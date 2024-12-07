@@ -1,0 +1,85 @@
+#admin {
+  display: flex;
+  flex-direction: column;
+
+  h1 {
+    margin: 0;
+    padding: 10px 0;
+  }
+
+  .dashboard {
+    border-radius: 16px;
+    height: 200px;
+    width: fit-content;
+    max-width: 100%;
+    // padding: 16px;
+    display: flex;
+    overflow: auto;
+    gap: 16px;
+    margin: 0 auto;
+
+    &:empty {
+      align-items: center;
+      justify-content: center;
+      &::before {
+        content: '';
+        height: 60px;
+        width: 60px;
+        border: solid 4px rgba(255, 255, 255, 0.3);
+        border-bottom-color: transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+
+        @keyframes spin {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+      }
+    }
+  }
+
+  .card {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 168px;
+    width: 168px;
+    background-color: var(--secondary-color);
+    border-radius: 16px;
+    box-shadow: 0 0 4px 0.5px rgba(0, 0, 0, 0.5);
+
+    .content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2em;
+      font-weight: 800;
+      letter-spacing: 5px;
+      margin: 5px;
+      flex: 1;
+    }
+
+    .title {
+      border-top: solid 1px rgba(255, 255, 255, 0.3);
+      line-height: 40px;
+      height: 40px;
+    }
+  }
+
+  table {
+    max-width: unset;
+    td {
+      width: fit-content;
+    }
+  }
+
+  .table-container {
+    overflow: auto;
+  }
+}

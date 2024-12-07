@@ -1,0 +1,18 @@
+export default {
+  buttonColor: '#3399ff',
+  buttonTextColor: '#ffffff',
+  buttonHoverColor: '#2389ef',
+  buttonActiveColor: '#2288ee',
+  buttonActiveTextColor: '#ffffff',
+  primaryColor: '#313131',
+  primaryTextColor: '#ffffff',
+  secondaryColor: '#212121',
+  secondaryTextColor: '#ffffff',
+  errorColor: 'orangered',
+  successColor: 'green',
+  dangerColor: 'orangered',
+  dangerTextColor: '#ffffff',
+  bgColor: '#111',
+  themeType: 'dark',
+  codeBgColor: 'rgba(0,0,0,0.5)',
+};

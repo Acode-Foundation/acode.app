@@ -1,0 +1,172 @@
+@font-face {
+  font-family: 'acode';
+  src: url('acode.ttf?a3uju2') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+.icon {
+  /* use !important to prevent issues with browser extensions that change fonts */
+  font-family: 'acode' !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  /* Better Font Rendering =========== */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon.bitcoin:before {
+  content: "\e90c";
+  color: #f7931a;
+}
+
+.icon.github:before {
+  content: "\e901";
+}
+
+.icon.paypal:before {
+  content: "\e905";
+  color: #00457c;
+}
+
+.icon.navigate_next:before {
+  content: "\e90a";
+}
+
+.icon.navigate_before:before {
+  content: "\e90b";
+}
+
+.icon.chevron_left:before {
+  content: "\e90b";
+}
+
+.icon.verified:before {
+  content: "\e909";
+}
+
+.icon.star_outline:before {
+  content: "\e906";
+}
+
+.icon.star:before {
+  content: "\e907";
+}
+
+.icon.favorite:before {
+  content: "\e908";
+}
+
+.icon.account_balance:before {
+  content: "\e904";
+}
+
+.icon.warning:before {
+  content: "\e903";
+}
+
+.icon.chat_bubble:before {
+  content: "\e96d";
+}
+
+.icon.add:before {
+  content: "\e992";
+}
+
+.icon.clear:before {
+  content: "\e999";
+}
+
+.icon.content_copy:before {
+  content: "\e99a";
+}
+
+.icon.create:before {
+  content: "\e99d";
+}
+
+.icon.flag:before {
+  content: "\e9a0";
+}
+
+.icon.report:before {
+  content: "\e9ab";
+}
+
+.icon.outlined_flag:before {
+  content: "\e9b9";
+}
+
+.icon.access_time:before {
+  content: "\e9c7";
+}
+
+.icon.publish:before {
+  content: "\ea26";
+}
+
+.icon.download:before {
+  content: "\ea46";
+}
+
+.icon.menu:before {
+  content: "\eb58";
+}
+
+.icon.refresh:before {
+  content: "\eb5b";
+}
+
+.icon.person:before {
+  content: "\ebad";
+}
+
+.icon.share:before {
+  content: "\ebb3";
+}
+
+.icon.delete:before {
+  content: "\ebe1";
+}
+
+.icon.done:before {
+  content: "\ebe4";
+}
+
+.icon.done_all:before {
+  content: "\ebe5";
+}
+
+.icon.thumb_down:before {
+  content: "\ec34";
+}
+
+.icon.thumb_up:before {
+  content: "\ec35";
+}
+
+.icon.logout:before {
+  content: "\ece8";
+}
+
+.icon.thumb_down_alt:before {
+  content: "\ed07";
+}
+
+.icon.thumb_up_alt:before {
+  content: "\ed08";
+}
+
+.icon.mail:before {
+  content: "\e902";
+}
+
+.icon.earth:before {
+  content: "\e900";
+}

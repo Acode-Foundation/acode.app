@@ -1,0 +1,132 @@
+.dialog-box-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+
+  &.hide {
+    .dialog-box-overlay {
+      opacity: 0;
+    }
+
+    .dialog-box {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+  }
+
+  .dialog-box-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    opacity: 0.8;
+    z-index: 0;
+    transition: opacity 0.2s ease-in-out;
+    animation: opacity 0.2s ease-in-out;
+
+    @keyframes opacity {
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 0.8;
+      }
+    }
+  }
+
+  .dialog-box {
+    background-color: var(--secondary-color);
+    color: var(--secondary-text-color);
+    border-radius: 4px;
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
+    min-width: 200px;
+    z-index: 1;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: scale 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+    @keyframes scale {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .title {
+      font-size: 1.2rem;
+      padding: 0 10px;
+      margin: 10px 0 0 10px;
+    }
+
+    .body {
+      padding: 0 20px;
+
+      input,
+      textarea {
+        width: 100%;
+        height: fit-content;
+        border: none;
+        border-bottom: 1px solid var(--secondary-text-color);
+        background-color: transparent;
+        color: var(--secondary-text-color);
+        font-size: 1.2em;
+        margin: 10px 0;
+        box-sizing: border-box;
+        outline: none;
+        border-radius: 0;
+      }
+
+      textarea {
+        height: 1.5em;
+        min-height: 1.5em;
+      }
+
+      ul.options {
+        display: flex;
+        flex-direction: column;
+        list-style: none;
+        width: 100%;
+        padding: 0;
+        margin: 10px 0;
+
+        li {
+          display: flex;
+          align-items: center;
+          height: 40px;
+          padding: 0 10px;
+          cursor: pointer;
+          text-transform: uppercase;
+
+          &:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+          }
+
+          .icon {
+            margin-right: 10px;
+          }
+        }
+      }
+    }
+
+    .buttons {
+      display: flex;
+      background-color: rgba(0, 0, 0, 0.1);
+
+      button {
+        width: 100%;
+        background-color: transparent;
+      }
+    }
+  }
+}

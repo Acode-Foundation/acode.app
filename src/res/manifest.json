@@ -1,0 +1,26 @@
+{
+  "short_name": "Acode",
+  "name": "Acode - A Powerful Code Editor for Android",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.svg",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#313131",
+  "theme_color": "#313131",
+  "description": "Acode is a powerful code editor for Android. It supports 50+ languages and comes with code completion, syntax highlighting, code snippets, code refactoring, and many other features.",
+  "lang": "en"
+}

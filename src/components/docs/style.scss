@@ -1,0 +1,289 @@
+@import '../../mixins.scss';
+
+.docs-container {
+  padding: 0;
+  margin: 0;
+  display: flex;
+  width: 100%;
+  max-width: unset;
+
+  #doc-nav:checked ~ .side-nav {
+    display: flex !important;
+  }
+
+  .doc-header {
+    position: sticky;
+    top: 0;
+    padding: 10px 0;
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-color);
+    margin-left: -10px;
+
+    .icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px;
+      width: 40px;
+    }
+
+    h1 {
+      margin: 0;
+    }
+  }
+
+  .side-nav {
+    position: sticky;
+    top: 80px;
+    display: none;
+    flex-direction: column;
+    background-color: var(--secondary-color);
+    color: var(--secondary-text-color);
+    min-width: 120px;
+    -webkit-tap-highlight-color: transparent;
+    max-height: calc(100vh - 80px);
+    overflow: auto;
+    padding-bottom: 30%;
+    box-sizing: border-box;
+
+    // hide scrollbar
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    a,
+    .link {
+      margin: 0;
+      padding: 0;
+    }
+
+    ul {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+
+      ul {
+        padding: 0;
+        background-color: rgba($color: #000000, $alpha: 0.4);
+
+        ul {
+          background-color: var(--secondary-color);
+          color: var(--secondary-text-color);
+        }
+      }
+
+      li {
+        margin: 0;
+        cursor: pointer;
+
+        &.active,
+        &:hover {
+          background-color: rgba($color: #000000, $alpha: 0.4);
+        }
+
+        > * {
+          text-decoration: none !important;
+          display: flex;
+          padding: 10px;
+        }
+
+        summary {
+          padding: 10px 0;
+          user-select: none;
+        }
+      }
+    }
+
+    h1 {
+      font-size: 1.2rem;
+      margin: 0;
+      padding: 0;
+    }
+  }
+
+  .doc-body {
+    padding: 0 10px;
+    width: 100%;
+    box-sizing: border-box;
+    flex: 1;
+    max-width: 800px;
+    margin: 0 auto;
+
+    p {
+      line-height: 20px;
+    }
+
+    ul {
+      line-height: 28px;
+    }
+
+    img {
+      max-width: 100%;
+    }
+
+    header {
+      padding: 0;
+      background-color: var(--primary-color);
+      color: var(--primary-text-color);
+
+      .icon {
+        @include flex-center;
+        height: 60px;
+        width: 60px;
+      }
+    }
+
+    .doc {
+      margin-top: 10px;
+
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        margin: 5px 0;
+        padding: 5px 0;
+        font-weight: 500;
+        text-align: left;
+        border-bottom: solid 1px var(--primary-color);
+      }
+    }
+  }
+
+  @media screen and (min-width: 1000px) {
+    .doc-header {
+      padding-left: 10px;
+      label.icon.menu {
+        display: none;
+      }
+    }
+  }
+
+  @media screen and (max-width: 1000px) {
+    #doc-nav:checked ~ .side-nav {
+      transform: translateX(0);
+    }
+
+    #doc-nav:checked ~ .mask {
+      opacity: 0.5;
+      pointer-events: all;
+    }
+
+    label.mask {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 100vw;
+      pointer-events: none;
+      background-color: rgba($color: #000000, $alpha: 0.6);
+      transition: all 0.3s ease-in-out;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease-in-out;
+    }
+
+    .side-nav {
+      display: flex;
+      position: absolute;
+      left: 0;
+      top: 80px;
+      height: calc(100% - 80px);
+      transform: translateX(-100%);
+      transition: all 0.3s ease-in-out;
+      z-index: 9;
+      overflow: auto;
+    }
+  }
+
+  .hljs-meta,
+  .hljs-comment {
+    color: #565f89;
+  } /* Red */ /*INFO: This
+  keyword, HTML elements, Regex group symbol, CSS units, Terminal Red */
+  .hljs-tag,
+  .hljs-doctag,
+  .hljs-selector-id,
+  .hljs-selector-class,
+  .hljs-regexp,
+  .hljs-template-tag,
+  .hljs-selector-pseudo,
+  .hljs-selector-attr,
+  .hljs-variable.language_,
+  .hljs-deletion {
+    color: #f7768e;
+  } /*Orange */ /*INFO: Number and Boolean constants, Language
+  support constants */
+  .hljs-variable,
+  .hljs-template-variable,
+  .hljs-number,
+  .hljs-literal,
+  .hljs-type,
+  .hljs-params,
+  .hljs-link {
+    color: #ff9e64;
+  } /* Yellow */ /* INFO: Function parameters, Regex character
+  sets, Terminal Yellow */
+  .hljs-built_in,
+  .hljs-attribute {
+    color: #e0af68;
+  } /* cyan */ /* INFO: Language support functions, CSS HTML elements */
+  .hljs-selector-tag {
+    color: #2ac3de;
+  } /* light blue */ /* INFO: Object
+  properties, Regex quantifiers and flags, Markdown headings, Terminal Cyan,
+  Markdown code, Import/export keywords */
+  .hljs-keyword,
+  .hljs-title.function_,
+  .hljs-title,
+  .hljs-title.class_,
+  .hljs-title.class_.inherited__,
+  .hljs-subst,
+  .hljs-property {
+    color: #7dcfff;
+  } /*Green*/ /* INFO: Object literal keys, Markdown links, Terminal
+  Green */
+  .hljs-selector-tag {
+    color: #73daca;
+  } /*Green(er) */ /* INFO:
+  Strings, CSS class names */
+  .hljs-quote,
+  .hljs-string,
+  .hljs-symbol,
+  .hljs-bullet,
+  .hljs-addition {
+    color: #9ece6a;
+  } /* Blue */ /* INFO:
+  Function names, CSS property names, Terminal Blue */
+  .hljs-code,
+  .hljs-formula,
+  .hljs-section {
+    color: #7aa2f7;
+  } /* Magenta */ /*INFO:
+  Control Keywords, Storage Types, Regex symbols and operators, HTML
+  Attributes, Terminal Magenta */
+  .hljs-name,
+  .hljs-keyword,
+  .hljs-operator,
+  .hljs-keyword,
+  .hljs-char.escape_,
+  .hljs-attr {
+    color: #bb9af7;
+  } /*
+  white*/ /* INFO: Variables, Class names, Terminal White */
+  .hljs-punctuation {
+    color: #c0caf5;
+  }
+  .hljs {
+    background: #1a1b26;
+    color: #9aa5ce;
+  }
+  .hljs-emphasis {
+    font-style: italic;
+  }
+  .hljs-strong {
+    font-weight: bold;
+  }
+}

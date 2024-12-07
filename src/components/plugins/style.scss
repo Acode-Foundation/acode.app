@@ -1,0 +1,80 @@
+.plugins {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -10px;
+
+  &:empty::after {
+    content: attr(data-msg);
+    display: block;
+    text-align: center;
+    width: 100%;
+    margin: 10px;
+  }
+
+  .plugin {
+    width: calc(33% - 30px);
+    min-width: 250px;
+    margin: 10px 0 0 10px;
+    background-color: var(--secondary-color);
+    color: var(--secondary-text-color);
+    padding: 10px;
+    text-align: center;
+    border-radius: 4px;
+    text-decoration: none;
+
+    h2 {
+      margin-bottom: 5px;
+    }
+
+    @media screen and (max-width: 925px) {
+      width: calc(50% - 35px);
+    }
+
+    @media screen and (max-width: 600px) {
+      width: calc(100% - 40px);
+    }
+
+    &:hover {
+      box-shadow: -2px 2px 12px 2px rgba($color: #000000, $alpha: 0.9);
+    }
+
+    .plugin-icon {
+      height: 120px;
+      width: 120px;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 100px;
+      margin: auto;
+    }
+  }
+
+  .info {
+    display: flex;
+    justify-content: center;
+    cursor: default;
+
+    > *:not(:last-child)::after {
+      content: '•';
+      font-weight: bolder;
+      margin: 0 5px;
+    }
+  }
+
+  .status-indicator {
+    text-transform: capitalize;
+    cursor: pointer;
+  }
+
+  .pending {
+    color: #39f;
+  }
+
+  .approved {
+    color: #3f9;
+  }
+
+  .deleted,
+  .rejected {
+    color: #f33;
+  }
+}

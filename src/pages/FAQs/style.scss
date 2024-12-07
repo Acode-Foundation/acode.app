@@ -1,0 +1,38 @@
+#faqs {
+  &::after {
+    content: '';
+    display: block;
+    height: 100%;
+  }
+
+  h1 {
+    margin: 20px;
+  }
+
+  .faq {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: solid 1px rgba(234, 234, 234, 0.486);
+
+    h2::before {
+      content: 'Q.';
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #eaeaea;
+      margin-right: 10px;
+    }
+  }
+
+  .preview {
+    &::before {
+      display: block;
+      width: 100%;
+      content: 'Preview';
+      border-bottom: solid 1px rgba(234, 234, 234, 0.486);
+    }
+
+    padding: 10px;
+    border: solid 1px rgba(234, 234, 234, 0.486);
+    min-height: 200px;
+  }
+}

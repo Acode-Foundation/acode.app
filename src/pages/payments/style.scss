@@ -1,0 +1,60 @@
+#payments {
+  h1 {
+    padding: 20px 0;
+  }
+
+  .payments {
+    display: flex;
+  }
+
+  .list {
+    list-style: none;
+    padding: 0;
+    margin: auto;
+    width: 90%;
+    max-width: 600px;
+
+    li {
+      margin: 10px 10px 0 10px;
+
+      &:first-child {
+        margin-top: 0;
+      }
+
+      background: linear-gradient(
+        to bottom right,
+        rgb(100, 176, 252),
+        rgb(4, 64, 99)
+      );
+      color: white;
+      padding: 10px;
+      border-radius: 4px;
+      min-height: 60px;
+      user-select: none;
+
+      &.paid {
+        background: linear-gradient(
+          to bottom right,
+          rgb(0, 255, 0),
+          rgb(0, 128, 0)
+        );
+      }
+
+      &.active {
+        box-shadow: inset 0 0 0 2px white;
+      }
+
+      .amount {
+        display: block;
+        font-weight: 600;
+        margin: 5px 0;
+        font-size: large;
+      }
+    }
+  }
+
+  .payment-method {
+    margin: 0 10px 0 0;
+    width: calc(100% - 10px);
+  }
+}

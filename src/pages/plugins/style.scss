@@ -1,0 +1,7 @@
+#plugins {
+  &::after {
+    content: '';
+    display: block;
+    height: 100%;
+  }
+}

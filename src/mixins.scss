@@ -1,0 +1,45 @@
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-col {
+  flex-direction: column;
+  @include flex-center;
+}
+
+@mixin flex-row {
+  flex-direction: row;
+  @include flex-center;
+}
+
+@mixin fixed-full {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+}
+
+@mixin fit-bg {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+@mixin bgcolor {
+  background-color: #282828;
+  background-color: var(--primary-color);
+}
+
+@mixin icon($height, $width, $fontSize: 1rem) {
+  height: $height;
+  width: $width;
+  font-size: $fontSize;
+}
+
+@mixin statusbar {
+  // padding-top: 28px;
+  box-sizing: border-box;
+}
