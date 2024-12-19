@@ -1,13 +1,14 @@
 /* eslint-disable no-console */
-const { config } = require('dotenv');
 const path = require('path');
+const { config } = require('dotenv');
 const setAuth = require('../server/gapis');
 const updateEarnings = require('../server/updateEarnings');
 const { sendNotification } = require('../server/helpers');
 
+config({ path: path.resolve(__dirname, '../.env') });
+
 (async () => {
   try {
-    config({ path: path.resolve(__dirname, '../.env') });
     await setAuth();
     await updateEarnings();
     sendNotification(

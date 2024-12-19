@@ -1,10 +1,10 @@
 const moment = require('moment');
-const downloadReport = require('./downloadGr');
-const UserEarnings = require('./entities/userEarnings');
-const Payment = require('./entities/payment');
 const Plugin = require('./entities/plugin');
-const { sendNotification } = require('./helpers');
+const Payment = require('./entities/payment');
+const downloadReport = require('./downloadGr');
 const calcEarnings = require('./calcEarnings');
+const { sendNotification } = require('./helpers');
+const UserEarnings = require('./entities/userEarnings');
 const PaymentMethod = require('./entities/paymentMethod');
 
 const now = moment();

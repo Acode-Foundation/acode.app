@@ -1,5 +1,9 @@
+const path = require('path');
+const { config } = require('dotenv');
 const { encryptPassword } = require('../password');
 const Entity = require('./entity');
+
+config({ path: path.resolve(__dirname, '../../.env') });
 
 const table = `create table if not exists user (
   id integer primary key,
