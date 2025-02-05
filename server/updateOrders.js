@@ -25,11 +25,16 @@ module.exports = async function updateOrder(startDate, endDate, google) {
       state,
     } = order;
 
-    const [{ sku: productId }] = await Plugin.get([Plugin.SKU], [Plugin.ID, pluginId]);
+    const [plugin] = await Plugin.get([Plugin.SKU], [Plugin.ID, pluginId]);
+    if (!plugin) {
+      console.log(`Plugin ${pluginId} not found`);
+      return;
+    }
+
     const purchase = await androidpublisher.purchases.products.get({
       packageName,
       token,
-      productId,
+      productId: plugin.sku,
     });
 
     const { purchaseState, orderId: purchaseOrderId } = purchase.data;

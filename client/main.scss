@@ -108,9 +108,9 @@ header {
   position: sticky;
   top: 0;
 
-  .icon {
-    height: 60px !important;
-    width: 60px !important;
+  > .icon {
+    height: 60px;
+    width: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -202,6 +202,12 @@ header {
       height: 30px;
       padding: 0 10px;
       align-items: center;
+
+      .icon {
+        height: fit-content;
+        width: fit-content;
+        margin-right: 10px;
+      }
 
       &.play-button {
         justify-content: center;

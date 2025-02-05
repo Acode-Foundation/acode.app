@@ -14,8 +14,8 @@ export default ({ routes }) => <>
     <input hidden type="checkbox" id="menu-toggler" name="menu toggler" />
     <label attr-for="menu-toggler" className="mask"></label>
     <nav>
-      {routes.map(({ href, text }) => (
-        <a href={href}>{text}</a>
+      {routes.map(({ href, text, icon }) => (
+        <a href={href}>{icon && <span className={`icon ${icon}`} />} {text}</a>
       ))}
       <a target='_blank' style={{ color: '#0080FF', margin: '10px 0' }} href="https://www.digitalocean.com/?refcode=ddb6c70b077b&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge">
         <img height='30' src={digitalOceanLogo} alt='' />

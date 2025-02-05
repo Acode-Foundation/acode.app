@@ -48,7 +48,7 @@
         "import/resolver": {
             "node": {
                 "paths": [
-                    "src"
+                    "client"
                 ]
             },
             "typescript": {

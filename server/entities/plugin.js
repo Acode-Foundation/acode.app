@@ -8,6 +8,7 @@ const table = `CREATE TABLE IF NOT EXISTS plugin (
   user_id INTEGER,
   repository text,
   description TEXT,
+  downloads TEXT DEFAULT '0',
   status INTEGER DEFAULT (0),
   created_at TIMESTAMP DEFAULT (current_timestamp),
   updated_at TIMESTAMP DEFAULT (current_timestamp), 

@@ -2,7 +2,6 @@ const path = require('path');
 const fs = require('fs');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
-const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 
 const PUBLIC = path.resolve(__dirname, 'public');
 
@@ -16,7 +15,7 @@ module.exports = (env, options) => {
     mode,
     stats: 'minimal',
     resolve: {
-      modules: ['src', 'node_modules'],
+      modules: ['client', 'node_modules'],
     },
     watchOptions: {
       ignored: [
@@ -86,14 +85,10 @@ module.exports = (env, options) => {
     },
   ];
 
-  if (mode === 'production') {
-    common.plugins.push(new BundleAnalyzerPlugin());
-  }
-
   const main = {
     ...common,
     entry: {
-      main: './src/main.js',
+      main: './client/main.js',
     },
     module: {
       rules,
@@ -103,7 +98,7 @@ module.exports = (env, options) => {
   const assets = {
     ...common,
     entry: {
-      assets: './src/assets.js',
+      assets: './client/assets.js',
     },
     module: {
       rules: [
