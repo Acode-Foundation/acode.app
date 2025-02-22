@@ -183,7 +183,10 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
         break;
       case 'changelogs':
         currentSection = sectionChangelogs;
-        mainBody.append(<p className='md' innerHTML={marked.parse(plugin.changelogs)}></p>);
+        const changelogs = plugin.changelogs ? marked.parse(plugin.changelogs) : '';
+        mainBody.append(<p className='md' innerHTML={changelogs}>{
+          !changelogs && <span style={{ opacity: 0.8, fontSize: 'italic' }}>No changelogs</span>
+        }</p>);
         break;
       default:
         currentSection = sectionDescription;
