@@ -5,6 +5,7 @@ import {
 } from 'lib/helpers';
 import AjaxForm from 'components/ajaxForm';
 import Router from 'lib/Router';
+import Ref from 'html-tag-js/ref';
 
 export default async function PublishPlugin({ mode = 'publish', id }) {
   const user = await getLoggedInUser();
@@ -26,6 +27,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
   const minVersionCode = <></>;
   const method = mode === 'publish' ? 'post' : 'put';
   const buttonText = <>{capitalize(mode)}</>;
+  const submitButton = new Ref();
   const pluginIcon = <img style={{ height: '120px', width: '120px' }} src="#" alt="Plugin icon" />;
 
   let plugin;
@@ -93,7 +95,9 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
         </tbody>
       </table>
 
-      <button type='submit'> <span className="icon publish"></span> {buttonText}</button>
+      <button ref={submitButton} type='submit'>
+        <span className="icon publish"></span>{buttonText}
+      </button>
     </AjaxForm>
   </section>;
 
@@ -104,6 +108,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
     }
 
     successText.value = 'Plugin published successfully.';
+    Router.loadUrl(`/plugin/${data.id}`);
   }
 
   function onerror(error) {
@@ -140,6 +145,14 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
           return;
         }
 
+        if (id && !isVersionGreater(manifest.version, plugin.version)) {
+          submitButton.el.disabled = true;
+          errorText.value = 'Version should be greater than previous version.';
+          return;
+        }
+
+        errorText.value = '';
+        submitButton.el.disabled = false;
         pluginId.value = manifest.id;
         pluginName.value = manifest.name;
         pluginVersion.value = manifest.version;
@@ -154,5 +167,43 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
     };
 
     reader.readAsArrayBuffer(file);
+  }
+
+  function isVersionGreater(newV, oldV) {
+    const [newMajor, newMinor, newPatch] = newV.split('.').map(Number);
+    const [oldMajor, oldMinor, oldPatch] = oldV.split('.').map(Number);
+
+    if (newMajor > oldMajor) {
+      return true;
+    }
+
+    if (newMajor === oldMajor && newMinor > oldMinor) {
+      return true;
+    }
+
+    if (newMajor === oldMajor && newMinor === oldMinor && newPatch > oldPatch) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function getUpdateType(newV, oldV) {
+    const [newMajor, newMinor, newPatch] = newV.split('.').map(Number);
+    const [oldMajor, oldMinor, oldPatch] = oldV.split('.').map(Number);
+
+    if (newMajor > oldMajor) {
+      return 'major';
+    }
+
+    if (newMajor === oldMajor && newMinor > oldMinor) {
+      return 'minor';
+    }
+
+    if (newMajor === oldMajor && newMinor === oldMinor && newPatch > oldPatch) {
+      return 'patch';
+    }
+
+    return 'unknown';
   }
 }

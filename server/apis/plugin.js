@@ -459,7 +459,7 @@ router.put('/', async (req, res) => {
     }
 
     const { license, contributors, changelogs, keywords } = req.body;
-    const { pluginJson, icon, readme } = await exploreZip(pluginZip.data);
+    const { pluginJson, icon, readme, changelogs: changelogsFile } = await exploreZip(pluginZip.data);
 
     const errorMessage = validatePlugin(pluginJson, icon, readme);
     if (errorMessage) {
@@ -492,7 +492,7 @@ router.put('/', async (req, res) => {
       [Plugin.DESCRIPTION, readme],
       [Plugin.LICENSE, license],
       [Plugin.CONTRIBUTORS, contributors],
-      [Plugin.CHANGELOGS, changelogs],
+      [Plugin.CHANGELOGS, changelogs || changelogsFile],
       [Plugin.KEYWORDS, keywords],
     ];
 
@@ -617,8 +617,9 @@ async function exploreZip(file) {
   const pluginJson = JSON.parse(await zip.file('plugin.json')?.async('string'));
   const icon = await zip.file('icon.png')?.async('base64');
   const readme = await zip.file('readme.md')?.async('string');
+  const changelogs = await zip.file('changelogs.md')?.async('string');
 
-  return { pluginJson, icon, readme };
+  return { pluginJson, icon, readme, changelogs };
 }
 
 function savePlugin(id, file, icon) {
@@ -729,14 +730,20 @@ function isValidPrice(price) {
   return price && !Number.isNaN(price) && price >= MIN_PRICE && price <= MAX_PRICE;
 }
 
-function isVersionGreater(v1, v2) {
-  const v1Arr = v1.split('.');
-  const v2Arr = v2.split('.');
+function isVersionGreater(newV, oldV) {
+  const [newMajor, newMinor, newPatch] = newV.split('.').map(Number);
+  const [oldMajor, oldMinor, oldPatch] = oldV.split('.').map(Number);
 
-  for (let i = 0; i < 3; i++) {
-    if (v1Arr[i] > v2Arr[i]) {
-      return true;
-    }
+  if (newMajor > oldMajor) {
+    return true;
+  }
+
+  if (newMajor === oldMajor && newMinor > oldMinor) {
+    return true;
+  }
+
+  if (newMajor === oldMajor && newMinor === oldMinor && newPatch > oldPatch) {
+    return true;
   }
 
   return false;

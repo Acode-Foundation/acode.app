@@ -10,13 +10,11 @@ html {
   width: 100%;
   overflow: hidden;
   margin: 0;
-  background: linear-gradient(
-    to bottom,
-    var(--secondary-color),
-    var(--primary-color),
-    var(--primary-color),
-    var(--primary-color)
-  );
+  background: linear-gradient(to bottom,
+      var(--secondary-color),
+      var(--primary-color),
+      var(--primary-color),
+      var(--primary-color));
   color: var(--primary-text-color);
   font-family: 'Montserrat', sans-serif;
 }
@@ -89,9 +87,11 @@ body.loading {
         0% {
           transform: translateX(-100%) scaleX(0);
         }
+
         50% {
           transform: translateX(100%) scaleX(1);
         }
+
         100% {
           transform: translateX(100%) scaleX(0);
         }
@@ -108,7 +108,7 @@ header {
   position: sticky;
   top: 0;
 
-  > .icon {
+  >.icon {
     height: 60px;
     width: 60px;
     display: flex;
@@ -142,7 +142,7 @@ header {
       justify-content: center;
     }
 
-    #menu-toggler ~ .mask {
+    #menu-toggler~.mask {
       position: fixed;
       top: 0;
       left: 0;
@@ -153,11 +153,11 @@ header {
       transition: all 0.3s ease-in-out;
     }
 
-    #menu-toggler:checked ~ nav:nth-of-type(2) {
+    #menu-toggler:checked~nav:nth-of-type(2) {
       transform: translateX(0);
     }
 
-    #menu-toggler:checked ~ .mask {
+    #menu-toggler:checked~.mask {
       pointer-events: all;
       background-color: rgba($color: #000000, $alpha: 0.5);
     }
@@ -246,6 +246,7 @@ main {
   &:empty {
     position: relative;
     height: 100%;
+
     &::before {
       position: absolute;
       top: 50%;
@@ -371,6 +372,7 @@ button {
   &:disabled,
   &.disabled {
     cursor: not-allowed;
+    opacity: 0.5;
   }
 
   &:hover {
@@ -387,10 +389,12 @@ button {
         background-color: var(--button-color);
         color: var(--button-text-color);
       }
+
       50% {
         background-color: var(--button-hover-color);
         color: var(--button-text-color);
       }
+
       100% {
         background-color: var(--button-color);
         color: var(--button-text-color);
