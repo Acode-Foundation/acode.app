@@ -26,6 +26,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
   const successText = <></>;
   const pluginPrice = <></>;
   const minVersionCode = <></>;
+  const updateType = <></>;
   const method = mode === 'publish' ? 'post' : 'put';
   const buttonText = <>{capitalize(mode)}</>;
   const submitButton = new Ref();
@@ -75,7 +76,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
           </tr>
           <tr>
             <th>Version</th>
-            <td>{pluginVersion}</td>
+            <td>{pluginVersion} {id && <small>{updateType}</small>}</td>
           </tr>
           <tr>
             <th>Author</th>
@@ -108,7 +109,14 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
       return;
     }
 
-    alert('Success', 'Plugin published successfully.', null, true);
+    let message = 'Plugin published successfully.';
+
+    if (id) {
+      const updateType = getUpdateType(pluginVersion.value, plugin.version);
+      message = `Plugin updated to ${pluginVersion.value} (${updateType}) successfully.`;
+    }
+
+    alert('Success', message, null, true);
     Router.loadUrl(`/plugin/${pluginId.value}`);
   }
 
@@ -154,10 +162,11 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
 
         errorText.value = '';
         submitButton.el.disabled = false;
+        updateType.value = `(${getUpdateType(manifest.version, plugin.version)} from ${plugin.version})`;
         pluginId.value = manifest.id;
         pluginName.value = manifest.name;
         pluginVersion.value = manifest.version;
-        pluginAuthor.value = manifest.author?.name;
+        if (manifest.author?.name) pluginAuthor.value = manifest.author?.name;
         pluginDescription.value = manifest.description;
         minVersionCode.value = manifest.minVersionCode || -1;
         pluginPrice.value = `INR ${manifest.price || 0}`;
@@ -169,42 +178,54 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
 
     reader.readAsArrayBuffer(file);
   }
+}
 
-  function isVersionGreater(newV, oldV) {
-    const [newMajor, newMinor, newPatch] = newV.split('.').map(Number);
-    const [oldMajor, oldMinor, oldPatch] = oldV.split('.').map(Number);
+/**
+ * Check if version is greater
+ * @param {string} newV 
+ * @param {string} oldV
+ * @returns {boolean}
+ */
+function isVersionGreater(newV, oldV) {
+  const [newMajor, newMinor, newPatch] = newV.split('.').map(Number);
+  const [oldMajor, oldMinor, oldPatch] = oldV.split('.').map(Number);
 
-    if (newMajor > oldMajor) {
-      return true;
-    }
-
-    if (newMajor === oldMajor && newMinor > oldMinor) {
-      return true;
-    }
-
-    if (newMajor === oldMajor && newMinor === oldMinor && newPatch > oldPatch) {
-      return true;
-    }
-
-    return false;
+  if (newMajor > oldMajor) {
+    return true;
   }
 
-  function getUpdateType(newV, oldV) {
-    const [newMajor, newMinor, newPatch] = newV.split('.').map(Number);
-    const [oldMajor, oldMinor, oldPatch] = oldV.split('.').map(Number);
-
-    if (newMajor > oldMajor) {
-      return 'major';
-    }
-
-    if (newMajor === oldMajor && newMinor > oldMinor) {
-      return 'minor';
-    }
-
-    if (newMajor === oldMajor && newMinor === oldMinor && newPatch > oldPatch) {
-      return 'patch';
-    }
-
-    return 'unknown';
+  if (newMajor === oldMajor && newMinor > oldMinor) {
+    return true;
   }
+
+  if (newMajor === oldMajor && newMinor === oldMinor && newPatch > oldPatch) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Get update type
+ * @param {string} newV 
+ * @param {string} oldV
+ * @returns {'major' | 'minor' | 'patch' | 'unknown'}
+ */
+function getUpdateType(newV, oldV) {
+  const [newMajor, newMinor, newPatch] = newV.split('.').map(Number);
+  const [oldMajor, oldMinor, oldPatch] = oldV.split('.').map(Number);
+
+  if (newMajor > oldMajor) {
+    return 'major';
+  }
+
+  if (newMajor === oldMajor && newMinor > oldMinor) {
+    return 'minor';
+  }
+
+  if (newMajor === oldMajor && newMinor === oldMinor && newPatch > oldPatch) {
+    return 'patch';
+  }
+
+  return 'unknown';
 }
