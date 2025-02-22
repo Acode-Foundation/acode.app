@@ -22,7 +22,7 @@ window.onload = async () => {
     { href: '/faqs', text: 'FAQs' },
     { href: '/plugin-docs', text: 'Plugin Docs' },
     { href: '/plugins', text: 'Plugins' },
-    { href: 'https://foxbiz.io', text: 'Foxbiz' },
+    { href: 'https://www.foxbiz.io', text: 'Foxbiz' },
     { href: '/policy', text: 'Privacy policy' },
     { href: '/terms', text: 'Terms of service' },
     { href: '/user', text: $loginText, icon: 'person' },

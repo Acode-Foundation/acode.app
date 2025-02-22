@@ -108,7 +108,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
     }
 
     successText.value = 'Plugin published successfully.';
-    Router.loadUrl(`/plugin/${data.id}`);
+    Router.loadUrl(`/plugin/${pluginId.value}`);
   }
 
   function onerror(error) {
