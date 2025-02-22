@@ -8,6 +8,10 @@ const table = `CREATE TABLE IF NOT EXISTS plugin (
   user_id INTEGER,
   repository text,
   description TEXT,
+  license TEXT DEFAULT 'Unknown',
+  contributors TEXT,
+  changelogs TEXT,
+  keywords TEXT,
   downloads TEXT DEFAULT '0',
   status INTEGER DEFAULT (0),
   created_at TIMESTAMP DEFAULT (current_timestamp),
@@ -40,14 +44,18 @@ class Plugin extends Entity {
   AUTHOR = 'author';
   VERSION = 'version';
   USER_ID = 'user_id';
+  LICENSE = 'license';
+  KEYWORDS = 'keywords';
   VOTES_UP = 'votes_up';
   DOWNLOADS = 'downloads';
   CREATED_AT = 'created_at';
+  CHANGELOGS = 'changelogs';
   UPDATED_AT = 'updated_at';
   VOTES_DOWN = 'votes_down';
   REPOSITORY = 'repository';
   DESCRIPTION = 'description';
   AUTHOR_EMAIL = 'author_email';
+  CONTRIBUTORS = 'contributors';
   COMMENT_COUNT = 'comment_count';
   AUTHOR_GITHUB = 'author_github';
   AUTHOR_WEBSITE = 'author_website';
@@ -151,22 +159,24 @@ class Plugin extends Entity {
       this.ICON,
       this.NAME,
       this.PRICE,
+      this.AUTHOR,
+      this.USER_ID,
       this.VERSION,
+      this.KEYWORDS,
+      this.LICENSE,
       this.VOTES_UP,
       this.DOWNLOADS,
       this.REPOSITORY,
       this.VOTES_DOWN,
       this.COMMENT_COUNT,
-      this.MIN_VERSION_CODE,
       this.AUTHOR_VERIFIED,
-      this.USER_ID,
+      this.MIN_VERSION_CODE,
     ];
   }
 
   get allColumns() {
     return [
       ...this.minColumns,
-      this.USER_ID,
       this.STATUS,
     ];
   }
@@ -179,6 +189,10 @@ class Plugin extends Entity {
       `IFNULL(${this.PRICE}, 0) as price`,
       this.VERSION,
       this.DESCRIPTION,
+      this.LICENSE,
+      this.CONTRIBUTORS,
+      this.CHANGELOGS,
+      this.KEYWORDS,
       this.USER_ID,
       this.CREATED_AT,
       this.UPDATED_AT,
@@ -202,6 +216,10 @@ class Plugin extends Entity {
       'p.price as price',
       'p.version as version',
       'p.user_id as user_id',
+      'p.license as license',
+      'p.contributors as contributors',
+      'p.changelogs as changelogs',
+      'p.keywords as keywords',
       'p.created_at as created_at',
       'p.updated_at as updated_at',
       'p.status as status',

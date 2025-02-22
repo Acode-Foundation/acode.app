@@ -36,7 +36,7 @@ async function getLoggedInUser(req) {
 
   const [loggedInUser] = userRow;
 
-  if (loggedInUser.id === ADMIN) {
+  if (loggedInUser.role === 'admin') {
     loggedInUser.isAdmin = true;
   }
 

@@ -12,30 +12,10 @@ const setAuth = require('./gapis');
 global.ADMIN = 1;
 const app = express();
 
-if (process.env.NODE_ENV === 'production') {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT);
-} else {
-  // eslint-disable-next-line global-require
-  const https = require('https');
-  const privateKey = fs.readFileSync(
-    path.resolve(__dirname, '../.vscode/server.key'),
-    'utf8',
-  );
-  const certificate = fs.readFileSync(
-    path.resolve(__dirname, '../.vscode/server.crt'),
-    'utf8',
-  );
-  const credentials = {
-    key: privateKey,
-    cert: certificate,
-    passphrase: '1234',
-  };
-  const httpsServer = https.createServer(credentials, app);
-  httpsServer.listen(3001, () => {
-    console.log('HTTPS Server running on port 3001');
-  });
-}
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 main();
 

@@ -11,6 +11,7 @@ const table = `create table if not exists user (
   email text not null unique,
   github text,
   website text,
+  role text default 'user',
   threshold integer default 1000,
   password text not null,
   verified boolean default false,
@@ -28,6 +29,7 @@ create trigger if not exists user_updated_at
 class User extends Entity {
   ID = 'id';
   NAME = 'name';
+  ROLE = 'role';
   EMAIL = 'email';
   GITHUB = 'github';
   WEBSITE = 'website';
@@ -46,6 +48,7 @@ class User extends Entity {
     const admin = await this.get([this.EMAIL, process.env.ADMIN_EMAIL]);
     if (!admin.length) {
       this.insert(
+        [this.ROLE, 'admin'],
         [this.NAME, process.env.ADMIN_NAME],
         [this.EMAIL, process.env.ADMIN_EMAIL],
         [this.GITHUB, process.env.ADMIN_GITHUB],
@@ -59,6 +62,7 @@ class User extends Entity {
     return [
       this.ID,
       this.NAME,
+      this.ROLE,
       this.EMAIL,
       this.GITHUB,
       this.WEBSITE,
@@ -74,6 +78,7 @@ class User extends Entity {
     return [
       this.ID,
       this.NAME,
+      this.ROLE,
       this.EMAIL,
       this.GITHUB,
       this.WEBSITE,
@@ -88,6 +93,7 @@ class User extends Entity {
     return [
       this.ID,
       this.NAME,
+      this.ROLE,
       this.EMAIL,
       this.VERIFIED,
       this.THRESHOLD,

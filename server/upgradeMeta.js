@@ -5,8 +5,11 @@
 const db = require('./db');
 
 execQuery([
-  'DELETE FROM user_earnings WHERE payment_id NOT IN (SELECT id FROM payment);',
-  'ALTER TABLE user ADD COLUMN threshold INTEGER DEFAULT 1000;',
+  'ALTER TABLE plugin ADD COLUMN license TEXT DEFAULT "Unknown"',
+  'ALTER TABLE plugin ADD COLUMN contributors TEXT',
+  'ALTER TABLE plugin ADD COLUMN changelogs TEXT',
+  'ALTER TABLE plugin ADD COLUMN keywords TEXT',
+  'ALTER TABLE user ADD COLUMN role TEXT DEFAULT "user"',
 ], async () => {
   db.close();
   console.log('Done');
@@ -24,12 +27,14 @@ function execQuery(queries, cb) {
     }
     return;
   }
+
+
+  console.log('Executing:', query);
   db.all(query, [], (err) => {
     if (err) {
-      console.error(err);
-      process.exit(1);
-    } else {
-      execQuery(queries, cb);
+      console.warn(err.message);
     }
+
+    execQuery(queries, cb);
   });
 }

@@ -62,8 +62,13 @@ export default async function User({ userEmail }) {
       <img ref={img} src={userImage} alt="" className="profile-image" />
       <div className='profile-info'>
         <h1>
-          <span>{user.name}</span>
-          <VerifyButton />
+          <div className='user-name'>
+            {user.name}
+            <div className='extra-info'>
+              {user.role === 'admin' && <small className='tag'>Admin</small>}
+              <VerifyButton />
+            </div>
+          </div>
         </h1>
         {
           shouldShowSensitiveInfo

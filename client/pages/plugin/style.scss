@@ -35,7 +35,7 @@
         display: flex;
         flex-wrap: wrap;
 
-        > *:not(.chip):not(:last-child)::after {
+        >*:not(.chip):not(:last-child)::after {
           content: '•';
           margin: 0 10px;
         }
@@ -50,8 +50,10 @@
     justify-content: space-around;
     border-bottom: solid 1px rgba(234, 234, 234, 0.486);
     margin-bottom: 20px;
+    overflow: auto;
+    scrollbar-width: none;
 
-    > * {
+    >* {
       cursor: pointer;
       padding: 10px;
       border-radius: 4px;
@@ -70,6 +72,7 @@
           0% {
             transform: scaleX(0);
           }
+
           100% {
             transform: scaleX(100%);
           }
@@ -94,9 +97,11 @@
           0% {
             transform: scale(1);
           }
+
           50% {
             transform: scale(1.5);
           }
+
           100% {
             transform: scale(1);
           }
@@ -198,7 +203,7 @@
           text-align: center;
         }
 
-        > * {
+        >* {
           margin: 0 auto 0 0;
         }
       }

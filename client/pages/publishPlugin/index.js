@@ -28,6 +28,19 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
   const buttonText = <>{capitalize(mode)}</>;
   const pluginIcon = <img style={{ height: '120px', width: '120px' }} src="#" alt="Plugin icon" />;
 
+  let plugin;
+  if (id) {
+    plugin = await fetch(`/api/plugin/${id}`).then(res => res.json());
+    pluginId.value = plugin.id;
+    pluginName.value = plugin.name;
+    pluginVersion.value = plugin.version;
+    pluginAuthor.value = plugin.author;
+    pluginDescription.value = plugin.description;
+    minVersionCode.value = plugin.minVersionCode;
+    pluginPrice.value = `INR ${plugin.price}`;
+    pluginIcon.src = `/plugin-icon/${plugin.id}`;
+  }
+
   return <section id='publish-plugin'>
     <h1>{capitalize(mode)} plugin</h1>
     <AjaxForm
@@ -40,6 +53,10 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
       loadingEnd={(form) => loadingEnd(form, buttonText, capitalize(mode))}
     >
       <Input required={true} onchange={onFileChange} type='file' name='plugin' label='Select plugin or drop here.' />
+      <Input value={plugin?.changelogs || ''} type='textarea' name='changelogs' label='Change logs' placeholder="What's new in this update." />
+      <Input value={plugin?.contributors || ''} type='textarea' name='contributors' label='Contributors' placeholder='Contributors' />
+      <Input value={plugin?.keywords || ''} type='textarea' name='keywords' label='Keywords' placeholder='e.g. AI Assistance, Autocomplete' />
+      <Input value={plugin?.license || ''} type='text' name='license' label='License' placeholder='e.g. MIT' />
       <span className="error">{errorText}</span>
       <span className="success">{successText}</span>
 

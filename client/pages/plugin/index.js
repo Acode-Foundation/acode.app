@@ -13,18 +13,18 @@ import confirm from 'components/dialogs/confirm';
 import { calcRating, getLoggedInUser, gravatar } from 'lib/helpers';
 
 export default async function Plugin({ id: pluginId, section = 'description' }) {
-  /** @type string */
   const plugin = await fetch(`/api/plugin/${pluginId}`).then((res) => res.json());
   if (plugin.error) {
     return <div className='error'>{plugin.error}</div>;
   }
 
   const {
-    icon,
+    id,
     name,
     price,
     author,
     version,
+    license,
     downloads,
     repository,
     description,
@@ -39,6 +39,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
   const user = await getLoggedInUser();
   const userComment = await getUserComment(pluginId);
   const sectionDescription = new Ref();
+  const sectionChangelogs = new Ref();
   const sectionComments = new Ref();
   const sectionOrders = new Ref();
   const ordersList = new Ref();
@@ -60,6 +61,15 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
   const $orders = <Order />;
   const isSameUser = user && (user.id === userId || user.isAdmin) && plugin.price;
 
+  let canInstall = /android/i.test(navigator.userAgent);
+
+  if (user?.isAdmin && plugin.status !== 'approved') {
+    canInstall = false;
+  }
+
+  /** @type {Ref} */
+  let currentSection;
+
   changeSection(section, false);
   renderComments(commentListRef, userId, user, pluginId, author);
 
@@ -75,12 +85,10 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
   return <section id='plugin'>
     <div className='row plugin-head'>
       <div className='plugin-logo'>
-        <img src={icon} alt={name} />
-        {
-          /android/i.test(navigator.userAgent)
-            ? <button onclick={() => window.open(`acode://plugin/install/${pluginId}`)} >Install</button>
-            : <></>
-        }
+        <img src={`/plugin-icon/${id}`} alt={name} />
+        {canInstall && <button
+          onclick={() => window.open(`acode://plugin/install/${pluginId}`)}
+        ><span className='icon download'></span> Install</button>}
       </div>
       <div className='info-container'>
         <div className='info'>
@@ -109,9 +117,17 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
               : ''
           }
           <div className='chip' onclick={() => changeSection('comments')}>
+            <span className='icon certificate'></span>
+            <span>{license}</span>
+          </div>
+          <div className='chip' onclick={() => changeSection('comments')}>
             <img src='/thumbs-up.gif' alt='thumbs up' />
             <span>{calcRating(votesUp, votesDown)}</span>
           </div>
+          {user?.isAdmin && <button className='chip' onclick={() => window.open(`/api/plugin/download/${id}`)}>
+            <span className='icon download'></span>
+            <span>Download</span>
+          </button>}
         </div>
         <div className='info'>
           <span className='chip'>
@@ -130,8 +146,13 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
       </div>
     </div>
     <div className='detailed'>
-      <div className='options'>
+      <div className='options' onwheel={(e) => {
+        const target = e.target.closest('.options');
+        target.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }}>
         <h2 onclick={() => changeSection('description')} ref={sectionDescription}>Description</h2>
+        <h2 onclick={() => changeSection('changelogs')} ref={sectionChangelogs}>Changelogs</h2>
         <h2 onclick={() => changeSection('comments')} ref={sectionComments}>Reviews</h2>
         {
           isSameUser
@@ -145,24 +166,31 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
 
   /**
    *
-   * @param {'comments' | 'description'} sectionName
+   * @param {'comments' | 'description' | 'changelogs' | 'orders'} sectionName
    */
   function changeSection(sectionName, updateLocation = true) {
-    sectionDescription.className = '';
-    sectionComments.className = '';
-    sectionOrders.className = '';
+    if (currentSection) currentSection.className = '';
     mainBody.innerHTML = '';
 
-    if (sectionName === 'comments') {
-      sectionComments.className = 'selected';
-      mainBody.append($comments);
-    } else if (sectionName === 'orders') {
-      sectionOrders.className = 'selected';
-      mainBody.append($orders);
-    } else {
-      sectionDescription.className = 'selected';
-      mainBody.append($description);
+    switch (sectionName) {
+      case 'comments':
+        currentSection = sectionComments;
+        mainBody.append($comments);
+        break;
+      case 'orders':
+        currentSection = sectionOrders;
+        mainBody.append($orders);
+        break;
+      case 'changelogs':
+        currentSection = sectionChangelogs;
+        mainBody.append(<p className='md' innerHTML={marked.parse(plugin.changelogs)}></p>);
+        break;
+      default:
+        currentSection = sectionDescription;
+        mainBody.append($description);
     }
+
+    currentSection.className = 'selected';
 
     if (updateLocation) {
       Router.setUrl(`/plugin/${pluginId}/${sectionName}`);

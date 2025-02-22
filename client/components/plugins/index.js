@@ -52,7 +52,6 @@ function Plugin({
   name,
   id,
   version,
-  icon,
   downloads,
   status,
   isAdmin,
@@ -63,7 +62,7 @@ function Plugin({
   comment_count: comments,
 }) {
   return <a href={`/plugin/${id}`} className='plugin'>
-    <div className='plugin-icon' style={{ backgroundImage: `url(${icon})` }}></div>
+    <div className='plugin-icon' style={{ backgroundImage: `url(/plugin-icon/${id})` }}></div>
     <div className="plugin-info">
       <h2>{name}</h2>
       <div className='info'>

@@ -15,6 +15,36 @@
       text-align: left;
     }
 
+    .user-name {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      width: 100%;
+
+      >* {
+        &:not(:first-child) {
+          margin-left: 10px;
+        }
+      }
+
+      .extra-info {
+        .tag {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background-color: var(--primary-color);
+          color: var(--primary-text-color);
+          font-size: 0.8rem;
+          height: 18px;
+          padding: 0 5px;
+          border-radius: 9px;
+          margin-left: 5px;
+        }
+      }
+    }
+
     .verified {
       color: #39f;
 
@@ -43,9 +73,11 @@
           0% {
             content: 'Loading';
           }
+
           33% {
             content: 'Loading.';
           }
+
           66% {
             content: 'Loading..';
           }
@@ -169,6 +201,7 @@
       &:first-child {
         margin-left: 0;
       }
+
       height: 30px;
       width: 30px;
       background-color: white;

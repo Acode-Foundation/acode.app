@@ -26,7 +26,7 @@ const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
 router.get('/owned/:sku', async (req, res) => {
   try {
     const { sku } = req.params;
-    const [row] = await Plugin.get(Plugin.minColumns, [Plugin.SKU, sku]);
+    const [row] = await Plugin.get(Plugin.allColumns, [Plugin.SKU, sku]);
     if (!row) {
       res.status(404).send({ error: 'Not found' });
       return;
@@ -189,6 +189,21 @@ router.get('/count/:type?', async (req, res) => {
   }
 });
 
+router.get('/description/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [row] = await Plugin.get([Plugin.DESCRIPTION], [Plugin.ID, id]);
+    if (!row) {
+      res.status(404).send({ error: 'Not found' });
+      return;
+    }
+
+    res.send({ description: row.description });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
 router.get('/:pluginId?', async (req, res) => {
   try {
     const { pluginId } = req.params;
@@ -215,9 +230,9 @@ router.get('/:pluginId?', async (req, res) => {
     }
 
     if (pluginId) {
+      columns.push(Plugin.CHANGELOGS);
+      columns.push(Plugin.CONTRIBUTORS);
       columns.push(Plugin.DESCRIPTION);
-      columns.push(Plugin.AUTHOR);
-      columns.push(Plugin.PRICE);
       columns.push(Plugin.AUTHOR_EMAIL);
       columns.push(Plugin.AUTHOR_GITHUB);
       columns.push(Plugin.AUTHOR_GITHUB);
@@ -348,6 +363,7 @@ router.post('/', async (req, res) => {
       return;
     }
 
+    const { license, contributors, changelogs, keywords } = req.body;
     const { pluginJson, icon, readme } = await exploreZip(pluginZip.data);
     const errorMessage = validatePlugin(pluginJson, icon, readme);
 
@@ -405,12 +421,21 @@ router.post('/', async (req, res) => {
       [Plugin.VERSION, version],
       [Plugin.USER_ID, user.id],
       [Plugin.DESCRIPTION, readme],
+      [Plugin.LICENSE, license],
+      [Plugin.CONTRIBUTORS, contributors],
+      [Plugin.CHANGELOGS, changelogs],
+      [Plugin.KEYWORDS, keywords],
       [Plugin.MIN_VERSION_CODE, minVersionCode],
     );
 
     savePlugin(id, pluginZip, icon);
-    sendNotification('dellevenjack@gmail.com', 'Ajit Kumar', 'New plugin waiting for approval', `A new plugin <a href='https://acode.app/plugin/${id}'><strong>${name}</strong></a> is waiting for approval.`);
     res.send({ message: 'Plugin uploaded successfully' });
+
+    User.get([User.EMAIL, User.NAME], [User.ROLE, 'admin']).then((rows) => {
+      rows.forEach((row) => {
+        sendNotification(row.email, row.name, 'New plugin waiting for approval', `A new plugin <a href='https://acode.app/plugin/${id}'><strong>${name}</strong></a> is waiting for approval.`);
+      });
+    });
   } catch (error) {
     res.status(500).send({ error: error.message });
   }
@@ -433,6 +458,7 @@ router.put('/', async (req, res) => {
       return;
     }
 
+    const { license, contributors, changelogs, keywords } = req.body;
     const { pluginJson, icon, readme } = await exploreZip(pluginZip.data);
 
     const errorMessage = validatePlugin(pluginJson, icon, readme);
@@ -464,6 +490,10 @@ router.put('/', async (req, res) => {
 
     const updates = [
       [Plugin.DESCRIPTION, readme],
+      [Plugin.LICENSE, license],
+      [Plugin.CONTRIBUTORS, contributors],
+      [Plugin.CHANGELOGS, changelogs],
+      [Plugin.KEYWORDS, keywords],
     ];
 
     if (version !== row.version) {

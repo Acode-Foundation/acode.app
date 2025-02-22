@@ -42,15 +42,16 @@
   }
 
   input:not([type='file']) {
+
     &:not(:placeholder-shown),
     &:focus {
-      & + .label {
+      &+.label {
         @include input-active(-20px);
       }
     }
   }
 
-  input[type='file'] + .label {
+  input[type='file']+.label {
     right: 0;
     width: fit-content;
   }
@@ -117,17 +118,24 @@
     }
   }
 
+  input,
+  textarea {
+    &::placeholder {
+      opacity: 0.5;
+    }
+  }
+
   &.textarea {
     textarea {
       min-height: 100px !important;
       min-width: 100%;
       max-width: 100%;
       border-radius: 4px;
-      padding: 10px;
+      padding: 15px 10px 10px 10px;
 
       &:not(:placeholder-shown),
       &:focus {
-        & + .label {
+        &+.label {
           @include input-active(-10px);
         }
       }
