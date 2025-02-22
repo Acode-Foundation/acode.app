@@ -2,7 +2,7 @@
 const { exec } = require('child_process');
 
 const inspect = process.argv.includes('--inspect');
-const configProcess = exec('node ./tools/config.js d', processHandler);
+const configProcess = exec('node ./dev/config.js d', processHandler);
 configProcess.on('exit', build);
 
 function build(watch) {

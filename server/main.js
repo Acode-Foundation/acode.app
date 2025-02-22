@@ -5,6 +5,10 @@ const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const fileUpload = require('express-fileupload');
+const Handlebars = require('handlebars');
+const markdownToText = require('markdown-to-txt');
+const defaultOg = require('./defaultOg.json');
+const Plugin = require('./entities/plugin');
 
 const apis = require('./routes/apis');
 const setAuth = require('./gapis');
@@ -94,7 +98,38 @@ async function main() {
     res.status(404).send({ error: 'Plugin not found' });
   });
 
+  app.get('/plugin/:id', async (req, res, next) => {
+    try {
+      const [plugin] = await Plugin.get([Plugin.ID, req.params.id]);
+      if (!plugin) {
+        next();
+        return;
+      }
+
+      const template = path.resolve(__dirname, './index.hbs');
+      const source = fs.readFileSync(template, 'utf8');
+      const templateScript = Handlebars.compile(source);
+
+      res.header('Content-Type', 'text/html;charset=utf-8');
+      res.send(templateScript({
+        title: `${plugin.name} - Acode`,
+        description: markdownToText.default(plugin.description),
+        icon: `plugin-icon/${plugin.id}`,
+        url: `plugin/${plugin.id}`,
+        icon_alt: `${plugin.name} icon`,
+        site_name: `Acode - ${plugin.name}`,
+      }));
+    } catch (error) {
+      next();
+    }
+  });
+
   app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, './index.html'));
+    const template = path.resolve(__dirname, './index.hbs');
+    const source = fs.readFileSync(template, 'utf8');
+    const templateScript = Handlebars.compile(source);
+
+    res.header('Content-Type', 'text/html;charset=utf-8');
+    res.send(templateScript(defaultOg));
   });
 }

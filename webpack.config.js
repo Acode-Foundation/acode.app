@@ -49,7 +49,7 @@ module.exports = (env, options) => {
 
   const rules = [
     {
-      test: /\.(hbs|md)$/,
+      test: /\.md$/,
       use: ['raw-loader'],
     },
     {
@@ -59,6 +59,10 @@ module.exports = (env, options) => {
         'postcss-loader',
         'sass-loader',
       ],
+    },
+    {
+      test: /\.hbs$/,
+      use: ['./dev/handlebars-loader.js'],
     },
     {
       test: /\.jsx?$/,

@@ -71,5 +71,8 @@
     "smali",
     "smtppro",
     "zenburn"
-  ]
+  ],
+  "[handlebars]": {
+    "editor.defaultFormatter": "vscode.html-language-features"
+  }
 }

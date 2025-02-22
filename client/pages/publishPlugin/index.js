@@ -6,6 +6,7 @@ import {
 import AjaxForm from 'components/ajaxForm';
 import Router from 'lib/Router';
 import Ref from 'html-tag-js/ref';
+import alert from 'components/dialogs/alert';
 
 export default async function PublishPlugin({ mode = 'publish', id }) {
   const user = await getLoggedInUser();
@@ -107,7 +108,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
       return;
     }
 
-    successText.value = 'Plugin published successfully.';
+    alert('Success', 'Plugin published successfully.');
     Router.loadUrl(`/plugin/${pluginId.value}`);
   }
 
