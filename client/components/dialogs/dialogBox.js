@@ -1,5 +1,5 @@
-import Router from 'lib/Router';
 import './style.scss';
+import Router from 'lib/Router';
 
 /**
  * @typedef {(hide: ()=>void, $box: HTMLElement) => void} DialogBoxCallback
@@ -7,21 +7,30 @@ import './style.scss';
 
 /**
  *
- * @param {object} param0
- * @param {HTMLElement} [param0.body]
- * @param {string} [param0.title]
- * @param {DialogBoxCallback} [param0.onok]
- * @param {DialogBoxCallback} [param0.oncancel]
- * @param {(i: number, hide: () => void) => void} [param0.onselect]
- * @param {() => void} [param0.onhide]
- * @param {string} [param0.options]
- * @param {string} [param0.message]
- * @param {string} [param0.body]
+ * @param {object} props
+ * @param {HTMLElement} [props.body]
+ * @param {string} [props.title]
+ * @param {DialogBoxCallback} [props.onok]
+ * @param {DialogBoxCallback} [props.oncancel]
+ * @param {(i: number, hide: () => void) => void} [props.onselect]
+ * @param {() => void} [props.onhide]
+ * @param {string} [props.options]
+ * @param {string} [props.message]
+ * @param {string} [props.body]
+ * @param {boolean} [props.keep]
  * @param {HTMLElement[]} [children]
  * @returns
  */
 export default function DialogBox({
-  title = '', onhide, onok, oncancel, onselect, options, message, body,
+  title = '',
+  onhide,
+  onok,
+  oncancel,
+  onselect,
+  options,
+  message,
+  body,
+  keep = false,
 }, children) {
   const buttons = [];
   let $box;
@@ -53,7 +62,9 @@ export default function DialogBox({
     </div>
   </div>;
 
-  Router.on('navigate', hide);
+  if (!keep) {
+    Router.on('navigate', hide);
+  }
 
   function hide(callOnhide = true) {
     if (typeof onhide === 'function' && callOnhide) {

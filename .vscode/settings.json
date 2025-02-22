@@ -56,6 +56,7 @@
     "onloadeend",
     "onloaderror",
     "onnavigate",
+    "onok",
     "onref",
     "onrename",
     "onrun",

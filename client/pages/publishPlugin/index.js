@@ -108,7 +108,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
       return;
     }
 
-    alert('Success', 'Plugin published successfully.');
+    alert('Success', 'Plugin published successfully.', null, true);
     Router.loadUrl(`/plugin/${pluginId.value}`);
   }
 
