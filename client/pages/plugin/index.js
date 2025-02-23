@@ -118,10 +118,12 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
                 <span>{commentCount}</span>
               </div>
             )}
-            <div className='chip' onclick={() => changeSection('comments')}>
-              <span className='icon certificate' />
-              <span>{license}</span>
-            </div>
+            {license.toLowerCase() !== 'unknown' && (
+              <div className='chip' onclick={() => changeSection('comments')}>
+                <span className='icon certificate' />
+                <span>{license}</span>
+              </div>
+            )}
             {votesUp + votesDown > 0 && (
               <div className='chip' onclick={() => changeSection('comments')}>
                 <img src='/thumbs-up.gif' alt='thumbs up' />
