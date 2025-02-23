@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { getLoggedInUser, sendNotification } = require('../helpers');
+const { getLoggedInUser, sendNotification } = require('../lib/helpers');
 const Comment = require('../entities/comment');
 const Plugin = require('../entities/plugin');
 const user = require('../entities/user');
@@ -23,10 +23,7 @@ router.get('/:id', async (req, res) => {
     }
 
     const loggedInUser = await getLoggedInUser(req);
-    const [plugin] = await Plugin.get(
-      [Plugin.USER_ID],
-      [Plugin.ID, id],
-    );
+    const [plugin] = await Plugin.get([Plugin.USER_ID], [Plugin.ID, id]);
 
     if (!plugin) {
       const [comment] = await Comment.get([Comment.ID, id]);
@@ -44,11 +41,7 @@ router.get('/:id', async (req, res) => {
       columns = Comment.allColumns;
     }
 
-    const rows = await Comment.get(
-      columns,
-      [Comment.PLUGIN_ID, id],
-      { page, limit, orderBy: `${Comment.UPDATED_AT} DESC` },
-    );
+    const rows = await Comment.get(columns, [Comment.PLUGIN_ID, id], { page, limit, orderBy: `${Comment.UPDATED_AT} DESC` });
 
     res.send(rows);
   } catch (error) {
@@ -74,28 +67,21 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    const {
-      plugin_id: pluginId,
-      comment = '',
-      vote: voteStr = 0,
-    } = req.body;
+    const { plugin_id: pluginId, comment = '', vote: voteStr = 0 } = req.body;
 
     if (!pluginId) {
       res.status(400).send({ error: 'Plugin ID is required' });
       return;
     }
 
-    const [plugin] = await Plugin.get(
-      [Plugin.AUTHOR, Plugin.AUTHOR_EMAIL, Plugin.NAME],
-      [Plugin.ID, pluginId],
-    );
+    const [plugin] = await Plugin.get([Plugin.AUTHOR, Plugin.AUTHOR_EMAIL, Plugin.NAME], [Plugin.ID, pluginId]);
 
     if (!plugin) {
       res.status(404).send({ error: 'Plugin not found' });
       return;
     }
 
-    const vote = parseInt(voteStr, 10);
+    const vote = Number.parseInt(voteStr, 10);
     if (typeof vote !== 'number' || !Comment.isValidVote(vote)) {
       res.status(400).send({ error: 'Invalid vote' });
       return;
@@ -104,7 +90,8 @@ router.post('/', async (req, res) => {
     if (vote === Comment.VOTE_DOWN && !comment) {
       res.status(400).send({ error: 'Comment is required for downvote' });
       return;
-    } if (vote === Comment.VOTE_NULL && !comment) {
+    }
+    if (vote === Comment.VOTE_NULL && !comment) {
       res.status(400).send({ error: 'Comment is required' });
       return;
     }
@@ -227,20 +214,14 @@ router.post('/:commentId/reply', async (req, res) => {
       return;
     }
 
-    const [comment] = await Comment.get(
-      Comment.allColumns,
-      [Comment.ID, commentId],
-    );
+    const [comment] = await Comment.get(Comment.allColumns, [Comment.ID, commentId]);
 
     if (!comment) {
       res.status(404).send({ error: 'Comment not found' });
       return;
     }
 
-    const [plugin] = await Plugin.get(
-      [Plugin.USER_ID, Plugin.NAME],
-      [Plugin.ID, comment.plugin_id],
-    );
+    const [plugin] = await Plugin.get([Plugin.USER_ID, Plugin.NAME], [Plugin.ID, comment.plugin_id]);
 
     if (!plugin) {
       res.status(404).send({ error: 'Plugin not found' });
@@ -252,10 +233,7 @@ router.post('/:commentId/reply', async (req, res) => {
       return;
     }
 
-    await Comment.update(
-      [Comment.AUTHOR_REPLY, reply],
-      [Comment.ID, commentId],
-    );
+    await Comment.update([Comment.AUTHOR_REPLY, reply], [Comment.ID, commentId]);
 
     res.send({ message: 'Reply added successfully' });
 
@@ -288,7 +266,7 @@ router.delete('/:id', async (req, res) => {
       return;
     }
 
-    const authorized = (comment.user_id === loggedInUser.id) || loggedInUser.isAdmin;
+    const authorized = comment.user_id === loggedInUser.id || loggedInUser.isAdmin;
     if (!authorized) {
       res.status(401).send({ error: 'Unauthorized' });
       return;

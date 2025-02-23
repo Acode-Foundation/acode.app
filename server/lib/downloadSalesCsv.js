@@ -1,6 +1,6 @@
 /* eslint-disable dot-notation */
-const path = require('path');
-const fileSystem = require('fs');
+const path = require('node:path');
+const fileSystem = require('node:fs');
 const Decimal = require('decimal.js');
 const downloadReport = require('./downloadGr');
 
@@ -29,7 +29,7 @@ async function downloadSalesReportCsv(year, month, type = 'sales') {
       csv += `${order.id},${order.date},${order.product},${order.amount}\n`;
     });
   } else {
-    csv = 'Order Id,Date,Product,Product Id,Country of Buyer,State of Buyer,City of Buyer,Amount in Buyer Currency\n'
+    csv = 'Order Id,Date,Product,Product Id,Country of Buyer,State of Buyer,City of Buyer,Amount in Buyer Currency\n';
     Object.values(orders).forEach((order) => {
       csv += `${order.id},${order.date},${order.product},${order.productId},${order.countryOfBuyer},${order.stateOfBuyer},${order.cityOfBuyer},${order.chargedAmount}\n`;
     });
@@ -75,6 +75,7 @@ function sales(row, orders) {
 }
 
 function earnings(row, orders) {
+  // biome-ignore lint/complexity/useLiteralKeys: <explanation>
   const id = row['Description'];
   const date = row['Transaction Date'];
   const product = row['Product Title'];

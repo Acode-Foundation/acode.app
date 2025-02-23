@@ -1,22 +1,20 @@
+import './style.scss';
 import AjaxForm from 'components/ajaxForm';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import Input from 'components/input';
-import { getLoggedInUser, hashString } from 'lib/helpers';
-import Router from 'lib/Router';
-import { marked } from 'marked';
 import Ref from 'html-tag-js/ref';
-import './style.scss';
+import Router from 'lib/Router';
+import { getLoggedInUser, hashString } from 'lib/helpers';
+import { marked } from 'marked';
 
-export default async function FAQs({
-  mode, oldQ, a, qHash,
-}) {
+export default async function FAQs({ mode, oldQ, a, qHash }) {
   const isUpdate = mode === 'update';
   const loggedInUser = await getLoggedInUser();
   const res = await fetch('/api/faqs');
   const faqs = await res.json();
   const isAdmin = !!loggedInUser?.isAdmin;
-  const form = new Ref();
+  const form = Ref();
 
   if (isUpdate) {
     form.on('ref', (el) => {
@@ -31,52 +29,57 @@ export default async function FAQs({
     }, 0);
   }
 
-  return <section id='faqs'>
-    <h1>FAQs</h1>
-    <FAQForm />
-    <FAQsContainer />
-  </section>;
+  return (
+    <section id='faqs'>
+      <h1>FAQs</h1>
+      <FAQForm />
+      <FAQsContainer />
+    </section>
+  );
 
   function FAQsContainer() {
     return faqs.map(({ q, a: ans }) => <FAQ q={q} a={ans} />);
   }
 
   function FAQForm() {
-    if (!isAdmin) return <div></div>;
+    if (!isAdmin) return <div />;
 
     const method = isUpdate ? 'put' : 'post';
-    const mdPreview = new Ref();
-    const q = new Ref();
+    const mdPreview = Ref();
+    const q = Ref();
 
     mdPreview.innerHTML = marked.parse(a || '');
 
-    return <details open={isUpdate} style={{ margin: '20px 0' }}>
-      <summary style={{ margin: '20px 0' }}>{isUpdate ? 'Update' : 'Add'} FAQ</summary>
-      <AjaxForm
-        ref={form}
-        onerror={onerror}
-        onloadend={onloadend}
-        action='/api/faqs'
-        method={method}
-      >
-        {
-          isUpdate
-            ? <Input name='old_q' required={true} hidden type='hidden' value={oldQ || ''} />
-            : ''
-        }
-        <Input ref={q} name='q' required={true} label='Question' placeholder='Question' value={oldQ || ''} />
-        <Input name='a' required={true} onkeydown={onkeydown} oninput={oninput} label='Answer' type='textarea' placeholder='Answer (Markdown)' value={a || ''} />
-        <div className='preview' ref={mdPreview}></div>
-        <div className='buttons'>
-          <button type='submit'>Submit</button>
-          {
-            isUpdate
-              ? <button className='danger' type='button' onclick={() => Router.reload()}>Cancel</button>
-              : ''
-          }
-        </div>
-      </AjaxForm>
-    </details>;
+    return (
+      <details open={isUpdate} style={{ margin: '20px 0' }}>
+        <summary style={{ margin: '20px 0' }}>{isUpdate ? 'Update' : 'Add'} FAQ</summary>
+        <AjaxForm ref={form} onerror={onerror} onloadend={onloadend} action='/api/faqs' method={method}>
+          {isUpdate ? <Input name='old_q' required={true} hidden type='hidden' value={oldQ || ''} /> : ''}
+          <Input ref={q} name='q' required={true} label='Question' placeholder='Question' value={oldQ || ''} />
+          <Input
+            name='a'
+            required={true}
+            onkeydown={onkeydown}
+            oninput={oninput}
+            label='Answer'
+            type='textarea'
+            placeholder='Answer (Markdown)'
+            value={a || ''}
+          />
+          <div className='preview' ref={mdPreview} />
+          <div className='buttons'>
+            <button type='submit'>Submit</button>
+            {isUpdate ? (
+              <button className='danger' type='button' onclick={() => Router.reload()}>
+                Cancel
+              </button>
+            ) : (
+              ''
+            )}
+          </div>
+        </AjaxForm>
+      </details>
+    );
 
     function onerror(err) {
       alert('Error', err.message);
@@ -112,20 +115,24 @@ export default async function FAQs({
 
   function FAQ({ q, a: ans }) {
     const id = hashString(q);
-    return <div className='faq'>
-      <a href={`/faqs/${id}`} style={{ textDecoration: 'none' }}>
-        <h2 id={id} style={{ textAlign: 'left' }}>{q}</h2>
-      </a>
-      <p innerHTML={marked.parse(ans)}></p>
-      {
-        isAdmin
-          ? <div className='icon-buttons'>
-            <span onclick={() => editFaq(q, ans)} title='Edit this FAQ' className='link icon create'></span>
-            <span onclick={() => deleteFaq(q)} title='Delete this FAQ' className='link icon delete danger'></span>
+    return (
+      <div className='faq'>
+        <a href={`/faqs/${id}`} style={{ textDecoration: 'none' }}>
+          <h2 id={id} style={{ textAlign: 'left' }}>
+            {q}
+          </h2>
+        </a>
+        <p innerHTML={marked.parse(ans)} />
+        {isAdmin ? (
+          <div className='icon-buttons'>
+            <span onclick={() => editFaq(q, ans)} title='Edit this FAQ' className='link icon create' />
+            <span onclick={() => deleteFaq(q)} title='Delete this FAQ' className='link icon delete danger' />
           </div>
-          : ''
-      }
-    </div>;
+        ) : (
+          ''
+        )}
+      </div>
+    );
   }
 
   function editFaq(q, ans) {

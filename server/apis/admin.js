@@ -3,10 +3,10 @@ const moment = require('moment');
 const User = require('../entities/user');
 const Payment = require('../entities/payment');
 const PaymentMethod = require('../entities/paymentMethod');
-const { getLoggedInUser, sendNotification } = require('../helpers');
+const { getLoggedInUser, sendNotification } = require('../lib/helpers');
 const purchaseOrder = require('../entities/purchaseOrder');
 const plugin = require('../entities/plugin');
-const downloadSalesReportCsv = require('../downloadSalesCsv');
+const downloadSalesReportCsv = require('../lib/downloadSalesCsv');
 
 const router = Router();
 
@@ -20,7 +20,7 @@ router.use('/', async (req, res, next) => {
   next();
 });
 
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   const users = await User.count();
   const plugins = await plugin.count();
   const [{ total: pluginDownloads }] = await plugin.get(['SUM(downloads) as total'], []);
@@ -42,12 +42,7 @@ router.get('/reports/:year/:month', async (req, res) => {
 });
 
 router.get('/users', async (req, res) => {
-  const {
-    page,
-    limit,
-    name,
-    email,
-  } = req.query;
+  const { page, limit, name, email } = req.query;
   const count = await User.count();
   const where = [];
 
@@ -69,12 +64,7 @@ router.get('/users', async (req, res) => {
 });
 
 router.get('/payments', async (req, res) => {
-  const {
-    status,
-    user,
-    page,
-    limit,
-  } = req.query;
+  const { status, user, page, limit } = req.query;
   const where = [];
 
   if (status) {
@@ -94,9 +84,7 @@ router.get('/payments', async (req, res) => {
 
 router.get('/payment-method/:id', async (req, res) => {
   const { id } = req.params;
-  const [row] = await PaymentMethod.get(
-    [PaymentMethod.ID, id],
-  );
+  const [row] = await PaymentMethod.get([PaymentMethod.ID, id]);
   res.send(row);
 });
 
@@ -113,12 +101,7 @@ router.patch('/payment', async (req, res) => {
   const lastMonth = moment().subtract(1, 'month').format('MM-YYYY');
   const message = `Your payment for ${lastMonth} has been sent.`;
 
-  sendNotification(
-    user.email,
-    user.name,
-    'Payment Sent',
-    message,
-  );
+  sendNotification(user.email, user.name, 'Payment Sent', message);
 });
 
 router.delete('/user/:id', async (req, res) => {

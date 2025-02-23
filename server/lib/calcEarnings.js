@@ -1,8 +1,8 @@
 const moment = require('moment');
-const Plugin = require('./entities/plugin');
-const Download = require('./entities/download');
-const UserEarnings = require('./entities/userEarnings');
-const PurchaseOrder = require('./entities/purchaseOrder');
+const Plugin = require('../entities/plugin');
+const Download = require('../entities/download');
+const UserEarnings = require('../entities/userEarnings');
+const PurchaseOrder = require('../entities/purchaseOrder');
 
 /**
  * Calculate earnings from paid plugins
@@ -16,58 +16,48 @@ async function fromPaidPlugins(year, month, user, report) {
   const { monthStart, monthEnd } = getDate(year, month);
   const plugins = await Plugin.get([Plugin.ID], [Plugin.USER_ID, user.id]);
   const orders = await PurchaseOrder.for('internal').get([
-    [
-      PurchaseOrder.PLUGIN_ID,
-      plugins.map((p) => p.id),
-    ],
-    [
-      PurchaseOrder.CREATED_AT,
-      [monthStart, monthEnd],
-      'BETWEEN',
-    ],
+    [PurchaseOrder.PLUGIN_ID, plugins.map((p) => p.id)],
+    [PurchaseOrder.CREATED_AT, [monthStart, monthEnd], 'BETWEEN'],
   ]);
 
-  const amounts = await Promise.all(orders.map(async ({
-    id: rowId,
-    order_id: orderId,
-    amount,
-    state,
-  }) => {
-    state = parseInt(state, 10);
-    if (state === PurchaseOrder.STATE_CANCELED) {
-      return 0;
-    }
+  const amounts = await Promise.all(
+    orders.map(async ({ id: rowId, order_id: orderId, amount, state }) => {
+      state = Number.parseInt(state, 10);
+      if (state === PurchaseOrder.STATE_CANCELED) {
+        return 0;
+      }
 
-    try {
-      const updates = [];
+      try {
+        const updates = [];
 
-      let calculatedAmount = 0;
-      if (report) {
-        const reportRows = report.filter((r) => r.Description === orderId);
-        if (!reportRows.length) {
-          calculatedAmount = amount * 0.65;
+        let calculatedAmount = 0;
+        if (report) {
+          const reportRows = report.filter((r) => r.Description === orderId);
+          if (!reportRows.length) {
+            calculatedAmount = amount * 0.65;
+          } else {
+            reportRows.forEach((r) => {
+              calculatedAmount += Number.parseFloat(r['Amount (Merchant Currency)']);
+            });
+          }
         } else {
-          reportRows.forEach((r) => {
-            calculatedAmount += parseFloat(r['Amount (Merchant Currency)']);
-          });
+          calculatedAmount = amount;
         }
-      } else {
-        calculatedAmount = amount;
-      }
 
-      if (calculatedAmount !== amount) {
-        updates.push([PurchaseOrder.AMOUNT, calculatedAmount]);
-      }
+        if (calculatedAmount !== amount) {
+          updates.push([PurchaseOrder.AMOUNT, calculatedAmount]);
+        }
 
-      if (updates.length) {
-        await PurchaseOrder.update(updates, [PurchaseOrder.ID, rowId]);
-      }
+        if (updates.length) {
+          await PurchaseOrder.update(updates, [PurchaseOrder.ID, rowId]);
+        }
 
-      return calculatedAmount;
-    } catch (e) {
-      return 0;
-    }
-  }));
+        return calculatedAmount;
+      } catch (_error) {
+        return 0;
+      }
+    }),
+  );
 
   return Math.round(amounts.reduce((a, b) => a + b, 0) * 100) / 100;
 }
@@ -83,19 +73,9 @@ async function fromDownloads(year, month, user) {
   const { monthStart, monthEnd } = getDate(year, month);
   const plugins = await Plugin.get([Plugin.ID], [Plugin.USER_ID, user.id]);
   const downloads = await Download.count([
-    [
-      Download.PLUGIN_ID,
-      plugins.map((p) => p.id),
-    ],
-    [
-      Download.CREATED_AT,
-      [monthStart, monthEnd],
-      'BETWEEN',
-    ],
-    [
-      Download.PACKAGE_NAME,
-      'com.foxdebug.acodefree',
-    ],
+    [Download.PLUGIN_ID, plugins.map((p) => p.id)],
+    [Download.CREATED_AT, [monthStart, monthEnd], 'BETWEEN'],
+    [Download.PACKAGE_NAME, 'com.foxdebug.acodefree'],
   ]);
 
   // INR 12 per 1000 downloads
@@ -115,7 +95,7 @@ async function total(year, month, user, report) {
   earnings = (1 - process.env.PERCENTAGE_CUT) * paidPluginEarnings;
   const freePluginDownloads = await fromDownloads(year, month, user);
   earnings += freePluginDownloads;
-  earnings = parseFloat(Math.round(earnings * 100) / 100);
+  earnings = Number.parseFloat(Math.round(earnings * 100) / 100);
   return earnings;
 }
 
@@ -143,18 +123,10 @@ async function unpaid(user, year, month) {
   ];
 
   if (year && month) {
-    where.push(
-      [UserEarnings.MONTH, month, '<'],
-      [UserEarnings.YEAR, year],
-      'OR',
-      [UserEarnings.YEAR, year, '<'],
-    );
+    where.push([UserEarnings.MONTH, month, '<'], [UserEarnings.YEAR, year], 'OR', [UserEarnings.YEAR, year, '<']);
   }
 
-  const unpaidEarnings = await UserEarnings.get(
-    [UserEarnings.AMOUNT, UserEarnings.ID, UserEarnings.MONTH, UserEarnings.YEAR],
-    where,
-  );
+  const unpaidEarnings = await UserEarnings.get([UserEarnings.AMOUNT, UserEarnings.ID, UserEarnings.MONTH, UserEarnings.YEAR], where);
 
   let fromMonth = 31;
   let fromYear = 9999;
@@ -162,12 +134,7 @@ async function unpaid(user, year, month) {
   let toYear = 0;
 
   unpaidEarnings.forEach((earning) => {
-    const {
-      id,
-      amount,
-      month: thisMonth,
-      year: thisYear,
-    } = earning;
+    const { id, amount, month: thisMonth, year: thisYear } = earning;
     ids.push(id);
 
     if (thisYear < fromYear || (thisYear === fromYear && thisMonth < fromMonth)) {
@@ -180,10 +147,10 @@ async function unpaid(user, year, month) {
       toYear = thisYear;
     }
 
-    earnings += parseFloat(amount);
+    earnings += Number.parseFloat(amount);
   });
 
-  earnings = parseFloat(Math.round(earnings * 100) / 100);
+  earnings = Number.parseFloat(Math.round(earnings * 100) / 100);
   return {
     ids,
     earnings,

@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 const nodeMailer = require('nodemailer');
-const login = require('./entities/login');
-const user = require('./entities/user');
+const login = require('../entities/login');
+const user = require('../entities/user');
 
 /**
  * @typedef {object} LoggedInUser

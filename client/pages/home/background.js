@@ -48,19 +48,16 @@ export default function background(canvas) {
   });
 
   function init() {
-    let numParticles = Math.min(
-      150,
-      Math.round((canvas.width * canvas.height) / 9500)
-    );
+    const numParticles = Math.min(150, Math.round((canvas.width * canvas.height) / 9500));
 
     particles = [];
 
     for (let i = 0; i < numParticles; ++i) {
-      let r = Math.random() * 3 + 1;
-      let x = Math.random() * (canvas.width - r) + r;
-      let y = Math.random() * (canvas.height - r) + r;
-      let dx = (Math.random() > 0.5 ? 1 : -1) * Math.random() * 1.5;
-      let dy = (Math.random() > 0.5 ? 1 : -1) * Math.random() * 1.5;
+      const r = Math.random() * 3 + 1;
+      const x = Math.random() * (canvas.width - r) + r;
+      const y = Math.random() * (canvas.height - r) + r;
+      const dx = (Math.random() > 0.5 ? 1 : -1) * Math.random() * 1.5;
+      const dy = (Math.random() > 0.5 ? 1 : -1) * Math.random() * 1.5;
 
       particles.push(new Particle(r, x, y, dx, dy, '#606060'));
     }
@@ -73,7 +70,7 @@ export default function background(canvas) {
   function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    for (let p of particles) {
+    for (const p of particles) {
       p.draw(ctx);
       p.update();
     }
@@ -83,11 +80,9 @@ export default function background(canvas) {
   }
 
   function connect() {
-    for (let p1 of particles) {
-      for (let p2 of particles) {
-        let distance = Math.sqrt(
-          Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)
-        );
+    for (const p1 of particles) {
+      for (const p2 of particles) {
+        const distance = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
 
         if (distance < 100) {
           ctx.beginPath();

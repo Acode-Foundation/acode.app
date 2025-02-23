@@ -1,14 +1,14 @@
 const { Router } = require('express');
 const moment = require('moment');
 const { encryptPassword } = require('../password');
-const { getLoggedInUser, areSameUser } = require('../helpers');
+const { getLoggedInUser, areSameUser } = require('../lib/helpers');
 const Comment = require('../entities/comment');
 const Otp = require('../entities/otp');
 const User = require('../entities/user');
 const Payment = require('../entities/payment');
 const PaymentMethod = require('../entities/paymentMethod');
 const UserEarnings = require('../entities/userEarnings');
-const calcEarnings = require('../calcEarnings');
+const calcEarnings = require('../lib/calcEarnings');
 
 const route = Router();
 
@@ -31,8 +31,8 @@ route.get('/earnings/:year/:month', async (req, res) => {
     const user = await getAuthorizedUser(req);
     let { year, month } = req.params;
 
-    year = parseInt(year, 10);
-    month = parseInt(month, 10);
+    year = Number.parseInt(year, 10);
+    month = Number.parseInt(month, 10);
 
     if (Number.isNaN(year) || Number.isNaN(month) || month < 0 || month > 11) {
       res.status(400).send({ error: 'Invalid year or month' });
@@ -149,9 +149,7 @@ route.get('/payments/:year?', async (req, res) => {
   try {
     const user = await getAuthorizedUser(req);
     const { year } = req.params;
-    const where = [
-      [Payment.USER_ID, user.id],
-    ];
+    const where = [[Payment.USER_ID, user.id]];
 
     if (year) {
       where.push([`STRFTIME('%Y', ${Payment.CREATED_AT})`, year]);
@@ -204,10 +202,14 @@ route.get('/receipt/:paymentId', async (req, res) => {
 route.get('/:idOrEmail', async (req, res) => {
   const { idOrEmail } = req.params;
 
-  const [row] = await User.get([User.safeColumns], [
-    [User.ID, idOrEmail],
-    [User.EMAIL, idOrEmail],
-  ], 'OR');
+  const [row] = await User.get(
+    [User.safeColumns],
+    [
+      [User.ID, idOrEmail],
+      [User.EMAIL, idOrEmail],
+    ],
+    'OR',
+  );
 
   if (!row) {
     res.status(404).send({ error: 'User not found' });
@@ -226,10 +228,7 @@ route.patch('/verify/:revoke(revoke)?/:userId', async (req, res) => {
     }
 
     const { userId } = req.params;
-    await User.update(
-      [User.VERIFIED, req.params.revoke ? 0 : 1],
-      [User.ID, userId],
-    );
+    await User.update([User.VERIFIED, req.params.revoke ? 0 : 1], [User.ID, userId]);
 
     res.send({ message: 'User verified' });
   } catch (error) {
@@ -280,10 +279,7 @@ route.post('/payment-method', async (req, res) => {
       }
       insert.push([PaymentMethod.PAYPAL_EMAIL, paypal]);
     } else if (walletAddress && walletType) {
-      insert.push(
-        [PaymentMethod.WALLET_ADDRESS, walletAddress],
-        [PaymentMethod.WALLET_TYPE, walletType],
-      );
+      insert.push([PaymentMethod.WALLET_ADDRESS, walletAddress], [PaymentMethod.WALLET_TYPE, walletType]);
     } else {
       if (!bankName || !bankAccount || !bankIFSC || !bankAccountHolder) {
         res.status(400).send({ error: 'Missing required fields' });
@@ -313,10 +309,7 @@ route.post('/payment-method', async (req, res) => {
 
     const count = await PaymentMethod.count([PaymentMethod.USER_ID, loggedInUser.id]);
     insert.push([PaymentMethod.USER_ID, loggedInUser.id]);
-    await PaymentMethod.insert(
-      ...insert,
-      [PaymentMethod.IS_DEFAULT, count === 0],
-    );
+    await PaymentMethod.insert(...insert, [PaymentMethod.IS_DEFAULT, count === 0]);
     res.send({ message: 'Payment method added' });
   } catch (error) {
     handleError(res, error);
@@ -324,14 +317,7 @@ route.post('/payment-method', async (req, res) => {
 });
 
 route.post('/', async (req, res) => {
-  const {
-    name,
-    email,
-    password,
-    github = null,
-    website = null,
-    otp: sentOtp,
-  } = req.body;
+  const { name, email, password, github = null, website = null, otp: sentOtp } = req.body;
 
   if (!name) {
     res.status(400).send({ error: 'Missing name' });
@@ -353,7 +339,7 @@ route.post('/', async (req, res) => {
     return;
   }
 
-  if (!await isValidGithubId(github)) {
+  if (!(await isValidGithubId(github))) {
     res.status(400).send({ error: 'Invalid Github ID' });
     return;
   }
@@ -402,10 +388,7 @@ route.put('/threshold', async (req, res) => {
       return;
     }
 
-    await User.update(
-      [User.THRESHOLD, threshold],
-      [User.ID, loggedInUser.id],
-    );
+    await User.update([User.THRESHOLD, threshold], [User.ID, loggedInUser.id]);
 
     res.send({ message: 'Threshold updated' });
   } catch (error) {
@@ -414,9 +397,7 @@ route.put('/threshold', async (req, res) => {
 });
 
 route.put('/', async (req, res) => {
-  let {
-    email, name, github, website,
-  } = req.body;
+  let { email, name, github, website } = req.body;
 
   const { otp: sentOtp } = req.body;
 
@@ -444,7 +425,7 @@ route.put('/', async (req, res) => {
       website = undefined;
     }
 
-    if (!await isValidGithubId(github)) {
+    if (!(await isValidGithubId(github))) {
       res.status(400).send({ error: 'Invalid Github ID' });
       return;
     }
@@ -509,10 +490,7 @@ route.patch('/payment-method/update-default/:id', async (req, res) => {
       ],
     );
 
-    await PaymentMethod.update(
-      [PaymentMethod.IS_DEFAULT, 1],
-      [PaymentMethod.ID, id],
-    );
+    await PaymentMethod.update([PaymentMethod.IS_DEFAULT, 1], [PaymentMethod.ID, id]);
 
     res.send({ message: 'Payment method updated' });
   } catch (error) {
@@ -543,10 +521,7 @@ route.delete('/payment-method/:id', async (req, res) => {
     const payments = await Payment.get([Payment.PAYMENT_METHOD_ID, id]);
 
     if (payments.length) {
-      await PaymentMethod.update(
-        [PaymentMethod.IS_DELETED, 1],
-        [PaymentMethod.ID, id],
-      );
+      await PaymentMethod.update([PaymentMethod.IS_DELETED, 1], [PaymentMethod.ID, id]);
     } else {
       await PaymentMethod.delete([PaymentMethod.ID, id]);
     }
@@ -564,10 +539,7 @@ route.delete('/payment-method/:id', async (req, res) => {
       ]);
 
       if (firstRow) {
-        await PaymentMethod.update(
-          [PaymentMethod.IS_DEFAULT, 1],
-          [PaymentMethod.ID, firstRow.id],
-        );
+        await PaymentMethod.update([PaymentMethod.IS_DEFAULT, 1], [PaymentMethod.ID, firstRow.id]);
       }
     }
 

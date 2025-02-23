@@ -7,7 +7,7 @@ class Theme {
 
     const $theme = document.head.get('style#theme');
     $theme?.remove();
-    this.#$style = <style id='theme'></style>;
+    this.#$style = <style id='theme' />;
     this.updateTheme();
     document.head.appendChild(this.#$style);
   }

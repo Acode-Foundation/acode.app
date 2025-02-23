@@ -1,11 +1,11 @@
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
+const fs = require('node:fs');
 const { Router } = require('express');
 
 const faqsFile = path.resolve(__dirname, '../../data/faqs.json');
 const router = Router();
 
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const faqs = JSON.parse(fs.readFileSync(faqsFile, 'utf8'));
     res.json(faqs.reverse());

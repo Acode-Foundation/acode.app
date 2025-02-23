@@ -1,4 +1,4 @@
-const path = require('path');
+const path = require('node:path');
 const { config } = require('dotenv');
 const { encryptPassword } = require('../password');
 const Entity = require('./entity');
@@ -75,18 +75,7 @@ class User extends Entity {
   }
 
   get safeColumns() {
-    return [
-      this.ID,
-      this.NAME,
-      this.ROLE,
-      this.EMAIL,
-      this.GITHUB,
-      this.WEBSITE,
-      this.VERIFIED,
-      this.THRESHOLD,
-      this.CREATED_AT,
-      this.UPDATED_AT,
-    ];
+    return [this.ID, this.NAME, this.ROLE, this.EMAIL, this.GITHUB, this.WEBSITE, this.VERIFIED, this.THRESHOLD, this.CREATED_AT, this.UPDATED_AT];
   }
 
   get initialColumns() {

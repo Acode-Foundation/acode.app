@@ -1,11 +1,11 @@
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
+const fs = require('node:fs');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 
 const PUBLIC = path.resolve(__dirname, 'public');
 
-module.exports = (env, options) => {
+module.exports = (_env, options) => {
   if (fs.existsSync(PUBLIC)) {
     fs.rmSync(PUBLIC, { recursive: true });
   }
@@ -18,12 +18,7 @@ module.exports = (env, options) => {
       modules: ['client', 'node_modules'],
     },
     watchOptions: {
-      ignored: [
-        '**/node_modules',
-        '**/server',
-        '**/public',
-        '**/tools',
-      ],
+      ignored: ['**/node_modules', '**/server', '**/public', '**/tools'],
     },
     output: {
       path: PUBLIC,
@@ -54,11 +49,7 @@ module.exports = (env, options) => {
     },
     {
       test: /\.module.(sa|sc|c)ss$/,
-      use: [
-        'raw-loader',
-        'postcss-loader',
-        'sass-loader',
-      ],
+      use: ['raw-loader', 'postcss-loader', 'sass-loader'],
     },
     {
       test: /\.hbs$/,
@@ -67,10 +58,7 @@ module.exports = (env, options) => {
     {
       test: /\.jsx?$/,
       exclude: /(node_modules)/,
-      use: [
-        'html-tag-js/jsx/tag-loader.js',
-        'babel-loader',
-      ],
+      use: ['html-tag-js/jsx/tag-loader.js', 'babel-loader'],
     },
     {
       test: /(?<!\.module)\.(sa|sc|c)ss$/,

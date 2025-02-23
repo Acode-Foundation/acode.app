@@ -1,8 +1,8 @@
 import './style.scss';
 
 import Ref from 'html-tag-js/ref';
-import { hideLoading, showLoading } from 'lib/helpers';
 import Router from 'lib/Router';
+import { hideLoading, showLoading } from 'lib/helpers';
 
 /**
  *
@@ -14,38 +14,38 @@ import Router from 'lib/Router';
  * @param {() => (string|Promise<string>)} param0.load
  * @returns
  */
-export default function Docs({
-  docs, doc, base, load, title,
-}) {
+export default function Docs({ docs, doc, base, load, title }) {
   if (!docs) return <div className='error'>No list provided</div>;
   if (!doc) return <div className='error'>No doc provided</div>;
   if (!base) return <div className='error'>No base provided</div>;
   if (!load) return <div className='error'>No load function provided</div>;
 
-  const article = new Ref();
-  const heading = new Ref();
-  const nav = new Ref();
+  const article = Ref();
+  const heading = Ref();
+  const nav = Ref();
 
   if (!title) title = getTitle(doc);
 
   loadDoc(doc, title);
-  return <section className='docs-container'>
-    <input type='checkbox' id='doc-nav' checked={!(window.innerWidth < 600)} hidden />
-    <label htmlFor='doc-nav' className='mask'></label>
-    <nav ref={nav} className='side-nav'>
-      <Links links={docs} currentDoc={doc} />
-    </nav>
-    <div className='doc-body'>
-      <div className='doc-header'>
-        <label htmlFor='doc-nav' className='icon menu'></label>
-        <h1 ref={heading}></h1>
+  return (
+    <section className='docs-container'>
+      <input type='checkbox' id='doc-nav' checked={!(window.innerWidth < 600)} hidden />
+      <label htmlFor='doc-nav' className='mask' />
+      <nav ref={nav} className='side-nav'>
+        <Links links={docs} currentDoc={doc} />
+      </nav>
+      <div className='doc-body'>
+        <div className='doc-header'>
+          <label htmlFor='doc-nav' className='icon menu' />
+          <h1 ref={heading}>Acode Docs</h1>
+        </div>
+        <article ref={article} className='doc' />
       </div>
-      <article ref={article} className='doc'></article>
-    </div>
-  </section>;
+    </section>
+  );
 
   function Links({ links, parent, currentDoc }) {
-    const ul = new Ref();
+    const ul = Ref();
 
     links.forEach((link, i) => {
       if (Array.isArray(link)) return;
@@ -65,7 +65,13 @@ export default function Docs({
 
       const headingText = getHeadingText(parent, link);
       const href = `${base}/${link.toLowerCase()}?title=${headingText}`;
-      ul.append(<li className={currentDoc === link.toLowerCase() ? 'active' : ''}><a onclick={onclick} href={href}>{getTitle(link)}</a></li>);
+      ul.append(
+        <li className={currentDoc === link.toLowerCase() ? 'active' : ''}>
+          <a onclick={onclick} href={href}>
+            {getTitle(link)}
+          </a>
+        </li>,
+      );
 
       /**
        * On link click
@@ -82,7 +88,7 @@ export default function Docs({
       }
     });
 
-    return <ul ref={ul}></ul>;
+    return <ul ref={ul} />;
   }
 
   async function loadDoc(docName, headingText) {

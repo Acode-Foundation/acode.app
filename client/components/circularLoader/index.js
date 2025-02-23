@@ -13,10 +13,12 @@ import './styles.scss';
  * @returns {HTMLElement & CircularLoaderProps}
  */
 export default function CircularLoader({ top }) {
-  const $circle = new Ref();
-  const $el = <div id='circular-loader' style={{ top }}>
-    <div ref={$circle} className='circle'></div>
-  </div>;
+  const $circle = Ref();
+  const $el = (
+    <div id='circular-loader' style={{ top }}>
+      <div ref={$circle} className='circle' />
+    </div>
+  );
 
   Object.defineProperty($el, 'rotation', {
     set(value) {
@@ -28,7 +30,7 @@ export default function CircularLoader({ top }) {
     },
     get() {
       const { transform } = $circle.style;
-      return transform ? parseInt(transform.match(/rotate\((\d+)deg\)/)[1], 10) : 0;
+      return transform ? Number.parseInt(transform.match(/rotate\((\d+)deg\)/)[1], 10) : 0;
     },
   });
 

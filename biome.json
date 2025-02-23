@@ -1,0 +1,90 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
+  "files": { "ignoreUnknown": true, "ignore": ["dist/**/*", "*.d.ts", ".vscode/**/*", "**/jsconfig.json"] },
+  "formatter": {
+    "enabled": true,
+    "useEditorconfig": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 150,
+    "attributePosition": "auto",
+    "bracketSpacing": true
+  },
+  "organizeImports": {
+    "enabled": true
+  },
+  "linter": {
+    "rules": {
+      "recommended": true,
+      "nursery": {
+        "noCommonJs": "error",
+        "noNestedTernary": "error"
+      },
+      "correctness": {
+        "noUnusedVariables": "error",
+        "noUndeclaredVariables": "error"
+      },
+      "performance": {
+        "noDelete": "warn"
+      },
+      "complexity": {
+        "noForEach": "warn"
+      },
+      "suspicious": {
+        "noConsoleLog": "error"
+      },
+      "style": {
+        "noParameterAssign": "off",
+        "noRestrictedGlobals": "error"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "jsxQuoteStyle": "single",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "all",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "quoteStyle": "single",
+      "attributePosition": "auto",
+      "bracketSpacing": true
+    }
+  },
+  "overrides": [
+    {
+      "include": ["client/**"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useGenericFontNames": "off",
+            "noLabelWithoutControl": "off"
+          },
+          "correctness": {
+            "useJsxKeyInIterable": "off"
+          }
+        }
+      },
+      "javascript": {
+        "globals": ["app", "tag"]
+      }
+    },
+    {
+      "include": ["server/**", "webpack.config.js", "cron-jobs/**", "dev/**", "postcss.config.js"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noCommonJs": "off"
+          },
+          "suspicious": {
+            "noConsoleLog": "off"
+          }
+        }
+      }
+    }
+  ]
+}

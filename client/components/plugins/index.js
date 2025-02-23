@@ -1,17 +1,13 @@
 import './style.scss';
-import select from 'components/dialogs/select';
 import alert from 'components/dialogs/alert';
-import Router from 'lib/Router';
 import confirm from 'components/dialogs/confirm';
 import prompt from 'components/dialogs/prompt';
-import {
-  calcRating, capitalize, getLoggedInUser, hideLoading, showLoading,
-} from 'lib/helpers';
+import select from 'components/dialogs/select';
+import Router from 'lib/Router';
+import { calcRating, capitalize, getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
 
-export default function Plugins({
-  user, orderBy, status, name,
-}) {
-  const el = <div className='plugins' data-msg='loading...'></div>;
+export default function Plugins({ user, orderBy, status, name }) {
+  const el = <div className='plugins' data-msg='loading...' />;
 
   (async () => {
     try {
@@ -29,7 +25,7 @@ export default function Plugins({
       }
 
       const res = await fetch(url);
-      const { isAdmin, id: userId } = await getLoggedInUser() || {};
+      const { isAdmin, id: userId } = (await getLoggedInUser()) || {};
       const plugins = await res.json();
 
       el.setAttribute('data-msg', 'No plugins found. :(');
@@ -37,9 +33,11 @@ export default function Plugins({
         el.append(<Plugin {...plugin} isAdmin={isAdmin} userId={userId} />);
       });
     } catch (error) {
-      el.append(<div className='error'>
-        <h2>{error.error}</h2>
-      </div>);
+      el.append(
+        <div className='error'>
+          <h2>{error.error}</h2>
+        </div>,
+      );
     } finally {
       hideLoading();
     }
@@ -61,30 +59,39 @@ function Plugin({
   votes_down: downVotes,
   comment_count: comments,
 }) {
-  return <a href={`/plugin/${id}`} className='plugin'>
-    <div className='plugin-icon' style={{ backgroundImage: `url(/plugin-icon/${id})` }}></div>
-    <div className="plugin-info">
-      <h2>{name}</h2>
-      <div className='info'>
-        <div title='Downloads counter'>
-          {downloads.toLocaleString()} <span className="icon download"></span>
+  return (
+    <a href={`/plugin/${id}`} className='plugin'>
+      <div className='plugin-icon' style={{ backgroundImage: `url(/plugin-icon/${id})` }} />
+      <div className='plugin-info'>
+        <h2>{name}</h2>
+        <div className='info'>
+          <div title='Downloads counter'>
+            {downloads.toLocaleString()} <span className='icon download' />
+          </div>
+          {status ? (
+            <span data-id={id} onclick={isAdmin ? changePluginStatus : undefined} title='Plugin status' className={`status-indicator ${status}`}>
+              {status}
+            </span>
+          ) : (
+            ''
+          )}
+          <div>{calcRating(upVotes, downVotes)}</div>
+          {comments && (
+            <div>
+              {comments} <span className='icon chat_bubble' />
+            </div>
+          )}
         </div>
-        {
-          status
-            ? <span data-id={id} onclick={isAdmin ? changePluginStatus : undefined} title='Plugin status' className={`status-indicator ${status}`}>{status}</span>
-            : ''
-        }
-        <div>{calcRating(upVotes, downVotes)}</div>
-        {
-          comments
-            ? <div>{comments} <span className='icon chat_bubble'></span></div>
-            : ''
-        }
+        <p>
+          {id} •{' '}
+          <small>
+            <strong>{version}</strong>
+          </small>
+        </p>
+        <Actions id={id} isAdmin={isAdmin} user={userId} pluginsUser={pluginUser} />
       </div>
-      <p>{id} • <small><strong>{version}</strong></small></p>
-      <Actions id={id} isAdmin={isAdmin} user={userId} pluginsUser={pluginUser} />
-    </div>
-  </a>;
+    </a>
+  );
 }
 
 /**
@@ -184,17 +191,12 @@ async function changePluginStatus(e) {
   }
 }
 
-function Actions({
-  user, pluginsUser, id, isAdmin,
-}) {
-  const $el = <small className='icon-buttons'></small>;
-  const $delete = <span title='delete plugin' className='link icon delete danger' onclick={(e) => deletePlugin(e, id)}></span>;
+function Actions({ user, pluginsUser, id, isAdmin }) {
+  const $el = <small className='icon-buttons' />;
+  const $delete = <span title='delete plugin' className='link icon delete danger' onclick={(e) => deletePlugin(e, id)} />;
 
-  if (user && (user === pluginsUser)) {
-    $el.append(
-      <span title='edit plugin' className='link icon create' onclick={(e) => edit(e, id)}></span>,
-      $delete,
-    );
+  if (user && user === pluginsUser) {
+    $el.append(<span title='edit plugin' className='link icon create' onclick={(e) => edit(e, id)} />, $delete);
   } else if (isAdmin) {
     $el.append($delete);
   }

@@ -1,19 +1,17 @@
 import './style.scss';
-import userImage from 'res/user.png';
-import {
-  getLoggedInUser, gravatar, hideLoading, showLoading,
-} from 'lib/helpers';
-import Router from 'lib/Router';
-import Plugins from 'components/plugins';
-import moment from 'moment';
-import Ref from 'html-tag-js/ref';
-import select from 'components/dialogs/select';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
+import select from 'components/dialogs/select';
+import Plugins from 'components/plugins';
+import Ref from 'html-tag-js/ref';
+import Router from 'lib/Router';
+import { getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers';
+import moment from 'moment';
 import Earnings from 'pages/earnings';
+import userImage from 'res/user.png';
 
 export default async function User({ userEmail }) {
-  const amount = new Ref();
+  const amount = Ref();
   const loggedInUser = await getLoggedInUser();
   let user;
 
@@ -34,13 +32,13 @@ export default async function User({ userEmail }) {
 
   if (!user) {
     Router.loadUrl('/login?redirect=/user');
-    return <>Redirecting to login...</>;
+    return 'Redirecting...';
   }
 
-  const isSameUser = loggedInUser && loggedInUser.id === user.id;
-  const shouldShowSensitiveInfo = isSameUser || loggedInUser?.isAdmin;
-  const paymentMethods = new Ref();
-  const img = new Ref();
+  const isSelf = loggedInUser && loggedInUser.id === user.id;
+  const shouldShowSensitiveInfo = isSelf || loggedInUser?.isAdmin;
+  const paymentMethods = Ref();
+  const img = Ref();
 
   // get user image from github
   const ghImage = gravatar(user.github);
@@ -57,66 +55,52 @@ export default async function User({ userEmail }) {
     renderPaymentMethods();
   }
 
-  return <section id='user'>
-    <div className='profile'>
-      <img ref={img} src={userImage} alt="" className="profile-image" />
-      <div className='profile-info'>
-        <h1>
-          <div className='user-name'>
-            {user.name}
-            <div className='extra-info'>
-              {user.role === 'admin' && <small className='tag'>Admin</small>}
-              <VerifyButton />
+  return (
+    <section id='user'>
+      <div className='profile'>
+        <img ref={img} src={userImage} alt='' className='profile-image' />
+        <div className='profile-info'>
+          <h1>
+            <div className='user-name'>
+              {user.name}
+              <div className='extra-info'>
+                {user.role === 'admin' && <small className='tag'>Admin</small>}
+                <VerifyButton />
+              </div>
             </div>
-          </div>
-        </h1>
-        {
-          shouldShowSensitiveInfo
-            ? <small className='link earnings' title='Your earnings for this month'>
-              <strong className='loading' ref={amount}></strong>|<span>{moment().format('YYYY MMMM')}</span>
+          </h1>
+          {shouldShowSensitiveInfo ? (
+            <small className='link earnings' title='Your earnings for this month'>
+              <strong className='loading' ref={amount} />|<span>{moment().format('YYYY MMMM')}</span>
             </small>
-            : ''
-        }
-        <div onwheel={onwheel} ref={paymentMethods} className='payment-methods'>{
-          loggedInUser?.id === user.id
-            ? <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
-              <span className='icon add'></span>
-              <span>Payment method</span>
-            </div>
-            : ''
-        }</div>
-        <div className="socials">
-          <a title='email' className='icon mail' href={`mailto:${user.email}`}></a>
-          {
-            user.github
-              ? <a title='go to github account' className='icon github' href={`https://github.com/${user.github}`}></a>
-              : ''
-          }
-          {
-            user.website
-              ? <a title='go to website' className='icon earth' href={user.website}></a>
-              : ''
-          }
-          {
-            isSameUser
-              ? <a title='edit profile' href='/edit-user' className='icon create'></a>
-              : ''
-          }
-          {
-            loggedInUser?.id === user.id
-              ? <a title='logout' className="icon logout danger" href='/logout'></a>
-              : ''
-          }
+          ) : (
+            ''
+          )}
+          <div onwheel={onwheel} ref={paymentMethods} className='payment-methods'>
+            {isSelf ? (
+              <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
+                <span className='icon add' />
+                <span>Payment method</span>
+              </div>
+            ) : (
+              ''
+            )}
+          </div>
+          <div className='socials' onclick={(e) => e.target.dataset.href && Router.loadUrl(e.target.dataset.href)}>
+            <button type='button' title='email' className='icon mail' data-href={`mailto:${user.email}`} />
+            {user.github && (
+              <button type='button' title='go to github account' className='icon github' data-href={`https://github.com/${user.github}`} />
+            )}
+            {user.website && <button type='button' title='go to website' className='icon earth' data-href={user.website} />}
+            {isSelf && <button type='button' title='edit profile' data-href='/edit-user' className='icon create' />}
+            {isSelf && <button type='button' title='logout' className='icon logout danger' data-href='/logout' />}
+          </div>
+          {isSelf ? <a href='/publish'>Publish Plugin</a> : ''}
         </div>
-        {
-          isSameUser
-            ? <a href='/publish'>Publish Plugin</a>
-            : ''
-        }
       </div>
-    </div>
-    {await (<Plugins user={user?.email || userEmail} />)}
-  </section>;
+      <Plugins user={user?.email || userEmail} />
+    </section>
+  );
 
   /**
    * Scroll payment methods horizontally on mouse wheel
@@ -144,29 +128,35 @@ export default async function User({ userEmail }) {
     }
 
     if (paypalEmail) {
-      return <div on:click={onPaymentMethodClick} title={title} data-id={id} className='payment-method' data-default={isDefault}>
-        <span className='icon paypal'></span>
-        <span className='info'>{paypalEmail}</span>
-      </div>;
+      return (
+        <div on:click={onPaymentMethodClick} title={title} data-id={id} className='payment-method' data-default={isDefault}>
+          <span className='icon paypal' />
+          <span className='info'>{paypalEmail}</span>
+        </div>
+      );
     }
 
     if (walletAddress && walletType) {
-      return <div on:click={onPaymentMethodClick} data-id={id} title={title} className='payment-method' data-default={isDefault}>
-        <span className='icon bitcoin'></span>
-        <div className='info'>
-          <strong>{walletType}</strong>
-          <span>{walletAddress}</span>
+      return (
+        <div on:click={onPaymentMethodClick} data-id={id} title={title} className='payment-method' data-default={isDefault}>
+          <span className='icon bitcoin' />
+          <div className='info'>
+            <strong>{walletType}</strong>
+            <span>{walletAddress}</span>
+          </div>
         </div>
-      </div>;
+      );
     }
 
-    return <div on:click={onPaymentMethodClick} data-id={id} title={title} className='payment-method' data-default={isDefault}>
-      <span className='icon account_balance'></span>
-      <div className='info'>
-        <strong>{bankAccountType}</strong>
-        <span>{bankAccountNumber}</span>
+    return (
+      <div on:click={onPaymentMethodClick} data-id={id} title={title} className='payment-method' data-default={isDefault}>
+        <span className='icon account_balance' />
+        <div className='info'>
+          <strong>{bankAccountType}</strong>
+          <span>{bankAccountNumber}</span>
+        </div>
       </div>
-    </div>;
+    );
   }
 
   /**
@@ -174,7 +164,7 @@ export default async function User({ userEmail }) {
    * @param {MouseEvent} e
    */
   async function onPaymentMethodClick(e) {
-    if (!isSameUser) return;
+    if (!isSelf) return;
     try {
       const { title } = e.target;
       const option = await select(title, ['Delete', 'Set as default']);
@@ -244,9 +234,7 @@ export default async function User({ userEmail }) {
   async function renderEarnings() {
     try {
       const now = moment();
-      const res = await (
-        await fetch(`/api/user/earnings/${now.year()}/${now.month()}?user=${user.id}`)
-      ).json();
+      const res = await (await fetch(`/api/user/earnings/${now.year()}/${now.month()}?user=${user.id}`)).json();
 
       if (res.error) {
         amount.innerHTML = `<span class="error">${res.error}</span>`;
@@ -276,9 +264,11 @@ export default async function User({ userEmail }) {
     try {
       const confirmation = await confirm('WARNING', `Are you sure you want to ${revoke ? 'revoke verification of' : 'verify'} this user?`);
       if (!confirmation) return;
-      const res = (await fetch(`/api/user/verify${revoke ? '/revoke' : ''}/${userId}`, {
-        method: 'PATCH',
-      })).json();
+      const res = (
+        await fetch(`/api/user/verify${revoke ? '/revoke' : ''}/${userId}`, {
+          method: 'PATCH',
+        })
+      ).json();
       if (res.error) {
         throw new Error(res.error);
       }
@@ -290,12 +280,13 @@ export default async function User({ userEmail }) {
   }
 
   function VerifyButton() {
-    if (!user.verified && !loggedInUser.isAdmin) return <span></span>;
+    if (!user.verified && !loggedInUser.isAdmin) return null;
 
-    return <span className={`icon verified ${user.verified ? '' : 'grayscale'}`} on:click={
-      loggedInUser?.isAdmin
-        ? (e) => verifyUser(user.id, user.verified, e.target)
-        : null
-    }></span>;
+    return (
+      <span
+        className={`icon verified ${user.verified ? '' : 'grayscale'}`}
+        on:click={loggedInUser?.isAdmin ? (e) => verifyUser(user.id, user.verified, e.target) : null}
+      />
+    );
   }
 }

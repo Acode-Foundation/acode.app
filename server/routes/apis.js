@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const db = require('../db');
+const db = require('../lib/db');
 
 const apis = Router();
 
@@ -13,10 +13,11 @@ apis.use('/faqs', require('../apis/faqs'));
 apis.use('/admin', require('../apis/admin'));
 // apis.use('/completion', require('../apis/completion'));
 
-apis.get('/status', (req, res) => {
+apis.get('/status', (_req, res) => {
   res.json({ status: 'ok' });
 });
-apis.get('/server-time', (req, res) => {
+
+apis.get('/server-time', (_req, res) => {
   db.all('select current_timestamp as time', (err, rows) => {
     if (err) {
       res.status(500).json({ error: err });

@@ -1,10 +1,10 @@
 const { Router } = require('express');
 const moment = require('moment');
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 const { comparePassword } = require('../password');
 const login = require('../entities/login');
 const user = require('../entities/user');
-const { getLoggedInUser } = require('../helpers');
+const { getLoggedInUser } = require('../lib/helpers');
 
 const route = Router();
 
@@ -52,11 +52,7 @@ route.post('/', async (req, res) => {
 
   try {
     // store the token in the login table
-    await login.insert(
-      [login.USER_ID, id],
-      [login.TOKEN, token],
-      [login.EXPIRED_AT, expiredAt],
-    );
+    await login.insert([login.USER_ID, id], [login.TOKEN, token], [login.EXPIRED_AT, expiredAt]);
 
     // set the token in the cookie
     res.cookie('token', token, {

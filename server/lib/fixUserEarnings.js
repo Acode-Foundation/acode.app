@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 require('dotenv').config();
 const moment = require('moment');
-const UserEarnings = require('./entities/userEarnings');
-const Plugin = require('./entities/plugin');
+const UserEarnings = require('../entities/userEarnings');
+const Plugin = require('../entities/plugin');
 const calcEarnings = require('./calcEarnings');
 
 const now = moment();
@@ -38,7 +38,7 @@ async function fixUserEarnings() {
       fixUser(usr, rows);
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     process.exit(1);
   }
 }
@@ -47,9 +47,7 @@ async function fixUser(user, earningsRows, year = currentYear, month = currentMo
   const earnings = await calcEarnings.total(year, month, user);
 
   if (earnings) {
-    const row = earningsRows.find(
-      (r) => r.user_id === user.id && r.year === year && r.month === month,
-    );
+    const row = earningsRows.find((r) => r.user_id === user.id && r.year === year && r.month === month);
 
     if (!row) {
       console.log(`user: ${user.name} (${user.id}) was missing earnings for ${year}-${month}`);
@@ -61,10 +59,7 @@ async function fixUser(user, earningsRows, year = currentYear, month = currentMo
       );
     } else if (row.amount !== earnings) {
       console.log(`user: ${user.name} (${user.id}) had wrong earnings for ${year}-${month}`);
-      await UserEarnings.update(
-        [UserEarnings.AMOUNT, earnings],
-        [UserEarnings.ID, row.id],
-      );
+      await UserEarnings.update([UserEarnings.AMOUNT, earnings], [UserEarnings.ID, row.id]);
     }
   }
 

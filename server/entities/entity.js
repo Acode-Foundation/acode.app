@@ -1,4 +1,4 @@
-const db = require('../db');
+const db = require('../lib/db');
 
 /**
  * @typedef {object} Pagination
@@ -11,7 +11,7 @@ const db = require('../db');
 /**
  * @typedef {Array<[string, any, operator?]>} WhereCondition
  * @typedef {'api'|'internal'} QueryMode 'api' appends limit, order by and offset to the query,
-   * 'internal' does not
+ * 'internal' does not
  */
 
 class Entity {
@@ -64,12 +64,7 @@ class Entity {
     let operator = Entity.default_operator;
 
     if (typeof options === 'object') {
-      ({
-        page = Entity.default_page,
-        limit = Entity.default_limit,
-        orderBy = Entity.default_order_by,
-        operator = Entity.default_operator,
-      } = options);
+      ({ page = Entity.default_page, limit = Entity.default_limit, orderBy = Entity.default_order_by, operator = Entity.default_operator } = options);
     } else if (typeof options === 'string') {
       operator = options;
     }
@@ -102,12 +97,12 @@ class Entity {
    * @param {Pagination} options
    * @returns {string}
    */
-  generateGetSql(columns, where, values, {
-    page = Entity.default_page,
-    limit = Entity.default_limit,
-    orderBy = Entity.default_order_by,
-    operator = Entity.default_operator,
-  }) {
+  generateGetSql(
+    columns,
+    where,
+    values,
+    { page = Entity.default_page, limit = Entity.default_limit, orderBy = Entity.default_order_by, operator = Entity.default_operator },
+  ) {
     let sql = `SELECT ${columns.join(',')} FROM ${this.table}`;
 
     if (this.initialColumns) {
@@ -321,7 +316,9 @@ class Entity {
         }
 
         throw new Error(`Invalid operator ${whereOperator} for array value`);
-      } else if (whereOperator === 'LIKE' || whereOperator === 'NOT LIKE') {
+      }
+
+      if (whereOperator === 'LIKE' || whereOperator === 'NOT LIKE') {
         values.push(`%${value}%`);
       } else {
         if (!whereOperator) {
@@ -400,7 +397,10 @@ class Entity {
 
   get table() {
     // convert pascal case to snake case
-    return this.constructor.name.replace(/([A-Z])/g, '_$1').toLowerCase().slice(1);
+    return this.constructor.name
+      .replace(/([A-Z])/g, '_$1')
+      .toLowerCase()
+      .slice(1);
   }
 
   get mode() {

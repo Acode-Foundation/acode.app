@@ -1,4 +1,5 @@
 import './style.scss';
+import Reactive from 'html-tag-js/reactive';
 
 /**
  * @typedef {
@@ -61,16 +62,25 @@ export default function Input({
 }) {
   label = label || placeholder || name || id || type;
 
-  const cross = <span onclick={oncancel} className="icon clear"></span>;
-  const labelText = <>{label}</>;
+  const cross = <span onclick={oncancel} className='icon clear' />;
+  const labelText = Reactive(label);
   const labelContainer = <span className='label'>{labelText}</span>;
   /** @type {HTMLInputElement | HTMLTextAreaElement} */
-  const inputField = type === 'textarea'
-    ? <textarea />
-    : <input checked={checked} type={type} />;
-  const input = <div className={`custom-input ${type}`} style={style}>
-    <label className={checked ? 'checked' : undefined} tabIndex={0} onfocus={() => { inputField.disabled = false; inputField.focus(); }}>{inputField}{labelContainer}</label>
-  </div>;
+  const inputField = type === 'textarea' ? <textarea /> : <input checked={checked} type={type} />;
+  const input = (
+    <div className={`custom-input ${type}`} style={style}>
+      <label
+        className={checked ? 'checked' : undefined}
+        onfocus={() => {
+          inputField.disabled = false;
+          inputField.focus();
+        }}
+      >
+        {inputField}
+        {labelContainer}
+      </label>
+    </div>
+  );
 
   if (ref) ref.el = inputField;
   if (id) inputField.id = id;

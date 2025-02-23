@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const Otp = require('../entities/otp');
-const { sendNotification } = require('../helpers');
+const { sendNotification } = require('../lib/helpers');
 const User = require('../entities/user');
 
 const route = Router();

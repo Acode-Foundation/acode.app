@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const fileUpload = require('express-fileupload');
@@ -11,7 +11,7 @@ const defaultOg = require('./defaultOg.json');
 const Plugin = require('./entities/plugin');
 
 const apis = require('./routes/apis');
-const setAuth = require('./gapis');
+const setAuth = require('./lib/gapis');
 
 global.ADMIN = 1;
 const app = express();
@@ -27,7 +27,7 @@ async function main() {
   await setAuth();
 
   // allow origin https://localhost
-  app.use((req, res, next) => {
+  app.use((_req, res, next) => {
     res.header('Access-Control-Allow-Origin', 'https://localhost');
     // allow content-type
     res.header('Access-Control-Allow-Headers', 'Content-Type');
@@ -44,24 +44,22 @@ async function main() {
   );
   app.use(express.json());
   app.use('/api', apis);
-  app.use('/api/*', (req, res) => {
+  app.use('/api/*', (_req, res) => {
     res.status(404).send({ error: 'Not found' });
   });
 
-  app.get('/((app-ads)|(ads)).txt', (req, res) => {
+  app.get('/((app-ads)|(ads)).txt', (_req, res) => {
     res.sendFile(path.resolve(__dirname, '../data/ads.txt'));
   });
 
-  app.get('/.well-known/assetlinks.json', (req, res) => {
+  app.get('/.well-known/assetlinks.json', (_req, res) => {
     res.send([
       {
         relation: ['delegate_permission/common.handle_all_urls'],
         target: {
           namespace: 'android_app',
           package_name: 'com.foxdebug.acodefree',
-          sha256_cert_fingerprints: [
-            '12:66:9B:CA:68:91:87:C3:2A:49:ED:9B:5B:06:3A:06:0E:5B:67:75:34:50:4F:46:DC:DA:A0:AF:71:90:CB:93',
-          ],
+          sha256_cert_fingerprints: ['12:66:9B:CA:68:91:87:C3:2A:49:ED:9B:5B:06:3A:06:0E:5B:67:75:34:50:4F:46:DC:DA:A0:AF:71:90:CB:93'],
         },
       },
     ]);
@@ -78,6 +76,10 @@ async function main() {
       return;
     }
     res.status(404).send({ error: 'File not found' });
+  });
+
+  app.get('/manifest.json', (_req, res) => {
+    res.sendFile(path.resolve(__dirname, './manifest.json'));
   });
 
   app.get('/:filename', (req, res, next) => {
@@ -111,20 +113,22 @@ async function main() {
       const templateScript = Handlebars.compile(source);
 
       res.header('Content-Type', 'text/html;charset=utf-8');
-      res.send(templateScript({
-        title: `${plugin.name} - Acode`,
-        description: markdownToText.default(plugin.description),
-        icon: `plugin-icon/${plugin.id}`,
-        url: `plugin/${plugin.id}`,
-        icon_alt: `${plugin.name} icon`,
-        site_name: `Acode - ${plugin.name}`,
-      }));
-    } catch (error) {
+      res.send(
+        templateScript({
+          title: `${plugin.name} - Acode`,
+          description: markdownToText.default(plugin.description),
+          icon: `plugin-icon/${plugin.id}`,
+          url: `plugin/${plugin.id}`,
+          icon_alt: `${plugin.name} icon`,
+          site_name: `Acode - ${plugin.name}`,
+        }),
+      );
+    } catch (_error) {
       next();
     }
   });
 
-  app.get('*', (req, res) => {
+  app.get('*', (_req, res) => {
     const template = path.resolve(__dirname, './index.hbs');
     const source = fs.readFileSync(template, 'utf8');
     const templateScript = Handlebars.compile(source);

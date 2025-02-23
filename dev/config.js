@@ -1,5 +1,5 @@
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
+const fs = require('node:fs');
 
 const arg = process.argv[2];
 const babelrcpath = path.resolve(__dirname, '../.babelrc');
@@ -9,7 +9,7 @@ let babelrc;
 try {
   babelrc = fs.readFileSync(babelrcpath, 'utf8');
   if (babelrc) babelrc = JSON.parse(babelrc);
-} catch (error) {
+} catch (_error) {
   babelrc = null;
 }
 

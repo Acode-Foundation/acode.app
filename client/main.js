@@ -5,12 +5,12 @@ import './main.scss';
 import './common.scss';
 import 'res/icons/style.css';
 
+import $loginText from 'components/loginText';
 import Router from 'lib/Router';
+import { getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
+import PullToRefresh from 'lib/pullToRefresh';
 import Theme from 'lib/theme';
 import dark from 'themes/dark';
-import PullToRefresh from 'lib/pullToRefresh';
-import $loginText from 'components/loginText';
-import { getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
 import View from './main.view';
 
 window.onload = async () => {
@@ -18,15 +18,20 @@ window.onload = async () => {
   PullToRefresh(app, () => {
     Router.reload();
   });
-  app.content = <View appName="Acode" routes={[
-    { href: '/faqs', text: 'FAQs' },
-    { href: '/plugin-docs', text: 'Plugin Docs' },
-    { href: '/plugins', text: 'Plugins' },
-    { href: 'https://www.foxbiz.io', text: 'Foxbiz' },
-    { href: '/policy', text: 'Privacy policy' },
-    { href: '/terms', text: 'Terms of service' },
-    { href: '/user', text: $loginText, icon: 'person' },
-  ]} />;
+  app.content = (
+    <View
+      appName='Acode'
+      routes={[
+        { href: '/faqs', text: 'FAQs' },
+        { href: '/plugin-docs', text: 'Plugin Docs' },
+        { href: '/plugins', text: 'Plugins' },
+        { href: 'https://www.foxbiz.io', text: 'Foxbiz' },
+        { href: '/policy', text: 'Privacy policy' },
+        { href: '/terms', text: 'Terms of service' },
+        { href: '/user', text: $loginText, icon: 'person' },
+      ]}
+    />
+  );
 
   const user = await getLoggedInUser();
   if (user) {
@@ -42,16 +47,16 @@ window.onload = async () => {
   Router.add('/faqs/:qHash?', (params) => loadModule('FAQs', params));
   Router.add('/policy', () => loadModule('privacyPolicy'));
   Router.add('/terms', () => loadModule('termsOfService'));
-  Router.add('/login', (params, query) => loadModule('loginUser', query));
-  Router.add('/plugins', (params, query) => loadModule('plugins', query));
+  Router.add('/login', (_params, query) => loadModule('loginUser', query));
+  Router.add('/plugins', (_params, query) => loadModule('plugins', query));
   Router.add('/logout', logout);
   Router.add('/register', () => loadModule('registerUser'));
-  Router.add('/change-password', (params, query) => loadModule('changePassword', query));
+  Router.add('/change-password', (_params, query) => loadModule('changePassword', query));
   Router.add('/edit-user', () => loadModule('registerUser', { mode: 'edit' }));
-  Router.add('/publish', (params, query) => loadModule('publishPlugin', query));
+  Router.add('/publish', (_params, query) => loadModule('publishPlugin', query));
   Router.add('/plugin/:id/:section?', (params) => loadModule('plugin', params));
   Router.add('/user/:userEmail?', (params) => loadModule('user', params));
-  Router.add('/earnings', (params, query) => loadModule('earnings', query));
+  Router.add('/earnings', (_params, query) => loadModule('earnings', query));
   Router.add('/:filename(index.html?)?', () => loadModule('home'));
 
   Router.add('*', () => {

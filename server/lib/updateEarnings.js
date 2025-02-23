@@ -1,11 +1,11 @@
 const moment = require('moment');
-const Plugin = require('./entities/plugin');
-const Payment = require('./entities/payment');
+const Plugin = require('../entities/plugin');
+const Payment = require('../entities/payment');
 const downloadReport = require('./downloadGr');
 const calcEarnings = require('./calcEarnings');
-const { sendNotification } = require('./helpers');
-const UserEarnings = require('./entities/userEarnings');
-const PaymentMethod = require('./entities/paymentMethod');
+const { sendNotification } = require('../lib/helpers');
+const UserEarnings = require('../entities/userEarnings');
+const PaymentMethod = require('../entities/paymentMethod');
 
 const now = moment();
 
@@ -46,12 +46,7 @@ module.exports = async function updateEarnings(year = currentYear, month = curre
     // send email to user with no paypal email or no bank account
     users.forEach((u) => {
       if (u.payment_method_id) return;
-      sendNotification(
-        u.email,
-        u.name,
-        'Payment method not found',
-        'Please add payment method to receive payment.',
-      );
+      sendNotification(u.email, u.name, 'Payment method not found', 'Please add payment method to receive payment.');
     });
 
     users.forEach(async (usr) => {
@@ -64,10 +59,7 @@ module.exports = async function updateEarnings(year = currentYear, month = curre
       ]);
 
       if (row) {
-        await UserEarnings.update(
-          [UserEarnings.AMOUNT, earnings],
-          [UserEarnings.ID, row.id],
-        );
+        await UserEarnings.update([UserEarnings.AMOUNT, earnings], [UserEarnings.ID, row.id]);
       } else {
         await UserEarnings.insert(
           [UserEarnings.USER_ID, usr.id],
@@ -79,12 +71,7 @@ module.exports = async function updateEarnings(year = currentYear, month = curre
 
       if (!usr.payment_method_id) return;
 
-      const {
-        ids: unpaidEarningsId,
-        earnings: unpaid,
-        from,
-        to,
-      } = await calcEarnings.unpaid(usr);
+      const { ids: unpaidEarningsId, earnings: unpaid, from, to } = await calcEarnings.unpaid(usr);
       // eslint-disable-next-line no-console
       console.log(`Earnings for ${usr.name} is ${unpaid}`);
       let { threshold } = usr;
@@ -110,10 +97,7 @@ module.exports = async function updateEarnings(year = currentYear, month = curre
         [Payment.DATE_TO, to.format('YYYY-MM-DD')],
       );
 
-      await UserEarnings.update(
-        [UserEarnings.PAYMENT_ID, paymentId],
-        [UserEarnings.ID, unpaidEarningsId],
-      );
+      await UserEarnings.update([UserEarnings.PAYMENT_ID, paymentId], [UserEarnings.ID, unpaidEarningsId]);
     });
   } catch (error) {
     // eslint-disable-next-line no-console

@@ -100,8 +100,12 @@ export function gravatar(github) {
   return '/user.png';
 }
 
+/**
+ * Calculate rating
+ * @param {number} votesUp
+ * @param {number} votesDown
+ * @returns
+ */
 export function calcRating(votesUp, votesDown) {
-  return !votesUp && !votesDown
-    ? 'Unrated'
-    : `${Math.round(((votesUp / (votesDown + votesUp)) * 100))}%`;
+  return !votesUp && !votesDown ? 'Unrated' : `${Math.round((votesUp / (votesDown + votesUp)) * 100)}%`;
 }

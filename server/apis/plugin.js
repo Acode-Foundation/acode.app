@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 const JSZip = require('jszip');
 const moment = require('moment');
 const { Router } = require('express');
@@ -9,21 +9,29 @@ const User = require('../entities/user');
 const Order = require('../entities/purchaseOrder');
 const Download = require('../entities/download');
 const badWords = require('../badWords.json');
+const { getLoggedInUser, sendNotification, getPluginSKU } = require('../lib/helpers');
 
 const androidpublisher = google.androidpublisher('v3');
-const {
-  getLoggedInUser,
-  sendNotification,
-  getPluginSKU,
-} = require('../helpers');
 
 const router = Router();
 const jsZip = new JSZip();
 const MIN_PRICE = 10;
 const MAX_PRICE = 10000;
 const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
-
-const validLicenses = ['MIT', 'GPL-3.0', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'LGPL-3.0', 'MPL-2.0', 'CDDL-1.0', 'EPL-2.0', 'AGPL-3.0', 'Proprietary'];
+const ID_REGEX = /^[a-z][a-z0-9._]{3,49}$/i;
+const validLicenses = [
+  'MIT',
+  'GPL-3.0',
+  'Apache-2.0',
+  'BSD-2-Clause',
+  'BSD-3-Clause',
+  'LGPL-3.0',
+  'MPL-2.0',
+  'CDDL-1.0',
+  'EPL-2.0',
+  'AGPL-3.0',
+  'Proprietary',
+];
 
 router.get('/owned/:sku', async (req, res) => {
   try {
@@ -60,7 +68,7 @@ router.get('/download/:id', async (req, res) => {
 
       const [order] = await Order.get([Order.TOKEN, token]);
 
-      if (order && order.state && parseInt(order.state, 10) !== Order.STATE_PURCHASED) {
+      if (order?.state && Number.parseInt(order.state, 10) !== Order.STATE_PURCHASED) {
         res.status(403).send({ error: 'Purchase not active.' });
         return;
       }
@@ -146,7 +154,7 @@ router.get('/orders/:pluginId/:year/:month', async (req, res) => {
       return;
     }
 
-    const yearMonth = { month: parseInt(month, 10), year: parseInt(year, 10) };
+    const yearMonth = { month: Number.parseInt(month, 10), year: Number.parseInt(year, 10) };
     const monthStart = moment(yearMonth).startOf('month').format('YYYY-MM-DD');
     const monthEnd = moment(yearMonth).endOf('month').format('YYYY-MM-DD');
     const orders = await Order.get(Order.minColumns, [
@@ -209,14 +217,7 @@ router.get('/description/:id', async (req, res) => {
 router.get('/:pluginId?', async (req, res) => {
   try {
     const { pluginId } = req.params;
-    const {
-      user: email,
-      name,
-      status,
-      page,
-      limit,
-      orderBy,
-    } = req.query;
+    const { user: email, name, status, page, limit, orderBy } = req.query;
     const loggedInUser = await getLoggedInUser(req);
     const columns = Plugin.minColumns;
     const where = [];
@@ -296,7 +297,7 @@ router.get('/:pluginId?', async (req, res) => {
   }
 });
 
-router.post('/refund', async (req, res) => {
+router.post('/refund', async (_req, res) => {
   res.send({ refer: 'https://pay.google.com' });
 });
 
@@ -348,10 +349,6 @@ router.post('/order', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    // Id should start with an alphabet,
-    // should be of length 4-20 and should contain only alphanumeric characters,
-    // dot and underscore
-    const ID_REGEX = /^[a-zA-Z][a-zA-Z0-9._]{3,49}$/;
     const user = await getLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
@@ -367,6 +364,22 @@ router.post('/', async (req, res) => {
 
     let { license, contributors, changelogs, keywords } = req.body;
     const { pluginJson, icon, readme, changelogsFile } = await exploreZip(pluginZip.data);
+
+    const pluginId = pluginJson.id.toLowerCase();
+    if (!ID_REGEX.test(pluginId) || badWords.includes(pluginId)) {
+      res.status(400).send({
+        error:
+          'Invalid plugin ID! Valid ID should start with an alphabet, should be of length 4-50 and should contain only alphanumeric characters, dot and underscore.',
+      });
+      return;
+    }
+
+    const [row] = await Plugin.get([Plugin.ID, pluginId]);
+    if (row) {
+      res.status(400).send({ error: `Plugin "${pluginId}" already exists.` });
+      return;
+    }
+
     const errorMessage = validatePlugin(pluginJson, icon, readme);
 
     if (errorMessage) {
@@ -395,28 +408,13 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    let { id } = pluginJson;
-
-    if (!ID_REGEX.test(id) || badWords.includes(id)) {
-      res.status(400).send({ error: 'Invalid plugin ID! Valid ID should start with an alphabet, should be of length 4-50 and should contain only alphanumeric characters, dot and underscore.' });
-      return;
-    }
-
-    id = id.toLowerCase();
-
-    const [row] = await Plugin.get([Plugin.ID, id]);
-    if (row) {
-      res.status(400).send({ error: 'Plugin already exists.' });
-      return;
-    }
-
     if (price) {
       if (price < MIN_PRICE || price > MAX_PRICE) {
         res.status(400).send({ error: `Price should be between INR ${MIN_PRICE} and INR ${MAX_PRICE}` });
         return;
       }
 
-      await registerSKU(name, id, price);
+      await registerSKU(name, pluginId, price);
     }
 
     if (!license && licenseFromPlugin) {
@@ -430,7 +428,7 @@ router.post('/', async (req, res) => {
 
     if (!keywords && keywordsFromPlugin) {
       if (Array.isArray(keywordsFromPlugin)) {
-        const invalidKeywords = keywordsFromPlugin.filter(keyword => typeof keyword !== 'string');
+        const invalidKeywords = keywordsFromPlugin.filter((keyword) => typeof keyword !== 'string');
         if (invalidKeywords.length) {
           res.status(400).send({ error: 'Keywords should be an array of strings' });
           return;
@@ -444,10 +442,10 @@ router.post('/', async (req, res) => {
 
     if (!contributors && contributorsFromPlugin) {
       if (Array.isArray(contributorsFromPlugin)) {
-        const invalidContributors = contributorsFromPlugin.filter(contributor => typeof contributor !== 'string');
+        const invalidContributors = contributorsFromPlugin.filter((contributor) => typeof contributor !== 'string');
         if (invalidContributors.length) {
           res.status(400).send({ error: 'Contributors should be an array of strings' });
-          return
+          return;
         }
 
         contributors = contributorsFromPlugin.join(', ');
@@ -466,8 +464,8 @@ router.post('/', async (req, res) => {
     }
 
     await Plugin.insert(
-      [Plugin.ID, id],
-      [Plugin.SKU, getPluginSKU(id)],
+      [Plugin.ID, pluginId],
+      [Plugin.SKU, getPluginSKU(pluginId)],
       [Plugin.NAME, name],
       [Plugin.PRICE, price],
       [Plugin.VERSION, version],
@@ -480,13 +478,18 @@ router.post('/', async (req, res) => {
       [Plugin.MIN_VERSION_CODE, minVersionCode],
     );
 
-    savePlugin(id, pluginZip, icon);
+    savePlugin(pluginId, pluginZip, icon);
     res.send({ message: 'Plugin uploaded successfully' });
 
     User.get([User.EMAIL, User.NAME], [User.ROLE, 'admin']).then((rows) => {
-      rows.forEach((row) => {
-        sendNotification(row.email, row.name, 'New plugin waiting for approval', `A new plugin <a href='https://acode.app/plugin/${id}'><strong>${name}</strong></a> is waiting for approval.`);
-      });
+      for (const row of rows) {
+        sendNotification(
+          row.email,
+          row.name,
+          'New plugin waiting for approval',
+          `A new plugin <a href='https://acode.app/plugin/${pluginId}'><strong>${name}</strong></a> is waiting for approval.`,
+        );
+      }
     });
   } catch (error) {
     res.status(500).send({ error: error.message });
@@ -535,13 +538,7 @@ router.put('/', async (req, res) => {
       return;
     }
 
-    const [row] = await Plugin.get([
-      Plugin.ID,
-      Plugin.USER_ID,
-      Plugin.VERSION,
-      Plugin.NAME,
-      Plugin.PRICE,
-    ], [Plugin.ID, pluginId]);
+    const [row] = await Plugin.get([Plugin.ID, Plugin.USER_ID, Plugin.VERSION, Plugin.NAME, Plugin.PRICE], [Plugin.ID, pluginId]);
     if (!row || row.user_id !== user.id) {
       res.status(404).send({ error: 'Plugin not found' });
       return;
@@ -558,7 +555,7 @@ router.put('/', async (req, res) => {
 
     if (!keywords && keywordsFromPlugin) {
       if (Array.isArray(keywordsFromPlugin)) {
-        const invalidKeywords = keywordsFromPlugin.filter(keyword => typeof keyword !== 'string');
+        const invalidKeywords = keywordsFromPlugin.filter((keyword) => typeof keyword !== 'string');
         if (invalidKeywords.length) {
           res.status(400).send({ error: 'Keywords should be an array of strings' });
           return;
@@ -572,10 +569,10 @@ router.put('/', async (req, res) => {
 
     if (!contributors && contributorsFromPlugin) {
       if (Array.isArray(contributorsFromPlugin)) {
-        const invalidContributors = contributorsFromPlugin.filter(contributor => typeof contributor !== 'string');
+        const invalidContributors = contributorsFromPlugin.filter((contributor) => typeof contributor !== 'string');
         if (invalidContributors.length) {
           res.status(400).send({ error: 'Contributors should be an array of strings' });
-          return
+          return;
         }
 
         contributors = contributorsFromPlugin.join(', ');
@@ -652,11 +649,7 @@ router.patch('/', async (req, res) => {
     res.send({ message: 'Plugin updated successfully' });
 
     try {
-      const [{
-        user_id: userId,
-        name: pluginName,
-        id: pluginID,
-      }] = await Plugin.get([Plugin.USER_ID, Plugin.ID, Plugin.NAME], [Plugin.ID, id]);
+      const [{ user_id: userId, name: pluginName, id: pluginID }] = await Plugin.get([Plugin.USER_ID, Plugin.ID, Plugin.NAME], [Plugin.ID, id]);
       const [{ email, name }] = await User.get([User.EMAIL, User.NAME], [User.ID, userId]);
       const subject = status === 'approve' ? 'Plugin Approved' : 'Plugin Rejected';
       let message = `Your <a href='https://acode.app/plugin/${pluginID}'><strong>${pluginName}</strong></a> plugin for Acode editor`;
@@ -744,16 +737,14 @@ function validatePlugin(json, icon, readmeFile) {
     return 'Missing readme file.';
   }
 
-  const {
-    name, version, id, main,
-  } = json;
+  const { name, version, id, main } = json;
 
   const missingFields = [name, version, id, main].filter((field) => !field);
   if (missingFields.length) {
     return `Missing required fields: ${missingFields.join(', ')}`;
   }
 
-  const sizeInBytes = 4 * Math.ceil((icon.length / 3)) * 0.5624896334383812;
+  const sizeInBytes = 4 * Math.ceil(icon.length / 3) * 0.5624896334383812;
   const sizeInKb = sizeInBytes / 1000;
   if (icon && sizeInKb >= 50) {
     return 'Icon size should be less than 50kb';
@@ -805,7 +796,7 @@ async function registerSKU(name, id, price) {
           packageName,
         });
         skuAlreadyExists = true;
-      } catch (error) {
+      } catch (_error) {
         // SKU does not exist
       }
 

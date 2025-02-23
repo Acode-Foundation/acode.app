@@ -7,7 +7,7 @@ const table = `CREATE TABLE IF NOT EXISTS payment (
   receipt TEXT,
   payment_method_id INTEGER NOT NULL,
   status INTEGER NOT NULL DEFAULT 0,
-  date_form DATE NOT NULL,
+  date_from DATE NOT NULL,
   date_to DATE NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,

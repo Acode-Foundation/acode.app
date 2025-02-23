@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const User = require('../entities/user');
 const Otp = require('../entities/otp');
-const { getLoggedInUser } = require('../helpers');
+const { getLoggedInUser } = require('../lib/helpers');
 const { comparePassword, encryptPassword } = require('../password');
 
 const router = Router();
@@ -48,9 +48,7 @@ router.put('/', async (req, res) => {
       return;
     }
 
-    const [{
-      password: userPassword,
-    }] = await User.get([User.PASSWORD], [User.ID, loggedInUser.id]);
+    const [{ password: userPassword }] = await User.get([User.PASSWORD], [User.ID, loggedInUser.id]);
     if (!comparePassword(oldPassword, userPassword)) {
       res.status(400).send({ error: 'Incorrect password' });
       return;

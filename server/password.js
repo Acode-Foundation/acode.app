@@ -1,9 +1,7 @@
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 
 function encryptPassword(password) {
-  return crypto.createHash('sha256', process.env.PASSWORD_SALT)
-    .update(password)
-    .digest('hex');
+  return crypto.createHash('sha256', process.env.PASSWORD_SALT).update(password).digest('hex');
 }
 
 function comparePassword(password, encryptedPassword) {

@@ -1,8 +1,8 @@
-const path = require('path');
+const path = require('node:path');
 const { google } = require('googleapis');
 
 const gAuth = new google.auth.GoogleAuth({
-  keyFile: path.resolve(__dirname, '../data/key.json'),
+  keyFile: path.resolve(__dirname, '../../data/key.json'),
   scopes: ['https://www.googleapis.com/auth/androidpublisher'],
 });
 

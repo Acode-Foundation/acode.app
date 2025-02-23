@@ -13,11 +13,9 @@ import DialogBox from './dialogBox';
  * @returns
  */
 export default function prompt(title, options = {}) {
-  const {
-    type = 'text', defaultValue, placeholder = '', required, match,
-  } = options;
+  const { type = 'text', defaultValue, placeholder = '', required, match } = options;
   return new Promise((resolve) => {
-    const $error = <div className='error'></div>;
+    const $error = <div className='error' />;
     let $input;
 
     if (type === 'textarea') {
@@ -29,27 +27,35 @@ export default function prompt(title, options = {}) {
 
     $input.onchange = $error.remove.bind($error);
 
-    const $box = <DialogBox
-      title={title}
-      body={<div>{$input}{$error}</div>}
-      oncancel={(hide) => {
-        resolve(null);
-        hide();
-      }}
-      onok={(hide, this$Box) => {
-        if (required && !$input.value) {
-          $error.textContent = 'This field is required.';
-          this$Box.get('.body').append($error);
-          return;
+    const $box = (
+      <DialogBox
+        title={title}
+        body={
+          <div>
+            {$input}
+            {$error}
+          </div>
         }
-        if (match && !match.test($input.value)) {
-          $error.textContent = 'Invalid input.';
-          this$Box.get('.body').append($error);
-          return;
-        }
-        resolve($input.value);
-        hide();
-      }} />;
+        oncancel={(hide) => {
+          resolve(null);
+          hide();
+        }}
+        onok={(hide, this$Box) => {
+          if (required && !$input.value) {
+            $error.textContent = 'This field is required.';
+            this$Box.get('.body').append($error);
+            return;
+          }
+          if (match && !match.test($input.value)) {
+            $error.textContent = 'Invalid input.';
+            this$Box.get('.body').append($error);
+            return;
+          }
+          resolve($input.value);
+          hide();
+        }}
+      />
+    );
 
     document.body.append($box);
   });

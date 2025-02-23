@@ -1,6 +1,6 @@
 // download Google Earnings reports using google cloud/storage
 
-const path = require('path');
+const path = require('node:path');
 const JsZip = require('jszip');
 const csvToJSON = require('csvtojson');
 const { Storage } = require('@google-cloud/storage');

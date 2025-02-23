@@ -1,12 +1,11 @@
-import JSZip from 'jszip';
-import Input from 'components/input';
-import {
-  capitalize, getLoggedInUser, loadingEnd, loadingStart,
-} from 'lib/helpers';
 import AjaxForm from 'components/ajaxForm';
-import Router from 'lib/Router';
-import Ref from 'html-tag-js/ref';
 import alert from 'components/dialogs/alert';
+import Input from 'components/input';
+import Reactive from 'html-tag-js/reactive';
+import Ref from 'html-tag-js/ref';
+import JSZip from 'jszip';
+import Router from 'lib/Router';
+import { capitalize, getLoggedInUser, hideLoading, loadingEnd, loadingStart, showLoading } from 'lib/helpers';
 
 export default async function PublishPlugin({ mode = 'publish', id }) {
   const user = await getLoggedInUser();
@@ -17,91 +16,123 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
   }
 
   const jsZip = new JSZip();
-  const pluginId = <></>;
-  const pluginVersion = <></>;
-  const pluginAuthor = <></>;
-  const pluginName = <></>;
-  const pluginDescription = <></>;
-  const errorText = <></>;
-  const successText = <></>;
-  const pluginPrice = <></>;
-  const minVersionCode = <></>;
-  const updateType = <></>;
+  const license = Reactive();
+  const keywords = Reactive();
+  const pluginId = Reactive();
+  const errorText = Reactive();
+  const updateType = Reactive();
+  const pluginName = Reactive();
+  const successText = Reactive();
+  const pluginPrice = Reactive();
+  const contributors = Reactive();
+  const pluginAuthor = Reactive();
+  const pluginVersion = Reactive();
+  const minVersionCode = Reactive();
+  const pluginDescription = Reactive();
+  const buttonText = Reactive(capitalize(mode));
+
+  const submitButton = Ref();
+  const changelogsInput = Ref();
   const method = mode === 'publish' ? 'post' : 'put';
-  const buttonText = <>{capitalize(mode)}</>;
-  const submitButton = new Ref();
-  const pluginIcon = <img style={{ height: '120px', width: '120px' }} src="#" alt="Plugin icon" />;
+  const pluginIcon = <img style={{ height: '120px', width: '120px' }} src='#' alt='Plugin icon' />;
 
   let plugin;
   if (id) {
-    plugin = await fetch(`/api/plugin/${id}`).then(res => res.json());
+    plugin = await fetch(`/api/plugin/${id}`).then((res) => res.json());
     pluginId.value = plugin.id;
     pluginName.value = plugin.name;
     pluginVersion.value = plugin.version;
     pluginAuthor.value = plugin.author;
     pluginDescription.value = plugin.description;
     minVersionCode.value = plugin.minVersionCode;
-    pluginPrice.value = `INR ${plugin.price}`;
+
+    if (+plugin.price) {
+      pluginPrice.value = `INR ${plugin.price}`;
+    } else {
+      pluginPrice.value = 'Free';
+    }
+
     pluginIcon.src = `/plugin-icon/${plugin.id}`;
   }
 
-  return <section id='publish-plugin'>
-    <h1>{capitalize(mode)} plugin</h1>
-    <AjaxForm
-      action='/api/plugin'
-      method={method}
-      encoding='multipart/form-data'
-      onloadend={onloadend}
-      onerror={onerror}
-      loading={(form) => loadingStart(form, errorText, successText, buttonText)}
-      loadingEnd={(form) => loadingEnd(form, buttonText, capitalize(mode))}
-    >
-      <Input required={true} onchange={onFileChange} type='file' name='plugin' label='Select plugin or drop here.' />
-      <Input value={plugin?.changelogs || ''} type='textarea' name='changelogs' label='Change logs' placeholder="What's new in this update." />
-      <Input value={plugin?.contributors || ''} type='textarea' name='contributors' label='Contributors' placeholder='Contributors' />
-      <Input value={plugin?.keywords || ''} type='textarea' name='keywords' label='Keywords' placeholder='e.g. AI Assistance, Autocomplete' />
-      <Input value={plugin?.license || ''} type='text' name='license' label='License' placeholder='e.g. MIT' />
-      <span className="error">{errorText}</span>
-      <span className="success">{successText}</span>
+  return (
+    <section id='publish-plugin'>
+      <h1>{capitalize(mode)} plugin</h1>
+      <AjaxForm
+        action='/api/plugin'
+        method={method}
+        encoding='multipart/form-data'
+        onloadend={onloadend}
+        onerror={onerror}
+        loading={(form) => loadingStart(form, errorText, successText, buttonText)}
+        loadingEnd={(form) => loadingEnd(form, buttonText, capitalize(mode))}
+      >
+        <Input required={true} onchange={onFileChange} type='file' name='plugin' label='Select plugin or drop here.' />
+        <Input
+          ref={changelogsInput}
+          value={plugin?.changelogs || ''}
+          type='textarea'
+          name='changelogs'
+          label='Change logs'
+          placeholder="What's new in this update."
+        />
+        <span className='error'>{errorText}</span>
+        <span className='success'>{successText}</span>
 
-      <table>
-        <tbody>
-          <tr>
-            <th>ID</th>
-            <td>{pluginId}</td>
-          </tr>
-          <tr>
-            <th>Name</th>
-            <td>{pluginName}</td>
-          </tr>
-          <tr>
-            <th>Version</th>
-            <td>{pluginVersion} {id && <small>{updateType}</small>}</td>
-          </tr>
-          <tr>
-            <th>Author</th>
-            <td>{pluginAuthor}</td>
-          </tr>
-          <tr>
-            <th>Min Version Code</th>
-            <td>{minVersionCode}</td>
-          </tr>
-          <tr>
-            <th>Price</th>
-            <td>{pluginPrice}</td>
-          </tr>
-          <tr>
-            <th>Icon</th>
-            <td>{pluginIcon}</td>
-          </tr>
-        </tbody>
-      </table>
+        <table>
+          <tbody>
+            <tr>
+              <th>ID</th>
+              <td>{pluginId}</td>
+            </tr>
+            <tr>
+              <th>Name</th>
+              <td>{pluginName}</td>
+            </tr>
+            <tr>
+              <th>Version</th>
+              <td>
+                {pluginVersion} {id && <small>{updateType}</small>}
+              </td>
+            </tr>
+            <tr>
+              <th>Author</th>
+              <td>{pluginAuthor}</td>
+            </tr>
+            <tr>
+              <th>License</th>
+              <td>{license}</td>
+            </tr>
+            <tr>
+              <th>Keywords</th>
+              <td>{keywords}</td>
+            </tr>
+            <tr>
+              <th>Contributors</th>
+              <td>{contributors}</td>
+            </tr>
+            <tr>
+              <th>Min Version Code</th>
+              <td>{minVersionCode}</td>
+            </tr>
+            <tr>
+              <th>Price</th>
+              <td>{pluginPrice}</td>
+            </tr>
+            <tr>
+              <th>Icon</th>
+              <td>{pluginIcon}</td>
+            </tr>
+          </tbody>
+        </table>
 
-      <button ref={submitButton} type='submit'>
-        <span className="icon publish"></span>{buttonText}
-      </button>
-    </AjaxForm>
-  </section>;
+        <button ref={submitButton} type='submit'>
+          <span className='icon publish' />
+          {buttonText}
+        </button>
+      </AjaxForm>
+    </section>
+  );
 
   function onloadend(data) {
     if (data.error) {
@@ -144,6 +175,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
     const reader = new FileReader();
 
     reader.onload = async () => {
+      showLoading();
       const zip = await jsZip.loadAsync(reader.result);
       try {
         const manifest = JSON.parse(await zip.file('plugin.json').async('string'));
@@ -160,20 +192,54 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
           return;
         }
 
-        errorText.value = '';
-        submitButton.el.disabled = false;
-        updateType.value = `(${getUpdateType(manifest.version, plugin.version)} from ${plugin.version})`;
+        const changelogs = await zip.file('changelogs.md')?.async('string');
+
+        if (changelogs) {
+          changelogsInput.el.value = changelogs;
+        }
+
+        if (manifest.contributors) {
+          contributors.value = manifest.contributors.join(', ');
+        }
+
+        if (manifest.keywords) {
+          keywords.value = manifest.keywords.join(', ');
+        }
+
+        if (manifest.license) {
+          license.value = manifest.license;
+        }
+
+        if (manifest.author?.name) {
+          pluginAuthor.value = manifest.author?.name;
+        } else {
+          pluginAuthor.value = user.name;
+        }
+
+        if (id) {
+          updateType.value = `(${getUpdateType(manifest.version, plugin.version)} from ${plugin.version})`;
+        }
+
+        if (+manifest.price) {
+          pluginPrice.value = `INR ${manifest.price || 0}`;
+        } else {
+          pluginPrice.value = 'Free';
+        }
+
         pluginId.value = manifest.id;
         pluginName.value = manifest.name;
         pluginVersion.value = manifest.version;
-        if (manifest.author?.name) pluginAuthor.value = manifest.author?.name;
         pluginDescription.value = manifest.description;
         minVersionCode.value = manifest.minVersionCode || -1;
-        pluginPrice.value = `INR ${manifest.price || 0}`;
         pluginIcon.src = `data:image/png;base64,${icon}`;
+
+        errorText.value = '';
+        submitButton.el.disabled = false;
       } catch (error) {
+        console.error(error);
         errorText.value = 'Invalid plugin file.';
       }
+      hideLoading();
     };
 
     reader.readAsArrayBuffer(file);
@@ -182,7 +248,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
 
 /**
  * Check if version is greater
- * @param {string} newV 
+ * @param {string} newV
  * @param {string} oldV
  * @returns {boolean}
  */
@@ -207,7 +273,7 @@ function isVersionGreater(newV, oldV) {
 
 /**
  * Get update type
- * @param {string} newV 
+ * @param {string} newV
  * @param {string} oldV
  * @returns {'major' | 'minor' | 'patch' | 'unknown'}
  */
@@ -227,5 +293,5 @@ function getUpdateType(newV, oldV) {
     return 'patch';
   }
 
-  return 'unknown';
+  return null;
 }

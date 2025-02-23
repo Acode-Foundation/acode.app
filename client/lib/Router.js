@@ -56,7 +56,7 @@ class Router {
       }
     });
 
-    allCallbacks.push((currUrl, next, forceParams) => {
+    allCallbacks.push((currUrl, _next, forceParams) => {
       this.#navigate(currUrl, forceParams);
     });
 
@@ -87,7 +87,7 @@ class Router {
 
         this.#on.navigate.forEach((listener) => listener(url, changed));
         break;
-      } catch (error) {
+      } catch (_error) {
         // not matched
       }
     }
@@ -203,9 +203,7 @@ class Router {
       if (routeSegment.startsWith(':')) {
         const IS_OPTIONAL = routeSegment.endsWith('?');
         const IS_ALLOWED = IS_OPTIONAL && !pathSegment;
-        const cleanRouteSegment = IS_OPTIONAL
-          ? routeSegment.slice(1, -1)
-          : routeSegment.slice(1);
+        const cleanRouteSegment = IS_OPTIONAL ? routeSegment.slice(1, -1) : routeSegment.slice(1);
         const key = cleanRouteSegment.replace(/\(.*\)$/, '');
         const execValue = /\((.+)\)/.exec(cleanRouteSegment);
         if (Array.isArray(execValue)) {
@@ -253,9 +251,7 @@ class Router {
    */
   loadUrl(href) {
     const { location, history } = window;
-    const thisSite = new RegExp(
-      `(^https?://(www.)?${location.hostname}(/.*)?)|(^/)`,
-    );
+    const thisSite = new RegExp(`(^https?://(www.)?${location.hostname}(/.*)?)|(^/)`);
     if (!thisSite.test(href)) {
       window.location.href = href;
     }

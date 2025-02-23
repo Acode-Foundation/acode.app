@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-const { exec } = require('child_process');
+const { exec } = require('node:child_process');
 
 const inspect = process.argv.includes('--inspect');
 const configProcess = exec('node ./dev/config.js d', processHandler);
