@@ -23,6 +23,8 @@ const MIN_PRICE = 10;
 const MAX_PRICE = 10000;
 const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
 
+const validLicenses = ['MIT', 'GPL-3.0', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'LGPL-3.0', 'MPL-2.0', 'CDDL-1.0', 'EPL-2.0', 'AGPL-3.0', 'Proprietary'];
+
 router.get('/owned/:sku', async (req, res) => {
   try {
     const { sku } = req.params;
@@ -363,8 +365,8 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    const { license, contributors, changelogs, keywords } = req.body;
-    const { pluginJson, icon, readme } = await exploreZip(pluginZip.data);
+    let { license, contributors, changelogs, keywords } = req.body;
+    const { pluginJson, icon, readme, changelogsFile } = await exploreZip(pluginZip.data);
     const errorMessage = validatePlugin(pluginJson, icon, readme);
 
     if (errorMessage) {
@@ -374,9 +376,13 @@ router.post('/', async (req, res) => {
 
     const {
       name,
-      version,
       price,
+      version,
       minVersionCode,
+      license: licenseFromPlugin,
+      keywords: keywordsFromPlugin,
+      changelogs: changelogsFromPlugin,
+      contributors: contributorsFromPlugin,
     } = pluginJson;
 
     if (!VERSION_REGEX.test(version)) {
@@ -413,6 +419,52 @@ router.post('/', async (req, res) => {
       await registerSKU(name, id, price);
     }
 
+    if (!license && licenseFromPlugin) {
+      if (!validLicenses.includes(licenseFromPlugin)) {
+        res.status(400).send({ error: 'Invalid license' });
+        return;
+      }
+
+      license = licenseFromPlugin;
+    }
+
+    if (!keywords && keywordsFromPlugin) {
+      if (Array.isArray(keywordsFromPlugin)) {
+        const invalidKeywords = keywordsFromPlugin.filter(keyword => typeof keyword !== 'string');
+        if (invalidKeywords.length) {
+          res.status(400).send({ error: 'Keywords should be an array of strings' });
+          return;
+        }
+
+        keywords = keywordsFromPlugin.join(', ');
+      }
+
+      keywords = keywordsFromPlugin;
+    }
+
+    if (!contributors && contributorsFromPlugin) {
+      if (Array.isArray(contributorsFromPlugin)) {
+        const invalidContributors = contributorsFromPlugin.filter(contributor => typeof contributor !== 'string');
+        if (invalidContributors.length) {
+          res.status(400).send({ error: 'Contributors should be an array of strings' });
+          return
+        }
+
+        contributors = contributorsFromPlugin.join(', ');
+      }
+
+      contributors = contributorsFromPlugin;
+    }
+
+    if (!changelogs && (changelogsFromPlugin || changelogsFile)) {
+      if (changelogsFromPlugin && typeof changelogsFromPlugin !== 'string') {
+        res.status(400).send({ error: 'Changelogs should be a string' });
+        return;
+      }
+
+      changelogs = changelogsFromPlugin || changelogsFile;
+    }
+
     await Plugin.insert(
       [Plugin.ID, id],
       [Plugin.SKU, getPluginSKU(id)],
@@ -423,7 +475,7 @@ router.post('/', async (req, res) => {
       [Plugin.DESCRIPTION, readme],
       [Plugin.LICENSE, license],
       [Plugin.CONTRIBUTORS, contributors],
-      [Plugin.CHANGELOGS, changelogs],
+      [Plugin.CHANGELOGS, changelogs || changelogsFile || changelogsFromPlugin],
       [Plugin.KEYWORDS, keywords],
       [Plugin.MIN_VERSION_CODE, minVersionCode],
     );
@@ -458,7 +510,7 @@ router.put('/', async (req, res) => {
       return;
     }
 
-    const { license, contributors, changelogs, keywords } = req.body;
+    let { license, contributors, changelogs, keywords } = req.body;
     const { pluginJson, icon, readme, changelogs: changelogsFile } = await exploreZip(pluginZip.data);
 
     const errorMessage = validatePlugin(pluginJson, icon, readme);
@@ -468,7 +520,14 @@ router.put('/', async (req, res) => {
     }
 
     const {
-      name, version, id: pluginId, price,
+      name,
+      price,
+      version,
+      id: pluginId,
+      license: licenseFromPlugin,
+      keywords: keywordsFromPlugin,
+      changelogs: changelogsFromPlugin,
+      contributors: contributorsFromPlugin,
     } = pluginJson;
 
     if (!VERSION_REGEX.test(version)) {
@@ -488,11 +547,57 @@ router.put('/', async (req, res) => {
       return;
     }
 
+    if (!license && licenseFromPlugin) {
+      if (!validLicenses.includes(licenseFromPlugin)) {
+        res.status(400).send({ error: 'Invalid license' });
+        return;
+      }
+
+      license = licenseFromPlugin;
+    }
+
+    if (!keywords && keywordsFromPlugin) {
+      if (Array.isArray(keywordsFromPlugin)) {
+        const invalidKeywords = keywordsFromPlugin.filter(keyword => typeof keyword !== 'string');
+        if (invalidKeywords.length) {
+          res.status(400).send({ error: 'Keywords should be an array of strings' });
+          return;
+        }
+
+        keywords = keywordsFromPlugin.join(', ');
+      }
+
+      keywords = keywordsFromPlugin;
+    }
+
+    if (!contributors && contributorsFromPlugin) {
+      if (Array.isArray(contributorsFromPlugin)) {
+        const invalidContributors = contributorsFromPlugin.filter(contributor => typeof contributor !== 'string');
+        if (invalidContributors.length) {
+          res.status(400).send({ error: 'Contributors should be an array of strings' });
+          return
+        }
+
+        contributors = contributorsFromPlugin.join(', ');
+      }
+
+      contributors = contributorsFromPlugin;
+    }
+
+    if (!changelogs && (changelogsFromPlugin || changelogsFile)) {
+      if (changelogsFromPlugin && typeof changelogsFromPlugin !== 'string') {
+        res.status(400).send({ error: 'Changelogs should be a string' });
+        return;
+      }
+
+      changelogs = changelogsFromPlugin || changelogsFile;
+    }
+
     const updates = [
       [Plugin.DESCRIPTION, readme],
       [Plugin.LICENSE, license],
       [Plugin.CONTRIBUTORS, contributors],
-      [Plugin.CHANGELOGS, changelogs || changelogsFile],
+      [Plugin.CHANGELOGS, changelogs],
       [Plugin.KEYWORDS, keywords],
     ];
 
