@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
-  "files": { "ignoreUnknown": true, "ignore": ["dist/**/*", "*.d.ts", ".vscode/**/*", "**/jsconfig.json"] },
+  "files": { "ignoreUnknown": true, "ignore": ["public/**/*", "*.d.ts", ".vscode/**/*", "**/jsconfig.json"] },
   "formatter": {
     "enabled": true,
     "useEditorconfig": true,
