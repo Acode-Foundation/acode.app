@@ -31,10 +31,10 @@ class Theme {
 
   #toStyle() {
     let theme = '';
-    Object.keys(this.#scheme).forEach((color) => {
+    for (const color in this.#scheme) {
       const cssVar = color.replace(/[A-Z]/g, ($) => `-${$.toLowerCase()}`);
       theme += `--${cssVar}: ${this.#scheme[color]};`;
-    });
+    }
     return `:root{${theme}}`;
   }
 }

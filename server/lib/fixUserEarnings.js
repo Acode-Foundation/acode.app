@@ -33,10 +33,10 @@ async function fixUserEarnings() {
   try {
     const users = await Plugin.getUsersWithPlugin();
 
-    users.forEach(async (usr) => {
-      const rows = await UserEarnings.get([[UserEarnings.USER_ID, usr.id]]);
-      fixUser(usr, rows);
-    });
+    for (const user of users) {
+      const rows = await UserEarnings.get([[UserEarnings.USER_ID, user.id]]);
+      fixUser(user, rows);
+    }
   } catch (error) {
     console.error(error);
     process.exit(1);

@@ -13,26 +13,28 @@ async function downloadSalesReportCsv(year, month, type = 'sales') {
   const json = await downloadReport(year, month, type);
   const orders = {};
 
-  json.forEach((row) => {
+  for (const row of json) {
     if (type === 'sales') {
       sales(row, orders);
     } else {
       earnings(row, orders);
     }
-  });
+  }
 
   let csv;
 
   if (type === 'earnings') {
     csv = 'ID,Date,Product,Amount\n';
-    Object.values(orders).forEach((order) => {
+
+    for (const order of Object.values(orders)) {
       csv += `${order.id},${order.date},${order.product},${order.amount}\n`;
-    });
+    }
   } else {
     csv = 'Order Id,Date,Product,Product Id,Country of Buyer,State of Buyer,City of Buyer,Amount in Buyer Currency\n';
-    Object.values(orders).forEach((order) => {
+
+    for (const order of Object.values(orders)) {
       csv += `${order.id},${order.date},${order.product},${order.productId},${order.countryOfBuyer},${order.stateOfBuyer},${order.cityOfBuyer},${order.chargedAmount}\n`;
-    });
+    }
   }
 
   const fileName = `${type}-${year}-${month}.csv`;

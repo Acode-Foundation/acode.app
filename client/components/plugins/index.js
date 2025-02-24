@@ -29,9 +29,9 @@ export default function Plugins({ user, orderBy, status, name }) {
       const plugins = await res.json();
 
       el.setAttribute('data-msg', 'No plugins found. :(');
-      plugins.forEach((plugin) => {
+      for (const plugin of plugins) {
         el.append(<Plugin {...plugin} isAdmin={isAdmin} userId={userId} />);
-      });
+      }
     } catch (error) {
       el.append(
         <div className='error'>

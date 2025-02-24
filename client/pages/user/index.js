@@ -64,7 +64,7 @@ export default async function User({ userEmail }) {
             <div className='user-name'>
               {user.name}
               <div className='extra-info'>
-                {user.role === 'admin' && <small className='tag'>Admin</small>}
+                {isSelf && user.role === 'admin' && <small className='tag'>Admin</small>}
                 <VerifyButton />
               </div>
             </div>
@@ -219,11 +219,13 @@ export default async function User({ userEmail }) {
       const { el } = paymentMethods;
       const lastChild = el.lastElementChild;
 
-      el.getAll('.payment-method').forEach(($el) => $el.remove());
+      for (const $el of el.getAll('.payment-method')) {
+        $el.remove();
+      }
 
-      rows.forEach((row) => {
+      for (const row of rows) {
         el.insertBefore(<PaymentMethod {...row} />, lastChild);
-      });
+      }
     } catch (error) {
       paymentMethods.innerHTML = <div className='error'>{error.message}</div>;
     } finally {

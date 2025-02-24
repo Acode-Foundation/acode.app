@@ -135,9 +135,9 @@ export default function Input({
   if (['radio', 'checkbox'].includes(type)) {
     inputField.addEventListener('change', (e) => {
       const { target } = e;
-      document.body.getAll(`input[name="${target.name}"]`).forEach(($el) => {
+      for (const $el of tag.getAll(`input[name="${target.name}"]`)) {
         $el.parentElement.classList.remove('checked');
-      });
+      }
       target.parentElement.classList.add('checked');
     });
   }

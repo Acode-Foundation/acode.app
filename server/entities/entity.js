@@ -155,10 +155,10 @@ class Entity {
     const fields = [];
     const values = [];
 
-    columns.forEach(([column, value]) => {
+    for (const [column, value] of columns) {
       fields.push(column);
       values.push(value);
-    });
+    }
 
     sql += ` (${fields.join(', ')})`;
     sql += ` VALUES (${values.map(() => '?').join(', ')})`;
@@ -171,10 +171,10 @@ class Entity {
     const fields = [];
     const values = [];
 
-    columns.forEach(([column, value]) => {
+    for (const [column, value] of columns) {
       fields.push(column);
       values.push(value);
-    });
+    }
 
     sql += ` (${fields.join(', ')})`;
     sql += ` VALUES (${values.map(() => '?').join(', ')})`;
@@ -200,11 +200,11 @@ class Entity {
     const fields = [];
     const values = [];
 
-    columns.forEach(([column, value]) => {
-      if (value === undefined) return;
+    for (const [column, value] of columns) {
+      if (value === undefined) continue;
       fields.push(column);
       values.push(value);
-    });
+    }
 
     if (!fields.length) return Promise.resolve();
     sql += ` SET ${fields.map((field) => `${field} = ?`).join(', ')}`;

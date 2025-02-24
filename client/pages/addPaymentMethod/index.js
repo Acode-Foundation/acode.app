@@ -52,7 +52,8 @@ export default async function AddPaymentMethod({ mode }) {
         </div>
       </div>,
     );
-  } else {
+  } else if (mode === 'crypto') {
+    title = 'Add New Wallet';
     form.append(
       <div>
         <Input required={true} type='text' name='wallet_address' placeholder='e.g. 0x1234567890abcdef' label='Wallet Address' />

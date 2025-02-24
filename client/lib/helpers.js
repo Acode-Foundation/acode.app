@@ -18,14 +18,19 @@ export function showLoading() {
     clearTimeout(eventTimeout);
     return;
   }
-  on.showloading.forEach((cb) => cb());
+
+  for (const cb of Array.from(on.showloading)) {
+    cb();
+  }
 }
 
 export function hideLoading() {
   document.body.classList.remove('loading');
   eventTimeout = setTimeout(() => {
     eventTimeout = null;
-    on.hideloading.forEach((cb) => cb());
+    for (const cb of Array.from(on.hideloading)) {
+      cb();
+    }
   }, 500);
 }
 

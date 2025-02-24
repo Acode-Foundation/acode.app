@@ -36,9 +36,9 @@ async function fromPaidPlugins(year, month, user, report) {
           if (!reportRows.length) {
             calculatedAmount = amount * 0.65;
           } else {
-            reportRows.forEach((r) => {
-              calculatedAmount += Number.parseFloat(r['Amount (Merchant Currency)']);
-            });
+            for (const row of reportRows) {
+              calculatedAmount += Number.parseFloat(row['Amount (Merchant Currency)']);
+            }
           }
         } else {
           calculatedAmount = amount;
@@ -133,7 +133,7 @@ async function unpaid(user, year, month) {
   let toMonth = 0;
   let toYear = 0;
 
-  unpaidEarnings.forEach((earning) => {
+  for (const earning of unpaidEarnings) {
     const { id, amount, month: thisMonth, year: thisYear } = earning;
     ids.push(id);
 
@@ -148,7 +148,7 @@ async function unpaid(user, year, month) {
     }
 
     earnings += Number.parseFloat(amount);
-  });
+  }
 
   earnings = Number.parseFloat(Math.round(earnings * 100) / 100);
   return {

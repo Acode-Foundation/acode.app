@@ -53,7 +53,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
     renderOrders(ordersList, pluginId, selectYear.value, selectMonth.value);
   };
   const $orders = <Order />;
-  const isSameUser = user && (user.id === userId || user.isAdmin) && plugin.price;
+  const shouldShowOrders = user && (user.id === userId || user.isAdmin) && !!plugin.price;
 
   let canInstall = /android/i.test(navigator.userAgent);
 
@@ -67,7 +67,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
   changeSection(section, false);
   renderComments(commentListRef, userId, user, pluginId, author);
 
-  if (isSameUser) {
+  if (shouldShowOrders) {
     renderOrders(ordersList, pluginId);
   }
 
@@ -119,7 +119,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
               </div>
             )}
             {license && license.toLowerCase() !== 'unknown' && (
-              <div className='chip' onclick={() => changeSection('comments')}>
+              <div className='chip'>
                 <span className='icon certificate' />
                 <span>{license}</span>
               </div>
@@ -141,12 +141,10 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
             <span className='chip'>
               <a href={`/user/${authorEmail}`}>{author}</a>&nbsp;{!!authorVerified && <span className='icon verified' />}
             </span>
-            {repository ? (
+            {repository && (
               <a className='chip' href={repository}>
                 repository
               </a>
-            ) : (
-              ''
             )}
           </div>
         </div>
@@ -169,7 +167,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           <h2 onclick={() => changeSection('comments')} ref={sectionComments}>
             Reviews
           </h2>
-          {isSameUser && (
+          {shouldShowOrders && (
             <h2 onclick={() => changeSection('orders')} ref={sectionOrders}>
               Orders
             </h2>
