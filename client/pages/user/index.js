@@ -282,7 +282,7 @@ export default async function User({ userEmail }) {
   }
 
   function VerifyButton() {
-    if (!user.verified && !loggedInUser.isAdmin) return null;
+    if (!user.verified && !loggedInUser?.isAdmin) return null;
 
     return (
       <span
