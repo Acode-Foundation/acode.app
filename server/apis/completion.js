@@ -18,13 +18,17 @@ router.post('/', async (req, res) => {
     const result = await client.messages.create({
       model: 'claude-3-haiku-20240307',
       max_tokens: 1024,
-      messages: [{
-        role: 'user',
-        content: [{
-          type: 'text',
-          text: message,
-        }],
-      }],
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: message,
+            },
+          ],
+        },
+      ],
     });
 
     // eslint-disable-next-line max-len

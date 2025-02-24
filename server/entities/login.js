@@ -23,14 +23,7 @@ class Login extends Entity {
   }
 
   get columns() {
-    return [
-      this.ID,
-      this.USER_ID,
-      this.TOKEN,
-      this.IP,
-      this.CREATED_AT,
-      this.UPDATED_AT,
-    ];
+    return [this.ID, this.USER_ID, this.TOKEN, this.IP, this.CREATED_AT, this.UPDATED_AT];
   }
 }
 

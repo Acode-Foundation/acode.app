@@ -4,16 +4,19 @@
 /* eslint-disable import/order */
 const db = require('./db');
 
-execQuery([
-  'ALTER TABLE plugin ADD COLUMN license TEXT DEFAULT "Unknown"',
-  'ALTER TABLE plugin ADD COLUMN contributors TEXT',
-  'ALTER TABLE plugin ADD COLUMN changelogs TEXT',
-  'ALTER TABLE plugin ADD COLUMN keywords TEXT',
-  'ALTER TABLE user ADD COLUMN role TEXT DEFAULT "user"',
-], async () => {
-  db.close();
-  console.log('Done');
-});
+execQuery(
+  [
+    'ALTER TABLE plugin ADD COLUMN license TEXT DEFAULT "Unknown"',
+    'ALTER TABLE plugin ADD COLUMN contributors TEXT',
+    'ALTER TABLE plugin ADD COLUMN changelogs TEXT',
+    'ALTER TABLE plugin ADD COLUMN keywords TEXT',
+    'ALTER TABLE user ADD COLUMN role TEXT DEFAULT "user"',
+  ],
+  async () => {
+    db.close();
+    console.log('Done');
+  },
+);
 
 /**
  * @param {string[]} queries
@@ -27,7 +30,6 @@ function execQuery(queries, cb) {
     }
     return;
   }
-
 
   console.log('Executing:', query);
   db.all(query, [], (err) => {

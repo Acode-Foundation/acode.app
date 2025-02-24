@@ -36,8 +36,6 @@ export default class RouterExtension {
   }
 
   get beforeNavigateCallbacks() {
-    return [
-      ...this.#beforeNavigate,
-    ];
+    return [...this.#beforeNavigate];
   }
 }

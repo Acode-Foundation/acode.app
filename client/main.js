@@ -65,14 +65,14 @@ window.onload = async () => {
 
   Router.listen();
 
-  Router.onnavigate = () => {
+  Router.on('navigate', () => {
     const navToggler = tag.get('#menu-toggler');
     if (navToggler.checked) {
       navToggler.checked = false;
     }
     main.content = '';
     app.scrollTop = 0;
-  };
+  });
 
   async function loadModule(module, props = {}) {
     showLoading();

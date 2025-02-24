@@ -59,9 +59,9 @@ class PaymentMethod extends Entity {
       this.USER_ID,
       this.CREATED_AT,
       this.PAYPAL_EMAIL,
-      'substr(bank_account_number, 1, 4) || \'XXXX\' || substr(bank_account_number, -4) as bank_account_number',
+      "substr(bank_account_number, 1, 4) || 'XXXX' || substr(bank_account_number, -4) as bank_account_number",
       this.BANK_ACCOUNT_TYPE,
-      'substr(wallet_address, 1, 4) || \'...\' || substr(wallet_address, -4) as wallet_address',
+      "substr(wallet_address, 1, 4) || '...' || substr(wallet_address, -4) as wallet_address",
       this.WALLET_TYPE,
       this.IS_DEFAULT,
     ];

@@ -1,6 +1,6 @@
 @font-face {
-  font-family: 'acode';
-  src: url('acode.ttf?w5ytek') format('truetype');
+  font-family: "acode";
+  src: url("acode.ttf?w5ytek") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -8,8 +8,7 @@
 
 .icon {
   /* use !important to prevent issues with browser extensions that change fonts */
-  font-family: 'acode' !important;
-  speak: never;
+  font-family: "acode" !important;
   font-style: normal;
   font-weight: normal;
   font-variant: normal;

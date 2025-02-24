@@ -37,7 +37,7 @@ class Router {
   }
 
   /**
-   * Nvigate to given path
+   * Navigate to given path
    * @param {string} url
    */
   navigate(url) {
@@ -47,14 +47,14 @@ class Router {
     const allCallbacks = [];
     this.#currentUrl = url;
 
-    Object.keys(this.#beforeNavigate).forEach((path) => {
+    for (const path in this.#beforeNavigate) {
       if (url.startsWith(path)) {
         const callbacks = this.#beforeNavigate[path];
         if (Array.isArray(callbacks)) {
           allCallbacks.push(...callbacks);
         }
       }
-    });
+    }
 
     allCallbacks.push((currUrl, _next, forceParams) => {
       this.#navigate(currUrl, forceParams);
@@ -81,11 +81,9 @@ class Router {
         this.#lastPath = path;
         route(forceParams ?? params, queries);
 
-        if (typeof this.onnavigate === 'function') {
-          this.onnavigate(url, changed);
+        for (const listener of Array.from(this.#on.navigate)) {
+          listener(url, changed);
         }
-
-        this.#on.navigate.forEach((listener) => listener(url, changed));
         break;
       } catch (_error) {
         // not matched
@@ -100,7 +98,7 @@ class Router {
     const { location } = window;
     this.navigate(location.pathname);
     document.addEventListener('locationchange', () => this.navigate());
-    document.body.addEventListener('click', this.#listenForAncher.bind(this));
+    document.body.addEventListener('click', this.#listenForAnchor.bind(this));
     window.addEventListener('popstate', () => {
       document.dispatchEvent(this.#customEvent);
     });
@@ -134,14 +132,14 @@ class Router {
    */
   use(router) {
     const { routes, beforeNavigateCallbacks } = router;
-    Object.keys(routes).forEach((path) => {
+    for (const path in routes) {
       this.add(path, routes[path]);
-    });
+    }
 
-    beforeNavigateCallbacks.forEach(({ path, callback }) => {
+    for (const { path, callback } of beforeNavigateCallbacks) {
       if (!this.#beforeNavigate[path]) this.#beforeNavigate[path] = [];
       this.#beforeNavigate[path].push(callback);
-    });
+    }
   }
 
   /**
@@ -181,10 +179,10 @@ class Router {
     const routeSegments = route.split('/');
     const pathSegments = path.split('/');
 
-    queryString?.split('&').forEach((get) => {
-      const [key, value] = get.split('=');
+    for (const query of queryString.split('&')) {
+      const [key, value] = query.split('=');
       queries[decodeURIComponent(key)] = decodeURIComponent(value);
-    });
+    }
 
     const len = Math.max(routeSegments.length, pathSegments.length);
 
@@ -230,7 +228,7 @@ class Router {
    * @param {MouseEvent} e
    * @returns
    */
-  #listenForAncher(e) {
+  #listenForAnchor(e) {
     const $el = e.target;
 
     if (!($el instanceof HTMLAnchorElement)) return;

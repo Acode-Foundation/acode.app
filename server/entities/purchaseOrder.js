@@ -40,13 +40,7 @@ class PurchaseOrder extends Entity {
   }
 
   get minColumns() {
-    return [
-      this.PACKAGE,
-      this.AMOUNT,
-      this.STATE,
-      this.CREATED_AT,
-      this.ORDER_ID,
-    ];
+    return [this.PACKAGE, this.AMOUNT, this.STATE, this.CREATED_AT, this.ORDER_ID];
   }
 }
 

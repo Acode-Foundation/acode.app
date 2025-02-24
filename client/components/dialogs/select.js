@@ -6,12 +6,16 @@ export default async function select(title, options) {
       hide(false);
       resolve(options[index]);
     };
-    const dialog = <DialogBox
-      onhide={() => { resolve(null); }}
-      title={title}
-      options={options}
-      onselect={onselect}
-    />;
+    const dialog = (
+      <DialogBox
+        onhide={() => {
+          resolve(null);
+        }}
+        title={title}
+        options={options}
+        onselect={onselect}
+      />
+    );
     document.body.append(dialog);
   });
 }

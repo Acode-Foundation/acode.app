@@ -7,7 +7,11 @@
  * @returns
  */
 export default function SendOtp({ errorText, getEmail, type = 'signup' }) {
-  return <span style={{ marginTop: 0 }} className="link" on:click={sendOtp}>Send OTP</span>;
+  return (
+    <span style={{ marginTop: 0 }} className='link' on:click={sendOtp}>
+      Send OTP
+    </span>
+  );
 
   async function sendOtp(e) {
     const email = getEmail();
@@ -42,9 +46,13 @@ export default function SendOtp({ errorText, getEmail, type = 'signup' }) {
       target.classList.add('success');
       target.textContent = data.message;
       target.style.pointerEvents = 'none';
-      startTimer(60, (time) => {
-        target.textContent = `Resend OTP (${time})`;
-      }, restore);
+      startTimer(
+        60,
+        (time) => {
+          target.textContent = `Resend OTP (${time})`;
+        },
+        restore,
+      );
     } catch (error) {
       errorText.value = error.message;
       restore();

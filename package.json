@@ -18,6 +18,7 @@
     "babel-loader": "^9.2.1",
     "css-loader": "^7.1.2",
     "file-loader": "^6.2.0",
+    "husky": "^9.1.7",
     "kill-port": "^2.0.1",
     "mini-css-extract-plugin": "^2.9.2",
     "nodemon": "^3.1.9",
@@ -56,6 +57,7 @@
     "sqlite3": "^5.1.7"
   },
   "scripts": {
+    "prepare": "husky",
     "config-build": "node ./dev/config",
     "build-release": "yarn config-build p && webpack --mode production",
     "start-dev": "node ./dev/start-dev",

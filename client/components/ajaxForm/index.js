@@ -12,13 +12,13 @@ import './style.scss';
  * @param {string} param0.contentType
  * @returns
  */
-export default function AjaxForm({
-  ref, onloadend, onerror, loading, loadingEnd, method, action, encoding, contentType,
-}, children) {
+export default function AjaxForm({ ref, onloadend, onerror, loading, loadingEnd, method, action, encoding, contentType }, children) {
   const actionUrl = typeof action === 'function' ? '#' : action;
-  const form = <form ref={ref} action={actionUrl} method={method} encoding={encoding}>
-    {children}
-  </form>;
+  const form = (
+    <form ref={ref} action={actionUrl} method={method} encoding={encoding}>
+      {children}
+    </form>
+  );
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -28,9 +28,9 @@ export default function AjaxForm({
     const jsonData = {};
 
     if (contentType === 'json') {
-      formData.entries().forEach(([key, value]) => {
+      for (const [key, value] of formData.entries()) {
         jsonData[key] = value;
-      });
+      }
       body = JSON.stringify(jsonData);
     }
 

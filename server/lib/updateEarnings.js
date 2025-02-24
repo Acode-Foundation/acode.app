@@ -44,16 +44,19 @@ module.exports = async function updateEarnings(year = currentYear, month = curre
     const users = await Plugin.getUsersWithPlugin();
     // filter user with not paypal email or not bank account and send email to them
     // send email to user with no paypal email or no bank account
-    users.forEach((u) => {
-      if (u.payment_method_id) return;
-      sendNotification(u.email, u.name, 'Payment method not found', 'Please add payment method to receive payment.');
-    });
 
-    users.forEach(async (usr) => {
-      const earnings = await calcEarnings.total(year, month, usr, report);
+    for (const user of users) {
+      const { payment_method_id, email, name } = user;
+      let { threshold } = user;
+
+      if (!payment_method_id) {
+        sendNotification(email, name, 'Payment method not found', 'Please add payment method to receive payment.');
+      }
+
+      const earnings = await calcEarnings.total(year, month, user, report);
 
       const [row] = await UserEarnings.get([
-        [UserEarnings.USER_ID, usr.id],
+        [UserEarnings.USER_ID, user.id],
         [UserEarnings.YEAR, year],
         [UserEarnings.MONTH, month],
       ]);
@@ -62,43 +65,41 @@ module.exports = async function updateEarnings(year = currentYear, month = curre
         await UserEarnings.update([UserEarnings.AMOUNT, earnings], [UserEarnings.ID, row.id]);
       } else {
         await UserEarnings.insert(
-          [UserEarnings.USER_ID, usr.id],
+          [UserEarnings.USER_ID, user.id],
           [UserEarnings.YEAR, year],
           [UserEarnings.MONTH, month],
           [UserEarnings.AMOUNT, earnings],
         );
       }
 
-      if (!usr.payment_method_id) return;
+      if (!payment_method_id) continue;
 
-      const { ids: unpaidEarningsId, earnings: unpaid, from, to } = await calcEarnings.unpaid(usr);
-      // eslint-disable-next-line no-console
-      console.log(`Earnings for ${usr.name} is ${unpaid}`);
-      let { threshold } = usr;
+      const { ids: unpaidEarningsId, earnings: unpaid, from, to } = await calcEarnings.unpaid(user);
+      console.log(`Earnings for ${user.name} is ${unpaid}`);
 
-      const [paymentMethod] = await PaymentMethod.get([PaymentMethod.ID, usr.payment_method_id]);
+      const [paymentMethod] = await PaymentMethod.get([PaymentMethod.ID, user.payment_method_id]);
       if (paymentMethod.wallet_address) {
         threshold = Math.max(4000, threshold);
       } else if (paymentMethod.bank_swift_code) {
         threshold = Math.max(5000, threshold);
       }
 
-      if (unpaid < threshold) return;
+      if (unpaid < threshold) continue;
       // create integer random unique payment id
       const paymentId = Math.floor(Math.random() * 1000000000);
 
       await Payment.insert(
         [Payment.ID, paymentId],
-        [Payment.USER_ID, usr.id],
+        [Payment.USER_ID, user.id],
         [Payment.AMOUNT, unpaid],
         [Payment.STATUS, Payment.STATUS_INITIATED],
-        [Payment.PAYMENT_METHOD_ID, usr.payment_method_id],
+        [Payment.PAYMENT_METHOD_ID, user.payment_method_id],
         [Payment.DATE_FROM, from.format('YYYY-MM-DD')],
         [Payment.DATE_TO, to.format('YYYY-MM-DD')],
       );
 
       await UserEarnings.update([UserEarnings.PAYMENT_ID, paymentId], [UserEarnings.ID, unpaidEarningsId]);
-    });
+    }
   } catch (error) {
     // eslint-disable-next-line no-console
     console.log(error);

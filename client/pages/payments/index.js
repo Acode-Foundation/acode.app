@@ -21,9 +21,9 @@ export default function Payments() {
         throw new Error(data.error);
       }
 
-      data.forEach((i) => {
-        list.append(Payment(i));
-      });
+      for (const item of data) {
+        list.append(Payment(item));
+      }
     } catch (err) {
       alert('ERROR', err.message || err);
     }

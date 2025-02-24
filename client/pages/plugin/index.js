@@ -71,9 +71,9 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
     renderOrders(ordersList, pluginId);
   }
 
-  $description.getAll('table').forEach((table) => {
+  for (const table of $description.getAll('table')) {
     table.replaceWith(<div className='table-wrapper'>{table.cloneNode(true)}</div>);
-  });
+  }
 
   return (
     <section id='plugin'>
@@ -118,7 +118,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
                 <span>{commentCount}</span>
               </div>
             )}
-            {license.toLowerCase() !== 'unknown' && (
+            {license && license.toLowerCase() !== 'unknown' && (
               <div className='chip' onclick={() => changeSection('comments')}>
                 <span className='icon certificate' />
                 <span>{license}</span>
@@ -139,7 +139,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           </div>
           <div className='info'>
             <span className='chip'>
-              <a href={`/user/${authorEmail}`}>{author}</a>&nbsp;{authorVerified && <span className='icon verified' />}
+              <a href={`/user/${authorEmail}`}>{author}</a>&nbsp;{!!authorVerified && <span className='icon verified' />}
             </span>
             {repository ? (
               <a className='chip' href={repository}>
@@ -169,12 +169,10 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           <h2 onclick={() => changeSection('comments')} ref={sectionComments}>
             Reviews
           </h2>
-          {isSameUser ? (
+          {isSameUser && (
             <h2 onclick={() => changeSection('orders')} ref={sectionOrders}>
               Orders
             </h2>
-          ) : (
-            ''
           )}
         </div>
         <div ref={mainBody} className='body' />
@@ -256,7 +254,8 @@ async function renderOrders(ref, pluginId, year, month) {
   if (!year) year = moment().year();
   const url = `/api/plugin/orders/${pluginId}/${year}/${month}`;
   const orders = await fetch(url).then((res) => res.json());
-  orders.forEach((order) => {
+
+  for (const order of orders) {
     const date = moment(order.created_at).format('DD MMMM YYYY');
     const status = order.state === '0' ? 'Completed' : 'Cancelled';
     const packageName = /free$/.test(order.package) ? 'Free' : 'Paid';
@@ -268,18 +267,19 @@ async function renderOrders(ref, pluginId, year, month) {
         <td className={`order-status ${status}`}>{status}</td>
       </tr>,
     );
-  });
+  }
 }
 
 async function renderComments(ref, pluginUserId, user, id, author) {
   const comments = await fetch(`/api/comments/${id}`).then((res) => res.json());
-  comments.forEach((comment) => {
-    if (!comment.comment) return;
+
+  for (const comment of comments) {
+    if (!comment.comment) confirm;
     comment.user = user;
     comment.pluginUserId = pluginUserId;
     comment.pluginAuthor = author;
     ref.append(<Comment {...comment} />);
-  });
+  }
 }
 
 function Comment({
@@ -455,10 +455,10 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
       const deleted = await deleteComment(commentId);
       if (!deleted) return;
       form.el.reset();
-      form.el.getAll('input[name=vote]').forEach((i) => {
-        i.checked = false;
-        i.onchange();
-      });
+      for (const input of form.getAll('input[name=vote]')) {
+        input.checked = false;
+        input.onchange();
+      }
     } catch (error) {
       alert('ERROR', error);
     }
@@ -486,11 +486,12 @@ function IconInput({ name, icon, iconSelected, value, title, checked }) {
   const onclick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    tag.getAll(`input[name=${name}]`).forEach((i) => {
-      if (i === input.el) return;
-      i.checked = false;
-      i.onchange();
-    });
+
+    for (const input of tag.getAll(`input[name=${name}]`)) {
+      if (input === input.el) return;
+      input.checked = false;
+      input.onchange();
+    }
 
     const isChecked = !input.el.checked;
     input.el.checked = isChecked;

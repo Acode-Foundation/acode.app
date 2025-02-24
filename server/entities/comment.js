@@ -43,16 +43,7 @@ class Comment extends Entity {
   }
 
   get columns() {
-    return [
-      this.ID,
-      this.PLUGIN_ID,
-      this.USER_ID,
-      this.COMMENT,
-      this.VOTE,
-      this.CREATED_AT,
-      this.UPDATED_AT,
-      this.AUTHOR_REPLY,
-    ];
+    return [this.ID, this.PLUGIN_ID, this.USER_ID, this.COMMENT, this.VOTE, this.CREATED_AT, this.UPDATED_AT, this.AUTHOR_REPLY];
   }
 
   getVoteString(vote) {
@@ -62,10 +53,7 @@ class Comment extends Entity {
   }
 
   get allColumns() {
-    return [
-      ...this.columns,
-      this.FLAGGED_BY_AUTHOR,
-    ];
+    return [...this.columns, this.FLAGGED_BY_AUTHOR];
   }
 
   /**
@@ -76,12 +64,12 @@ class Comment extends Entity {
    * @param {import('./entity').Pagination} options
    * @returns {string}
    */
-  generateGetSql(columns, where, values, {
-    page = Entity.DEFAULT_PAGE,
-    limit = Entity.DEFAULT_LIMIT,
-    orderBy = Entity.DEFAULT_ORDER_BY,
-    operator = Entity.DEFAULT_OPERATOR,
-  }) {
+  generateGetSql(
+    columns,
+    where,
+    values,
+    { page = Entity.DEFAULT_PAGE, limit = Entity.DEFAULT_LIMIT, orderBy = Entity.DEFAULT_ORDER_BY, operator = Entity.DEFAULT_OPERATOR },
+  ) {
     if (columns[0] === '*') columns = this.allColumns;
     let sql = `SELECT [${this.allColumns.join('], [')}] FROM ${this.table}`;
 

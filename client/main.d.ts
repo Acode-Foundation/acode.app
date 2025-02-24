@@ -28,7 +28,6 @@ interface Router {
     event: 'nagivate',
     listener: (url: String, changed: Boolean) => void
   ): void;
-  onnavigate(url: String): void;
 }
 
 interface Order {

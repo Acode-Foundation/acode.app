@@ -23,14 +23,7 @@ class Download extends Entity {
   }
 
   get columns() {
-    return [
-      this.ID,
-      this.PLUGIN_ID,
-      this.DEVICE_ID,
-      this.CREATED_AT,
-      this.CLIENT_IP,
-      this.PACKAGE_NAME,
-    ];
+    return [this.ID, this.PLUGIN_ID, this.DEVICE_ID, this.CREATED_AT, this.CLIENT_IP, this.PACKAGE_NAME];
   }
 }
 

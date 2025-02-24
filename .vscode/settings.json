@@ -37,12 +37,14 @@
     "Foxbiz",
     "gapis",
     "hideloading",
+    "hintrc",
     "hljs",
     "iconsrc",
     "IFNULL",
     "ifsc",
     "inappproducts",
     "lightgreen",
+    "locationchange",
     "maxlength",
     "nagivate",
     "noreferrer",
@@ -54,7 +56,6 @@
     "onhide",
     "onloadeend",
     "onloaderror",
-    "onnavigate",
     "onok",
     "onref",
     "onrename",
@@ -79,6 +80,9 @@
     "editor.defaultFormatter": "biomejs.biome"
   },
   "[json]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[css]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
   "editor.codeActionsOnSave": {

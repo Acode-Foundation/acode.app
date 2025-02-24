@@ -84,12 +84,12 @@ class Plugin extends Entity {
    * @param {import('./entity').Pagination} options
    * @returns {string}
    */
-  generateGetSql(columns, where, values, {
-    page = Entity.default_page,
-    limit = Entity.default_limit,
-    orderBy = Entity.default_order_by,
-    operator = Entity.default_operator,
-  }) {
+  generateGetSql(
+    columns,
+    where,
+    values,
+    { page = Entity.default_page, limit = Entity.default_limit, orderBy = Entity.default_order_by, operator = Entity.default_operator },
+  ) {
     let sql = `SELECT ${this.#initialColumns.join(',')} FROM ${this.table}`;
 
     if (Entity.isValidWhere(where)) {
@@ -123,11 +123,7 @@ class Plugin extends Entity {
    * @param {'AND' | 'OR'} operator when there are multiple where clauses
    */
   delete(where, operator = 'AND') {
-    return this.update(
-      [this.STATUS, this.STATUS_INACTIVE],
-      where,
-      operator,
-    );
+    return this.update([this.STATUS, this.STATUS_INACTIVE], where, operator);
   }
 
   deletePermanently(where, operator = 'AND') {
@@ -175,10 +171,7 @@ class Plugin extends Entity {
   }
 
   get allColumns() {
-    return [
-      ...this.minColumns,
-      this.STATUS,
-    ];
+    return [...this.minColumns, this.STATUS];
   }
 
   get #initialColumns() {
@@ -203,7 +196,7 @@ class Plugin extends Entity {
       this.STATUS_CHANGE_MESSAGE,
       this.STATUS_CHANGE_DATE,
       this.REPOSITORY,
-      'CASE WHEN status = 0 THEN \'pending\' WHEN status = 1 THEN \'approved\' WHEN status = 2 THEN \'rejected\' WHEN status = 3 THEN \'deleted\' END as status',
+      "CASE WHEN status = 0 THEN 'pending' WHEN status = 1 THEN 'approved' WHEN status = 2 THEN 'rejected' WHEN status = 3 THEN 'deleted' END as status",
       `'${process.env.HOST}/plugin-icon/' || id as icon`,
     ];
   }
@@ -242,8 +235,8 @@ class Plugin extends Entity {
     return [
       'u.name as author',
       'u.verified as author_verified',
-      'IFNULL(u.github, \'\') as author_github',
-      'IFNULL(u.website, \'\') as author_website',
+      "IFNULL(u.github, '') as author_github",
+      "IFNULL(u.website, '') as author_website",
       'u.email as author_email',
     ];
   }
