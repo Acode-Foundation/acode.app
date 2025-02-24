@@ -362,7 +362,6 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    let { license, contributors, changelogs, keywords } = req.body;
     const { pluginJson, icon, readme, changelogsFile } = await exploreZip(pluginZip.data);
 
     const pluginId = pluginJson.id.toLowerCase();
@@ -387,16 +386,7 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    const {
-      name,
-      price,
-      version,
-      minVersionCode,
-      license: licenseFromPlugin,
-      keywords: keywordsFromPlugin,
-      changelogs: changelogsFromPlugin,
-      contributors: contributorsFromPlugin,
-    } = pluginJson;
+    const { name, price, version, minVersionCode } = pluginJson;
 
     if (!VERSION_REGEX.test(version)) {
       res.status(400).send({ error: 'Invalid version number, version should be in the format x.x.x' });
@@ -417,66 +407,41 @@ router.post('/', async (req, res) => {
       await registerSKU(name, pluginId, price);
     }
 
-    if (!license && licenseFromPlugin) {
-      if (!validLicenses.includes(licenseFromPlugin)) {
-        res.status(400).send({ error: 'Invalid license' });
-        return;
-      }
-
-      license = licenseFromPlugin;
+    const { changelogs } = req.body;
+    if (!pluginJson.changelogs && (changelogsFile || changelogs)) {
+      pluginJson.changelogs = changelogsFile || changelogs;
     }
 
-    if (!keywords && keywordsFromPlugin) {
-      if (Array.isArray(keywordsFromPlugin)) {
-        const invalidKeywords = keywordsFromPlugin.filter((keyword) => typeof keyword !== 'string');
-        if (invalidKeywords.length) {
-          res.status(400).send({ error: 'Keywords should be an array of strings' });
-          return;
-        }
+    validatePluginData(pluginJson);
 
-        keywords = keywordsFromPlugin.join(', ');
-      }
-
-      keywords = keywordsFromPlugin;
-    }
-
-    if (!contributors && contributorsFromPlugin) {
-      if (Array.isArray(contributorsFromPlugin)) {
-        const invalidContributors = contributorsFromPlugin.filter((contributor) => typeof contributor !== 'string');
-        if (invalidContributors.length) {
-          res.status(400).send({ error: 'Contributors should be an array of strings' });
-          return;
-        }
-
-        contributors = contributorsFromPlugin.join(', ');
-      }
-
-      contributors = contributorsFromPlugin;
-    }
-
-    if (!changelogs && (changelogsFromPlugin || changelogsFile)) {
-      if (changelogsFromPlugin && typeof changelogsFromPlugin !== 'string') {
-        res.status(400).send({ error: 'Changelogs should be a string' });
-        return;
-      }
-
-      changelogs = changelogsFromPlugin || changelogsFile;
-    }
-
-    await Plugin.insert(
+    const insert = [
       [Plugin.ID, pluginId],
-      [Plugin.SKU, getPluginSKU(pluginId)],
       [Plugin.NAME, name],
       [Plugin.PRICE, price],
       [Plugin.VERSION, version],
       [Plugin.USER_ID, user.id],
       [Plugin.DESCRIPTION, readme],
-      [Plugin.LICENSE, license],
-      [Plugin.CONTRIBUTORS, contributors],
-      [Plugin.CHANGELOGS, changelogs || changelogsFile || changelogsFromPlugin],
-      [Plugin.KEYWORDS, keywords],
+      [Plugin.SKU, getPluginSKU(pluginId)],
       [Plugin.MIN_VERSION_CODE, minVersionCode],
-    );
+    ];
+
+    if (pluginJson.license) {
+      insert.push([Plugin.LICENSE, pluginJson.license]);
+    }
+
+    if (pluginJson.contributors) {
+      insert.push([Plugin.CONTRIBUTORS, JSON.stringify(pluginJson.contributors)]);
+    }
+
+    if (pluginJson.keywords) {
+      insert.push([Plugin.KEYWORDS, JSON.stringify(pluginJson.keywords)]);
+    }
+
+    if (pluginJson.changelogs) {
+      insert.push([Plugin.CHANGELOGS, pluginJson.changelogs]);
+    }
+
+    await Plugin.insert(...insert);
 
     savePlugin(pluginId, pluginZip, icon);
     res.send({ message: 'Plugin uploaded successfully' });
@@ -513,7 +478,6 @@ router.put('/', async (req, res) => {
       return;
     }
 
-    let { license, contributors, changelogs, keywords } = req.body;
     const { pluginJson, icon, readme, changelogs: changelogsFile } = await exploreZip(pluginZip.data);
 
     const errorMessage = validatePlugin(pluginJson, icon, readme);
@@ -522,16 +486,7 @@ router.put('/', async (req, res) => {
       return;
     }
 
-    const {
-      name,
-      price,
-      version,
-      id: pluginId,
-      license: licenseFromPlugin,
-      keywords: keywordsFromPlugin,
-      changelogs: changelogsFromPlugin,
-      contributors: contributorsFromPlugin,
-    } = pluginJson;
+    const { name, price, version, id: pluginId } = pluginJson;
 
     if (!VERSION_REGEX.test(version)) {
       res.status(400).send({ error: 'Invalid version number, version should be in the format x.x.x' });
@@ -544,59 +499,30 @@ router.put('/', async (req, res) => {
       return;
     }
 
-    if (!license && licenseFromPlugin) {
-      if (!validLicenses.includes(licenseFromPlugin)) {
-        res.status(400).send({ error: 'Invalid license' });
-        return;
-      }
-
-      license = licenseFromPlugin;
+    const { changelogs } = req.body;
+    if (!pluginJson.changelogs && (changelogsFile || changelogs)) {
+      pluginJson.changelogs = changelogsFile || changelogs;
     }
 
-    if (!keywords && keywordsFromPlugin) {
-      if (Array.isArray(keywordsFromPlugin)) {
-        const invalidKeywords = keywordsFromPlugin.filter((keyword) => typeof keyword !== 'string');
-        if (invalidKeywords.length) {
-          res.status(400).send({ error: 'Keywords should be an array of strings' });
-          return;
-        }
+    validatePluginData(pluginJson);
 
-        keywords = keywordsFromPlugin.join(', ');
-      }
+    const updates = [[Plugin.DESCRIPTION, readme]];
 
-      keywords = keywordsFromPlugin;
+    if (pluginJson.license) {
+      updates.push([Plugin.LICENSE, pluginJson.license]);
     }
 
-    if (!contributors && contributorsFromPlugin) {
-      if (Array.isArray(contributorsFromPlugin)) {
-        const invalidContributors = contributorsFromPlugin.filter((contributor) => typeof contributor !== 'string');
-        if (invalidContributors.length) {
-          res.status(400).send({ error: 'Contributors should be an array of strings' });
-          return;
-        }
-
-        contributors = contributorsFromPlugin.join(', ');
-      }
-
-      contributors = contributorsFromPlugin;
+    if (pluginJson.contributors) {
+      updates.push([Plugin.CONTRIBUTORS, JSON.stringify(pluginJson.contributors)]);
     }
 
-    if (!changelogs && (changelogsFromPlugin || changelogsFile)) {
-      if (changelogsFromPlugin && typeof changelogsFromPlugin !== 'string') {
-        res.status(400).send({ error: 'Changelogs should be a string' });
-        return;
-      }
-
-      changelogs = changelogsFromPlugin || changelogsFile;
+    if (pluginJson.keywords) {
+      updates.push([Plugin.KEYWORDS, JSON.stringify(pluginJson.keywords)]);
     }
 
-    const updates = [
-      [Plugin.DESCRIPTION, readme],
-      [Plugin.LICENSE, license],
-      [Plugin.CONTRIBUTORS, contributors],
-      [Plugin.CHANGELOGS, changelogs],
-      [Plugin.KEYWORDS, keywords],
-    ];
+    if (pluginJson.changelogs) {
+      updates.push([Plugin.CHANGELOGS, pluginJson.changelogs]);
+    }
 
     if (version !== row.version) {
       if (!isVersionGreater(version, row.version)) {
@@ -843,6 +769,56 @@ function isVersionGreater(newV, oldV) {
   }
 
   return false;
+}
+
+/**
+ * Validate plugin data
+ * @param {object} arg
+ * @param {string} arg.license
+ * @param {object[]} arg.contributors
+ * @param {string[]} arg.keywords
+ * @param {string} arg.changelogs
+ */
+function validatePluginData({ license, contributors, keywords, changelogs }) {
+  if (license && !validLicenses.includes(license)) {
+    throw new Error('Invalid license');
+  }
+
+  if (contributors) {
+    const error = new Error('Contributors should be an array of {name, role, github}');
+    if (!Array.isArray(contributors)) {
+      throw error;
+    }
+
+    const invalidContributors = contributors.filter((contributor) => {
+      for (const key in contributor) {
+        if (!['role', 'github', 'name'].includes(key)) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (invalidContributors.length) {
+      throw error;
+    }
+  }
+
+  if (keywords) {
+    const error = new Error('Keywords should be an array of string');
+    if (!Array.isArray(keywords)) {
+      throw error;
+    }
+
+    const invalidKeywords = keywords.filter((keyword) => typeof keyword !== 'string');
+    if (invalidKeywords.length) {
+      throw error;
+    }
+  }
+
+  if (changelogs && typeof changelogs !== 'string') {
+    throw new Error('Changelogs should be a string');
+  }
 }
 
 module.exports = router;

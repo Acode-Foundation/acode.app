@@ -15,45 +15,32 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
     return null;
   }
 
+  /** @type {object} */
+  const plugin = id ? await fetch(`/api/plugin/${id}`).then((res) => res.json()) : null;
   const jsZip = new JSZip();
-  const license = Reactive();
-  const keywords = Reactive();
-  const pluginId = Reactive();
   const errorText = Reactive();
   const updateType = Reactive();
-  const pluginName = Reactive();
   const successText = Reactive();
-  const pluginPrice = Reactive();
-  const contributors = Reactive();
-  const pluginAuthor = Reactive();
-  const pluginVersion = Reactive();
-  const minVersionCode = Reactive();
-  const pluginDescription = Reactive();
+  const pluginId = Reactive(plugin?.id);
+  const pluginName = Reactive(plugin?.name);
+  const license = Reactive(plugin?.license);
+  const pluginVersion = Reactive(plugin?.version);
+  const pluginPrice = Reactive(+plugin?.price ? `INR ${plugin.price}` : 'Free');
+  const keywords = Reactive(plugin?.keywords && json(plugin.keywords)?.join(', '));
+  const contributors = Reactive(
+    plugin?.contributors &&
+      json(plugin.contributors)
+        ?.map((contributor) => contributor.name)
+        .join(', '),
+  );
+  const pluginAuthor = Reactive(plugin?.author || user.name);
+  const minVersionCode = Reactive(plugin?.minVersionCode);
   const buttonText = Reactive(capitalize(mode));
 
   const submitButton = Ref();
   const changelogsInput = Ref();
   const method = mode === 'publish' ? 'post' : 'put';
-  const pluginIcon = <img style={{ height: '120px', width: '120px' }} src='#' alt='Plugin icon' />;
-
-  let plugin;
-  if (id) {
-    plugin = await fetch(`/api/plugin/${id}`).then((res) => res.json());
-    pluginId.value = plugin.id;
-    pluginName.value = plugin.name;
-    pluginVersion.value = plugin.version;
-    pluginAuthor.value = plugin.author;
-    pluginDescription.value = plugin.description;
-    minVersionCode.value = plugin.minVersionCode;
-
-    if (+plugin.price) {
-      pluginPrice.value = `INR ${plugin.price}`;
-    } else {
-      pluginPrice.value = 'Free';
-    }
-
-    pluginIcon.src = `/plugin-icon/${plugin.id}`;
-  }
+  const pluginIcon = <img style={{ height: '120px', width: '120px' }} src={plugin?.icon || '#'} alt='Plugin icon' />;
 
   return (
     <section id='publish-plugin'>
@@ -165,7 +152,6 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
       pluginName.value = '';
       pluginVersion.value = '';
       pluginAuthor.value = '';
-      pluginDescription.value = '';
       pluginPrice.value = '';
       pluginIcon.src = '#';
       minVersionCode.value = '';
@@ -199,15 +185,21 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
         }
 
         if (manifest.contributors) {
-          contributors.value = manifest.contributors.join(', ');
+          contributors.value = manifest.contributors.map((contributor) => contributor.name).join(', ');
+        } else {
+          contributors.value = '';
         }
 
         if (manifest.keywords) {
           keywords.value = manifest.keywords.join(', ');
+        } else {
+          keywords.value = '';
         }
 
         if (manifest.license) {
           license.value = manifest.license;
+        } else {
+          license.value = '';
         }
 
         if (manifest.author?.name) {
@@ -229,7 +221,6 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
         pluginId.value = manifest.id;
         pluginName.value = manifest.name;
         pluginVersion.value = manifest.version;
-        pluginDescription.value = manifest.description;
         minVersionCode.value = manifest.minVersionCode || -1;
         pluginIcon.src = `data:image/png;base64,${icon}`;
 
@@ -294,4 +285,12 @@ function getUpdateType(newV, oldV) {
   }
 
   return null;
+}
+
+function json(string) {
+  try {
+    return JSON.parse(string);
+  } catch (_error) {
+    return null;
+  }
 }
