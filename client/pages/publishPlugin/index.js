@@ -168,14 +168,12 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
         const icon = await zip.file('icon.png').async('base64');
 
         if (id && id !== manifest.id) {
-          errorText.value = 'Plugin ID is not same as previous version.';
-          return;
+          throw new Error('Plugin ID is not same as previous version.');
         }
 
         if (id && !isVersionGreater(manifest.version, plugin.version)) {
           submitButton.el.disabled = true;
-          errorText.value = 'Version should be greater than previous version.';
-          return;
+          throw new Error('Version should be greater than previous version.');
         }
 
         const changelogs = await zip.file('changelogs.md')?.async('string');
@@ -228,7 +226,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
         submitButton.el.disabled = false;
       } catch (error) {
         console.error(error);
-        errorText.value = 'Invalid plugin file.';
+        errorText.value = error.message;
       }
       hideLoading();
     };

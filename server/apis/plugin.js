@@ -362,27 +362,20 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    const { pluginJson, icon, readme, changelogsFile } = await exploreZip(pluginZip.data);
+    const { pluginJson, icon, readme, changelogs } = await exploreZip(pluginZip.data);
+
+    try {
+      validatePlugin(pluginJson, icon, readme);
+    } catch (error) {
+      res.status(400).send({ error: error.message });
+      return;
+    }
 
     const pluginId = pluginJson.id.toLowerCase();
-    if (!ID_REGEX.test(pluginId) || badWords.includes(pluginId)) {
-      res.status(400).send({
-        error:
-          'Invalid plugin ID! Valid ID should start with an alphabet, should be of length 4-50 and should contain only alphanumeric characters, dot and underscore.',
-      });
-      return;
-    }
-
     const [row] = await Plugin.get([Plugin.ID, pluginId]);
+
     if (row) {
       res.status(400).send({ error: `Plugin "${pluginId}" already exists.` });
-      return;
-    }
-
-    const errorMessage = validatePlugin(pluginJson, icon, readme);
-
-    if (errorMessage) {
-      res.status(400).send({ error: errorMessage });
       return;
     }
 
@@ -407,13 +400,6 @@ router.post('/', async (req, res) => {
       await registerSKU(name, pluginId, price);
     }
 
-    const { changelogs } = req.body;
-    if (!pluginJson.changelogs && (changelogsFile || changelogs)) {
-      pluginJson.changelogs = changelogsFile || changelogs;
-    }
-
-    validatePluginData(pluginJson);
-
     const insert = [
       [Plugin.ID, pluginId],
       [Plugin.NAME, name],
@@ -424,6 +410,14 @@ router.post('/', async (req, res) => {
       [Plugin.SKU, getPluginSKU(pluginId)],
       [Plugin.MIN_VERSION_CODE, minVersionCode],
     ];
+
+    if (changelogs) {
+      insert.push([Plugin.CHANGELOGS, changelogs]);
+    }
+
+    if (req.body.changelogs) {
+      insert.push([Plugin.CHANGELOGS, req.body.changelogs]);
+    }
 
     if (pluginJson.license) {
       insert.push([Plugin.LICENSE, pluginJson.license]);
@@ -478,15 +472,16 @@ router.put('/', async (req, res) => {
       return;
     }
 
-    const { pluginJson, icon, readme, changelogs: changelogsFile } = await exploreZip(pluginZip.data);
-
+    const { pluginJson, icon, readme, changelogs } = await exploreZip(pluginZip.data);
     const errorMessage = validatePlugin(pluginJson, icon, readme);
+
     if (errorMessage) {
       res.status(400).send({ error: errorMessage });
       return;
     }
 
-    const { name, price, version, id: pluginId } = pluginJson;
+    const { name, price, version } = pluginJson;
+    const pluginId = pluginJson.id.toLowerCase();
 
     if (!VERSION_REGEX.test(version)) {
       res.status(400).send({ error: 'Invalid version number, version should be in the format x.x.x' });
@@ -498,13 +493,6 @@ router.put('/', async (req, res) => {
       res.status(404).send({ error: 'Plugin not found' });
       return;
     }
-
-    const { changelogs } = req.body;
-    if (!pluginJson.changelogs && (changelogsFile || changelogs)) {
-      pluginJson.changelogs = changelogsFile || changelogs;
-    }
-
-    validatePluginData(pluginJson);
 
     const updates = [[Plugin.DESCRIPTION, readme]];
 
@@ -522,6 +510,14 @@ router.put('/', async (req, res) => {
 
     if (pluginJson.changelogs) {
       updates.push([Plugin.CHANGELOGS, pluginJson.changelogs]);
+    }
+
+    if (changelogs) {
+      updates.push([Plugin.CHANGELOGS, changelogs]);
+    }
+
+    if (req.body.changelogs) {
+      updates.push([Plugin.CHANGELOGS, req.body.changelogs]);
     }
 
     if (version !== row.version) {
@@ -656,24 +652,71 @@ function savePlugin(id, file, icon) {
 
 function validatePlugin(json, icon, readmeFile) {
   if (!json) {
-    return 'Invalid plugin file.';
+    throw new Error('Missing plugin.json file.');
   }
 
   if (!readmeFile) {
-    return 'Missing readme file.';
+    throw new Error('Missing readme.md file.');
   }
 
-  const { name, version, id, main } = json;
+  const { name, version, main, license, contributors, keywords } = json;
+  const id = json.id.toLowerCase();
+
+  if (!ID_REGEX.test(id) || badWords.includes(id)) {
+    throw new Error(
+      'Invalid plugin ID! Valid ID should start with an alphabet, should be of length 4-50 and should contain only alphanumeric characters, dot and underscore.',
+    );
+  }
+
+  if (!VERSION_REGEX.test(version)) {
+    throw new Error('Invalid version number, version should be in the format <major>.<minor>.<patch> (e.g. 0.0.1)');
+  }
 
   const missingFields = [name, version, id, main].filter((field) => !field);
   if (missingFields.length) {
-    return `Missing required fields: ${missingFields.join(', ')}`;
+    throw new Error(`Missing fields in plugin.json: ${missingFields.join(', ')}`);
   }
 
   const sizeInBytes = 4 * Math.ceil(icon.length / 3) * 0.5624896334383812;
   const sizeInKb = sizeInBytes / 1000;
   if (icon && sizeInKb >= 50) {
-    return 'Icon size should be less than 50kb';
+    throw new Error('Icon size should be less than 50kb');
+  }
+
+  if (license && !validLicenses.includes(license)) {
+    throw new Error('Invalid license');
+  }
+
+  if (contributors) {
+    const error = new Error('Contributors should be an array of {name, role, github}');
+    if (!Array.isArray(contributors)) {
+      throw error;
+    }
+
+    const invalidContributors = contributors.filter((contributor) => {
+      for (const key in contributor) {
+        if (!['role', 'github', 'name'].includes(key)) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (invalidContributors.length) {
+      throw error;
+    }
+  }
+
+  if (keywords) {
+    const error = new Error('Keywords should be an array of string');
+    if (!Array.isArray(keywords)) {
+      throw error;
+    }
+
+    const invalidKeywords = keywords.filter((keyword) => typeof keyword !== 'string');
+    if (invalidKeywords.length) {
+      throw error;
+    }
   }
 
   return null;
@@ -769,56 +812,6 @@ function isVersionGreater(newV, oldV) {
   }
 
   return false;
-}
-
-/**
- * Validate plugin data
- * @param {object} arg
- * @param {string} arg.license
- * @param {object[]} arg.contributors
- * @param {string[]} arg.keywords
- * @param {string} arg.changelogs
- */
-function validatePluginData({ license, contributors, keywords, changelogs }) {
-  if (license && !validLicenses.includes(license)) {
-    throw new Error('Invalid license');
-  }
-
-  if (contributors) {
-    const error = new Error('Contributors should be an array of {name, role, github}');
-    if (!Array.isArray(contributors)) {
-      throw error;
-    }
-
-    const invalidContributors = contributors.filter((contributor) => {
-      for (const key in contributor) {
-        if (!['role', 'github', 'name'].includes(key)) {
-          return true;
-        }
-      }
-      return false;
-    });
-
-    if (invalidContributors.length) {
-      throw error;
-    }
-  }
-
-  if (keywords) {
-    const error = new Error('Keywords should be an array of string');
-    if (!Array.isArray(keywords)) {
-      throw error;
-    }
-
-    const invalidKeywords = keywords.filter((keyword) => typeof keyword !== 'string');
-    if (invalidKeywords.length) {
-      throw error;
-    }
-  }
-
-  if (changelogs && typeof changelogs !== 'string') {
-    throw new Error('Changelogs should be a string');
-  }
 }
 
 module.exports = router;
