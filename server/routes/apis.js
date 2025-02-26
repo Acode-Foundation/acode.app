@@ -43,9 +43,16 @@ apis.get('/telegram-members-count', async (_req, res) => {
       return;
     }
 
-    const [, count] = /<div class="tgme_page_extra">(.+) members/i.exec(stdout) || [];
+    let [, count] = /<div class="tgme_page_extra">(.+) members/i.exec(stdout) || [];
     if (count) {
-      res.send(count.replace(/\D/g, ''));
+      count = count.replace(/\D/g, '');
+      res.send({
+        schemaVersion: 1,
+        label: 'Telegram Members',
+        message: `${count} members`,
+        color: '#24A1DE',
+        cacheSeconds: 3600,
+      });
     } else {
       res.status(500).send('Not found');
     }
