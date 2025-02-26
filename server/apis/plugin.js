@@ -431,10 +431,6 @@ router.post('/', async (req, res) => {
       insert.push([Plugin.KEYWORDS, JSON.stringify(pluginJson.keywords)]);
     }
 
-    if (pluginJson.changelogs) {
-      insert.push([Plugin.CHANGELOGS, pluginJson.changelogs]);
-    }
-
     await Plugin.insert(...insert);
 
     savePlugin(pluginId, pluginZip, icon);
@@ -637,7 +633,7 @@ async function exploreZip(file) {
   const pluginJson = JSON.parse(await zip.file('plugin.json')?.async('string'));
   const icon = await zip.file('icon.png')?.async('base64');
   const readme = await zip.file('readme.md')?.async('string');
-  const changelogs = await zip.file('changelogs.md')?.async('string');
+  const changelogs = await zip.file(pluginJson.changelogs || 'changelogs.md')?.async('string');
 
   return { pluginJson, icon, readme, changelogs };
 }
