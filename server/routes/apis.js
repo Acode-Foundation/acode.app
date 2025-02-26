@@ -28,4 +28,15 @@ apis.get('/server-time', (_req, res) => {
   });
 });
 
+apis.get('/telegram-members-count', async (_req, res) => {
+  const fetchRes = await fetch('https://t.me/foxdebug_acode');
+  const text = await fetchRes.text();
+  const [, count] = /<div class="tgme_page_extra">(.+) members/i.exec(text) || [];
+  if (count) {
+    res.send(count.replace(/\D/g, ''));
+  } else {
+    res.status(500).send('Not found');
+  }
+});
+
 module.exports = apis;
