@@ -1,4 +1,5 @@
 const { Router } = require('express');
+const { exec } = require('node:child_process');
 const db = require('../lib/db');
 
 const apis = Router();
@@ -29,14 +30,26 @@ apis.get('/server-time', (_req, res) => {
 });
 
 apis.get('/telegram-members-count', async (_req, res) => {
-  const fetchRes = await fetch('https://t.me/foxdebug_acode');
-  const text = await fetchRes.text();
-  const [, count] = /<div class="tgme_page_extra">(.+) members/i.exec(text) || [];
-  if (count) {
-    res.send(count.replace(/\D/g, ''));
-  } else {
-    res.status(500).send('Not found');
-  }
+  exec('curl -s https://t.me/foxdebug_acode', (err, stdout, stderr) => {
+    if (err) {
+      console.error(err);
+      res.status(500).json({ error: err });
+      return;
+    }
+
+    if (stderr) {
+      console.error(stderr);
+      res.status(500).json({ error: stderr });
+      return;
+    }
+
+    const [, count] = /<div class="tgme_page_extra">(.+) members/i.exec(stdout) || [];
+    if (count) {
+      res.send(count.replace(/\D/g, ''));
+    } else {
+      res.status(500).send('Not found');
+    }
+  });
 });
 
 module.exports = apis;
