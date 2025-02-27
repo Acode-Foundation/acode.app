@@ -13,6 +13,8 @@ import Theme from 'lib/theme';
 import dark from 'themes/dark';
 import View from './main.view';
 
+const DOCS_URL = "https://acode-foundation.github.io/acode-plugin-docs/";
+
 window.onload = async () => {
   Theme(dark);
   PullToRefresh(app, () => {
@@ -23,7 +25,8 @@ window.onload = async () => {
       appName='Acode'
       routes={[
         { href: '/faqs', text: 'FAQs' },
-        { href: '/plugin-docs', text: 'Plugin Docs' },
+        //{ href: '/plugin-docs', text: 'Plugin Docs' },
+        { href: DOCS_URL, text: 'Plugin Docs' },
         { href: '/plugins', text: 'Plugins' },
         { href: 'https://www.foxbiz.io', text: 'Foxbiz' },
         { href: '/policy', text: 'Privacy policy' },
