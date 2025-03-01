@@ -37,7 +37,6 @@ export default async function registerUser({ mode }) {
         <div>
           <fieldset>
             <Input
-              autofill={false}
               value={user.email}
               onchange={(e) => {
                 email = e.target.value;
@@ -57,7 +56,7 @@ export default async function registerUser({ mode }) {
         {mode === 'edit' ? (
           <a href='/change-password'>Change password</a>
         ) : (
-          <Input autofill={false} type='password' name='password' label='Password' placeholder='password' />
+          <Input type='password' name='password' label='Password' placeholder='password' />
         )}
 
         <div className='error'>{errorText}</div>
