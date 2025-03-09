@@ -76,7 +76,7 @@ function Plugin({
             ''
           )}
           <div>{calcRating(upVotes, downVotes)}</div>
-          {comments && (
+          {comments > 0 && (
             <div>
               {comments} <span className='icon chat_bubble' />
             </div>
