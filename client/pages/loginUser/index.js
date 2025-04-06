@@ -30,11 +30,11 @@ export default function LoginUser({ redirect }) {
           Login
         </button>
         <div style={{ margin: 'auto' }}>
-          <a className='link' href='/register'>
+          <a className='link' href={`/register?redirect=${redirect}`}>
             New account.
           </a>{' '}
           |{' '}
-          <a className='link' href='/change-password?mode=reset'>
+          <a className='link' href={`/change-password?redirect=${redirect}&mode=reset`}>
             Forgot password?
           </a>
         </div>
@@ -52,15 +52,18 @@ export default function LoginUser({ redirect }) {
       return;
     }
 
-    successText.textContent = 'Login successful. Redirecting...';
+    successText.value = 'Login successful. Redirecting...';
     button.el.disabled = true;
     setTimeout(() => {
+      if (redirect === 'app') {
+        redirect = `acode://user/login/${data.token}`;
+      }
       window.location.replace(redirect || '/');
     }, 1000);
   }
 
   function onerror(error) {
     button.el.disabled = false;
-    errorText.textContent = error;
+    errorText.value = error;
   }
 }

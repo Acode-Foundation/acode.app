@@ -53,7 +53,7 @@ window.onload = async () => {
   Router.add('/login', (_params, query) => loadModule('loginUser', query));
   Router.add('/plugins', (_params, query) => loadModule('plugins', query));
   Router.add('/logout', logout);
-  Router.add('/register', () => loadModule('registerUser'));
+  Router.add('/register', (_params, query) => loadModule('registerUser', query));
   Router.add('/change-password', (_params, query) => loadModule('changePassword', query));
   Router.add('/edit-user', () => loadModule('registerUser', { mode: 'edit' }));
   Router.add('/publish', (_params, query) => loadModule('publishPlugin', query));

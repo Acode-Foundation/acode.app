@@ -68,7 +68,7 @@ export default async function changePassword({ mode, redirect }) {
     errorText.value = '';
     successText.value = 'Password changed successfully.';
     setTimeout(() => {
-      Router.loadUrl(`/login${redirect ? `?redirect=${redirect}` : ''}`);
+      Router.loadUrl(`/login?redirect=${redirect}`);
     }, 3000);
   }
 

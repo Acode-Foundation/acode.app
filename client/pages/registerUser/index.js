@@ -4,7 +4,7 @@ import SendOtp from 'components/sendOtp';
 import Reactive from 'html-tag-js/reactive';
 import { getLoggedInUser, loadingEnd, loadingStart } from 'lib/helpers';
 
-export default async function registerUser({ mode }) {
+export default async function registerUser({ mode, redirect }) {
   const title = mode === 'edit' ? 'Edit user' : 'Register new user';
   const buttonText = mode === 'edit' ? 'Update' : 'Register';
   const method = mode === 'edit' ? 'put' : 'post';
@@ -83,7 +83,7 @@ export default async function registerUser({ mode }) {
     if (mode !== 'edit') {
       successText.value = 'User registered successfully. Redirecting...';
       setTimeout(() => {
-        window.location.href = '/login';
+        window.location.href = `/login?redirect=${redirect}`;
       }, 2000);
       return;
     }

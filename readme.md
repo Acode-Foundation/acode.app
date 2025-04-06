@@ -1,106 +1,61 @@
-# Quickpage
+# Acode - Official Website Repository
 
-Quickpage is a GitHub template for creating single-page-application with front-end routing. See demo at official page <https://quickpage.foxdebug.com>.
+Welcome to the repository for Acode's official website. This project contains the source code and content for [acode.app](https://acode.app), the home of Acode—a powerful and versatile code editor for Android devices.
 
-## Usage
+## About Acode
 
-Create github repository using this template.
+Acode is a lightweight yet robust code editor and web IDE designed specifically for Android. It supports a wide range of programming languages, including but not limited to:
 
-## Documentation
+- HTML
+- JavaScript
+- Python
+- Java
+- CSS
+- Dart
 
-### Start server
+With Acode, you can:
 
-To start the server run the following bash command
+- Edit and create websites, and instantly preview them in a browser.
+- Seamlessly modify source files for various languages.
+- Utilize GitHub integration for efficient version control.
+- Manage files via FTP/SFTP support.
+- Enjoy syntax highlighting for over 100 programming languages.
+- Customize the interface with multiple themes.
+- Use the in-app preview for HTML and Markdown files.
+- Debug using the integrated JavaScript console.
+- Enhance functionality with a collection of over 195 plugins.
 
-```bash
-: yarn start
-```
+For more details, visit the [Acode website](https://acode.app).
 
-To start the dev-server run the following bash command
+## Repository Structure
 
-```bash
-: yarn start-dev
-```
+This repository is organized as follows:
 
-### Build the application
+- `/client`: Contains the React components and logic for the website.
+- `/server`: Includes the backend code for handling API requests and server-side logic.
+- `/public`: Houses static assets, built files and the main HTML files.
+- `/dev`: Contains development scripts and tools.
+- `/cron-jobs/`: Includes scripts for scheduled tasks and maintenance.
 
-```bash
-: yarn build-release
-```
+## Contributing
 
-The server uses 'NodeJs' and 'ExpressJs' for serving files. You can edit the server src code in `server` directory.
+We welcome contributions to improve the Acode website. To contribute:
 
-### Routing
+1. Fork this repository.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and ensure they are well-tested.
+4. Submit a pull request with a clear description of your changes.
 
-Create a router.
+Please adhere to our [Code of Conduct](CODE_OF_CONDUCT.md) in all interactions.
 
-```javascript
-import Router from 'lib/Router';
+## License
 
-const router = new Router();
-```
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-Add routes.
+## Contact
 
-```javascript
-router.add('/home', (params, queries) => {
-  // render home
-});
-```
+For any inquiries or support, please visit our [contact page](https://acode.app/contact) or reach out via [email](mailto:support@acode.app).
 
-Start route.
+---
 
-```javascript
-router.listen();
-```
-
-#### Create saperate routing page
-
-Create a router page
-
-```bash
-touch adminRouter.js
-```
-
-Initialize router page.
-
-```javascript
-// adminRouter.js
-import Router from 'lib/RouterExtension';
-
-const router = new Router('/admin');
-
-// routes
-
-export default router;
-```
-
-Add middle function to filter routes.
-
-```javascript
-router.beforeNavigate((url, next) => {
-  // url -> current url
-  // next -> callback function
-  // call next function to proceed
-});
-```
-
-Add a route.
-
-```javascript
-router.add('home', (params, queries) => {
-  // render '/base-route/home'
-});
-```
-
-Add router to main router.
-
-```javascript
-import adminRouter from './adminRouter';
-import Router from 'lib/Router';
-
-const router = new Router();
-
-router.use(adminRouter);
-router.listen();
-```
+*Empower your coding journey with Acode—code anytime, anywhere.*
