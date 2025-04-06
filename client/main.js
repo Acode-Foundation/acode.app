@@ -13,8 +13,6 @@ import Theme from 'lib/theme';
 import dark from 'themes/dark';
 import View from './main.view';
 
-const DOCS_URL = 'https://acode-foundation.github.io/acode-plugin-docs/';
-
 window.onload = async () => {
   Theme(dark);
   PullToRefresh(app, () => {
@@ -25,8 +23,7 @@ window.onload = async () => {
       appName='Acode'
       routes={[
         { href: '/faqs', text: 'FAQs' },
-        //{ href: '/plugin-docs', text: 'Plugin Docs' },
-        { href: DOCS_URL, text: 'Plugin Docs' },
+        { href: 'https://docs.acode.app', text: 'Plugin Docs' },
         { href: '/plugins', text: 'Plugins' },
         { href: 'https://www.foxbiz.io', text: 'Foxbiz' },
         { href: '/policy', text: 'Privacy policy' },
@@ -46,7 +43,6 @@ window.onload = async () => {
   Router.add('/payments', (params) => loadModule('payments', params));
   Router.add('/admin', (params) => loadModule('admin', params));
   Router.add('/add-payment-method/:mode', (params) => loadModule('addPaymentMethod', params));
-  Router.add('/plugin-docs/:doc?', ({ doc }, { title }) => loadModule('pluginDocs', { doc, title }));
   Router.add('/faqs/:qHash?', (params) => loadModule('FAQs', params));
   Router.add('/policy', () => loadModule('privacyPolicy'));
   Router.add('/terms', () => loadModule('termsOfService'));
