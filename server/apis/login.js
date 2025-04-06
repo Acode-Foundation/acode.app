@@ -59,7 +59,7 @@ route.post('/', async (req, res) => {
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
     });
 
-    res.send({ message: 'Logged in' });
+    res.send({ message: 'Logged in', token });
   } catch (error) {
     res.status(500).send(error.message);
   }

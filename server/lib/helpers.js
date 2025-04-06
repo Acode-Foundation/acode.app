@@ -14,10 +14,14 @@ const user = require('../entities/user');
  * @returns {Promise<LoggedInUser & User>}
  */
 async function getLoggedInUser(req) {
-  const { token } = req.cookies;
+  let { token } = req.cookies;
 
   if (!token) {
-    return null;
+    token = req.headers['x-auth-token'];
+
+    if (!token) {
+      return null;
+    }
   }
 
   const row = await login.get([login.TOKEN, token]);

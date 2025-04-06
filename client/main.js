@@ -13,7 +13,7 @@ import Theme from 'lib/theme';
 import dark from 'themes/dark';
 import View from './main.view';
 
-const DOCS_URL = "https://acode-foundation.github.io/acode-plugin-docs/";
+const DOCS_URL = 'https://acode-foundation.github.io/acode-plugin-docs/';
 
 window.onload = async () => {
   Theme(dark);
