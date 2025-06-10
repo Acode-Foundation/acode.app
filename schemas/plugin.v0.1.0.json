@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Manifest",
+  "description": "Acode plugin manifest that is contained inside the file `plugin.json`",
+  "type": "object",
+  "properties": {
+    "author": {
+      "description": "Details about the plugin author, including name, email, URL, and GitHub username.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "description": "Email of the author",
+          "type": "string"
+        },
+        "github": {
+          "description": "GitHub username of the author",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of the author",
+          "type": "string"
+        },
+        "url": {
+          "description": "Url of the author",
+          "type": "string"
+        }
+      },
+      "required": ["name"]
+    },
+    "changelogs": {
+      "description": "Path to the changelog file documenting version updates and modifications.",
+      "type": "string"
+    },
+    "contributors": {
+      "description": "An array of objects containing details about project contributors.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "github": {
+            "description": "Contributor's GitHub username.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Contributor's name.",
+            "type": "string"
+          },
+          "role": {
+            "description": "Contributor's role in the project.",
+            "type": "string"
+          }
+        }
+      },
+      "uniqueItems": true
+    },
+    "dependencies": {
+      "description": "An array plugins to be installed along with plugin",
+      "type": "array",
+      "items": {
+        "description": "Plugin id of dependency",
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "files": {
+      "description": "An array listing the files to be included in the plugin zip file.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "icon": {
+      "description": "Path to the icon.png file, serving as the visual representation of the plugin. Icon file size must less than or equal to 50Kb",
+      "type": "string"
+    },
+    "id": {
+      "description": "Unique identifier for the plugin, following the reverse domain name format or what ever you want (e.g., \"com.example.plugin\").",
+      "type": "string"
+    },
+    "keywords": {
+      "description": "An array of strings providing searchable terms related to the plugin.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "main": {
+      "description": "Path to the bundled main.js file or your plugin's main javascript file, which contains the actual code for the plugin.",
+      "type": "string"
+    },
+    "minVersionCode": {
+      "description": "Minimum Acode version code required to run the plugin. The plugin will be available only for Acode versions greater than or equal to the specified code.",
+      "type": "integer",
+      "minimum": 290
+    },
+    "name": {
+      "description": "Descriptive name of the plugin.",
+      "type": "string"
+    },
+    "price": {
+      "description": "Price of the plugin in INR (Indian Rupees). If set to 0 or omitted, the plugin is free. This attribute allows for monetization of plugins with a defined price range.",
+      "maximum": 10000,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "readme": {
+      "description": "Path to the readme.md file, providing documentation and information about the plugin.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Version number of the plugin. Must be incremented for updates.",
+      "type": "string"
+    }
+  },
+  "required": ["id", "name", "main", "version", "readme", "icon", "author"]
+}
