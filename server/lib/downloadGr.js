@@ -7,7 +7,7 @@ const { Storage } = require('@google-cloud/storage');
 
 const storage = new Storage({
   projectId: 'pc-api-7966583793961491942-480',
-  keyFilename: path.resolve(__dirname, '../data/key.json'),
+  keyFilename: path.resolve(process.cwd(), 'data', 'key.json'),
 });
 
 // cloud storage URI
@@ -39,6 +39,7 @@ async function downloadReport(year, month, type = 'earnings') {
     throw new Error('Invalid report type');
   }
 
+  console.log(`Downloading report from prefix: ${prefix}`);
   const [files] = await bucket.getFiles({ prefix });
 
   if (files.length === 0) {

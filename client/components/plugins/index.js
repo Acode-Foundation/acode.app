@@ -68,12 +68,10 @@ function Plugin({
           <div title='Downloads counter'>
             {downloads.toLocaleString()} <span className='icon download' />
           </div>
-          {status ? (
+          {Boolean(status) && (
             <span data-id={id} onclick={isAdmin ? changePluginStatus : undefined} title='Plugin status' className={`status-indicator ${status}`}>
               {status}
             </span>
-          ) : (
-            ''
           )}
           <div>{calcRating(upVotes, downVotes)}</div>
           {comments > 0 && (

@@ -1,15 +1,19 @@
 /* eslint-disable dot-notation */
 const path = require('node:path');
+const os = require('node:os');
 const fileSystem = require('node:fs');
 const Decimal = require('decimal.js');
 const downloadReport = require('./downloadGr');
+
+const documentsDirectory = `${os.homedir()}/Documents`;
+const defaultPath = path.resolve(documentsDirectory, 'Acode-reports');
 
 /**
  * Download a Google Earnings report from Google Cloud Storage
  * @param {number} year Year to download
  * @param {number} month Month of the year to download, 1-12
  */
-async function downloadSalesReportCsv(year, month, type = 'sales') {
+async function downloadSalesReportCsv(year, month, type = 'sales', dir = defaultPath) {
   const json = await downloadReport(year, month, type);
   const orders = {};
 
@@ -38,14 +42,13 @@ async function downloadSalesReportCsv(year, month, type = 'sales') {
   }
 
   const fileName = `${type}-${year}-${month}.csv`;
-  const dirname = path.resolve('../reports');
-  const filePath = path.resolve(dirname, fileName);
-  if (!fileSystem.existsSync(dirname)) {
-    fileSystem.mkdirSync(dirname);
+  const file = path.join(dir, fileName);
+  if (!fileSystem.existsSync(dir)) {
+    fileSystem.mkdirSync(dir);
   }
 
-  fileSystem.writeFileSync(filePath, csv);
-  return filePath;
+  fileSystem.writeFileSync(file, csv);
+  return file;
 }
 
 function sales(row, orders) {

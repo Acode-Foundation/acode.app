@@ -6,10 +6,10 @@ const apis = Router();
 
 apis.use('/user', require('../apis/user'));
 apis.use('/login', require('../apis/login'));
-apis.use('/plugins?', require('../apis/plugin'));
+apis.use(['/plugin', '/plugins'], require('../apis/plugin'));
 apis.use('/password', require('../apis/password'));
 apis.use('/otp', require('../apis/otp'));
-apis.use('/comments?', require('../apis/comment'));
+apis.use(['/comments', '/comment'], require('../apis/comment'));
 apis.use('/faqs', require('../apis/faqs'));
 apis.use('/admin', require('../apis/admin'));
 // apis.use('/completion', require('../apis/completion'));

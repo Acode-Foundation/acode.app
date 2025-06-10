@@ -25,7 +25,8 @@ jobs:
               sudo apt-get install -y git
             fi
             cd ~/sites/acode.app
+            git restore .
             git pull
-            yarn install
-            yarn build-release
+            npm install
+            npm run build
             pm2 restart acode.app

@@ -54,7 +54,7 @@ window.onload = async () => {
   Router.add('/edit-user', () => loadModule('registerUser', { mode: 'edit' }));
   Router.add('/publish', (_params, query) => loadModule('publishPlugin', query));
   Router.add('/plugin/:id/:section?', (params) => loadModule('plugin', params));
-  Router.add('/user/:userEmail?', (params) => loadModule('user', params));
+  Router.add('/user/:userId?', (params) => loadModule('user', params));
   Router.add('/earnings', (_params, query) => loadModule('earnings', query));
   Router.add('/:filename(index.html?)?', () => loadModule('home'));
 

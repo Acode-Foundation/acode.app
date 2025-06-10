@@ -1,13 +1,13 @@
 /* eslint-disable no-console */
 const path = require('node:path');
 const { config } = require('dotenv');
-const setAuth = require('../server/lib/gapis');
-const updateEarnings = require('../server/lib/updateEarnings');
-const { sendNotification } = require('../server/lib/helpers');
+const setAuth = require('../lib/gapis');
+const updateEarnings = require('../lib/updateEarnings');
+const { sendNotification } = require('../lib/helpers');
 
 config({ path: path.resolve(__dirname, '../.env') });
 
-(async () => {
+module.exports = async () => {
   try {
     await setAuth();
     await updateEarnings();
@@ -17,4 +17,4 @@ config({ path: path.resolve(__dirname, '../.env') });
     sendNotification('me@ajitkumar.dev', 'Ajit Kumar', 'Monthly cron job failed', `Cron job failed, ${error.message}`);
     console.error(error);
   }
-})();
+};

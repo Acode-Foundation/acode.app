@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 const moment = require('moment');
-const Otp = require('../server/entities/otp');
-const Login = require('../server/entities/login');
-const Download = require('../server/entities/download');
+const Otp = require('../entities/otp');
+const Login = require('../entities/login');
+const Download = require('../entities/download');
 
 const now = moment().format('YYYY-MM-DD');
 const today = moment(now).format('YYYY-MM-DD HH:mm:ss.sss');
@@ -30,5 +30,4 @@ function cleanDb() {
   cleanDownload();
 }
 
-cleanDb();
-// module.exports = cleanDb;
+module.exports = cleanDb;

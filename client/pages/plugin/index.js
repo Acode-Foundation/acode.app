@@ -31,7 +31,6 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
     user_id: userId,
     votes_up: votesUp,
     votes_down: votesDown,
-    author_email: authorEmail,
     comment_count: commentCount,
     author_verified: authorVerified,
   } = plugin;
@@ -139,7 +138,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           </div>
           <div className='info'>
             <span className='chip'>
-              <a href={`/user/${authorEmail}`}>{author}</a>&nbsp;{!!authorVerified && <span className='icon verified' />}
+              <a href={`/user/${userId}`}>{author}</a>&nbsp;{!!authorVerified && <span className='icon verified' />}
             </span>
             {repository && (
               <a className='chip' href={repository}>

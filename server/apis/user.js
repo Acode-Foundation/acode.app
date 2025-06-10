@@ -145,7 +145,7 @@ route.get('/comment/:pluginId', async (req, res) => {
   }
 });
 
-route.get('/payments/:year?', async (req, res) => {
+route.get('/payments{/:year}', async (req, res) => {
   try {
     const user = await getAuthorizedUser(req);
     const { year } = req.params;
@@ -219,7 +219,7 @@ route.get('/:idOrEmail', async (req, res) => {
   res.send(row);
 });
 
-route.patch('/verify/:revoke(revoke)?/:userId', async (req, res) => {
+route.patch('/verify{/:type}/:userId', async (req, res) => {
   try {
     const loggedInUser = await getLoggedInUser(req);
     if (!loggedInUser?.isAdmin) {
@@ -228,7 +228,7 @@ route.patch('/verify/:revoke(revoke)?/:userId', async (req, res) => {
     }
 
     const { userId } = req.params;
-    await User.update([User.VERIFIED, req.params.revoke ? 0 : 1], [User.ID, userId]);
+    await User.update([User.VERIFIED, req.params.type === 'revoke' ? 0 : 1], [User.ID, userId]);
 
     res.send({ message: 'User verified' });
   } catch (error) {

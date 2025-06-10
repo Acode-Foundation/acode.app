@@ -12,6 +12,22 @@ const now = moment();
 // previous month (0-11) and year
 const [currentYear, currentMonth] = previous(now.year(), now.month());
 
+const args = process.argv.slice(2);
+const yearArg = args[0];
+const monthArg = args[1];
+
+if (yearArg && monthArg) {
+  (async () => {
+    const path = require('node:path');
+    const { config } = require('dotenv');
+    const setAuth = require('../lib/gapis');
+    config({ path: path.resolve(__dirname, '../.env') });
+    await setAuth();
+
+    await updateEarnings(+yearArg, +monthArg);
+  })();
+}
+
 /**
  * Get previous month and year
  * @param {number} year Year
@@ -26,14 +42,16 @@ function previous(year, month) {
 
 /**
  * Update earnings for given month and year
- * @param {number} year
+ * @param {number} year YYYY year (default: current year)
  * @param {number} month month (0-11)
  */
-module.exports = async function updateEarnings(year = currentYear, month = currentMonth) {
+async function updateEarnings(year = currentYear, month = currentMonth) {
   try {
     const [previousYear, previousMonth] = previous(year, month);
     const report = await downloadReport(year, month + 1);
     const reportOfPreviousMonth = await downloadReport(previousYear, previousMonth + 1);
+
+    console.log(reportOfPreviousMonth);
 
     // push previous month report to current month report using for loop
     const len = reportOfPreviousMonth.length;
@@ -105,4 +123,6 @@ module.exports = async function updateEarnings(year = currentYear, month = curre
     console.log(error);
     process.exit(1);
   }
-};
+}
+
+module.exports = updateEarnings;

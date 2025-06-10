@@ -3,11 +3,11 @@ const { google } = require('googleapis');
 const { config } = require('dotenv');
 const path = require('node:path');
 const moment = require('moment');
-const setAuth = require('../server/lib/gapis');
-const updateOrders = require('../server/lib/updateOrders');
-const { sendNotification } = require('../server/lib/helpers');
+const setAuth = require('../lib/gapis');
+const updateOrders = require('../lib/updateOrders');
+const { sendNotification } = require('../lib/helpers');
 
-(async () => {
+module.exports = async () => {
   try {
     config({ path: path.resolve(__dirname, '../.env') });
     await setAuth();
@@ -35,4 +35,4 @@ const { sendNotification } = require('../server/lib/helpers');
     sendNotification('me@ajitkumar.dev', 'Ajit Kumar', 'Daily cron job failed', `Cron job failed, ${error.message}`);
     console.error(error);
   }
-})();
+};

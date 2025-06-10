@@ -10,14 +10,14 @@ import moment from 'moment';
 import Earnings from 'pages/earnings';
 import userImage from 'res/user.png';
 
-export default async function User({ userEmail }) {
+export default async function User({ userId }) {
   const amount = Ref();
   const loggedInUser = await getLoggedInUser();
   let user;
 
-  if (userEmail) {
+  if (userId) {
     try {
-      const res = await fetch(`/api/user/${userEmail}`);
+      const res = await fetch(`/api/user/${userId}`);
       user = await res.json();
 
       if (user.error) {
@@ -98,7 +98,7 @@ export default async function User({ userEmail }) {
           {isSelf ? <a href='/publish'>Publish Plugin</a> : ''}
         </div>
       </div>
-      <Plugins user={user?.email || userEmail} />
+      <Plugins user={userId} />
     </section>
   );
 

@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-const downloadGrCsv = require('./downloadSalesCsv');
+const downloadGrCsv = require('./lib/downloadSalesCsv');
 
 const month = process.argv[2];
 const year = process.argv[3];

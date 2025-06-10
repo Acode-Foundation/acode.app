@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 require('dotenv').config();
+require('./crons');
 const fs = require('node:fs');
 const path = require('node:path');
 const express = require('express');
@@ -44,12 +45,8 @@ async function main() {
   );
   app.use(express.json());
   app.use('/api', apis);
-  app.use('/api/*', (_req, res) => {
+  app.use('/api/*path', (_req, res) => {
     res.status(404).send({ error: 'Not found' });
-  });
-
-  app.get('/((app-ads)|(ads)).txt', (_req, res) => {
-    res.sendFile(path.resolve(__dirname, '../data/ads.txt'));
   });
 
   app.get('/.well-known/assetlinks.json', (_req, res) => {
@@ -83,6 +80,11 @@ async function main() {
   });
 
   app.get('/:filename', (req, res, next) => {
+    if (['app-ads.txt', 'ads.txt'].includes(req.params.filename)) {
+      res.sendFile(path.resolve(__dirname, '../data/ads.txt'));
+      return;
+    }
+
     const file = path.resolve(__dirname, `../public/${req.params.filename}`);
     if (fs.existsSync(file)) {
       res.sendFile(file);
@@ -128,7 +130,7 @@ async function main() {
     }
   });
 
-  app.get('*', (_req, res) => {
+  app.get('*path', (_req, res) => {
     const template = path.resolve(__dirname, './index.hbs');
     const source = fs.readFileSync(template, 'utf8');
     const templateScript = Handlebars.compile(source);

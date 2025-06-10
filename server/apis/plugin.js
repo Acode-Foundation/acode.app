@@ -182,7 +182,7 @@ router.get('/check-update/:id/:version', async (req, res) => {
   }
 });
 
-router.get('/count/:type?', async (req, res) => {
+router.get('/count{/:type}', async (req, res) => {
   try {
     const { type } = req.params;
     const where = [];
@@ -214,17 +214,17 @@ router.get('/description/:id', async (req, res) => {
   }
 });
 
-router.get('/:pluginId?', async (req, res) => {
+router.get('{/:pluginId}', async (req, res) => {
   try {
     const { pluginId } = req.params;
-    const { user: email, name, status, page, limit, orderBy } = req.query;
+    const { user, name, status, page, limit, orderBy } = req.query;
     const loggedInUser = await getLoggedInUser(req);
     const columns = Plugin.minColumns;
     const where = [];
     let userId;
 
-    if (email) {
-      const [row] = await User.get([User.EMAIL, email]);
+    if (user) {
+      const [row] = await User.get([User.ID, user]);
       if (!row) {
         res.status(404).send({ error: 'Not found' });
         return;

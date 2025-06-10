@@ -1,13 +1,30 @@
 const PurchaseOrder = require('../entities/purchaseOrder');
 const Plugin = require('../entities/plugin');
 
+const args = process.argv.slice(2);
+const startDateArg = args[0];
+const endDateArg = args[1];
+
+if (startDateArg && endDateArg) {
+  (async () => {
+    const path = require('node:path');
+    const { google } = require('googleapis');
+    const { config } = require('dotenv');
+    const setAuth = require('../lib/gapis');
+    config({ path: path.resolve(__dirname, '../.env') });
+    await setAuth();
+
+    await updateOrder(startDateArg, endDateArg, google);
+  })();
+}
+
 /**
  * Update order state, order_id and amount
  * @param {string} startDate start date in YYYY-MM-DD format
  * @param {string} endDate end date in YYYY-MM-DD format
  * @param {string} google googleapis object
  */
-module.exports = async function updateOrder(startDate, endDate, google) {
+async function updateOrder(startDate, endDate, google) {
   const androidpublisher = google.androidpublisher('v3');
   const orders = await PurchaseOrder.for('internal').get([PurchaseOrder.CREATED_AT, [startDate, endDate], 'BETWEEN']);
 
@@ -47,4 +64,6 @@ module.exports = async function updateOrder(startDate, endDate, google) {
       }
     }),
   );
-};
+}
+
+module.exports = updateOrder;

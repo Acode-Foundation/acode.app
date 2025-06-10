@@ -44,6 +44,7 @@ async function fixUserEarnings() {
 }
 
 async function fixUser(user, earningsRows, year = currentYear, month = currentMonth) {
+  console.log(`Fixing earnings for user: ${user.name} (${user.id}) for ${year}-${month + 1}`);
   const earnings = await calcEarnings.total(year, month, user);
 
   if (earnings) {

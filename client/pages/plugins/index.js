@@ -16,7 +16,7 @@ export default async function PluginList({ filter }) {
     <section style={{ padding: '20px 0' }} id='plugins'>
       <div className='header'>
         <h1 ref={title}>Plugins</h1>
-        {loggedInUser?.isAdmin ? (
+        {loggedInUser?.isAdmin && (
           <nav>
             <span className='link' onclick={updatePlugins} data-filter='all'>
               All
@@ -34,8 +34,6 @@ export default async function PluginList({ filter }) {
               Deleted
             </span>
           </nav>
-        ) : (
-          ''
         )}
         <nav>
           <span className='link' onclick={updatePlugins} data-filter='newest'>
