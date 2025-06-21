@@ -133,7 +133,7 @@ header {
     display: none;
   }
 
-  @media screen and (max-width: 1110px) {
+  @media screen and (max-width: 600px) {
     label[for='menu-toggler'] {
       display: flex;
       height: 40px;
@@ -214,6 +214,7 @@ header {
         height: fit-content;
         width: 100%;
         padding: 0;
+        margin: 0;
       }
 
       &.logo {
@@ -441,4 +442,23 @@ code {
 [role='button'] {
   cursor: pointer;
   width: fit-content;
+}
+
+.footer-nav {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  padding: 10px;
+  flex-wrap: wrap;
+
+  a {
+    color: white;
+    margin: 0;
+    white-space: nowrap;
+  }
+}
+
+footer {
+  position: relative;
+  z-index: 100;
 }

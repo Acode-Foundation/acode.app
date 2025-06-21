@@ -98,7 +98,7 @@ export default async function User({ userId }) {
           {isSelf ? <a href='/publish'>Publish Plugin</a> : ''}
         </div>
       </div>
-      <Plugins user={userId} />
+      <Plugins user={user.id} />
     </section>
   );
 

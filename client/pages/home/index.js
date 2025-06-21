@@ -35,8 +35,8 @@ export default async function home() {
           Acode - An extensible and <br /> powerful code editor for Android
         </h1>
         <div className='gh-buttons'>
-          <GhButton icon='star' url='https://github.com/deadlyjack/acode' title='Star' />
-          <GhButton icon='repo-forked' url='https://github.com/deadlyjack/acode/fork' title='Fork' />
+          <GhButton icon='star' url='https://github.com/acode-foundation/acode' title='Star' />
+          <GhButton icon='repo-forked' url='https://github.com/acode-foundation/acode/fork' title='Fork' />
         </div>
         <div className='preview-image'>
           <img src={previewImage} alt='Acode for android' />

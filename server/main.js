@@ -56,9 +56,7 @@ async function main() {
         target: {
           namespace: 'android_app',
           package_name: 'com.foxdebug.acodefree',
-          sha256_cert_fingerprints: [
-            '12:66:9B:CA:68:91:87:C3:2A:49:ED:9B:5B:06:3A:06:0E:5B:67:75:34:50:4F:46:DC:DA:A0:AF:71:90:CB:93',
-          ],
+          sha256_cert_fingerprints: ['12:66:9B:CA:68:91:87:C3:2A:49:ED:9B:5B:06:3A:06:0E:5B:67:75:34:50:4F:46:DC:DA:A0:AF:71:90:CB:93'],
         },
       },
     ]);

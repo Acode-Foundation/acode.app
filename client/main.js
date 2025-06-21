@@ -25,9 +25,6 @@ window.onload = async () => {
         { href: '/faqs', text: 'FAQs' },
         { href: 'https://docs.acode.app', text: 'Plugin Docs' },
         { href: '/plugins', text: 'Plugins' },
-        { href: 'https://www.foxbiz.io', text: 'Foxbiz' },
-        { href: '/policy', text: 'Privacy policy' },
-        { href: '/terms', text: 'Terms of service' },
         { href: '/user', text: $loginText, icon: 'person' },
       ]}
     />

@@ -20,18 +20,6 @@ export default ({ routes }) => (
             {icon && <span className={`icon ${icon}`} />} {text}
           </a>
         ))}
-        <a
-          target='_blank'
-          style={{ color: '#0080FF', margin: '10px 0' }}
-          href='https://www.digitalocean.com/?refcode=ddb6c70b077b&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge'
-          rel='noreferrer'
-        >
-          <img height='30' src={digitalOceanLogo} alt='' />
-          <span style={{ marginLeft: '10px' }}>
-            <small>Powered by</small> <br />
-            <big>DigitalOcean</big>
-          </span>
-        </a>
       </nav>
       <nav>
         <a
@@ -48,7 +36,26 @@ export default ({ routes }) => (
     </header>
     <main />
     <footer>
-      <div style={{ background: 'transparent', textAlign: 'center', padding: '10px' }}>&copy; foxdebug 2023</div>
+      <div style={{ background: 'transparent', textAlign: 'center', padding: '10px' }}>&copy; Foxbiz Software Pvt. Ltd. (2025-26)</div>
+      <nav className='footer-nav'>
+        <a href='https://foxbiz.io'>Foxbiz Software Pvt. Ltd.</a>
+        <a href='/policy'>Privacy policy</a>
+        <a href='/terms'>Terms of service</a>
+      </nav>
+      <nav style={{ textAlign: 'center' }}>
+        <a
+          target='_blank'
+          style={{ color: '#0080FF', margin: '10px 0', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+          href='https://www.digitalocean.com/?refcode=ddb6c70b077b&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge'
+          rel='noreferrer'
+        >
+          <img height='30' src={digitalOceanLogo} alt='' />
+          <div style={{ marginLeft: '10px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '0.7rem' }}>Powered by</span>
+            <span>DigitalOcean</span>
+          </div>
+        </a>
+      </nav>
     </footer>
   </>
 );

@@ -1,6 +1,7 @@
 import './style.scss';
 import MonthSelect from 'components/MonthSelect';
 import YearSelect from 'components/YearSelect';
+import AdSense from 'components/adsense';
 import AjaxForm from 'components/ajaxForm';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
@@ -47,7 +48,12 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
   const selectYear = Ref();
   const selectMonth = Ref();
   const $comments = <CommentsContainerAndForm listRef={commentListRef} plugin={plugin} user={user} id={pluginId} userComment={userComment} />;
-  const $description = <p className='md' innerHTML={marked.parse(description)} />;
+  const $description = (
+    <article style={{ width: '100%', overflow: 'auto' }}>
+      <AdSense name='readme' style={{ position: 'relative' }} />
+      <p className='md' innerHTML={marked.parse(description)} />
+    </article>
+  );
   const updateOrder = () => {
     renderOrders(ordersList, pluginId, selectYear.value, selectMonth.value);
   };
@@ -466,6 +472,18 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
   }
 }
 
+/**
+ * Renders an icon input element with customizable icon states and selection behavior.
+ *
+ * @param {Object} props - The properties for this component.
+ * @param {string} props.name - The name attribute of the input, used for grouping.
+ * @param {string} props.icon - The default icon class to display.
+ * @param {string} props.iconSelected - The icon class to display when selected.
+ * @param {string} props.value - The value attribute of the input.
+ * @param {string} props.title - The title attribute used for the label and input.
+ * @param {boolean} props.checked - Whether the input is initially checked.
+ * @returns {HTMLElement} The rendered icon-based radio input component.
+ */
 function IconInput({ name, icon, iconSelected, value, title, checked }) {
   const input = Ref();
   const iconHolder = Ref();
@@ -509,6 +527,12 @@ function IconInput({ name, icon, iconSelected, value, title, checked }) {
   );
 }
 
+/**
+ * Toggles the flagged state of the provided element by updating its class name and title.
+ *
+ * @param {boolean} flagged - Indicates whether the element should be set as flagged.
+ * @param {HTMLElement} flagRef - A reference to the HTML element that needs its class and title updated.
+ */
 function toggleFlag(flagged, flagRef) {
   if (flagged) {
     flagRef.className = 'icon flag danger';
