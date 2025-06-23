@@ -44,7 +44,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
 
   return (
     <section id='publish-plugin'>
-      <h1>{capitalize(mode)} plugin</h1>
+      <h1 style={{ textAlign: 'center' }}>{capitalize(mode)} plugin</h1>
       <AjaxForm
         action='/api/plugin'
         method={method}

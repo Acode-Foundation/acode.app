@@ -26,7 +26,7 @@ export default function LoginUser({ redirect }) {
 
         <span className='success'>{successText}</span>
         <span className='error'>{errorText}</span>
-        <button ref={button} type='submit'>
+        <button ref={button} type='submit' style={{ width: '120px' }}>
           Login
         </button>
         <div style={{ margin: 'auto' }}>

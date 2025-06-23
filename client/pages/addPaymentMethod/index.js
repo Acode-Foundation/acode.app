@@ -19,7 +19,9 @@ export default async function AddPaymentMethod({ mode }) {
         <span className='error'>{errorText}</span>
         <span className='success'>{successText}</span>
         <div className='buttons-container'>
-          <button type='submit'>Save</button>
+          <button type='submit' style={{ width: '120px' }}>
+            Save
+          </button>
         </div>
       </div>,
     );
@@ -33,7 +35,7 @@ export default async function AddPaymentMethod({ mode }) {
         <Input type='text' name='bank_swift_code' placeholder='e.g. ICICINBBNRI' label='Bank Swift Code' />
 
         <fieldset>
-          <legend>Account type</legend>
+          <legend style={{ marginBottom: '10px' }}>Account type</legend>
           <Input type='radio' name='bank_account_type' value='savings' label='Savings' checked={true} />
           <Input type='radio' name='bank_account_type' value='current' label='Current' />
         </fieldset>
@@ -41,12 +43,14 @@ export default async function AddPaymentMethod({ mode }) {
         <span className='error'>{errorText}</span>
         <span className='success'>{successText}</span>
 
-        <div style={{ marginTop: '20px' }}>
+        <small style={{ marginTop: '20px', display: 'block' }}>
           <sup>*</sup> are required.
-        </div>
+        </small>
         <div className='buttons-container'>
-          <button type='submit'>{buttonText}</button>
-          <button type='reset' className='danger'>
+          <button type='submit' style={{ width: '120px' }}>
+            {buttonText}
+          </button>
+          <button type='reset' className='danger' style={{ width: '120px' }}>
             Reset
           </button>
         </div>
@@ -61,7 +65,9 @@ export default async function AddPaymentMethod({ mode }) {
         <span className='error'>{errorText}</span>
         <span className='success'>{successText}</span>
         <div className='buttons-container'>
-          <button type='submit'>{buttonText}</button>
+          <button type='submit' style={{ width: '120px' }}>
+            {buttonText}
+          </button>
         </div>
       </div>,
     );
@@ -69,7 +75,7 @@ export default async function AddPaymentMethod({ mode }) {
 
   return (
     <section id='add-payment-method'>
-      <h1>{title}</h1>
+      <h1 style={{ textAlign: 'center' }}>{title}</h1>
       <AjaxForm
         ref={form}
         action='/api/user/payment-method'

@@ -37,7 +37,7 @@ export default async function Earnings({ user, threshold }) {
 
   return (
     <section id='earnings'>
-      <h2>Earnings</h2>
+      <h2 style={{ textAlign: 'center' }}>Earnings</h2>
       <div className='table-wrapper'>
         <table className='info'>
           <tbody>
