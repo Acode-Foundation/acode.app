@@ -58,12 +58,7 @@ export default async function home() {
             >
               <span className='hidden'>Download from Google Play store</span>
             </a>
-            <a
-              title='Download Acode from F-Droid'
-              rel='nofollow'
-              className='f-droid'
-              href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'
-            >
+            <a title='Download Acode from F-Droid' rel='nofollow' className='f-droid' href='https://f-droid.org/en/packages/com.foxdebug.acode/'>
               <span className='hidden'>Download from F-Droid</span>
             </a>
           </div>
