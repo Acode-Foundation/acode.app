@@ -1,3 +1,4 @@
+import './style.scss';
 import AjaxForm from 'components/ajaxForm';
 import Input from 'components/input';
 import Reactive from 'html-tag-js/reactive';
@@ -10,9 +11,7 @@ export default function LoginUser({ redirect }) {
   const button = Ref();
 
   return (
-    <section id='login-user'>
-      <h1>Developer login</h1>
-
+    <section id='user-login'>
       <AjaxForm
         loading={onloadstart}
         loadingEnd={(form) => loadingEnd(form, 'Login')}
@@ -21,6 +20,7 @@ export default function LoginUser({ redirect }) {
         action='/api/login'
         method='post'
       >
+        <h1>Login</h1>
         <Input type='email' name='email' label='Email' placeholder='e.g. john@gmail.com' />
         <Input type='password' name='password' label='Password' placeholder='Password' />
 

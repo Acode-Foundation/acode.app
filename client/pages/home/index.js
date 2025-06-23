@@ -4,7 +4,10 @@ import { render } from 'github-buttons';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { hideLoading, showLoading } from 'lib/helpers';
-import previewImage from 'res/preview.png';
+import phoneImageJpg from 'res/phone.jpg';
+import phoneImageWebp from 'res/phone.webp';
+import tabletImageJpg from 'res/tablet.jpg';
+import tabletImageWebp from 'res/tablet.webp';
 import background from './background';
 
 export default async function home() {
@@ -30,34 +33,65 @@ export default async function home() {
   return (
     <section id='home'>
       <canvas ref={canvas} id='background' />
-      <Screen>
-        <h1>
-          Acode - An extensible and <br /> powerful code editor for Android
-        </h1>
-        <div className='gh-buttons'>
-          <GhButton icon='star' url='https://github.com/acode-foundation/acode' title='Star' />
-          <GhButton icon='repo-forked' url='https://github.com/acode-foundation/acode/fork' title='Fork' />
-        </div>
+      <div className='intro'>
         <div className='preview-image'>
-          <img src={previewImage} alt='Acode for android' />
+          <picture className='phone'>
+            <source srcset={phoneImageWebp} type='image/webp' />
+            <img src={phoneImageJpg} alt='Acode on phone' />
+          </picture>
+          <picture className='tablet'>
+            <source srcset={tabletImageWebp} type='image/webp' />
+            <img src={tabletImageJpg} alt='Acode on tablet' />
+          </picture>
         </div>
-      </Screen>
+        <div className='heading'>
+          <p>An extensible, powerful and open-source code editor for Android</p>
+          <div className='gh-buttons'>
+            <GhButton icon='star' url='https://github.com/acode-foundation/acode' title='Star' />
+            <GhButton icon='repo-forked' url='https://github.com/acode-foundation/acode/fork' title='Fork' />
+          </div>
+          <div className='download-buttons'>
+            <a
+              title='Download Acode from Google Play store'
+              className='play-store'
+              href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'
+            >
+              <span className='hidden'>Download from Google Play store</span>
+            </a>
+            <a
+              title='Download Acode from F-Droid'
+              rel='nofollow'
+              className='f-droid'
+              href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'
+            >
+              <span className='hidden'>Download from F-Droid</span>
+            </a>
+          </div>
+        </div>
+      </div>
 
-      <Screen>
-        <div className='features'>
-          <h2>Features</h2>
-          <ul className='features__list'>
-            <li>Open source.</li>
-            <li>Collection of {pluginCount} plugins.</li>
-            <li>Edit any file from your device.</li>
-            <li>GitHub &amp; FTP/SFTP support.</li>
-          </ul>
-        </div>
-        <div className='featured-plugins'>
-          <h2>Popular Plugins</h2>
-          <ul className='featured-plugins__list'>{plugins}</ul>
-        </div>
-      </Screen>
+      <div className='download-buttons'>
+        <a
+          title='Download Acode from Google Play store'
+          className='play-store'
+          href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'
+        >
+          <span className='hidden'>Download from Google Play store</span>
+        </a>
+        <a
+          title='Download Acode from F-Droid'
+          rel='nofollow'
+          className='f-droid'
+          href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'
+        >
+          <span className='hidden'>Download from F-Droid</span>
+        </a>
+      </div>
+
+      <div className='featured-plugins'>
+        <p>Featured Plugins</p>
+        <ul className='featured-plugins__list'>{plugins}</ul>
+      </div>
     </section>
   );
 }
@@ -91,16 +125,5 @@ function Plugin({ data }) {
       <h4>{name}</h4>
       <small>{downloads?.toLocaleString()} downloads</small>
     </li>
-  );
-}
-
-function Screen({ className }, children) {
-  const $mainHeader = tag.get('#main-header');
-  const { height } = $mainHeader.getBoundingClientRect();
-  className = `screen ${className || ''}`;
-  return (
-    <div className={className} style={{ minHeight: `calc(100vh - ${height - 32}px)` }}>
-      {children}
-    </div>
   );
 }

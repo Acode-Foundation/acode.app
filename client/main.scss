@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100;0,200;0,300;0,400;1,100;1,200;1,300;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
 
 :root {
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Lato', sans-serif;
 }
 
 body,
@@ -10,7 +10,7 @@ html {
   width: 100%;
   overflow: hidden;
   margin: 0;
-  background: linear-gradient(to bottom,
+  background: linear-gradient(to bottom right,
       var(--secondary-color),
       var(--primary-color),
       var(--primary-color),
@@ -29,44 +29,13 @@ html {
   &::-webkit-scrollbar {
     display: none;
   }
-}
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  text-align: center;
-  margin: 0;
-}
-
-h1 {
-  font-size: 2rem !important;
-}
-
-h2 {
-  font-size: 1.5rem !important;
-}
-
-h3 {
-  font-size: 1.2rem !important;
-}
-
-h4 {
-  font-size: 1rem !important;
-}
-
-h5 {
-  font-size: 0.8rem !important;
-}
-
-h6 {
-  font-size: 0.6rem !important;
-}
-
-h1 {
-  font-size: 2rem;
+  &.scrolled {
+    header {
+      background-color: rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(20px);
+    }
+  }
 }
 
 body.loading {
@@ -101,12 +70,12 @@ body.loading {
 }
 
 header {
-  display: flex;
-  align-items: center;
-  background-color: var(--bg-color);
-  box-shadow: 0px 1px 2px #000;
-  position: sticky;
   top: 0;
+  z-index: 10;
+  display: flex;
+  position: sticky;
+  align-items: center;
+  transition: all 1s ease-in-out;
 
   >.icon {
     height: 60px;
@@ -123,10 +92,6 @@ header {
     &:hover {
       background-color: rgba(0, 0, 0, 0.5);
     }
-  }
-
-  &#main-header {
-    z-index: 100;
   }
 
   label[for='menu-toggler'] {
@@ -202,6 +167,7 @@ header {
       height: 30px;
       padding: 0 10px;
       align-items: center;
+      z-index: 1;
 
       .icon {
         height: fit-content;
@@ -242,7 +208,6 @@ header {
 
 main {
   width: 100%;
-  background-color: var(--bg-color);
 
   &:empty {
     position: relative;
@@ -459,6 +424,8 @@ code {
 }
 
 footer {
+  background-color: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(20px);
   position: relative;
   z-index: 100;
 }

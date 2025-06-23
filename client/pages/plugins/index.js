@@ -15,7 +15,9 @@ export default async function PluginList({ filter }) {
   return (
     <section style={{ padding: '20px 0' }} id='plugins'>
       <div className='header'>
-        <h1 ref={title}>Plugins</h1>
+        <h1 style={{ textAlign: 'center' }} ref={title}>
+          Plugins
+        </h1>
         {loggedInUser?.isAdmin && (
           <nav>
             <span className='link' onclick={updatePlugins} data-filter='all'>

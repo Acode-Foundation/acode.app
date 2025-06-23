@@ -25,10 +25,23 @@ window.onload = async () => {
         { href: '/faqs', text: 'FAQs' },
         { href: 'https://docs.acode.app', text: 'Plugin Docs' },
         { href: '/plugins', text: 'Plugins' },
-        { href: '/user', text: $loginText, icon: 'person' },
       ]}
     />
   );
+
+  app.addEventListener('scroll', (e) => {
+    app.get('#main-header').style.cssText = `
+      background-color: rgba(0, 0, 0, ${Math.min(e.target.scrollTop / 100, 0.5)});
+      backdrop-filter: blur(${Math.min(e.target.scrollTop / 10, 10)}px);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, ${Math.min(e.target.scrollTop / 100, 0.2)});
+      transition: background-color 0.3s ease, backdrop-filter 0.3s ease, box-shadow 0.3s ease;
+    `;
+    if (e.target.scrollTop > 0) {
+      app.classList.add('scrolled');
+    } else {
+      app.classList.remove('scrolled');
+    }
+  });
 
   const user = await getLoggedInUser();
   if (user) {

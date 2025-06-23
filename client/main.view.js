@@ -1,3 +1,4 @@
+import $loginText from 'components/loginText';
 import './main.scss';
 import digitalOceanLogo from 'res/digitalocean-icon.svg';
 import logo from 'res/logo.svg';
@@ -22,15 +23,9 @@ export default ({ routes }) => (
         ))}
       </nav>
       <nav>
-        <a
-          className='play-button'
-          href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'
-        >
-          <img
-            style={{ width: '150px' }}
-            alt='Get it on Google Play'
-            src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png'
-          />
+        <a href='/user'>
+          <span className='icon person' />
+          {$loginText}
         </a>
       </nav>
     </header>
