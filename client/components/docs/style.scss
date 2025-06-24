@@ -45,6 +45,7 @@
     overflow: auto;
     padding-bottom: 30%;
     box-sizing: border-box;
+    scrollbar-width: none; // hide scrollbar in Firefox
 
     // hide scrollbar
     &::-webkit-scrollbar {

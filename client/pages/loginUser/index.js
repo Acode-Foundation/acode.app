@@ -3,15 +3,21 @@ import AjaxForm from 'components/ajaxForm';
 import Input from 'components/input';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
+import background from 'lib/background';
 import { loadingEnd, loadingStart } from 'lib/helpers';
+import userImage from 'res/user.svg';
 
 export default function LoginUser({ redirect }) {
   const errorText = Reactive('');
   const successText = Reactive('');
   const button = Ref();
+  const canvas = Ref();
+
+  canvas.onref = () => background(canvas.el);
 
   return (
     <section id='user-login'>
+      <canvas ref={canvas} id='background' />
       <AjaxForm
         loading={onloadstart}
         loadingEnd={(form) => loadingEnd(form, 'Login')}
@@ -20,9 +26,13 @@ export default function LoginUser({ redirect }) {
         action='/api/login'
         method='post'
       >
-        <h1>Login</h1>
+        <picture className='login-profile'>
+          <source srcset={userImage} type='image/svg' />
+          <img src={userImage} alt='Wombat' />
+        </picture>
+        <h1 style={{ textAlign: 'center' }}>Login</h1>
         <Input type='email' name='email' label='Email' placeholder='e.g. john@gmail.com' />
-        <Input type='password' name='password' label='Password' placeholder='Password' />
+        <Input type='password' name='password' label='Password' placeholder='Password' autocomplete='current-password' />
 
         <span className='success'>{successText}</span>
         <span className='error'>{errorText}</span>

@@ -115,6 +115,7 @@
     max-width: 100%;
     flex-wrap: nowrap;
     overflow: auto;
+    scrollbar-width: none;
 
     &:empty {
       display: none;

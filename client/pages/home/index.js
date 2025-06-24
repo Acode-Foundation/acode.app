@@ -3,12 +3,12 @@ import './style.scss';
 import { render } from 'github-buttons';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
+import background from 'lib/background';
 import { hideLoading, showLoading } from 'lib/helpers';
 import phoneImageJpg from 'res/phone.jpg';
 import phoneImageWebp from 'res/phone.webp';
 import tabletImageJpg from 'res/tablet.jpg';
 import tabletImageWebp from 'res/tablet.webp';
-import background from './background';
 
 export default async function home() {
   const canvas = Ref();

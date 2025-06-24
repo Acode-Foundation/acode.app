@@ -27,25 +27,27 @@ import Reactive from 'html-tag-js/reactive';
 
 /**
  *
- * @param {Object} param0
- * @param {number} param0.maxlength
- * @param {Ref} param0.ref
- * @param {boolean} param0.autofill
- * @param {Function} param0.onkeydown
- * @param {Function} param0.oninput
- * @param {boolean} param0.checked
- * @param {boolean} param0.required
- * @param {Function} param0.onchange
- * @param {string|number} param0.value
- * @param {string} param0.placeholder
- * @param {string} param0.label
- * @param {string} param0.name
- * @param {string} param0.id
- * @param {InputTypes} param0.type
+ * @param {Object} props
+ * @param {Ref} props.ref
+ * @param {number} props.maxlength
+ * @param {string} props.autocomplete
+ * @param {boolean} props.autofill
+ * @param {Function} props.onkeydown
+ * @param {Function} props.oninput
+ * @param {boolean} props.checked
+ * @param {boolean} props.required
+ * @param {Function} props.onchange
+ * @param {string|number} props.value
+ * @param {string} props.placeholder
+ * @param {string} props.label
+ * @param {string} props.name
+ * @param {string} props.id
+ * @param {InputTypes} props.type
  */
 export default function Input({
   maxlength,
   ref,
+  autocomplete = 'on',
   autofill = true,
   onkeydown,
   oninput,
@@ -96,6 +98,8 @@ export default function Input({
   if (!autofill) {
     inputField.disabled = true;
   }
+
+  inputField.autocomplete = autocomplete;
 
   if (type === 'file') {
     inputField.addEventListener('change', () => {
