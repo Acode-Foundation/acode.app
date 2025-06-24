@@ -19,8 +19,8 @@
   ],
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#313131",
-  "theme_color": "#313131",
+  "background_color": "#35374B",
+  "theme_color": "#35374B",
   "description": "Acode is a powerful code editor for Android. It supports 50+ languages and comes with code completion, syntax highlighting, code snippets, code refactoring, and many other features.",
   "lang": "en"
 }
