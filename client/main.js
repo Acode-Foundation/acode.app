@@ -8,16 +8,12 @@ import 'res/icons/style.css';
 import $loginText from 'components/loginText';
 import Router from 'lib/Router';
 import { getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
-import PullToRefresh from 'lib/pullToRefresh';
 import Theme from 'lib/theme';
 import dark from 'themes/dark';
 import View from './main.view';
 
 window.onload = async () => {
   Theme(dark);
-  PullToRefresh(app, () => {
-    Router.reload();
-  });
   app.content = (
     <View
       appName='Acode'
