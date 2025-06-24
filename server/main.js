@@ -44,6 +44,12 @@ async function main() {
     }),
   );
   app.use(express.json());
+
+  app.get('/sitemap.xml', (_req, res) => {
+    res.setHeader('Content-Type', 'application/xml');
+    res.sendFile('sitemap.xml', { root: process.cwd() });
+  });
+
   app.use('/api', apis);
   app.use('/api/*path', (_req, res) => {
     res.status(404).send({ error: 'Not found' });

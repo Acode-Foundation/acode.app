@@ -24,6 +24,7 @@
     "nodemon": "^3.1.10",
     "postcss": "^8.5.4",
     "postcss-loader": "^8.1.1",
+    "puppeteer": "^24.10.2",
     "raw-loader": "^4.0.0",
     "sass": "^1.89.2",
     "sass-loader": "^16.0.4",
@@ -64,7 +65,8 @@
     "dev": "node ./dev/start-dev",
     "upgrade-meta": "node ./server/upgradeMeta",
     "download": "node ./server/reportsCli",
-    "start": "node ./server/main"
+    "start": "node ./server/main",
+    "sitemap": "node dev/generateSitemap.js"
   },
   "browserslist": ["> 0.25%, not dead"]
 }
