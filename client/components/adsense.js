@@ -31,7 +31,7 @@ export default function AdSense({ className = '', name = 'plugin', style = {}, r
     <div className={className} style={{ zIndex: '1', ...style }} ref={ref}>
       <ins
         className='adsbygoogle'
-        style={{ display: 'block', zIndex: 1 }}
+        style={{ display: 'block', zIndex: 1, position: 'relative' }}
         data-ad-client='ca-pub-5911839694379275'
         data-ad-slot={nameMap[name].slot}
         data-ad-format='fluid'

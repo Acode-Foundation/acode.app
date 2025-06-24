@@ -49,9 +49,9 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
   const selectMonth = Ref();
   const $comments = <CommentsContainerAndForm listRef={commentListRef} plugin={plugin} user={user} id={pluginId} userComment={userComment} />;
   const $description = (
-    <article style={{ width: '100%', overflow: 'auto', zIndex: 0 }}>
-      <AdSense name='readme' style={{ position: 'relative', zIndex: 0 }} />
-      <p className='md' innerHTML={marked.parse(description)} style={{ zIndex: 1, position: 'relative' }} />
+    <article style={{ width: '100%', overflow: 'auto' }}>
+      <AdSense name='readme' style={{ position: 'relative' }} />
+      <p className='md' innerHTML={marked.parse(description)} />
     </article>
   );
   const updateOrder = () => {
