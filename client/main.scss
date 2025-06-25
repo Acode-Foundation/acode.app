@@ -219,6 +219,7 @@ header {
 
 main {
   width: 100%;
+  min-height: 100%;
 
   &:empty {
     position: relative;

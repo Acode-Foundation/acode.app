@@ -1,10 +1,9 @@
-import AdSense from 'components/adsense';
 import './style.scss';
+import AdSense from 'components/adsense';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import prompt from 'components/dialogs/prompt';
 import select from 'components/dialogs/select';
-import DotsLoading from 'components/dots';
 import Router from 'lib/Router';
 import { calcRating, capitalize, getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
 
@@ -29,10 +28,12 @@ export default function Plugins({ user, orderBy, status, name }) {
       const res = await fetch(url);
       const { isAdmin, id: userId } = (await getLoggedInUser()) || {};
       const plugins = await res.json();
+      const adsPosition = [2, 15, 28];
 
       el.setAttribute('data-msg', 'No plugins found. :(');
-      for (const plugin of plugins) {
-        if (Math.random() < 0.1) {
+      for (let i = 0; i < plugins.length; i++) {
+        const plugin = plugins[i];
+        if (adsPosition.includes(i) || (i > 33 && Math.random() < 0.1)) {
           el.append(<AdSense className='plugin' style={{ position: 'relative' }} />);
         }
         el.append(<Plugin {...plugin} isAdmin={isAdmin} userId={userId} />);
@@ -86,7 +87,7 @@ function Plugin({
           )}
         </div>
         <p>
-          {id} •{' '}
+          {id}&nbsp;•&nbsp;
           <small>
             <strong>{version}</strong>
           </small>

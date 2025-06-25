@@ -53,6 +53,10 @@
     overflow: auto;
     scrollbar-width: none;
 
+    h2 {
+      margin: 0;
+    }
+
     >* {
       cursor: pointer;
       padding: 10px;
