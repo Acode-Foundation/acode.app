@@ -29,7 +29,16 @@ async function main() {
 
   // allow origin https://localhost
   app.use((_req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'https://localhost');
+    const allowedOrigins = [
+      'https://preview--acode-code-hub.lovable.app', // temp, for dev only
+      'http://localhost:8080', // temp, for dev only
+      'https://localhost',
+    ];
+    const origin = req.headers.origin;
+
+    if (allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+    }
     // allow content-type
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     next();
