@@ -431,6 +431,10 @@ router.post('/', async (req, res) => {
       insert.push([Plugin.KEYWORDS, JSON.stringify(pluginJson.keywords)]);
     }
 
+    if (pluginJson.repository) {
+      insert.push([Plugin.REPOSITORY, pluginJson.repository]);
+    }
+
     await Plugin.insert(...insert);
 
     savePlugin(pluginId, pluginZip, icon);
@@ -502,6 +506,10 @@ router.put('/', async (req, res) => {
 
     if (pluginJson.keywords) {
       updates.push([Plugin.KEYWORDS, JSON.stringify(pluginJson.keywords)]);
+    }
+
+    if (pluginJson.repository) {
+      updates.push([Plugin.REPOSITORY, pluginJson.repository]);
     }
 
     if (pluginJson.changelogs) {
