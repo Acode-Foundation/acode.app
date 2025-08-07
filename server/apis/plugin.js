@@ -473,10 +473,11 @@ router.put('/', async (req, res) => {
     }
 
     const { pluginJson, icon, readme, changelogs } = await exploreZip(pluginZip.data);
-    const errorMessage = validatePlugin(pluginJson, icon, readme);
-
-    if (errorMessage) {
-      res.status(400).send({ error: errorMessage });
+    
+    try {
+      validatePlugin(pluginJson, icon, readme);
+    } catch (error) {
+      res.status(400).send({ error: error.message });
       return;
     }
 
@@ -637,11 +638,54 @@ router.delete('/:id', async (req, res) => {
 });
 
 async function exploreZip(file) {
-  const zip = await jsZip.loadAsync(file);
-  const pluginJson = JSON.parse(await zip.file('plugin.json')?.async('string'));
-  const icon = await zip.file('icon.png')?.async('base64');
-  const readme = await zip.file('readme.md')?.async('string');
-  const changelogs = await zip.file(pluginJson.changelogs || 'changelogs.md')?.async('string');
+  // Create a new JSZip instance for each request to avoid caching issues
+  const zip = new JSZip();
+  await zip.loadAsync(file);
+  
+  const pluginJsonFile = zip.file('plugin.json');
+  if (!pluginJsonFile) {
+    throw new Error('Missing plugin.json file in the zip.');
+  }
+  const pluginJson = JSON.parse(await pluginJsonFile.async('string'));
+  
+  const iconPath = pluginJson.icon || 'icon.png';
+  const iconFile = zip.file(iconPath);
+  let icon = null;
+  if (iconFile) {
+    icon = await iconFile.async('base64');
+  } else if (iconPath !== 'icon.png') {
+    // If custom path failed, try the default path
+    const defaultIconFile = zip.file('icon.png');
+    if (defaultIconFile) {
+      icon = await defaultIconFile.async('base64');
+    }
+  }
+  
+  const readmePath = pluginJson.readme || 'readme.md';
+  let readmeFile = zip.file(readmePath);
+  if (!readmeFile && readmePath !== 'readme.md') {
+    // If custom path failed, try the default path
+    readmeFile = zip.file('readme.md');
+  }
+  
+  let readme = null;
+  if (readmeFile) {
+    const readmeContent = await readmeFile.async('string');
+    readme = readmeContent && readmeContent.trim() ? readmeContent.trim() : null;
+  }
+  
+  const changelogsPath = pluginJson.changelogs || 'changelogs.md';
+  let changelogsFile = zip.file(changelogsPath);
+  if (!changelogsFile && changelogsPath !== 'changelogs.md') {
+    // If custom path failed, try the default path
+    changelogsFile = zip.file('changelogs.md');
+  }
+  
+  let changelogs = null;
+  if (changelogsFile) {
+    const changelogsContent = await changelogsFile.async('string');
+    changelogs = changelogsContent && changelogsContent.trim() ? changelogsContent.trim() : null;
+  }
 
   return { pluginJson, icon, readme, changelogs };
 }
@@ -676,7 +720,10 @@ function validatePlugin(json, icon, readmeFile) {
     throw new Error('Invalid version number, version should be in the format <major>.<minor>.<patch> (e.g. 0.0.1)');
   }
 
-  const missingFields = [name, version, id, main].filter((field) => !field);
+  const requiredFields = { name, version, id, main };
+  const missingFields = Object.entries(requiredFields)
+    .filter(([_, value]) => !value)
+    .map(([key]) => key);
   if (missingFields.length) {
     throw new Error(`Missing fields in plugin.json: ${missingFields.join(', ')}`);
   }
