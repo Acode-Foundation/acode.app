@@ -24,10 +24,10 @@ async function cleanDownload() {
   console.log('Deleted old downloads');
 }
 
-function cleanDb() {
-  cleanOtp();
-  cleanLogin();
-  cleanDownload();
+async function cleanDb() {
+  await cleanOtp();
+  await cleanLogin();
+  await cleanDownload();
 }
 
 module.exports = cleanDb;

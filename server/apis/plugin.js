@@ -14,7 +14,6 @@ const { getLoggedInUser, sendNotification, getPluginSKU } = require('../lib/help
 const androidpublisher = google.androidpublisher('v3');
 
 const router = Router();
-const jsZip = new JSZip();
 const MIN_PRICE = 10;
 const MAX_PRICE = 10000;
 const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
@@ -154,7 +153,10 @@ router.get('/orders/:pluginId/:year/:month', async (req, res) => {
       return;
     }
 
-    const yearMonth = { month: Number.parseInt(month, 10), year: Number.parseInt(year, 10) };
+    const yearMonth = {
+      month: Number.parseInt(month, 10),
+      year: Number.parseInt(year, 10),
+    };
     const monthStart = moment(yearMonth).startOf('month').format('YYYY-MM-DD');
     const monthEnd = moment(yearMonth).endOf('month').format('YYYY-MM-DD');
     const orders = await Order.get(Order.minColumns, [
@@ -382,7 +384,9 @@ router.post('/', async (req, res) => {
     const { name, price, version, minVersionCode } = pluginJson;
 
     if (!VERSION_REGEX.test(version)) {
-      res.status(400).send({ error: 'Invalid version number, version should be in the format x.x.x' });
+      res.status(400).send({
+        error: 'Invalid version number, version should be in the format x.x.x',
+      });
       return;
     }
 
@@ -393,7 +397,9 @@ router.post('/', async (req, res) => {
 
     if (price) {
       if (price < MIN_PRICE || price > MAX_PRICE) {
-        res.status(400).send({ error: `Price should be between INR ${MIN_PRICE} and INR ${MAX_PRICE}` });
+        res.status(400).send({
+          error: `Price should be between INR ${MIN_PRICE} and INR ${MAX_PRICE}`,
+        });
         return;
       }
 
@@ -473,7 +479,7 @@ router.put('/', async (req, res) => {
     }
 
     const { pluginJson, icon, readme, changelogs } = await exploreZip(pluginZip.data);
-    
+
     try {
       validatePlugin(pluginJson, icon, readme);
     } catch (error) {
@@ -485,7 +491,9 @@ router.put('/', async (req, res) => {
     const pluginId = pluginJson.id.toLowerCase();
 
     if (!VERSION_REGEX.test(version)) {
-      res.status(400).send({ error: 'Invalid version number, version should be in the format x.x.x' });
+      res.status(400).send({
+        error: 'Invalid version number, version should be in the format x.x.x',
+      });
       return;
     }
 
@@ -527,7 +535,9 @@ router.put('/', async (req, res) => {
 
     if (version !== row.version) {
       if (!isVersionGreater(version, row.version)) {
-        res.status(400).send({ error: 'Version should be greater than the current version' });
+        res.status(400).send({
+          error: 'Version should be greater than the current version',
+        });
         return;
       }
       updates.push([Plugin.VERSION, version]);
@@ -641,13 +651,13 @@ async function exploreZip(file) {
   // Create a new JSZip instance for each request to avoid caching issues
   const zip = new JSZip();
   await zip.loadAsync(file);
-  
+
   const pluginJsonFile = zip.file('plugin.json');
   if (!pluginJsonFile) {
     throw new Error('Missing plugin.json file in the zip.');
   }
   const pluginJson = JSON.parse(await pluginJsonFile.async('string'));
-  
+
   const iconPath = pluginJson.icon || 'icon.png';
   const iconFile = zip.file(iconPath);
   let icon = null;
@@ -660,31 +670,31 @@ async function exploreZip(file) {
       icon = await defaultIconFile.async('base64');
     }
   }
-  
+
   const readmePath = pluginJson.readme || 'readme.md';
   let readmeFile = zip.file(readmePath);
   if (!readmeFile && readmePath !== 'readme.md') {
     // If custom path failed, try the default path
     readmeFile = zip.file('readme.md');
   }
-  
+
   let readme = null;
   if (readmeFile) {
     const readmeContent = await readmeFile.async('string');
-    readme = readmeContent && readmeContent.trim() ? readmeContent.trim() : null;
+    readme = readmeContent?.trim?.();
   }
-  
+
   const changelogsPath = pluginJson.changelogs || 'changelogs.md';
   let changelogsFile = zip.file(changelogsPath);
   if (!changelogsFile && changelogsPath !== 'changelogs.md') {
     // If custom path failed, try the default path
     changelogsFile = zip.file('changelogs.md');
   }
-  
+
   let changelogs = null;
   if (changelogsFile) {
     const changelogsContent = await changelogsFile.async('string');
-    changelogs = changelogsContent && changelogsContent.trim() ? changelogsContent.trim() : null;
+    changelogs = changelogsContent?.trim?.();
   }
 
   return { pluginJson, icon, readme, changelogs };

@@ -4,12 +4,12 @@ const updateEarnings = require('../lib/updateEarnings');
 const cleanDb = require('./cleanDb');
 
 const daily = new CronJob('0 1 * * *', async () => {
-  updateOrders();
-  cleanDb();
+  await updateOrders();
+  await cleanDb();
 });
 
-const monthly = new CronJob('0 0 1 * *', async () => {
-  updateEarnings();
+const monthly = new CronJob('0 0 16 * *', async () => {
+  await updateEarnings();
 });
 
 daily.start();

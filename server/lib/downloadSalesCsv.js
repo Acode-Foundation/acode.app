@@ -80,7 +80,7 @@ function sales(row, orders) {
 }
 
 function earnings(row, orders) {
-  // biome-ignore lint/complexity/useLiteralKeys: <explanation>
+  // biome-ignore lint/complexity/useLiteralKeys: ignore
   const id = row['Description'];
   const date = row['Transaction Date'];
   const product = row['Product Title'];

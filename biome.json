@@ -1,7 +1,10 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
-  "files": { "ignoreUnknown": true, "ignore": ["public/**/*", "*.d.ts", ".vscode/**/*", "**/jsconfig.json", ".babelrc", ".hintrc"] },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": ["**", "!**/public/**/*", "!**/*.d.ts", "!**/.vscode/**/*", "!**/jsconfig.json", "!**/.babelrc", "!**/.hintrc"]
+  },
   "formatter": {
     "enabled": true,
     "useEditorconfig": true,
@@ -13,16 +16,11 @@
     "attributePosition": "auto",
     "bracketSpacing": true
   },
-  "organizeImports": {
-    "enabled": true
-  },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "rules": {
       "recommended": true,
-      "nursery": {
-        "noCommonJs": "error",
-        "noNestedTernary": "error"
-      },
+      "nursery": {},
       "correctness": {
         "noUnusedVariables": "error",
         "noUndeclaredVariables": "error"
@@ -34,11 +32,13 @@
         "noForEach": "warn"
       },
       "suspicious": {
-        "noConsoleLog": "error"
+        "noConsole": { "level": "error", "options": { "allow": ["error"] } }
       },
       "style": {
         "noParameterAssign": "off",
-        "noRestrictedGlobals": "error"
+        "noRestrictedGlobals": "error",
+        "noCommonJs": "error",
+        "noNestedTernary": "error"
       }
     }
   },
@@ -57,7 +57,7 @@
   },
   "overrides": [
     {
-      "include": ["client/**"],
+      "includes": ["**/client/**"],
       "linter": {
         "rules": {
           "a11y": {
@@ -74,14 +74,15 @@
       }
     },
     {
-      "include": ["server/**", "webpack.config.js", "cron-jobs/**", "dev/**", "postcss.config.js"],
+      "includes": ["**/server/**", "**/webpack.config.js", "**/cron-jobs/**", "**/dev/**", "**/postcss.config.js"],
       "linter": {
         "rules": {
-          "nursery": {
-            "noCommonJs": "off"
-          },
+          "nursery": {},
           "suspicious": {
-            "noConsoleLog": "off"
+            "noConsole": { "level": "off", "options": { "allow": ["log"] } }
+          },
+          "style": {
+            "noCommonJs": "off"
           }
         }
       }

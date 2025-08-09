@@ -75,7 +75,10 @@ route.get('/unpaid-earnings', async (req, res) => {
       // send earnings from last month
       const now = moment();
       const date = now.date();
-      const lastMonth = moment({ year: now.year(), month: now.month() }).subtract(1, 'month');
+      const lastMonth = moment({
+        year: now.year(),
+        month: now.month(),
+      }).subtract(1, 'month');
       const lastMonthEarnings = await calcEarnings.total(lastMonth.year(), lastMonth.month(), user);
 
       if (date >= 16) {
@@ -188,7 +191,7 @@ route.get('/receipt/:paymentId', async (req, res) => {
       return;
     }
 
-    const { paymentMethod, paymentMethodId, ...rest } = payment;
+    const { paymentMethod: _paymentMethod, paymentMethodId: _paymentMethodId, ...rest } = payment;
 
     res.send({
       ...rest,

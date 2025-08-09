@@ -51,8 +51,6 @@ async function updateEarnings(year = currentYear, month = currentMonth) {
     const report = await downloadReport(year, month + 1);
     const reportOfPreviousMonth = await downloadReport(previousYear, previousMonth + 1);
 
-    console.log(reportOfPreviousMonth);
-
     // push previous month report to current month report using for loop
     const len = reportOfPreviousMonth.length;
     for (let i = 0; i < len; i++) {

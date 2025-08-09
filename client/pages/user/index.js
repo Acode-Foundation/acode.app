@@ -4,8 +4,8 @@ import confirm from 'components/dialogs/confirm';
 import select from 'components/dialogs/select';
 import Plugins from 'components/plugins';
 import Ref from 'html-tag-js/ref';
-import Router from 'lib/Router';
 import { getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers';
+import Router from 'lib/Router';
 import moment from 'moment';
 import Earnings from 'pages/earnings';
 import userImage from 'res/user.png';
@@ -69,22 +69,18 @@ export default async function User({ userId }) {
               </div>
             </div>
           </h1>
-          {shouldShowSensitiveInfo ? (
-            <small className='link earnings' title='Your earnings for this month'>
-              <strong className='loading' ref={amount} />|<span>{moment().format('YYYY MMMM')}</span>
-            </small>
-          ) : (
-            ''
-          )}
+          {shouldShowSensitiveInfo
+            ? <small className='link earnings' title='Your earnings for this month'>
+                <strong className='loading' ref={amount} />|<span>{moment().format('YYYY MMMM')}</span>
+              </small>
+            : ''}
           <div onwheel={onwheel} ref={paymentMethods} className='payment-methods'>
-            {isSelf ? (
-              <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
-                <span className='icon add' />
-                <span>Payment method</span>
-              </div>
-            ) : (
-              ''
-            )}
+            {isSelf
+              ? <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
+                  <span className='icon add' />
+                  <span>Payment method</span>
+                </div>
+              : ''}
           </div>
           <div className='socials' onclick={(e) => e.target.dataset.href && Router.loadUrl(e.target.dataset.href)}>
             <button type='button' title='email' className='icon mail' data-href={`mailto:${user.email}`} />

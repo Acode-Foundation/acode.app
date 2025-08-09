@@ -1,8 +1,8 @@
 import './style.scss';
 
 import Ref from 'html-tag-js/ref';
-import Router from 'lib/Router';
 import { hideLoading, showLoading } from 'lib/helpers';
+import Router from 'lib/Router';
 
 /**
  *

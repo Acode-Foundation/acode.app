@@ -4,8 +4,8 @@ import Input from 'components/input';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import JSZip from 'jszip';
-import Router from 'lib/Router';
 import { capitalize, getLoggedInUser, hideLoading, loadingEnd, loadingStart, showLoading } from 'lib/helpers';
+import Router from 'lib/Router';
 
 export default async function PublishPlugin({ mode = 'publish', id }) {
   const user = await getLoggedInUser();

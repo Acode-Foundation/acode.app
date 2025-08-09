@@ -2,8 +2,8 @@ import './style.scss';
 import Input from 'components/input';
 import Plugins from 'components/plugins';
 import Ref from 'html-tag-js/ref';
-import Router from 'lib/Router';
 import { getLoggedInUser } from 'lib/helpers';
+import Router from 'lib/Router';
 
 export default async function PluginList({ filter }) {
   const loggedInUser = await getLoggedInUser();
