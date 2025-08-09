@@ -6,8 +6,8 @@ import './common.scss';
 import 'res/icons/style.css';
 
 import $loginText from 'components/loginText';
-import Router from 'lib/Router';
 import { getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
+import Router from 'lib/Router';
 import Theme from 'lib/theme';
 import dark from 'themes/dark';
 import View from './main.view';

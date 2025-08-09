@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Acode – Scheduled Maintenance</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="description" content="Acode is briefly down for scheduled maintenance. We'll be right back." />
+  <link rel="icon" href="/favicon.ico" />
+  <style>
+    :root {
+      --primary: #35374B;
+      --secondary: #344955;
+      --accent: #3399ff;
+      --accent-glow: #66b5ff;
+      --text: #ffffff;
+      --muted: #c7d4dd;
+      --error: #ff6b6b;
+      --radius-xl: 32px;
+      --radius-lg: 22px;
+      --radius: 14px;
+      --shadow-1: 0 4px 14px -4px rgba(0, 0, 0, .4), 0 1px 3px rgba(0, 0, 0, .4);
+      --shadow-2: 0 10px 34px -10px rgba(0, 0, 0, .55), 0 2px 6px rgba(0, 0, 0, .45);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      color: var(--text);
+      background: radial-gradient(circle at 20% 15%, #48596d, #35374B 60%) fixed, linear-gradient(140deg, #344955, #35374B 65%, #23252f) fixed;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 85% 120%, rgba(51, 153, 255, .18), transparent 60%), radial-gradient(circle at -10% -10%, rgba(255, 255, 255, .07), transparent 70%);
+      mix-blend-mode: screen;
+      animation: glow 8s linear infinite;
+    }
+
+    @keyframes glow {
+
+      0%,
+      100% {
+        opacity: .85
+      }
+
+      50% {
+        opacity: .55
+      }
+    }
+
+    .page {
+      min-height: 100%;
+      max-width: 940px;
+      margin: 0 auto;
+      padding: 64px 28px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      margin: 0 0 34px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 1.35rem;
+      letter-spacing: .5px;
+    }
+
+    .logo img {
+      width: 70px;
+      height: 70px;
+      animation: float 6s ease-in-out infinite;
+      filter: drop-shadow(0 8px 20px rgba(0, 0, 0, .45));
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0)
+      }
+
+      50% {
+        transform: translateY(-10px)
+      }
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      font-size: clamp(2.3rem, 5vw, 3.5rem);
+      line-height: 1.1;
+      font-weight: 800;
+      letter-spacing: .6px;
+      background: linear-gradient(120deg, #fff 30%, var(--accent-glow));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    p.lead {
+      max-width: 720px;
+      margin: 0 0 38px;
+      font-size: clamp(1.02rem, 1.25vw, 1.15rem);
+      line-height: 1.55;
+      color: var(--muted);
+    }
+
+    .card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      width: 100%;
+      max-width: 620px;
+      padding: 36px 40px 40px;
+      border-radius: var(--radius-xl);
+      background: linear-gradient(160deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .04));
+      backdrop-filter: blur(26px) saturate(150%);
+      -webkit-backdrop-filter: blur(26px) saturate(150%);
+      border: 1px solid rgba(255, 255, 255, .14);
+      box-shadow: var(--shadow-2), inset 0 0 0 1px rgba(255, 255, 255, .06);
+    }
+
+    .chip {
+      align-self: flex-start;
+      background: linear-gradient(140deg, var(--accent), var(--accent-glow));
+      color: #fff;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 7px 16px 6px;
+      border-radius: 100px;
+      box-shadow: 0 4px 16px -4px rgba(51, 153, 255, .55), 0 1px 2px rgba(0, 0, 0, .45);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chip::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 28% 30%, rgba(255, 255, 255, .7), transparent 70%);
+      mix-blend-mode: overlay;
+      opacity: .6;
+    }
+
+    dl {
+      display: grid;
+      grid-template-columns: minmax(120px, 160px) 1fr;
+      gap: 10px 24px;
+      margin: 0;
+      font-size: .95rem;
+      line-height: 1.5;
+    }
+
+    dt {
+      font-weight: 600;
+      color: #fff;
+    }
+
+    dd {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .progress-wrap {
+      position: relative;
+      height: 8px;
+      background: rgba(255, 255, 255, .14);
+      border-radius: 5px;
+      overflow: hidden;
+      margin: 4px 0 2px;
+      grid-column: 1/3;
+    }
+
+    .bar {
+      position: absolute;
+      inset: 0;
+      width: 40%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-glow));
+      animation: load 2.3s ease-in-out infinite;
+      filter: drop-shadow(0 0 4px rgba(102, 181, 255, .6));
+    }
+
+    @keyframes load {
+      0% {
+        transform: translateX(-100%)
+      }
+
+      55% {
+        transform: translateX(40%)
+      }
+
+      100% {
+        transform: translateX(145%)
+      }
+    }
+
+    .countdown {
+      font-variant-numeric: tabular-nums;
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+      background: rgba(255, 255, 255, .09);
+      padding: 4px 10px 3px;
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .15);
+      color: #fff;
+      font-size: .85rem;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 4px;
+    }
+
+    .btn {
+      --bg: linear-gradient(135deg, var(--accent), var(--accent-glow));
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: .95rem;
+      font-weight: 600;
+      letter-spacing: .4px;
+      color: #fff;
+      padding: 14px 30px 13px;
+      border-radius: 18px;
+      background: var(--bg);
+      box-shadow: 0 8px 22px -8px rgba(51, 153, 255, .7), 0 2px 5px rgba(0, 0, 0, .45);
+      transition: transform .4s cubic-bezier(.4, .14, .14, 1), box-shadow .35s, filter .4s;
+    }
+
+    .btn:hover {
+      transform: translateY(-4px);
+      filter: brightness(1.08) saturate(1.15);
+      box-shadow: 0 14px 32px -12px rgba(51, 153, 255, .85), 0 4px 10px -2px rgba(0, 0, 0, .55);
+    }
+
+    .btn.alt {
+      --bg: linear-gradient(135deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .07));
+      color: var(--text);
+      box-shadow: var(--shadow-1), inset 0 0 0 1px rgba(255, 255, 255, .15);
+      backdrop-filter: blur(14px) saturate(140%);
+    }
+
+    .btn.alt:hover {
+      box-shadow: 0 8px 22px -10px rgba(0, 0, 0, .65), inset 0 0 0 1px rgba(255, 255, 255, .22);
+    }
+
+    footer {
+      margin-top: auto;
+      padding: 56px 0 10px;
+      font-size: .72rem;
+      letter-spacing: .6px;
+      color: var(--muted);
+    }
+
+    footer a {
+      color: var(--accent-glow);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width:660px) {
+      .card {
+        padding: 30px 26px 34px;
+        border-radius: var(--radius-lg);
+      }
+
+      h1 {
+        font-size: clamp(2.2rem, 8vw, 3.1rem);
+      }
+
+      .logo img {
+        width: 62px;
+        height: 62px;
+      }
+
+      dl {
+        grid-template-columns: 1fr;
+      }
+
+      dt,
+      dd,
+      .progress-wrap {
+        grid-column: 1/2;
+      }
+
+      .actions {
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page" role="main" aria-labelledby="title">
+    <a href="/" class="logo" aria-label="Acode Home">
+      <img src="/logo.svg" alt="Acode logo" width="70" height="70" loading="lazy" />
+      <span>Acode</span>
+    </a>
+
+    <h1 id="title">We'll be right back</h1>
+    <p class="lead">We're applying scheduled upgrades to keep Acode fast, secure and delightful. Your projects & data
+      are safe. This usually only takes a short while. You can wait here and we'll auto‑retry, or check our GitHub for
+      status updates.</p>
+
+    <section class="card" aria-labelledby="status-heading" aria-live="polite">
+      <span class="chip" id="status-heading">MAINTENANCE MODE</span>
+
+      <dl>
+        <dt>Estimated return</dt>
+        <dd id="eta">Shortly</dd>
+        <div class="progress-wrap" aria-hidden="true">
+          <div class="bar"></div>
+        </div>
+        <dt>Next check</dt>
+        <dd>In <span id="count" class="countdown">60</span> seconds (auto)</dd>
+      </dl>
+
+      <div class="actions">
+        <button class="btn" id="retry" type="button" aria-label="Refresh now">Try now</button>
+        <a class="btn alt" href="https://github.com/Acode-Foundation" target="_blank" rel="noopener"
+          aria-label="Acode Foundation on GitHub">GitHub</a>
+      </div>
+    </section>
+
+    <footer>&copy; <span id="year"></span> Acode Foundation • <a href="/privacyPolicy">Privacy</a> • <a
+        href="/termsOfService">Terms</a></footer>
+  </main>
+  <script>
+    (function () {
+      const SECONDS = 60; // change to adjust retry cycle
+      const countdown = document.getElementById('count');
+      const retryBtn = document.getElementById('retry');
+      const yearEl = document.getElementById('year');
+      yearEl.textContent = new Date().getFullYear();
+      let remaining = SECONDS;
+      function tick() {
+        remaining -= 1;
+        if (remaining <= 0) { window.location.reload(); return; }
+        countdown.textContent = remaining;
+        setTimeout(tick, 1000);
+      }
+      setTimeout(tick, 1000);
+      retryBtn.addEventListener('click', () => window.location.reload());
+      // Respect reduced motion
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.querySelectorAll('.bar,.logo img').forEach(el => el.style.animation = 'none');
+      }
+    })();
+  </script>
+</body>
+
+</html>

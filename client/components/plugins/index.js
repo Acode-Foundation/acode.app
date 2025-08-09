@@ -4,8 +4,8 @@ import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import prompt from 'components/dialogs/prompt';
 import select from 'components/dialogs/select';
-import Router from 'lib/Router';
 import { calcRating, capitalize, getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
+import Router from 'lib/Router';
 
 export default function Plugins({ user, orderBy, status, name }) {
   const el = <div className='plugins' data-msg='loading...' />;

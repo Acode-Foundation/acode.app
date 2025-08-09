@@ -22,14 +22,14 @@ if (startDateArg && endDateArg) {
  * Update order state, order_id and amount
  * @param {string} startDate start date in YYYY-MM-DD format
  * @param {string} endDate end date in YYYY-MM-DD format
- * @param {string} google googleapis object
+ * @param {import('googleapis').GoogleApis} google googleapis object
  */
 async function updateOrder(startDate, endDate, google) {
   const androidpublisher = google.androidpublisher('v3');
   const orders = await PurchaseOrder.for('internal').get([PurchaseOrder.CREATED_AT, [startDate, endDate], 'BETWEEN']);
 
-  await Promise.all(
-    orders.map(async (order) => {
+  for (const order of orders) {
+    try {
       const { package: packageName, plugin_id: pluginId, order_id: orderId, id: rowId, token, state } = order;
 
       const [plugin] = await Plugin.get([Plugin.SKU], [Plugin.ID, pluginId]);
@@ -62,8 +62,11 @@ async function updateOrder(startDate, endDate, google) {
       if (updates.length) {
         await PurchaseOrder.update(updates, [PurchaseOrder.ID, rowId]);
       }
-    }),
-  );
+    } catch (error) {
+      console.error(`Error updating order ${order.order_id}:`, error.message);
+      // Optionally, you can log the error to a file or send a notification
+    }
+  }
 }
 
 module.exports = updateOrder;
