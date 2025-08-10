@@ -223,4 +223,14 @@
       color: red;
     }
   }
+
+  article {
+    font-size: 14px;
+
+    input {
+      height: unset;
+      padding: unset;
+      margin: unset;
+    }
+  }
 }

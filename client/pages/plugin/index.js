@@ -1,4 +1,5 @@
 import './style.scss';
+import 'highlight.js/styles/github-dark.css';
 import AdSense from 'components/adsense';
 import AjaxForm from 'components/ajaxForm';
 import alert from 'components/dialogs/alert';
@@ -7,8 +8,9 @@ import prompt from 'components/dialogs/prompt';
 import Input from 'components/input';
 import MonthSelect from 'components/MonthSelect';
 import YearSelect from 'components/YearSelect';
+import hilightjs from 'highlight.js';
 import Ref from 'html-tag-js/ref';
-import { calcRating, getLoggedInUser, gravatar } from 'lib/helpers';
+import { calcRating, getLoggedInUser, gravatar, since } from 'lib/helpers';
 import Router from 'lib/Router';
 import { marked } from 'marked';
 import moment from 'moment/moment';
@@ -33,6 +35,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
     votes_up: votesUp,
     votes_down: votesDown,
     comment_count: commentCount,
+    package_updated_at: updatedAt,
     author_verified: authorVerified,
   } = plugin;
 
@@ -69,6 +72,10 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
   /** @type {Ref} */
   let currentSection;
 
+  for (const code of $description.getAll('pre code')) {
+    hilightjs.highlightElement(code);
+  }
+
   changeSection(section, false);
   renderComments(commentListRef, userId, user, pluginId, author);
 
@@ -94,6 +101,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
         <div className='info-container'>
           <div className='info'>
             <strong>{name}</strong>
+            <small>Updated {updatedAt ? since(updatedAt) : 'never'}</small>
           </div>
           <div className='info'>
             <span className='chip'>v {version}</span>
@@ -298,12 +306,11 @@ function Comment({
   const meta = Ref();
   const flagRef = Ref();
   const reply = Ref();
-  const now = moment().add(new Date().getTimezoneOffset(), 'minutes');
   const createTime = moment(updatedAt);
   const args = [id, pluginAuthor, pluginUserId, user];
   const userIsPluginAuthor = user && pluginUserId === user?.id;
 
-  const createDuration = moment.duration(now.diff(createTime)).humanize();
+  const createDuration = since(createTime);
 
   if (vote === 1) {
     dp.append(<div className='icon thumb_up primary' />);

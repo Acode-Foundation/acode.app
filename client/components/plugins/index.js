@@ -4,7 +4,7 @@ import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import prompt from 'components/dialogs/prompt';
 import select from 'components/dialogs/select';
-import { calcRating, capitalize, getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
+import { calcRating, capitalize, getLoggedInUser, hideLoading, showLoading, since } from 'lib/helpers';
 import Router from 'lib/Router';
 
 export default function Plugins({ user, orderBy, status, name }) {
@@ -53,15 +53,16 @@ export default function Plugins({ user, orderBy, status, name }) {
 }
 
 function Plugin({
-  name,
   id,
-  version,
-  downloads,
+  name,
   status,
-  isAdmin,
   userId,
-  user_id: pluginUser,
+  version,
+  isAdmin,
+  downloads,
   votes_up: upVotes,
+  user_id: pluginUser,
+  package_updated_at: updatedAt,
   votes_down: downVotes,
   comment_count: comments,
 }) {
@@ -69,7 +70,7 @@ function Plugin({
     <a href={`/plugin/${id}`} className='plugin'>
       <div className='plugin-icon' style={{ backgroundImage: `url(/plugin-icon/${id})` }} />
       <div className='plugin-info'>
-        <h2>{name}</h2>
+        <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</h2>
         <div className='info'>
           <div title='Downloads counter'>
             {downloads.toLocaleString()} <span className='icon download' />
@@ -92,6 +93,7 @@ function Plugin({
             <strong>{version}</strong>
           </small>
         </p>
+        <small>Updated {updatedAt ? since(updatedAt) : 'never'}</small>
         <Actions id={id} isAdmin={isAdmin} user={userId} pluginsUser={pluginUser} />
       </div>
     </a>

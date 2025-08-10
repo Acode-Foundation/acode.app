@@ -176,7 +176,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
           throw new Error('Version should be greater than previous version.');
         }
 
-        const changelogs = await zip.file('changelogs.md')?.async('string');
+        const changelogs = (await zip.file('changelogs.md')?.async('string')) || (await zip.file('changelog.md')?.async('string'));
 
         if (changelogs) {
           changelogsInput.el.value = changelogs;

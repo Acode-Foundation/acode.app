@@ -28,7 +28,7 @@ export default function AdSense({ className = '', name = 'plugin', style = {}, r
   }, 0);
 
   return (
-    <div className={className} style={{ zIndex: '1', ...style }} ref={ref}>
+    <div className={className} style={{ zIndex: '1', ...style, minHeight: '100px' }} ref={ref}>
       <ins
         className='adsbygoogle'
         style={{ display: 'block', zIndex: 1, position: 'relative' }}

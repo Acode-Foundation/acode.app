@@ -5,24 +5,25 @@ const table = `CREATE TABLE IF NOT EXISTS plugin (
   sku TEXT,
   name TEXT,
   version TEXT,
+  keywords TEXT,
   user_id INTEGER,
+  changelogs TEXT,
   repository text,
   description TEXT,
-  license TEXT DEFAULT 'Unknown',
   contributors TEXT,
-  changelogs TEXT,
-  keywords TEXT,
+  price INTEGER DEFAULT 0,
   downloads TEXT DEFAULT '0',
   status INTEGER DEFAULT (0),
-  created_at TIMESTAMP DEFAULT (current_timestamp),
-  updated_at TIMESTAMP DEFAULT (current_timestamp), 
-  status_change_message text, 
-  status_change_date timestamp, 
+  status_change_message text,
   votes_up integer default 0, 
   votes_down integer default 0, 
-  min_version_code INTEGER DEFAULT -1,
-  price INTEGER DEFAULT 0,
+  status_change_date timestamp, 
+  package_updated_at TIMESTAMP,
+  license TEXT DEFAULT 'Unknown',
   download_count INTEGER DEFAULT 0,
+  min_version_code INTEGER DEFAULT -1,
+  created_at TIMESTAMP DEFAULT (current_timestamp),
+  updated_at TIMESTAMP DEFAULT (current_timestamp),
   CONSTRAINT PLUGIN_PK PRIMARY KEY (id),
   CONSTRAINT FK_plugin_user FOREIGN KEY (user_id) REFERENCES "user"(id)
 );
@@ -32,6 +33,14 @@ create trigger if not exists plugin_updated_at
   for each row
   begin
     update plugin set updated_at = current_timestamp where id = old.id;
+  end;
+
+create trigger if not exists plugin_package_updated_at
+  after update on plugin
+  for each row
+  when old.version != new.version
+  begin
+    update plugin set package_updated_at = current_timestamp where id = old.id;
   end`;
 
 class Plugin extends Entity {
@@ -62,6 +71,7 @@ class Plugin extends Entity {
   AUTHOR_VERIFIED = 'author_verified';
   MIN_VERSION_CODE = 'min_version_code';
   STATUS_CHANGE_DATE = 'status_change_date';
+  PACKAGE_UPDATED_AT = 'package_updated_at';
   STATUS_CHANGE_MESSAGE = 'status_change_message';
 
   STATUS_PENDING = 0;
@@ -164,9 +174,12 @@ class Plugin extends Entity {
       this.DOWNLOADS,
       this.REPOSITORY,
       this.VOTES_DOWN,
+      this.UPDATED_AT,
+      this.CREATED_AT,
       this.COMMENT_COUNT,
       this.AUTHOR_VERIFIED,
       this.MIN_VERSION_CODE,
+      this.PACKAGE_UPDATED_AT,
     ];
   }
 
@@ -192,10 +205,11 @@ class Plugin extends Entity {
       this.VOTES_DOWN,
       this.VOTES_UP,
       this.DOWNLOADS,
-      this.MIN_VERSION_CODE,
-      this.STATUS_CHANGE_MESSAGE,
-      this.STATUS_CHANGE_DATE,
       this.REPOSITORY,
+      this.MIN_VERSION_CODE,
+      this.STATUS_CHANGE_DATE,
+      this.PACKAGE_UPDATED_AT,
+      this.STATUS_CHANGE_MESSAGE,
       "CASE WHEN status = 0 THEN 'pending' WHEN status = 1 THEN 'approved' WHEN status = 2 THEN 'rejected' WHEN status = 3 THEN 'deleted' END as status",
       `'${process.env.HOST}/plugin-icon/' || id as icon`,
     ];
@@ -226,6 +240,7 @@ class Plugin extends Entity {
       'IFNULL(comment_count, 0) as comment_count',
       'p.icon as icon',
       'p.description as description',
+      'p.package_updated_at as package_updated_at',
       ...this.#authorColumns,
     ];
   }

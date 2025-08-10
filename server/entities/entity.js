@@ -27,7 +27,11 @@ class Entity {
    * @param {string} sql
    */
   constructor(sql) {
-    db.exec(sql);
+    db.exec(sql, (err) => {
+      if (err) {
+        console.error('Failed to execute SQL:', sql, err);
+      }
+    });
   }
 
   /**
