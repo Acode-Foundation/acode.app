@@ -28,7 +28,7 @@
       "required": ["name"]
     },
     "changelog": {
-      "description": "Path or URL to the changelog file documenting version updates and modifications.",
+      "description": "URL to the changelog file documenting version updates and modifications.",
       "type": "string"
     },
     "contributors": {
@@ -98,7 +98,7 @@
       "type": "integer"
     },
     "readme": {
-      "description": "Path or URL to the readme.md file, providing documentation and information about the plugin.",
+      "description": "URL to the readme.md file, providing documentation and information about the plugin.",
       "type": "string"
     },
     "version": {
