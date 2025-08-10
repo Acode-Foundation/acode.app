@@ -96,7 +96,7 @@ export function hashString(str) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
 
-  return hash;
+  return Math.abs(hash).toString(36);
 }
 
 export function gravatar(github) {
