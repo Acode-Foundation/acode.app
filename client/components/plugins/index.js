@@ -93,7 +93,7 @@ function Plugin({
             <strong>{version}</strong>
           </small>
         </p>
-        <small>Updated {updatedAt ? since(updatedAt) : 'never'}</small>
+        <small>{updatedAt ? `Updated ${since(updatedAt)}` : ' '}</small>
         <Actions id={id} isAdmin={isAdmin} user={userId} pluginsUser={pluginUser} />
       </div>
     </a>

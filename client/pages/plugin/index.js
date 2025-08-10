@@ -101,7 +101,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
         <div className='info-container'>
           <div className='info'>
             <strong>{name}</strong>
-            <small>Updated {updatedAt ? since(updatedAt) : 'never'}</small>
+            {updatedAt && <small>Updated {since(updatedAt)}</small>}
           </div>
           <div className='info'>
             <span className='chip'>v {version}</span>
