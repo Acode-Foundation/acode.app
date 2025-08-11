@@ -2,10 +2,12 @@ const { CronJob } = require('cron');
 const updateOrders = require('./updateOrders');
 const updateEarnings = require('../lib/updateEarnings');
 const cleanDb = require('./cleanDb');
+const updateSponsors = require('./updateSponsors');
 
 const daily = new CronJob('0 1 * * *', async () => {
   await updateOrders();
   await cleanDb();
+  await updateSponsors();
 });
 
 const monthly = new CronJob('0 0 16 * *', async () => {

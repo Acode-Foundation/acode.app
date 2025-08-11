@@ -43,7 +43,11 @@ async function main() {
       },
     }),
   );
-  app.use(express.json());
+  app.use(
+    express.json({
+      limit: '50mb',
+    }),
+  );
 
   app.get('/sitemap.xml', (_req, res) => {
     res.setHeader('Content-Type', 'application/xml');
@@ -95,6 +99,17 @@ async function main() {
       return;
     }
     res.status(404).send({ error: 'File not found' });
+  });
+
+  app.get('/sponsor/image/:filename', async (req, res) => {
+    const { filename } = req.params;
+    const imagePath = path.resolve(__dirname, '../data/sponsors', filename);
+
+    if (!fs.existsSync(imagePath)) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    res.sendFile(imagePath);
   });
 
   app.get('/manifest.json', (_req, res) => {
