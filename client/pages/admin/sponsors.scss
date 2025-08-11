@@ -1,0 +1,48 @@
+#sponsors {
+  ul {
+    list-style-type: none;
+    padding: 0;
+
+    li {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+
+      div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .info {
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+          align-items: flex-start;
+
+          strong {
+            font-weight: bold;
+          }
+
+          span {
+            font-size: 0.9em;
+            color: #666;
+          }
+        }
+
+        .icon {
+          margin: 0;
+          background: none;
+          border: none;
+          cursor: pointer;
+
+          &.delete {
+            color: red;
+          }
+        }
+      }
+
+      &:hover {
+        background-color: #333;
+      }
+    }
+  }
+}

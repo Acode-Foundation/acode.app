@@ -4,6 +4,7 @@ const Sponsor = require('../entities/sponsor');
 const { resolve } = require('node:path');
 const { existsSync } = require('node:fs');
 const { google } = require('googleapis');
+const { getLoggedInUser, sendNotification } = require('../lib/helpers');
 
 const router = Router();
 const androidpublisher = google.androidpublisher('v3');
@@ -12,7 +13,14 @@ const sponsorImagesPath = resolve(__dirname, '../../data/sponsors');
 router.get('/', async (req, res) => {
   const { page, limit } = req.query;
 
-  const rows = await Sponsor.get(Sponsor.safeColumns, [[Sponsor.STATUS, Sponsor.STATE_PURCHASED]], { page, limit });
+  const rows = await Sponsor.get(
+    Sponsor.safeColumns,
+    [
+      [Sponsor.STATUS, Sponsor.STATE_PURCHASED],
+      [Sponsor.PUBLIC, 1],
+    ],
+    { page, limit },
+  );
 
   res.send(rows);
 });
@@ -66,10 +74,32 @@ router.post('/', async (req, res) => {
       [Sponsor.STATUS, purchase.purchaseState],
     );
 
+    if (email) {
+      sendNotification(email, name, 'Thank you for sponsoring Acode', `We appreciate your support, ${name}. Thank you for being a valued sponsor!`);
+    }
+
     res.status(201).json({ message: 'Thank you for becoming a sponsor!' });
   } catch (error) {
     console.error('Error processing sponsorship:', error);
     res.status(403).json({ error: 'Purchase not valid' });
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  const loggedInUser = await getLoggedInUser(req);
+
+  if (loggedInUser.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const { id } = req.params;
+
+  try {
+    await Sponsor.delete([Sponsor.ID, id]);
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting sponsor:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
