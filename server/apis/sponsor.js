@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { name, tier, email, image, public: show = 0, website, packageName, purchaseToken } = req.body;
+  const { name, tier, email, image, public: show = 0, website, packageName, purchaseToken, tagline } = req.body;
 
   if (!name) {
     return res.status(400).json({
@@ -73,6 +73,7 @@ router.post('/', async (req, res) => {
       [Sponsor.PUBLIC, show],
       [Sponsor.IMAGE, filename],
       [Sponsor.WEBSITE, website],
+      [Sponsor.TAGLINE, tagline],
       [Sponsor.TOKEN, purchaseToken],
       [Sponsor.PACKAGE_NAME, packageName],
       [Sponsor.ORDER_ID, purchase.orderId],
