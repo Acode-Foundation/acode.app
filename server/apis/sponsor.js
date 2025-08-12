@@ -11,18 +11,30 @@ const router = Router();
 const androidpublisher = google.androidpublisher('v3');
 const sponsorImagesPath = resolve(__dirname, '../../data/sponsors');
 
-router.get('/', async (req, res) => {
-  const { page, limit } = req.query;
+router.get('/{:top}', async (req, res) => {
+  let page;
+  let limit;
+  const isTop = req.params.top === 'top';
+  const whereClause = [
+    [Sponsor.STATUS, Sponsor.STATE_PURCHASED],
+    [Sponsor.PUBLIC, 1],
+    [Sponsor.CREATED_AT, moment().add(-30, 'days').toISOString(), '>'],
+  ];
 
-  const rows = await Sponsor.get(
-    Sponsor.safeColumns,
-    [
-      [Sponsor.STATUS, Sponsor.STATE_PURCHASED],
-      [Sponsor.PUBLIC, 1],
-      [Sponsor.CREATED_AT, moment().add(-30, 'days').toISOString(), '>'],
-    ],
-    { page, limit },
-  );
+  if (isTop) {
+    whereClause.push([Sponsor.TIER, 'titanium']);
+  } else {
+    page = req.query.page;
+    limit = req.query.limit;
+  }
+
+  const rows = await Sponsor.get(Sponsor.safeColumns, whereClause, { page, limit });
+
+  if (isTop) {
+    const randomTop = Math.floor(Math.random() * rows.length);
+    res.send(rows[randomTop]);
+    return;
+  }
 
   res.send(rows);
 });
