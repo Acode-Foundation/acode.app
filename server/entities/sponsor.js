@@ -11,6 +11,7 @@ const table = `create table if not exists sponsor (
   package_name text,
   website text,
   image text,
+  tagline text,
   tier text,
   public integer default 0,
   status integer default 2,
@@ -30,6 +31,7 @@ class Sponsor extends Entity {
   PUBLIC = 'public';
   USER_ID = 'user_id';
   WEBSITE = 'website';
+  TAGLINE = 'tagline';
   ORDER_ID = 'order_id';
   CREATED_AT = 'created_at';
   PACKAGE_NAME = 'package_name';
@@ -53,6 +55,7 @@ class Sponsor extends Entity {
       this.AMOUNT,
       this.STATUS,
       this.PUBLIC,
+      this.TAGLINE,
       this.WEBSITE,
       this.USER_ID,
       this.ORDER_ID,
@@ -62,7 +65,19 @@ class Sponsor extends Entity {
   }
 
   get safeColumns() {
-    return [this.ID, this.NAME, this.TIER, this.EMAIL, this.IMAGE, this.AMOUNT, this.STATUS, this.WEBSITE, this.CREATED_AT, this.PACKAGE_NAME];
+    return [
+      this.ID,
+      this.NAME,
+      this.TIER,
+      this.EMAIL,
+      this.TAGLINE,
+      this.IMAGE,
+      this.AMOUNT,
+      this.STATUS,
+      this.WEBSITE,
+      this.CREATED_AT,
+      this.PACKAGE_NAME,
+    ];
   }
 }
 

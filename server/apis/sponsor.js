@@ -4,6 +4,7 @@ const Sponsor = require('../entities/sponsor');
 const { resolve } = require('node:path');
 const { existsSync } = require('node:fs');
 const { google } = require('googleapis');
+const moment = require('moment');
 const { getLoggedInUser, sendNotification } = require('../lib/helpers');
 
 const router = Router();
@@ -18,6 +19,7 @@ router.get('/', async (req, res) => {
     [
       [Sponsor.STATUS, Sponsor.STATE_PURCHASED],
       [Sponsor.PUBLIC, 1],
+      [Sponsor.CREATED_AT, moment().add(-30, 'days').toISOString(), '>'],
     ],
     { page, limit },
   );
@@ -60,7 +62,10 @@ router.post('/', async (req, res) => {
       await mkdir(sponsorImagesPath, { recursive: true });
     }
 
-    await writeFile(path, image.split(';base64,')[1], { encoding: 'base64' });
+    if (image) {
+      await writeFile(path, image.split(';base64,')[1], { encoding: 'base64' });
+    }
+
     await Sponsor.insert(
       [Sponsor.NAME, name],
       [Sponsor.TIER, tier],

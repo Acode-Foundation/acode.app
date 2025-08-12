@@ -1,10 +1,7 @@
 // biome-ignore lint/style/noCommonJs: can't use import
 const db = require('./server/lib/db');
 
-const queries = [
-  'ALTER TABLE plugin ADD COLUMN package_updated_at TIMESTAMP',
-  'CREATE TRIGGER IF NOT EXISTS plugin_package_updated_at AFTER UPDATE ON plugin FOR EACH ROW WHEN old.version != new.version BEGIN UPDATE plugin SET package_updated_at = current_timestamp WHERE id = old.id; END;',
-];
+const queries = ['ALTER TABLE sponsor ADD COLUMN tagline TEXT'];
 
 (async () => {
   for (const query of queries) {
