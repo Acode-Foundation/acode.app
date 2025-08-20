@@ -421,7 +421,7 @@ router.post('/', async (req, res) => {
       insert.push([Plugin.CHANGELOGS, changelogs]);
     }
 
-    if (req.body.changelogs) {
+    if (req.body?.changelogs) {
       insert.push([Plugin.CHANGELOGS, req.body.changelogs]);
     }
 
@@ -457,7 +457,8 @@ router.post('/', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).send({ error: error.message });
+    console.error('Error uploading plugin:', error);
+    res.status(500).send({ error: 'Unable to upload plugin, please try again later, if issue persists contact support.' });
   }
 });
 
@@ -529,7 +530,7 @@ router.put('/', async (req, res) => {
       updates.push([Plugin.CHANGELOGS, changelogs]);
     }
 
-    if (req.body.changelogs) {
+    if (req.body?.changelogs) {
       updates.push([Plugin.CHANGELOGS, req.body.changelogs]);
     }
 
@@ -562,7 +563,8 @@ router.put('/', async (req, res) => {
     }
     res.send({ message: 'Plugin updated successfully' });
   } catch (error) {
-    res.status(500).send({ error: error.message });
+    console.error('Error updating plugin:', error);
+    res.status(500).send({ error: 'Unable to update plugin, please try again later, if issue persists contact support.' });
   }
 });
 
