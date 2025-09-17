@@ -67,7 +67,15 @@ router.post('/', async (req, res) => {
       token: purchaseToken,
     });
 
-    const filename = `${crypto.randomUUID()}.png`;
+    let extension = 'png';
+
+    try {
+      extension = image.split(';')?.[0].split('/')?.[1].split('+')?.[0] || 'png';
+    } catch (_error) {
+      extension = 'png';
+    }
+
+    const filename = `${crypto.randomUUID()}.${extension}`;
     const path = resolve(sponsorImagesPath, filename);
 
     if (!existsSync(sponsorImagesPath)) {
