@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const Otp = require('../entities/otp');
-const { sendNotification } = require('../lib/helpers');
 const User = require('../entities/user');
+const sendEmail = require('../lib/sendEmail');
 
 const route = Router();
 
@@ -37,7 +37,8 @@ route.post('/', async (req, res) => {
     await Otp.insert([Otp.EMAIL, email], [Otp.OTP, otp]);
     res.send({ message: 'OTP sent' });
   } catch (error) {
-    res.status(500).send({ error: error.message });
+    console.error(error);
+    res.status(500).send({ error: 'Something went wrong! Please try again later.' });
   }
 });
 
@@ -49,7 +50,7 @@ async function sendOtpToEmail(email, name, otp, type) {
     message = 'You have requested to reset your password.';
     subject = 'OTP for password reset';
   }
-  const res = await sendNotification(
+  const res = await sendEmail(
     email,
     name,
     subject,

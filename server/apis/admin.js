@@ -3,10 +3,11 @@ const moment = require('moment');
 const User = require('../entities/user');
 const Payment = require('../entities/payment');
 const PaymentMethod = require('../entities/paymentMethod');
-const { getLoggedInUser, sendNotification } = require('../lib/helpers');
+const { getLoggedInUser } = require('../lib/helpers');
 const purchaseOrder = require('../entities/purchaseOrder');
 const plugin = require('../entities/plugin');
 const downloadSalesReportCsv = require('../lib/downloadSalesCsv');
+const sendEmail = require('../lib/sendEmail');
 
 const router = Router();
 
@@ -101,7 +102,7 @@ router.patch('/payment', async (req, res) => {
   const lastMonth = moment().subtract(1, 'month').format('MM-YYYY');
   const message = `Your payment for ${lastMonth} has been sent.`;
 
-  sendNotification(user.email, user.name, 'Payment Sent', message);
+  sendEmail(user.email, user.name, 'Payment Sent', message);
 });
 
 router.delete('/user/:id', async (req, res) => {

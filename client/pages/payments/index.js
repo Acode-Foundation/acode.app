@@ -30,7 +30,7 @@ export default function Payments() {
   };
 
   return (
-    <div id='payments'>
+    <div id='payments' className='text-center'>
       <h1>Payments</h1>
       <div className='payments'>
         <ul ref={list} className='list' />
@@ -40,7 +40,7 @@ export default function Payments() {
 
   function Payment({ id, amount, user_name: name, user_email: email, status, created_at: date, payment_method_id: paymentId }) {
     return (
-      <li data-id={id} className={`payment ${status}`} onclick={() => renderPaymentMethod(id, paymentId)}>
+      <li data-id={id} className={`payment ${status}`} onclick={() => renderPaymentMethod(id, paymentId, amount)}>
         <div className='group'>
           <strong onclick={updateStatus} data-id={id} className='status'>
             {status}
@@ -84,17 +84,13 @@ export default function Payments() {
         throw new Error(data);
       }
 
-      const old = list.get(`[data-id='${id}']`);
-      const el = Payment(data);
-
-      old.replaceWith(el);
-      el.click();
+      list.get(`[data-id='${id}']`)?.replaceWith(<Payment {...data} />);
     } catch (err) {
       alert('ERROR', err.message || err);
     }
   }
 
-  async function renderPaymentMethod(id, pmId) {
+  async function renderPaymentMethod(id, pmId, amount) {
     try {
       list.get('li.active')?.classList.remove('active');
       list.get(`[data-id='${id}']`)?.classList.add('active');
@@ -147,6 +143,10 @@ export default function Payments() {
           <tr>
             <th>Email</th>
             <td>{data.user_email}</td>
+          </tr>
+          <tr>
+            <th>Amount</th>
+            <td>{amount}</td>
           </tr>
         </>
       );

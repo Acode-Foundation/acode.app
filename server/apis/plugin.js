@@ -9,7 +9,8 @@ const User = require('../entities/user');
 const Order = require('../entities/purchaseOrder');
 const Download = require('../entities/download');
 const badWords = require('../badWords.json');
-const { getLoggedInUser, sendNotification, getPluginSKU } = require('../lib/helpers');
+const { getLoggedInUser, getPluginSKU } = require('../lib/helpers');
+const sendEmail = require('../lib/sendEmail');
 
 const androidpublisher = google.androidpublisher('v3');
 
@@ -448,7 +449,7 @@ router.post('/', async (req, res) => {
 
     User.get([User.EMAIL, User.NAME], [User.ROLE, 'admin']).then((rows) => {
       for (const row of rows) {
-        sendNotification(
+        sendEmail(
           row.email,
           row.name,
           'New plugin waiting for approval',
@@ -602,7 +603,7 @@ router.patch('/', async (req, res) => {
         }
       }
 
-      sendNotification(email, name, subject, message);
+      sendEmail(email, name, subject, message);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);

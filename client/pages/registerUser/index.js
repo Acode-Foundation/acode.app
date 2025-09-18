@@ -22,7 +22,7 @@ export default async function registerUser({ mode, redirect }) {
   }
 
   return (
-    <section id='register-user'>
+    <section id='register-user' className='text-center'>
       <h1>{title}</h1>
       <AjaxForm
         loading={(form) => loadingStart(form, errorText, successText)}

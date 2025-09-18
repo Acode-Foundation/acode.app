@@ -3,9 +3,9 @@ const Plugin = require('../entities/plugin');
 const Payment = require('../entities/payment');
 const downloadReport = require('./downloadGr');
 const calcEarnings = require('./calcEarnings');
-const { sendNotification } = require('../lib/helpers');
 const UserEarnings = require('../entities/userEarnings');
 const PaymentMethod = require('../entities/paymentMethod');
+const sendEmail = require('./sendEmail');
 
 const now = moment();
 
@@ -66,7 +66,7 @@ async function updateEarnings(year = currentYear, month = currentMonth) {
       let { threshold } = user;
 
       if (!payment_method_id) {
-        sendNotification(email, name, 'Payment method not found', 'Please add payment method to receive payment.');
+        sendEmail(email, name, 'Payment method not found', 'Please add payment method to receive payment.');
       }
 
       const earnings = await calcEarnings.total(year, month, user, report);

@@ -1,8 +1,9 @@
 const { Router } = require('express');
-const { getLoggedInUser, sendNotification } = require('../lib/helpers');
+const { getLoggedInUser } = require('../lib/helpers');
 const Comment = require('../entities/comment');
 const Plugin = require('../entities/plugin');
 const user = require('../entities/user');
+const sendEmail = require('../lib/sendEmail');
 
 const router = Router();
 
@@ -130,7 +131,7 @@ router.post('/', async (req, res) => {
           updateVoteInPlugin(vote, pluginId);
         }
 
-        sendNotification(plugin.author_email, plugin.author, `Review update for your Acode plugin - ${plugin.name}.`, getNotificationMessage());
+        sendEmail(plugin.author_email, plugin.author, `Review update for your Acode plugin - ${plugin.name}.`, getNotificationMessage());
 
         return;
       }
@@ -152,7 +153,7 @@ router.post('/', async (req, res) => {
     res.send({ message: 'Comment added', comment: row });
     voteMessage = vote !== Comment.VOTE_NULL ? `${loggedInUser.name} voted ${Comment.getVoteString(vote)}` : '';
     commentMessage = comment ? `${loggedInUser.name} commented: ${comment}` : '';
-    sendNotification(plugin.author_email, plugin.author, `New review for your Acode plugin - ${plugin.name}.`, getNotificationMessage());
+    sendEmail(plugin.author_email, plugin.author, `New review for your Acode plugin - ${plugin.name}.`, getNotificationMessage());
   } catch (error) {
     res.status(500).send({ error: error.message });
   }
@@ -239,7 +240,7 @@ router.post('/:commentId/reply', async (req, res) => {
 
     try {
       const [commenter] = await user.get([user.NAME, user.EMAIL], [user.ID, comment.user_id]);
-      sendNotification(commenter.email, commenter.name, `Reply to your comment on Acode plugin - ${plugin.name}.`, `<p>${reply}</p>`);
+      sendEmail(commenter.email, commenter.name, `Reply to your comment on Acode plugin - ${plugin.name}.`, `<p>${reply}</p>`);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error(error);

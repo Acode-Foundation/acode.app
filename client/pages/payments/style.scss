@@ -16,16 +16,15 @@
 
     li {
       margin: 10px 10px 0 10px;
+      text-align: left;
 
       &:first-child {
         margin-top: 0;
       }
 
-      background: linear-gradient(
-        to bottom right,
+      background: linear-gradient(to bottom right,
         rgb(100, 176, 252),
-        rgb(4, 64, 99)
-      );
+        rgb(4, 64, 99));
       color: white;
       padding: 10px;
       border-radius: 4px;
@@ -33,11 +32,9 @@
       user-select: none;
 
       &.paid {
-        background: linear-gradient(
-          to bottom right,
-          rgb(0, 255, 0),
-          rgb(0, 128, 0)
-        );
+        background: linear-gradient(to bottom right,
+            rgb(0, 255, 0),
+            rgb(0, 128, 0));
       }
 
       &.active {

@@ -5,7 +5,8 @@ const { resolve } = require('node:path');
 const { existsSync } = require('node:fs');
 const { google } = require('googleapis');
 const moment = require('moment');
-const { getLoggedInUser, sendNotification } = require('../lib/helpers');
+const { getLoggedInUser } = require('../lib/helpers');
+const sendEmail = require('../lib/sendEmail');
 
 const router = Router();
 const androidpublisher = google.androidpublisher('v3');
@@ -101,7 +102,7 @@ router.post('/', async (req, res) => {
     );
 
     if (email) {
-      sendNotification(email, name, 'Thank you for sponsoring Acode', `We appreciate your support, ${name}. Thank you for being a valued sponsor!`);
+      sendEmail(email, name, 'Thank you for sponsoring Acode', 'Acode team appreciate your support. Thank you for being a valued sponsor!');
     }
 
     res.status(201).json({ message: 'Thank you for becoming a sponsor!' });

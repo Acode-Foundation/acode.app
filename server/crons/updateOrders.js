@@ -5,7 +5,7 @@ const path = require('node:path');
 const moment = require('moment');
 const setAuth = require('../lib/gapis');
 const updateOrders = require('../lib/updateOrders');
-const { sendNotification } = require('../lib/helpers');
+const sendEmail = require('../lib/sendEmail');
 
 module.exports = async () => {
   try {
@@ -30,9 +30,9 @@ module.exports = async () => {
     const startDate = moment({ year: startYear, month: startMonth }).startOf('month').format('YYYY-MM-DD');
     const endDate = moment({ year: endYear, month: endMonth }).endOf('month').format('YYYY-MM-DD');
     await updateOrders(startDate, endDate, google);
-    sendNotification('dellevenjack+notification@gmail.com', 'Ajit Kumar', 'Daily cron job completed', 'Cron job completed successfully');
+    sendEmail('dellevenjack+notification@gmail.com', 'Ajit Kumar', 'Daily cron job completed', 'Cron job completed successfully');
   } catch (error) {
-    sendNotification('me@ajitkumar.dev', 'Ajit Kumar', 'Daily cron job failed', `Cron job failed, ${error.message}`);
+    sendEmail('me@ajitkumar.dev', 'Ajit Kumar', 'Daily cron job failed', `Cron job failed, ${error.message}`);
     console.error(error);
   }
 };
