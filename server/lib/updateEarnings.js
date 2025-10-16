@@ -63,13 +63,8 @@ async function updateEarnings(year = currentYear, month = currentMonth) {
 
     for (const user of users) {
       const { payment_method_id, email, name } = user;
-      let { threshold } = user;
-
-      if (!payment_method_id) {
-        sendEmail(email, name, 'Payment method not found', 'Please add payment method to receive payment.');
-      }
-
       const earnings = await calcEarnings.total(year, month, user, report);
+      let { threshold } = user;
 
       const [row] = await UserEarnings.get([
         [UserEarnings.USER_ID, user.id],
@@ -103,6 +98,10 @@ async function updateEarnings(year = currentYear, month = currentMonth) {
       if (unpaid < threshold) continue;
       // create integer random unique payment id
       const paymentId = Math.floor(Math.random() * 1000000000);
+
+      if (!payment_method_id) {
+        sendEmail(email, name, 'Payment method not found', 'Please add payment method to receive payment.');
+      }
 
       await Payment.insert(
         [Payment.ID, paymentId],

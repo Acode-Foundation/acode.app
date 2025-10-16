@@ -64,9 +64,9 @@
     "build": "yarn config-build p && webpack --mode production",
     "dev": "node ./dev/start-dev",
     "update-schema": "node ./updateSchema",
-    "download": "node ./server/reportsCli",
     "start": "node ./server/main",
-    "sitemap": "node dev/generateSitemap.js"
+    "sitemap": "node dev/generateSitemap.js",
+    "reports": "node ./server/reportsCli"
   },
   "browserslist": [
     "> 0.25%, not dead"
