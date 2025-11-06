@@ -665,7 +665,7 @@ async function exploreZip(file) {
   const iconFile = zip.file(iconPath);
   let icon = null;
   if (iconFile) {
-    icon = await iconFile.async('base64');
+    icon = await iconFile?.async('base64');
   } else if (iconPath !== 'icon.png') {
     // If custom path failed, try the default path
     const defaultIconFile = zip.file('icon.png');
@@ -718,6 +718,10 @@ function validatePlugin(json, icon, readmeFile) {
 
   if (!readmeFile) {
     throw new Error('Missing readme.md file.');
+  }
+
+  if (!icon) {
+    throw new Error('Unable to load plugin icon: no icon was provided or the default icon (icon.png) is missing.');
   }
 
   const { name, version, main, license, contributors, keywords } = json;
