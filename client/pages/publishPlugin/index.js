@@ -140,6 +140,8 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
 
   function onerror(error) {
     errorText.value = error;
+    submitButton.el.disabled = true;
+    submitButton.el.ariaDisabled = true;
   }
 
   function onFileChange() {
@@ -155,17 +157,22 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
       pluginPrice.value = '';
       pluginIcon.src = '#';
       minVersionCode.value = '';
+      submitButton.el.disabled = true;
+      submitButton.el.ariaDisabled = true;
       return;
     }
 
     const reader = new FileReader();
+    submitButton.el.disabled = false;
+    submitButton.el.ariaDisabled = false;
 
     reader.onload = async () => {
       showLoading();
       const zip = await jsZip.loadAsync(reader.result);
       try {
         const manifest = JSON.parse(await zip.file('plugin.json').async('string'));
-        const icon = await zip.file('icon.png').async('base64');
+        const iconFileFromManifest = manifest?.icon || 'icon.png';
+        const icon = await zip.file(iconFileFromManifest)?.async('base64');
 
         if (id && id !== manifest.id) {
           throw new Error('Plugin ID is not same as previous version.');
@@ -173,8 +180,11 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
 
         if (id && !isVersionGreater(manifest.version, plugin.version)) {
           submitButton.el.disabled = true;
+          submitButton.el.ariaDisabled = true;
           throw new Error('Version should be greater than previous version.');
         }
+
+        if (!icon) errorText.value = 'Unable to load plugin icon: no icon was provided or the default icon (icon.png) is missing.';
 
         const changelogs = (await zip.file('changelogs.md')?.async('string')) || (await zip.file('changelog.md')?.async('string'));
 
@@ -220,6 +230,12 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
         pluginName.value = manifest.name;
         pluginVersion.value = manifest.version;
         minVersionCode.value = manifest.minVersionCode || -1;
+        // Checking for icon before rendering
+        if (!icon) {
+          submitButton.el.disabled = true;
+          submitButton.el.ariaDisabled = true;
+          throw new Error('Unable to load plugin icon: no icon was provided or the default icon (icon.png) is missing.');
+        }
         pluginIcon.src = `data:image/png;base64,${icon}`;
 
         errorText.value = '';
