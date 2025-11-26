@@ -1,14 +1,14 @@
+// TODO: Lookout for vulnerabilities.
+// TODO: support for Code challeges
+// TODO: Custom State support for remembering redirects.
 const { Router } = require('express');
 const OAuthProviderFactory = require('../services/oauth/OAuthProviderFactory');
 const SessionStateService = require('../services/oauth/SessionStateService');
-const login = require('../entities/login');
-const user = require('../entities/user');
-const moment = require('moment');
+const authenticateWithProvider = require('../lib/authenticateWithProvider');
 
 const SUCCESS_REDIRECT_PATH = `/login`;
 
 const router = Router();
-
 router.get('/:provider', async (req, res) => {
   const { provider } = req.params;
 
@@ -94,16 +94,25 @@ router.get('/:provider/callback', async (req, res) => {
 
     console.log(`[OAuth Router] - Provider (${provider}) responded with profile`, profile);
 
-    return res.status(200).send(`Fetched From Github, Hello ${profile.username} (${profile.name})`);
+    // return res.status(200).send(`Fetched From Github, Hello ${profile.username} (${profile.name})`);
 
-    // const userRow = await user.get([user.EMAIL, profile.email]);
+    const loginToken = await authenticateWithProvider(provider, profile, tokens);
     
-    // // Generate our own random token...
-    // const token = crypto.randomBytes(64).toString('hex');
-    // const expiredAt = moment().add(1, 'week').format('YYYY-MM-DD HH:mm:ss.sss');
-    
-    // // Store the token we have generated in the login table
-    // await login.insert([login.USER_ID, userRow[0].id], [login.TOKEN, token], [login.EXPIRED_AT, expiredAt]);
+    if(!loginToken) {
+      res.status(500).send({ error: "Session Token issuing failed for Social Login."});
+      return;
+    }
+
+    res.cookie('token', loginToken, { 
+      httpOnly: true, 
+      secure: true, 
+      maxAge: 7 * 24 * 60 * 60 * 1000  // 1 week
+    });
+
+    /*
+     NOTE: Replace the Hardcoded URL with the actual URL given by the frontend.
+     /* */
+    return res.redirect('/user');
 
   } catch (e) {
     console.error(`[OAuth Router] - OAuth callback (route: ${req.path}) error:`, e);
