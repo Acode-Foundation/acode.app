@@ -1,3 +1,7 @@
+const { betterFetch } = require('@better-fetch/fetch');
+
+const { z } = require('zod');
+
 /**
  * @typedef OAuthServiceConfig
  * @property {string} clientId Required for OAuth.
@@ -8,6 +12,7 @@
  * @property {string} userInfoUrl Required for Retrieve User's Profile Data.
  * @property {string} scopes Required To request permissions for read/write on User's Profile.
  * @property {string} providerName Good Name For The Provider.
+ * @property {string} [prompt]
  */
 
 class OAuthService {
@@ -25,7 +30,9 @@ class OAuthService {
     this.userInfoUrl = config.userInfoUrl;
     this.scopes = config.scopes;
     this.providerName = config.providerName;
+    this.prompt = config.prompt || "";
 
+    // biome-ignore lint/complexity/noForEach: ignore
     ;["clientId", "clientSecret", "authorizationUrl", "tokenUrl", "userInfoUrl", "scopes", "providerName"].forEach(p=> {
       if(!this?.[p]) throw RangeError(`"${p}" is required, but not specified in OAuthService Class Configuration`);
      })
@@ -53,29 +60,45 @@ class OAuthService {
       throw Error(`[${this.providerName} - getAccessToken] Code is required: ${code}`);
     }
     try {
-      const response = await fetch(
-        this.tokenUrl,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            client_id: this.clientId,
-            client_secret: this.clientSecret,
-            code: code,
-            redirect_uri: this.redirectUri,
-            grant_type: 'authorization_code'
-          }),
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      // TODO: Throw Error, In Case where Response's body has error property
-      console.log(`[${this.providerName} - getAccessToken] Response status: ${response.status} (${response.statusText})`, await response.json());
 
-      return this.normalizeTokenResponse(await response.json());
+      const { data: response, error } = await betterFetch(this.tokenUrl, {
+        method: "POST",
+        body: JSON.stringify({
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
+          code: code,
+          redirect_uri: this.redirectUri,
+          grant_type: 'authorization_code'
+        }),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        output: z.object({
+          access_token: z.string(),
+          refresh_token: z.string().optional(),
+          scope: z.string(),
+          token_type: z.string(),
+          expires_in: z.number().optional(),
+        }).or(
+          z.object({
+            error: z.string(),
+            error_description: z.string().optional(),
+            error_hint: z.string().optional(),
+          })
+        )
+      })
+      
+      if(!response || response.error || error) {
+        console.error(`[${this.providerName} - getAccessToken] Response status: ${response.status} (${response.statusText})`, response|| error);
+        throw response || error;
+      }
+
+      console.log(`[${this.providerName} - getAccessToken]`, response);
+
+      return this.normalizeTokenResponse(response);
     } catch (error) {
-      console.error(`${this.providerName} token exchange error:`, error.response?.data || error.message);
+      console.error(`${this.providerName} token exchange error:`, error);
       throw new Error(`Failed to exchange code for token with ${this.providerName}`);
     }
   }
@@ -92,6 +115,7 @@ class OAuthService {
   }
 
   // Fetch user profile (to be overridden by specific providers)
+  // biome-ignore lint/correctness/noUnusedFunctionParameters: unused here as it is overridden.
   async getUserProfile(accessToken) {
     throw new Error('getUserProfile must be implemented by provider-specific service');
   }
@@ -103,7 +127,8 @@ class OAuthService {
     }
 
     try {
-      const response = await fetch(
+
+      const { data: response, error } = betterFetch(
         this.tokenUrl,
         {
           method: 'POST',
@@ -116,13 +141,31 @@ class OAuthService {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
-          }
-        },
-      );
+          },
+          output: z.object({
+            access_token: z.string(),
+            refresh_token: z.string(),
+            scope: z.string(),
+            token_type: z.string(),
+            expires_in: z.number().optional(),
+          }).or(
+            z.object({
+              error: z.string(),
+              error_description: z.string().optional(),
+              error_hint: z.string().optional(),
+            })
+          )
+        }
+      )
 
-      return this.normalizeTokenResponse(await response.json());
+      if(!response || response.error || error) {
+        console.error(`[${this.providerName} - refreshAccessToken] Response status: ${response.status} (${response.statusText})`, response|| error);
+        throw response || error;
+      }
+
+      return this.normalizeTokenResponse(response);
     } catch (error) {
-      console.error(`${this.providerName} token refresh error:`, error.response?.data || error.message);
+      console.error(`${this.providerName} token refresh error:`, error);
       throw new Error(`Failed to refresh token with ${this.providerName}`);
     }
   }

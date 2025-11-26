@@ -35,6 +35,7 @@
     "webpack-cli": "6.0.1"
   },
   "dependencies": {
+    "@better-fetch/fetch": "^1.1.18",
     "@google-cloud/storage": "^7.16.0",
     "@googleapis/androidpublisher": "^29.3.0",
     "autosize": "^6.0.1",

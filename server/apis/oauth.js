@@ -1,14 +1,12 @@
 const { Router } = require('express');
-const crypto = require('node:crypto');
 const OAuthProviderFactory = require('../services/oauth/OAuthProviderFactory');
 const SessionStateService = require('../services/oauth/SessionStateService');
 const login = require('../entities/login');
 const user = require('../entities/user');
-const apis = require('../routes/apis');
 
-const route = Router();
+const router = Router();
 
-route.get('/:provider', async (req, res) => {
+router.get('/:provider', async (req, res) => {
   const { provider } = req.params;
 
   try {
@@ -19,7 +17,6 @@ route.get('/:provider', async (req, res) => {
     const oAuthProvider = OAuthProviderFactory.getProvider(provider);
 
     const state = SessionStateService.generateState();
-    console.log(`Auth state token: `, state)
 
     res.cookie('oauthProvider', provider, { secure: true });
     res.cookie('oauthState', state, { secure: true, signed: true, httpOnly: true, maxAge: 10 * 60 * 1000 });
@@ -28,12 +25,12 @@ route.get('/:provider', async (req, res) => {
 
     res.redirect(authURL);
   } catch (e) {
-    console.error(`[OAuth Router] - OAuth initiation (route: ${req.route}) error:`, e);
+    console.error(`[OAuth Router] - OAuth initiation (route: ${req.path}) error:`, e);
     res.status(400).json({ error: e.message });
   }
 })
 
-route.get('/:provider/callback', async (req, res) => {
+router.get('/:provider/callback', async (req, res) => {
 
   const { provider } = req.params;
   const { code, state, error } = req.query;
@@ -45,35 +42,41 @@ route.get('/:provider/callback', async (req, res) => {
 
     if(error) {
       console.error(`[OAuth Router] - Provider (${provider}) responded with an error: ${error}`);
+      res.redirect(`/login?error=${error}&error_description=${error?.error_description}`);
       return;
     }
 
     if(!code) {
       console.error(`[OAuth Router] - Provider (${provider}) responded without a code: ${code}`);
+      res.redirect(`/login?error=missing_code`);
+      return;
     }
 
     const storedState = req.signedCookies.oauthState;
     const storedProvider = req.cookies?.oauthProvider;
     console.log("[stored] Auth state token, provider and received state ", { storedState, state, provider});
     if(!storedState || !SessionStateService.verifyState(state)) {
-      res.status(422).send("Invalid State")
+      res.clearCookie('oauthState');
+      // res.status(422).send("Invalid State")
+      res.redirect(`/login?error=invalid_state`);
       return;
     }
 
     if(storedProvider !== provider) {
       console.error(`[OAuth Router] - Provider (${provider}) mismatch: ${storedProvider} !== ${provider}`);
-      res.status(422).send("OAuth Provider mismatch");
+      // res.status(422).send("OAuth Provider mismatch");
+      res.redirect(`/login?error=oauth_provider_mismatch`);
       return;
     }
 
-    res.clearCookie('oauthProvider');
-    res.clearCookie('state');
+    // res.clearCookie('oauthProvider');
+    res.clearCookie('oauthState');
 
     const OAuthProvider = OAuthProviderFactory.getProvider(provider);
 
     const tokens = await OAuthProvider.getAccessToken(code).catch(() => {});
 
-    if(!tokens.accessToken || !tokens) {
+    if(!tokens?.accessToken || !tokens) {
       res.status(401).send("Failed to retrieve access token");
       return;
     }
@@ -105,4 +108,4 @@ route.get('/:provider/callback', async (req, res) => {
   }
 })
 
-module.exports = route;
+module.exports = router;
