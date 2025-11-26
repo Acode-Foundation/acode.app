@@ -3,6 +3,9 @@ const OAuthProviderFactory = require('../services/oauth/OAuthProviderFactory');
 const SessionStateService = require('../services/oauth/SessionStateService');
 const login = require('../entities/login');
 const user = require('../entities/user');
+const moment = require('moment');
+
+const SUCCESS_REDIRECT_PATH = `/login`;
 
 const router = Router();
 
@@ -42,13 +45,13 @@ router.get('/:provider/callback', async (req, res) => {
 
     if(error) {
       console.error(`[OAuth Router] - Provider (${provider}) responded with an error: ${error}`);
-      res.redirect(`/login?error=${error}&error_description=${error?.error_description}`);
+      res.redirect(`${SUCCESS_REDIRECT_PATH}?error=${error}&error_description=${error?.error_description}`);
       return;
     }
 
     if(!code) {
       console.error(`[OAuth Router] - Provider (${provider}) responded without a code: ${code}`);
-      res.redirect(`/login?error=missing_code`);
+      res.redirect(`${SUCCESS_REDIRECT_PATH}?error=missing_code`);
       return;
     }
 
@@ -58,14 +61,14 @@ router.get('/:provider/callback', async (req, res) => {
     if(!storedState || !SessionStateService.verifyState(state)) {
       res.clearCookie('oauthState');
       // res.status(422).send("Invalid State")
-      res.redirect(`/login?error=invalid_state`);
+      res.redirect(`${SUCCESS_REDIRECT_PATH}?error=invalid_state`);
       return;
     }
 
     if(storedProvider !== provider) {
       console.error(`[OAuth Router] - Provider (${provider}) mismatch: ${storedProvider} !== ${provider}`);
       // res.status(422).send("OAuth Provider mismatch");
-      res.redirect(`/login?error=oauth_provider_mismatch`);
+      res.redirect(`${SUCCESS_REDIRECT_PATH}?error=oauth_provider_mismatch`);
       return;
     }
 
@@ -91,14 +94,14 @@ router.get('/:provider/callback', async (req, res) => {
 
     console.log(`[OAuth Router] - Provider (${provider}) responded with profile`, profile);
 
-    return res.status(200).send(`Fetched From Github, Hello ${profile.username} (${profile.name}`);
+    return res.status(200).send(`Fetched From Github, Hello ${profile.username} (${profile.name})`);
 
-    // const userRow = await user.get([user.EMAIL, email]);
-    //
+    // const userRow = await user.get([user.EMAIL, profile.email]);
+    
     // // Generate our own random token...
     // const token = crypto.randomBytes(64).toString('hex');
     // const expiredAt = moment().add(1, 'week').format('YYYY-MM-DD HH:mm:ss.sss');
-    //
+    
     // // Store the token we have generated in the login table
     // await login.insert([login.USER_ID, userRow[0].id], [login.TOKEN, token], [login.EXPIRED_AT, expiredAt]);
 
