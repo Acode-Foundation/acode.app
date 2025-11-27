@@ -1,5 +1,4 @@
 const OAuthService = require('../OAuthService');
-const { response } = require('express');
 
 class githubOAuthProvider extends OAuthService {
   constructor() {
@@ -24,9 +23,13 @@ class githubOAuthProvider extends OAuthService {
         }
       });
 
-      const profile = await userProfileResponse.json();
+      if (!userProfileResponse.ok) {
+        const errorData = await userProfileResponse.json().catch(() => ({}));
+         // ignore warning, Rethrown after catching....
+        throw new Error(`Failed to fetch user profile, err message: ${errorData.message || 'Unknown error'}`);
+      }
 
-      // GitHub may not return email in profile, fetch separately
+      const profile = await userProfileResponse.json();      // GitHub may not return email in profile, fetch separately
       let email = profile.email;
       if (!email) {
         const emailResponse = await fetch('https://api.github.com/user/emails', {
@@ -38,18 +41,18 @@ class githubOAuthProvider extends OAuthService {
 
         if(!emailResponse.ok) {
           // ignore warning, Rethrown after catching....
-          throw Error(`Failed to fetch User Email (response status: ${emailResponse.status}, response msg: ${response.json()?.message})`)
+          throw Error(`Failed to fetch User Email (response status: ${emailResponse.status}, response msg: ${emailResponse.json()?.message})`)
         }
 
         emailResponse.data = await emailResponse.json();
 
         // Find primary verified email
-        const primaryEmail = emailResponse.data.find(e => e.primary && e.verified);
+        const primaryEmail = emailResponse?.data?.find(e => e.primary && e.verified);
         email = primaryEmail ? primaryEmail.email : emailResponse.data[0]?.email;
 
         if(!email) {
           // ignore warning, Rethrown after catching....
-          throw Error(`${emailResponse.data?.error_description} (see: ${emailResponse.data?.error_uri})`);
+          throw Error(`${emailResponse.data?.error_description || "No verified email address found for GitHub user"} ${emailResponse?.data?.error_uri ? `(See: ${emailResponse.data.error_uri})` : ""}`);
         }
       }
 

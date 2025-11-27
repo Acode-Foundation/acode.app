@@ -3,7 +3,9 @@
 // TODO: Custom State support for remembering redirects.
 const { Router } = require('express');
 const OAuthProviderFactory = require('../services/oauth/OAuthProviderFactory');
-const SessionStateService = require('../services/oauth/SessionStateService');
+const SessionStateServiceClass = require('../services/oauth/SessionStateService');
+// For single-instance use only. For clustering/horizontal scaling, inject a distributed store (e.g. Redis) into SessionStateService.
+const sessionStateService = new SessionStateServiceClass();
 const authenticateWithProvider = require('../lib/authenticateWithProvider');
 
 const SUCCESS_REDIRECT_PATH = `/login`;
@@ -19,9 +21,9 @@ router.get('/:provider', async (req, res) => {
 
     const oAuthProvider = OAuthProviderFactory.getProvider(provider);
 
-    const state = SessionStateService.generateState();
+    const state = await sessionStateService.generateState();
 
-    res.cookie('oauthProvider', provider, { secure: true });
+    res.cookie('oauthProvider', provider, { secure: true, httpOnly: true, sameSite: 'lax' });
     res.cookie('oauthState', state, { secure: true, signed: true, httpOnly: true, maxAge: 10 * 60 * 1000 });
 
     const authURL = oAuthProvider.getAuthorizationUrl(state)
@@ -36,7 +38,7 @@ router.get('/:provider', async (req, res) => {
 router.get('/:provider/callback', async (req, res) => {
 
   const { provider } = req.params;
-  const { code, state, error } = req.query;
+  const { code, state, error, error_description } = req.query;
 
   try {
     if (!provider) {
@@ -45,7 +47,7 @@ router.get('/:provider/callback', async (req, res) => {
 
     if(error) {
       console.error(`[OAuth Router] - Provider (${provider}) responded with an error: ${error}`);
-      res.redirect(`${SUCCESS_REDIRECT_PATH}?error=${error}&error_description=${error?.error_description}`);
+      res.redirect(`${SUCCESS_REDIRECT_PATH}?error=${error}&error_description=${error_description}`);
       return;
     }
 
@@ -57,8 +59,7 @@ router.get('/:provider/callback', async (req, res) => {
 
     const storedState = req.signedCookies.oauthState;
     const storedProvider = req.cookies?.oauthProvider;
-    console.log("[stored] Auth state token, provider and received state ", { storedState, state, provider});
-    if(!storedState || !SessionStateService.verifyState(state)) {
+    if(!storedState || !(await sessionStateService.verifyState(state))) {
       res.clearCookie('oauthState');
       // res.status(422).send("Invalid State")
       res.redirect(`${SUCCESS_REDIRECT_PATH}?error=invalid_state`);
@@ -84,15 +85,14 @@ router.get('/:provider/callback', async (req, res) => {
       return;
     }
 
-    console.log(`[OAuth Router] - Provider (${provider}) responded with an tokens`, tokens);
-
     const profile = await OAuthProvider.getUserProfile(tokens.accessToken).catch((e) => {
       res.status(401).send(e?.message || "Failed to retrieve user profile");
+      return null;
     });
 
     if(!profile) return;
 
-    console.log(`[OAuth Router] - Provider (${provider}) responded with profile`, profile);
+    console.log(`[OAuth Router] - Provider (${provider}) authentication successful for user ID: ${profile.id}`);
 
     // return res.status(200).send(`Fetched From Github, Hello ${profile.username} (${profile.name})`);
 

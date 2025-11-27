@@ -15,6 +15,9 @@ class OAuthProviderFactory {
   }
 
   getProvider(providerName) {
+    if (!providerName) {
+      throw new Error('Provider name is required');
+    }
     const provider = this.providers.get(providerName.toLowerCase());
     if (!provider) {
       throw new Error(`OAuth provider '${providerName}' not supported`);
@@ -27,5 +30,5 @@ class OAuthProviderFactory {
   }
 }
 
-// Standalone Class.
+// Singleton instance
 module.exports = new OAuthProviderFactory();

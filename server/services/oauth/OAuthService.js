@@ -20,11 +20,10 @@ class OAuthService {
    * @param config {OAuthServiceConfig}
    */
   constructor(config) {
-    Object.freeze(config);
 
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
-    this.redirectUri = config?.redirectUri;
+    this.redirectUri = config.redirectUri;
     this.authorizationUrl = config.authorizationUrl;
     this.tokenUrl = config.tokenUrl;
     this.userInfoUrl = config.userInfoUrl;
@@ -34,7 +33,7 @@ class OAuthService {
 
     // biome-ignore lint/complexity/noForEach: ignore
     ;["clientId", "clientSecret", "authorizationUrl", "tokenUrl", "userInfoUrl", "scopes", "providerName"].forEach(p=> {
-      if(!this?.[p]) throw RangeError(`"${p}" is required, but not specified in OAuthService Class Configuration`);
+      if(!this[p]) throw TypeError(`"${p}" is required, but not specified in OAuthService Class Configuration`);
      })
   }
 
@@ -61,15 +60,20 @@ class OAuthService {
     }
     try {
 
+      const body = {
+        client_id: this.clientId,
+        client_secret: this.clientSecret,
+        code: code,
+        grant_type: 'authorization_code'
+      }
+
+      if(this.redirectUri) {
+        body.redirect_uri = this.redirectUri;
+      }
+
       const { data: response, error } = await betterFetch(this.tokenUrl, {
         method: "POST",
-        body: JSON.stringify({
-          client_id: this.clientId,
-          client_secret: this.clientSecret,
-          code: code,
-          redirect_uri: this.redirectUri,
-          grant_type: 'authorization_code'
-        }),
+        body: JSON.stringify(body),
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
@@ -77,7 +81,7 @@ class OAuthService {
         output: z.object({
           access_token: z.string(),
           refresh_token: z.string().optional(),
-          scope: z.string(),
+          scope: z.string().optional(),
           token_type: z.string(),
           expires_in: z.number().optional(),
         }).or(
@@ -128,7 +132,7 @@ class OAuthService {
 
     try {
 
-      const { data: response, error } = betterFetch(
+      const { data: response, error } = await betterFetch(
         this.tokenUrl,
         {
           method: 'POST',
@@ -144,8 +148,8 @@ class OAuthService {
           },
           output: z.object({
             access_token: z.string(),
-            refresh_token: z.string(),
-            scope: z.string(),
+            refresh_token: z.string().optional(),
+            scope: z.string().optional(),
             token_type: z.string(),
             expires_in: z.number().optional(),
           }).or(
@@ -159,7 +163,7 @@ class OAuthService {
       )
 
       if(!response || response.error || error) {
-        console.error(`[${this.providerName} - refreshAccessToken] Response status: ${response.status} (${response.statusText})`, response|| error);
+        console.error(`[${this.providerName} - refreshAccessToken] Token refresh failed`, error || response);
         throw response || error;
       }
 

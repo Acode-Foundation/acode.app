@@ -1,59 +1,78 @@
 const crypto = require('node:crypto');
 
+// --- Injectable state store abstraction ---
+class StateStore {
+  async set(key, value) { this._map.set(key, value); }
+  async get(key) { return this._map.get(key); }
+  async delete(key) { this._map.delete(key); }
+  async entries() { return Array.from(this._map.entries()); }
+  constructor() { this._map = new Map(); }
+}
+// TODO: Implement a Redis/Memcached version for distributed scaling support.
+
+// --- Main SessionStateService ---
 class SessionStateService {
-  constructor() {
-    this.states = new Map();
+  /**
+   * @param {object} options
+   *   - store: implements set/get/delete/entries (default: in-memory map), swap with Redis/Memcached for horizontal scaling
+   *   - cleanupIntervalMs: how frequently to clean up expired states (default: 60s)
+   */
+  constructor({ store, cleanupIntervalMs = 60000 } = {}) {
+    /**
+     * Use an injectable store. Use in-memory only for single-instance/dev. For cluster/horizontal scale, use a Redis/Memcached implementation!
+     * @type {StateStore}
+     */
+    this.states = store || new StateStore();
+    // Clean up expired states periodically
+    this._cleanupTimer = setInterval(() => this.cleanup(), cleanupIntervalMs);
   }
 
   // Generate a random state token for CSRF protection
-  generateState() {
+  async generateState() {
     const state = crypto.randomBytes(32).toString('hex');
-    this.states.set(state, {
-      createdAt: Date.now(),
-      used: false
-    });
-
-    // Clean up old states (older than 10 minutes)
-    this.cleanup();
-
+    await this.states.set(state, { createdAt: Date.now(), used: false });
+    // No per-generation cleanup, timer handles it
     return state;
   }
 
   // Verify and consume a state token
-  verifyState(state) {
-    const stateData = this.states.get(state);
-
-    if (!stateData) {
-      return false;
-    }
-
-    if (stateData.used) {
-      return false;
-    }
-
-    // Check if state is older than 10 minutes
+  async verifyState(state) {
+    // Proactive cleanup: remove expired states before checking
+    await this.cleanup();
+    const stateData = await this.states.get(state);
+    if (!stateData) return false;
+    if (stateData.used) return false;
     const tenMinutes = 10 * 60 * 1000;
     if (Date.now() - stateData.createdAt > tenMinutes) {
-      this.states.delete(state);
+      await this.states.delete(state);
       return false;
     }
-
     // Mark as used and delete
-    this.states.delete(state);
+    await this.states.delete(state);
     return true;
   }
 
   // Clean up old states
-  cleanup() {
+  async cleanup() {
     const tenMinutes = 10 * 60 * 1000;
     const now = Date.now();
-
-    for (const [state, data] of this.states.entries()) {
+    const entries = await this.states.entries();
+    for (const [state, data] of entries) {
       if (now - data.createdAt > tenMinutes) {
-        this.states.delete(state);
+        await this.states.delete(state);
       }
     }
   }
+
+  // Call this to stop the cleanup timer, e.g. on app shutdown
+  stopCleanupTimer() {
+    clearInterval(this._cleanupTimer);
+  }
 }
 
-module.exports = new SessionStateService();
+/**
+ * WARNING: The default in-memory state store works ONLY for single-instance applications.
+ * Deployments with horizontal scaling (multiple app/server instances) must inject a Redis/Memcached store
+ * implementing the async set/get/delete/entries contract.
+ */
+module.exports = SessionStateService;

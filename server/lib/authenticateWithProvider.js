@@ -32,27 +32,22 @@ async function authenticateWithProvider(providerType, profile, tokens) {
         [
           [authenticationProvider.ID, existingLink[0].id], 
           [authenticationProvider.ACCESS_TOKEN, accessToken], 
-          [authenticationProvider.REFRESH_TOKEN, refreshToken]
+          [authenticationProvider.REFRESH_TOKEN, refreshToken],
+          [authenticationProvider.ACCESS_TOKEN_EXPIRES_AT, tokenExpiresAt],
+          [authenticationProvider.SCOPE, tokens.scope]
         ]
-      )
-    } else {
-        const existingUser = await User.get([User.EMAIL, email]);
-
-        if (existingUser.length > 0) {
-          userId = existingUser[0].id;
-        } else {
-          
-          await User.insert(
-            [User.NAME, name],
-            [User.EMAIL, email],
-            [User.PASSWORD, ""],
-            [User.WEBSITE, null],
-            [User.GITHUB, providerType === "github" ? username : null],
-          );
-          
-          const newUser = User.get([User.EMAIL, email]);
-          userId = newUser[0].id;
-        }
+      )    } else {
+      // Atomic, race-safe upsert pattern for user
+      await User.insertOrIgnore(
+        [User.NAME, name],
+        [User.EMAIL, email],
+        [User.PASSWORD, ""],
+        [User.WEBSITE, null],
+        [User.GITHUB, providerType === "github" ? username : null],
+      );
+      // Always fetch the user after insert - ensures you get the correct id whether existing or new
+      const userRes = await User.get([User.EMAIL, email]);
+      userId = userRes[0].id;
         
         await authenticationProvider.insert(
           [authenticationProvider.USER_ID, userId],
@@ -61,7 +56,7 @@ async function authenticateWithProvider(providerType, profile, tokens) {
           [authenticationProvider.ACCESS_TOKEN, accessToken],
           [authenticationProvider.REFRESH_TOKEN, refreshToken],
           [authenticationProvider.ACCESS_TOKEN_EXPIRES_AT, tokenExpiresAt],
-          [authenticationProvider.REFRESH_TOKEN_EXPIRES_AT, ""],
+          [authenticationProvider.REFRESH_TOKEN_EXPIRES_AT, null],
           [authenticationProvider.SCOPE, tokens.scope]
         );
     }
