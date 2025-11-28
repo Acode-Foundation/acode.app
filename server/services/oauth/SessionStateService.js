@@ -25,6 +25,7 @@ class SessionStateService {
     this.states = store || new StateStore();
     // Clean up expired states periodically
     this._cleanupTimer = setInterval(() => this.cleanup(), cleanupIntervalMs);
+    this._cleanupTimer.unref(); // Don't prevent process exit
   }
 
   // Generate a random state token for CSRF protection
@@ -38,16 +39,19 @@ class SessionStateService {
   // Verify and consume a state token
   async verifyState(state) {
     // Proactive cleanup: remove expired states before checking
-    await this.cleanup();
+    // await this.cleanup();
     const stateData = await this.states.get(state);
     if (!stateData) return false;
     if (stateData.used) return false;
+    // Mark as used immediately to prevent concurrent reuse
+    stateData.used = true;
+    await this.states.set(state, stateData);
     const tenMinutes = 10 * 60 * 1000;
     if (Date.now() - stateData.createdAt > tenMinutes) {
       await this.states.delete(state);
       return false;
     }
-    // Mark as used and delete
+    // delete after successful Verification.
     await this.states.delete(state);
     return true;
   }

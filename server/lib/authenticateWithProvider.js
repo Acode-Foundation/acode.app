@@ -2,6 +2,9 @@ const moment = require('moment');
 const authenticationProvider = require('../entities/authenticationProvider');
 const login = require('../entities/login');
 const User = require('../entities/user');
+// Tokens are encrypted while their stored, and SHOULD BE decrypted 
+// When it's being used as values (i.e API with the tokens retrieved from the DB).
+const { decryptToken, encryptToken } = require('../lib/tokenCrypto')
 
 async function authenticateWithProvider(providerType, profile, tokens) {
     const { id: providerUserId, email, name, username } = profile;
@@ -31,12 +34,13 @@ async function authenticateWithProvider(providerType, profile, tokens) {
       await authenticationProvider.update(
         [
           [authenticationProvider.ID, existingLink[0].id], 
-          [authenticationProvider.ACCESS_TOKEN, accessToken], 
-          [authenticationProvider.REFRESH_TOKEN, refreshToken],
+          [authenticationProvider.ACCESS_TOKEN, encryptToken(accessToken)], 
+          [authenticationProvider.REFRESH_TOKEN, encryptToken(refreshToken)],
           [authenticationProvider.ACCESS_TOKEN_EXPIRES_AT, tokenExpiresAt],
-          [authenticationProvider.SCOPE, tokens.scope]
+          [authenticationProvider.SCOPE, tokens.scope || null]
         ]
-      )    } else {
+      )    
+    } else {
       // Atomic, race-safe upsert pattern for user
       await User.insertOrIgnore(
         [User.NAME, name],
@@ -48,17 +52,20 @@ async function authenticateWithProvider(providerType, profile, tokens) {
       // Always fetch the user after insert - ensures you get the correct id whether existing or new
       const userRes = await User.get([User.EMAIL, email]);
       userId = userRes[0].id;
+      if (!userRes || userRes.length === 0) {
+        throw new Error(`Failed to retrieve user with email: ${email}`);
+      }
         
-        await authenticationProvider.insert(
-          [authenticationProvider.USER_ID, userId],
-          [authenticationProvider.PROVIDER, providerType],
-          [authenticationProvider.PROVIDER_USER_ID, providerUserId],
-          [authenticationProvider.ACCESS_TOKEN, accessToken],
-          [authenticationProvider.REFRESH_TOKEN, refreshToken],
-          [authenticationProvider.ACCESS_TOKEN_EXPIRES_AT, tokenExpiresAt],
-          [authenticationProvider.REFRESH_TOKEN_EXPIRES_AT, null],
-          [authenticationProvider.SCOPE, tokens.scope]
-        );
+      await authenticationProvider.insert(
+        [authenticationProvider.USER_ID, userId],
+        [authenticationProvider.PROVIDER, providerType],
+        [authenticationProvider.PROVIDER_USER_ID, providerUserId],
+        [authenticationProvider.ACCESS_TOKEN, encryptToken(accessToken)],
+        [authenticationProvider.REFRESH_TOKEN, encryptToken(refreshToken)],
+        [authenticationProvider.ACCESS_TOKEN_EXPIRES_AT, tokenExpiresAt],
+        [authenticationProvider.REFRESH_TOKEN_EXPIRES_AT, null],
+        [authenticationProvider.SCOPE, tokens.scope]
+      );
     }
 
     // break this into a Function, if it gets too repetitive throughout the whole codebase.

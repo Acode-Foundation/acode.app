@@ -14,7 +14,14 @@ const table = `create table if not exists authentication_provider (
   updated_at timestamp default current_timestamp,
   foreign key (user_id) references user(id),
   unique(provider, provider_user_id)
-);`;
+);
+create trigger if not exists update_authentication_provider_timestamp
+  after update on authentication_provider
+  for each row
+begin
+  update authentication_provider set updated_at = current_timestamp where id = NEW.id;
+end;
+`;
 
 class AuthenticationProvider extends Entity {
   ID = 'id';
