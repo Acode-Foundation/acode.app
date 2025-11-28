@@ -18,10 +18,10 @@ const table = `create table if not exists authentication_provider (
 create trigger if not exists update_authentication_provider_timestamp
   after update on authentication_provider
   for each row
+  when OLD.updated_at >= NEW.updated_at
 begin
   update authentication_provider set updated_at = current_timestamp where id = NEW.id;
-end;
-`;
+end;`;
 
 class AuthenticationProvider extends Entity {
   ID = 'id';

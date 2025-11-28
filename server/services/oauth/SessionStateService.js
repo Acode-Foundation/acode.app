@@ -6,6 +6,11 @@ class StateStore {
   async get(key) { return this._map.get(key); }
   async delete(key) { this._map.delete(key); }
   async entries() { return Array.from(this._map.entries()); }
+  async getAndDelete(key) {
+    const value = this._map.get(key);
+    this._map.delete(key);
+    return value;
+  }
   constructor() { this._map = new Map(); }
 }
 // TODO: Implement a Redis/Memcached version for distributed scaling support.
@@ -31,7 +36,7 @@ class SessionStateService {
   // Generate a random state token for CSRF protection
   async generateState() {
     const state = crypto.randomBytes(32).toString('hex');
-    await this.states.set(state, { createdAt: Date.now(), used: false });
+    await this.states.set(state, { createdAt: Date.now() }); // Remove 'used'
     // No per-generation cleanup, timer handles it
     return state;
   }
@@ -40,19 +45,13 @@ class SessionStateService {
   async verifyState(state) {
     // Proactive cleanup: remove expired states before checking
     // await this.cleanup();
-    const stateData = await this.states.get(state);
+    const stateData = await this.states.getAndDelete(state);
     if (!stateData) return false;
-    if (stateData.used) return false;
-    // Mark as used immediately to prevent concurrent reuse
-    stateData.used = true;
-    await this.states.set(state, stateData);
     const tenMinutes = 10 * 60 * 1000;
     if (Date.now() - stateData.createdAt > tenMinutes) {
-      await this.states.delete(state);
+      // Already deleted: nothing left to clean
       return false;
     }
-    // delete after successful Verification.
-    await this.states.delete(state);
     return true;
   }
 

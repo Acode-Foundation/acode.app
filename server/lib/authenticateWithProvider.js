@@ -2,9 +2,9 @@ const moment = require('moment');
 const authenticationProvider = require('../entities/authenticationProvider');
 const login = require('../entities/login');
 const User = require('../entities/user');
-// Tokens are encrypted while their stored, and SHOULD BE decrypted 
+// Tokens are encrypted while they're stored, and SHOULD BE decrypted
 // When it's being used as values (i.e API with the tokens retrieved from the DB).
-const { decryptToken, encryptToken } = require('../lib/tokenCrypto')
+const { encryptToken } = require('../lib/tokenCrypto')
 
 async function authenticateWithProvider(providerType, profile, tokens) {
     const { id: providerUserId, email, name, username } = profile;
@@ -51,10 +51,10 @@ async function authenticateWithProvider(providerType, profile, tokens) {
       );
       // Always fetch the user after insert - ensures you get the correct id whether existing or new
       const userRes = await User.get([User.EMAIL, email]);
-      userId = userRes[0].id;
       if (!userRes || userRes.length === 0) {
-        throw new Error(`Failed to retrieve user with email: ${email}`);
+        throw new Error(`Failed to retrieve user`);
       }
+      userId = userRes[0].id;
         
       await authenticationProvider.insert(
         [authenticationProvider.USER_ID, userId],
@@ -64,7 +64,7 @@ async function authenticateWithProvider(providerType, profile, tokens) {
         [authenticationProvider.REFRESH_TOKEN, encryptToken(refreshToken)],
         [authenticationProvider.ACCESS_TOKEN_EXPIRES_AT, tokenExpiresAt],
         [authenticationProvider.REFRESH_TOKEN_EXPIRES_AT, null],
-        [authenticationProvider.SCOPE, tokens.scope]
+        [authenticationProvider.SCOPE, tokens.scope || null]
       );
     }
 
