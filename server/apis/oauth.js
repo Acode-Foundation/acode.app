@@ -72,7 +72,7 @@ async function handleOAuthCallback(req, res) {
       console.error(`[OAuth Router] - Provider (${provider}) responded without a state: ${error}`);
       return res.redirect(`${ERROR_REDIRECT_PATH}?error=missing_state`);
     }
-    
+
     if(error) {
       console.error(`[OAuth Router] - Provider (${provider}) responded with an error: ${error}`);
       return res.redirect(`${ERROR_REDIRECT_PATH}?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(error_description || '')}`);    
@@ -118,7 +118,6 @@ async function handleOAuthCallback(req, res) {
     const tokens = await OAuthProvider.getAccessToken({ code, codeVerifier: verifiedState.codeVerifier }).catch((e) => ({ error: e}));
 
     if(!tokens?.accessToken || !tokens) {
-      console.log(tokens.error);
       res.status(401).send(tokens?.error || "Failed to retrieve access token");
       return;
     }

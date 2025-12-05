@@ -41,7 +41,7 @@ class githubOAuthProvider extends OAuthService {
 
         if(!emailResponse.ok) {
           // ignore warning, Rethrown after catching....
-          throw Error(`Failed to fetch User Email (response status: ${emailResponse.status}, response msg: ${await emailResponse.json()?.message})`)
+          throw Error(`Failed to fetch User Email (response status: ${emailResponse.status}, response msg: ${(await emailResponse.json().catch(() => ({})))?.message || 'Unknown error'})`)       
         }
 
         emailResponse.data = await emailResponse.json();
