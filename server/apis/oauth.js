@@ -1,9 +1,8 @@
 // TODO: Lookout for vulnerabilities.
-// TODO: support for Code challeges
-// TODO: Custom State support for remembering redirects.
 const { Router } = require('express');
 const OAuthProviderFactory = require('../services/oauth/OAuthProviderFactory');
 const SessionStateServiceClass = require('../services/oauth/SessionStateService');
+const { ALLOWED_CALLBACK_HOSTS_ARRAY } = require('../../constants')
 // For single-instance use only. For clustering/horizontal scaling, inject a distributed store (e.g. Redis) into SessionStateService.
 const sessionStateService = new SessionStateServiceClass();
 const authenticateWithProvider = require('../lib/authenticateWithProvider');
@@ -18,7 +17,7 @@ function isValidCallbackUrl(url) {
   // Or validate against allowlist
   try {
     const parsed = new URL(url);
-    return ALLOWED_CALLBACK_HOSTS.includes(parsed.host);
+    return ALLOWED_CALLBACK_HOSTS_ARRAY.includes(parsed.host);
   } catch {
     return false;
   }
@@ -41,8 +40,13 @@ async function handleOAuthSignIn (req, res) {
       return res.status(400).send('No provider provided');
     }
 
+    // Validate callback URL to prevent open redirect
+    if (callbackUrl && !isValidCallbackUrl(callbackUrl)) {
+        return res.status(400).json({ error: 'Invalid callback URL' });
+    }
+
     const oAuthProvider = OAuthProviderFactory.getProvider(provider);
-    const state = await sessionStateService.generateState({ callbackUrl: `${callbackUrl ?? SUCCESS_CALLBACK_URL}` });
+    const state = await sessionStateService.generateState({ callbackUrl: `${isValidCallbackUrl(callbackUrl) ? callbackUrl : SUCCESS_CALLBACK_URL}` });
     res.cookie('oauthProvider', provider, { secure: true, httpOnly: true, sameSite: 'lax' });
     res.cookie('oauthState', state.state, { secure: true, signed: true, httpOnly: true, maxAge: 10 * 60 * 1000 });
 
@@ -68,9 +72,11 @@ async function handleOAuthCallback(req, res) {
       console.error(`[OAuth Router] - Provider (${provider}) responded without a state: ${error}`);
       return res.redirect(`${ERROR_REDIRECT_PATH}?error=missing_state`);
     }
+    
     if(error) {
       console.error(`[OAuth Router] - Provider (${provider}) responded with an error: ${error}`);
-      res.redirect(`${ERROR_REDIRECT_PATH}?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(error_description || '')}`);    }
+      return res.redirect(`${ERROR_REDIRECT_PATH}?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(error_description || '')}`);    
+    }
 
     if(!code) {
       console.error(`[OAuth Router] - Provider (${provider}) responded without a code: ${code}`);
@@ -141,7 +147,7 @@ async function handleOAuthCallback(req, res) {
       maxAge: 7 * 24 * 60 * 60 * 1000  // 1 week
     });
 
-    return res.redirect(`${verifiedState.callbackUrl ?? SUCCESS_CALLBACK_URL}`);
+    return res.redirect(`${isValidCallbackUrl(verifiedState.callbackUrl) ? verifiedState.callbackUrl : SUCCESS_CALLBACK_URL}`);
 
   } catch (e) {
     console.error(`[OAuth Router] - OAuth callback (route: ${req.path}) error:`, e);
