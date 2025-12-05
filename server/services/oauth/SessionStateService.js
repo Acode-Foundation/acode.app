@@ -34,11 +34,21 @@ class SessionStateService {
   }
 
   // Generate a random state token for CSRF protection
-  async generateState() {
+  async generateState({ callbackUrl }) {
+    const codeVerifier = this.#makeToken(128)
     const state = crypto.randomBytes(32).toString('hex');
-    await this.states.set(state, { createdAt: Date.now() }); // Remove 'used'
+
+    // Only stateData should be stored in cookie, IF IT's Encrypted,
+    // stateData SHOULD NOT BE Stored in the cookie, IF IT's not Encrypted, then it should be stored in the DB.
+    const stateData = {
+      createdAt: Date.now(),
+      callbackUrl: callbackUrl,
+      codeVerifier: codeVerifier,
+    };
+
+    await this.states.set(state, stateData); // Remove 'used'
     // No per-generation cleanup, timer handles it
-    return state;
+    return { state, codeVerifier, stateData };
   }
 
   // Verify and consume a state token
@@ -52,7 +62,7 @@ class SessionStateService {
       // Already deleted: nothing left to clean
       return false;
     }
-    return true;
+    return stateData;
   }
 
   // Clean up old states
@@ -71,6 +81,12 @@ class SessionStateService {
   stopCleanupTimer() {
     clearInterval(this._cleanupTimer);
   }
+
+  #makeToken(length) {
+    return crypto.randomBytes(Math.ceil((length * 3) / 4))
+      .toString("base64url")
+      .slice(0, length);
+  }  
 }
 
 /**

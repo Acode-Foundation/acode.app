@@ -34,8 +34,8 @@ async function authenticateWithProvider(providerType, profile, tokens) {
       await authenticationProvider.update(
         [
           [authenticationProvider.ID, existingLink[0].id], 
-          [authenticationProvider.ACCESS_TOKEN, encryptToken(accessToken)], 
-          [authenticationProvider.REFRESH_TOKEN, encryptToken(refreshToken)],
+          [authenticationProvider.ACCESS_TOKEN, await encryptToken(accessToken)], 
+          [authenticationProvider.REFRESH_TOKEN, refreshToken ? await encryptToken(refreshToken) : null],
           [authenticationProvider.ACCESS_TOKEN_EXPIRES_AT, tokenExpiresAt],
           [authenticationProvider.SCOPE, tokens.scope || null]
         ]
@@ -60,8 +60,8 @@ async function authenticateWithProvider(providerType, profile, tokens) {
         [authenticationProvider.USER_ID, userId],
         [authenticationProvider.PROVIDER, providerType],
         [authenticationProvider.PROVIDER_USER_ID, providerUserId],
-        [authenticationProvider.ACCESS_TOKEN, encryptToken(accessToken)],
-        [authenticationProvider.REFRESH_TOKEN, encryptToken(refreshToken)],
+        [authenticationProvider.ACCESS_TOKEN, await encryptToken(accessToken)],
+        [authenticationProvider.REFRESH_TOKEN, refreshToken ? await encryptToken(refreshToken) : null],
         [authenticationProvider.ACCESS_TOKEN_EXPIRES_AT, tokenExpiresAt],
         [authenticationProvider.REFRESH_TOKEN_EXPIRES_AT, null],
         [authenticationProvider.SCOPE, tokens.scope || null]

@@ -1,5 +1,5 @@
 const { betterFetch } = require('@better-fetch/fetch');
-
+const { TextEncoder } = require('node:util');
 const { z } = require('zod');
 
 /**
@@ -31,6 +31,8 @@ class OAuthService {
     this.providerName = config.providerName;
     this.prompt = config.prompt || "";
 
+    this.callbackUrl = "/user";
+
     // biome-ignore lint/complexity/noForEach: ignore
     ;["clientId", "clientSecret", "authorizationUrl", "tokenUrl", "userInfoUrl", "scopes", "providerName"].forEach(p=> {
       if(!this[p]) throw TypeError(`"${p}" is required, but not specified in OAuthService Class Configuration`);
@@ -38,23 +40,36 @@ class OAuthService {
   }
 
   // Generate authorization URL
-  getAuthorizationUrl(state) {
+  async getAuthorizationUrl({ state, codeVerifier }) {
     if(!state) throw ReferenceError("state is missing for generating Authorization URL");
-
+    /** Section 4.2 of RFC 7636 -> https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
+     * S256
+     * code_challenge = BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))
+     **/
+    const code_challenge = await this.#generateCodeChallenge(codeVerifier);
+    
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.clientId,
       state: state, // CSRF protection
       scope: this.scopes.join(' '),
+      code_challenge: code_challenge,
+      code_challenge_method: "S256",
     });
 
     if(this.redirectUri) params.append('redirect_uri', this.redirectUri);
+    if(codeVerifier) {
+      // Section 4.2 of RFC 7636 -> https://datatracker.ietf.org/doc/html/rfc7636#section-4
+      params.append('code_challenge', code_challenge);
+      params.append('code_challenge_method', 'S256');
+    }
 
     return `${this.authorizationUrl}?${params.toString()}`;
   }
 
   // Exchange authorization code for access token
-  async getAccessToken(code) {
+  async getAccessToken({ code, codeVerifier }) {
+    console.log({ code, codeVerifier })
     if(!code) {
       throw Error(`[${this.providerName} - getAccessToken] Code is required: ${code}`);
     }
@@ -65,6 +80,10 @@ class OAuthService {
         client_secret: this.clientSecret,
         code: code,
         grant_type: 'authorization_code'
+      }
+
+      if(codeVerifier) {
+        body.code_verifier = codeVerifier;
       }
 
       if(this.redirectUri) {
@@ -94,16 +113,16 @@ class OAuthService {
       })
       
       if(!response || response.error || error) {
-        console.error(`[${this.providerName} - getAccessToken] Response status: ${response.status} (${response.statusText})`, response|| error);
+        console.error(`[${this.providerName} - getAccessToken] `, response|| error);
         throw response || error;
       }
 
       console.log(`[${this.providerName} - getAccessToken]`, response);
 
       return this.normalizeTokenResponse(response);
-    } catch (error) {
-      console.error(`${this.providerName} token exchange error:`, error);
-      throw new Error(`Failed to exchange code for token with ${this.providerName}`);
+    } catch (e) {
+      console.error(`${this.providerName} token exchange error:`, e);
+      throw (e.error ? e : new Error(`Failed to exchange code for token with ${this.providerName}`))
     }
   }
 
@@ -172,6 +191,23 @@ class OAuthService {
       console.error(`${this.providerName} token refresh error:`, error);
       throw new Error(`Failed to refresh token with ${this.providerName}`);
     }
+  }
+  /**
+   * 
+   * @param {string} codeVerifier 
+   * @returns {Promise<string>} 
+   */
+  async #generateCodeChallenge(codeVerifier) {
+    if(!codeVerifier) throw ReferenceError("codeVerifier is required for generating Code Challenge");
+    /** Section 4.2 of RFC 7636 -> https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
+     * S256
+     * code_challenge = BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))
+     **/
+
+    const textEncoder = new TextEncoder();
+    const encodedData = textEncoder.encode(codeVerifier);
+    const hash = await crypto.subtle.digest('SHA-256', encodedData);
+    return Buffer.from(new Uint8Array(hash)).toString('base64url');
   }
 }
 
