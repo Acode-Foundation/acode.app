@@ -53,8 +53,6 @@ class OAuthService {
       client_id: this.clientId,
       state: state, // CSRF protection
       scope: this.scopes.join(' '),
-      code_challenge: code_challenge,
-      code_challenge_method: "S256",
     });
 
     if(this.redirectUri) params.append('redirect_uri', this.redirectUri);
@@ -69,7 +67,6 @@ class OAuthService {
 
   // Exchange authorization code for access token
   async getAccessToken({ code, codeVerifier }) {
-    console.log({ code, codeVerifier })
     if(!code) {
       throw Error(`[${this.providerName} - getAccessToken] Code is required: ${code}`);
     }

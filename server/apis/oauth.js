@@ -11,6 +11,19 @@ const authenticateWithProvider = require('../lib/authenticateWithProvider');
 const ERROR_REDIRECT_PATH = `/login`;
 const SUCCESS_CALLBACK_URL = `/user`
 
+function isValidCallbackUrl(url) {
+  if (!url) return false;
+  // Allow relative paths
+  if (url.startsWith('/') && !url.startsWith('//')) return true;
+  // Or validate against allowlist
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_CALLBACK_HOSTS.includes(parsed.host);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * @template REQ
  * @template RES
@@ -53,14 +66,11 @@ async function handleOAuthCallback(req, res) {
 
     if(!state) {
       console.error(`[OAuth Router] - Provider (${provider}) responded without a state: ${error}`);
-      throw res.redirect(`${ERROR_REDIRECT_PATH}?error=missing_state`);
+      return res.redirect(`${ERROR_REDIRECT_PATH}?error=missing_state`);
     }
-
     if(error) {
       console.error(`[OAuth Router] - Provider (${provider}) responded with an error: ${error}`);
-      res.redirect(`${ERROR_REDIRECT_PATH}?error=${error}&error_description=${error_description}`);
-      return;
-    }
+      res.redirect(`${ERROR_REDIRECT_PATH}?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(error_description || '')}`);    }
 
     if(!code) {
       console.error(`[OAuth Router] - Provider (${provider}) responded without a code: ${code}`);

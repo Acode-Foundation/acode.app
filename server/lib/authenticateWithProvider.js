@@ -4,7 +4,7 @@ const login = require('../entities/login');
 const User = require('../entities/user');
 // Tokens are encrypted while they're stored, and SHOULD BE decrypted
 // When it's being used as values (i.e API with the tokens retrieved from the DB).
-const { encryptToken } = require('../lib/tokenCrypto')
+const { encryptToken } = require('../lib/tokenCrypto');
 
 async function authenticateWithProvider(providerType, profile, tokens) {
     const { id: providerUserId, email, name, username } = profile;

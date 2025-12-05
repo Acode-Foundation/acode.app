@@ -1,6 +1,6 @@
 import { xchacha20poly1305 } from '@noble/ciphers/chacha.js';
 import { bytesToHex, hexToBytes, utf8ToBytes, managedNonce } from '@noble/ciphers/utils.js';
-import { subtle } from 'node:crypto'
+import { subtle } from 'node:crypto';
 import { TextEncoder } from 'node:util';
 const KEY_HEX = process.env.TOKEN_ENCRYPTION_KEY;
 if (!KEY_HEX || hexToBytes(KEY_HEX).length !== 32) {
