@@ -35,7 +35,7 @@ async function main() {
     next();
   });
 
-  app.use(cookieParser());
+  app.use(cookieParser(process.env.COOKIE_SECRET));
   app.use(
     fileUpload({
       limits: {
