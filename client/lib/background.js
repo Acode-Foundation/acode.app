@@ -63,18 +63,18 @@ export default function background(canvas) {
   });
 
   function init() {
-    const numParticles = Math.min(150, Math.round((canvas.width * canvas.height) / 9500));
+    const numParticles = Math.min(100, Math.round((canvas.width * canvas.height) / 15000));
 
     particles = [];
 
     for (let i = 0; i < numParticles; ++i) {
-      const r = Math.random() * 3 + 1;
+      const r = Math.random() * 2.5 + 1;
       const x = Math.random() * (canvas.width - r) + r;
       const y = Math.random() * (canvas.height - r) + r;
-      const dx = (Math.random() > 0.5 ? 1 : -1) * Math.random() * 1.5;
-      const dy = (Math.random() > 0.5 ? 1 : -1) * Math.random() * 1.5;
+      const dx = (Math.random() > 0.5 ? 1 : -1) * Math.random() * 1;
+      const dy = (Math.random() > 0.5 ? 1 : -1) * Math.random() * 1;
 
-      particles.push(new Particle(canvas, r, x, y, dx, dy, '#606060'));
+      particles.push(new Particle(canvas, r, x, y, dx, dy, 'rgba(96, 96, 96, 0.6)'));
     }
 
     if (reqId != null) cancelAnimationFrame(reqId);
@@ -106,10 +106,11 @@ export default function background(canvas) {
       for (const p2 of particles) {
         const distance = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
 
-        if (distance < 100) {
+        if (distance < 120) {
+          const opacity = 0.25 * (1 - distance / 120);
           ctx.beginPath();
-          ctx.strokeStyle = '#606060';
-          ctx.lineWidth = 1;
+          ctx.strokeStyle = `rgba(96, 96, 96, ${opacity})`;
+          ctx.lineWidth = 0.8;
           ctx.moveTo(p1.x, p1.y);
           ctx.lineTo(p2.x, p2.y);
           ctx.stroke();

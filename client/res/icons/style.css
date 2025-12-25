@@ -1,6 +1,6 @@
 @font-face {
   font-family: "acode";
-  src: url("acode.ttf?w5ytek") format("truetype");
+  src: url("acode.ttf?gc6nhk") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -9,6 +9,7 @@
 .icon {
   /* use !important to prevent issues with browser extensions that change fonts */
   font-family: "acode" !important;
+  speak: never;
   font-style: normal;
   font-weight: normal;
   font-variant: normal;
@@ -20,156 +21,127 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-.icon.certificate:before {
-  content: "\e90d";
+.certificate:before {
+  content: "e90d";
 }
-
-.icon.bitcoin:before {
-  content: "\e90c";
+.googleplay:before {
+  content: "e90f";
+  color: #607d8b;
+}
+.f-droid:before {
+  content: "e90e";
+  color: #1976d2;
+}
+.bitcoin:before {
+  content: "e90c";
   color: #f7931a;
 }
-
-.icon.github:before {
-  content: "\e901";
+.github:before {
+  content: "e901";
 }
-
-.icon.paypal:before {
-  content: "\e905";
+.paypal:before {
+  content: "e905";
   color: #00457c;
 }
-
-.icon.navigate_next:before {
-  content: "\e90a";
+.navigate_next:before {
+  content: "e90a";
 }
-
-.icon.navigate_before:before {
-  content: "\e90b";
+.navigate_before:before {
+  content: "e90b";
 }
-
-.icon.chevron_left:before {
-  content: "\e90b";
+.chevron_left:before {
+  content: "e90b";
 }
-
-.icon.verified:before {
-  content: "\e909";
+.verified:before {
+  content: "e909";
 }
-
-.icon.star_outline:before {
-  content: "\e906";
+.star_outline:before {
+  content: "e906";
 }
-
-.icon.star:before {
-  content: "\e907";
+.star:before {
+  content: "e907";
 }
-
-.icon.favorite:before {
-  content: "\e908";
+.favorite:before {
+  content: "e908";
 }
-
-.icon.account_balance:before {
-  content: "\e904";
+.account_balance:before {
+  content: "e904";
 }
-
-.icon.warning:before {
-  content: "\e903";
+.warning:before {
+  content: "e903";
 }
-
-.icon.chat_bubble:before {
-  content: "\e96d";
+.chat_bubble:before {
+  content: "e96d";
 }
-
-.icon.add:before {
-  content: "\e992";
+.add:before {
+  content: "e992";
 }
-
-.icon.clear:before {
-  content: "\e999";
+.clear:before {
+  content: "e999";
 }
-
-.icon.content_copy:before {
-  content: "\e99a";
+.content_copy:before {
+  content: "e99a";
 }
-
-.icon.create:before {
-  content: "\e99d";
+.create:before {
+  content: "e99d";
 }
-
-.icon.flag:before {
-  content: "\e9a0";
+.flag:before {
+  content: "e9a0";
 }
-
-.icon.report:before {
-  content: "\e9ab";
+.report:before {
+  content: "e9ab";
 }
-
-.icon.outlined_flag:before {
-  content: "\e9b9";
+.outlined_flag:before {
+  content: "e9b9";
 }
-
-.icon.access_time:before {
-  content: "\e9c7";
+.access_time:before {
+  content: "e9c7";
 }
-
-.icon.publish:before {
-  content: "\ea26";
+.publish:before {
+  content: "ea26";
 }
-
-.icon.download:before {
-  content: "\ea46";
+.download:before {
+  content: "ea46";
 }
-
-.icon.menu:before {
-  content: "\eb58";
+.menu:before {
+  content: "eb58";
 }
-
-.icon.refresh:before {
-  content: "\eb5b";
+.refresh:before {
+  content: "eb5b";
 }
-
-.icon.person:before {
-  content: "\ebad";
+.person:before {
+  content: "ebad";
 }
-
-.icon.share:before {
-  content: "\ebb3";
+.share:before {
+  content: "ebb3";
 }
-
-.icon.delete:before {
-  content: "\ebe1";
+.delete:before {
+  content: "ebe1";
 }
-
-.icon.done:before {
-  content: "\ebe4";
+.done:before {
+  content: "ebe4";
 }
-
-.icon.done_all:before {
-  content: "\ebe5";
+.done_all:before {
+  content: "ebe5";
 }
-
-.icon.thumb_down:before {
-  content: "\ec34";
+.thumb_down:before {
+  content: "ec34";
 }
-
-.icon.thumb_up:before {
-  content: "\ec35";
+.thumb_up:before {
+  content: "ec35";
 }
-
-.icon.logout:before {
-  content: "\ece8";
+.logout:before {
+  content: "ece8";
 }
-
-.icon.thumb_down_alt:before {
-  content: "\ed07";
+.thumb_down_alt:before {
+  content: "ed07";
 }
-
-.icon.thumb_up_alt:before {
-  content: "\ed08";
+.thumb_up_alt:before {
+  content: "ed08";
 }
-
-.icon.mail:before {
-  content: "\e902";
+.mail:before {
+  content: "e902";
 }
-
-.icon.earth:before {
-  content: "\e900";
+.earth:before {
+  content: "e900";
 }

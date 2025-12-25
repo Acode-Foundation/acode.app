@@ -7,78 +7,69 @@ const User = require('../entities/user');
 const { encryptToken } = require('../lib/tokenCrypto');
 
 async function authenticateWithProvider(providerType, profile, tokens) {
-    const { id: providerUserId, email, name, username } = profile;
-    const { accessToken, refreshToken, expiresIn } = tokens;
+  const { id: providerUserId, email, name, username } = profile;
+  const { accessToken, refreshToken, expiresIn } = tokens;
 
-    if (!email) {
-      throw new Error('Email not provided by OAuth provider');
-    }
+  if (!email) {
+    throw new Error('Email not provided by OAuth provider');
+  }
 
-    // Calculate token expiry
-    const tokenExpiresAt = expiresIn 
-      ? new Date(Date.now() + expiresIn * 1000)
-      : null;
+  // Calculate token expiry
+  const tokenExpiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000) : null;
 
-    let userId;
+  let userId;
 
-    const existingLink = await authenticationProvider.get(
-        [authenticationProvider.ID, authenticationProvider.USER_ID],
-        [authenticationProvider.PROVIDER, providerType],
-        [authenticationProvider.PROVIDER_USER_ID, providerUserId]
+  const existingLink = await authenticationProvider.get(
+    [authenticationProvider.ID, authenticationProvider.USER_ID],
+    [authenticationProvider.PROVIDER, providerType],
+    [authenticationProvider.PROVIDER_USER_ID, providerUserId],
+  );
+
+  if (existingLink.length > 0) {
+    userId = existingLink[0].user_id;
+
+    await authenticationProvider.update([
+      [authenticationProvider.ID, existingLink[0].id],
+      [authenticationProvider.ACCESS_TOKEN, await encryptToken(accessToken)],
+      [authenticationProvider.REFRESH_TOKEN, refreshToken ? await encryptToken(refreshToken) : null],
+      [authenticationProvider.ACCESS_TOKEN_EXPIRES_AT, tokenExpiresAt],
+      [authenticationProvider.SCOPE, tokens.scope || null],
+    ]);
+  } else {
+    // Atomic, race-safe upsert pattern for user
+    await User.insertOrIgnore(
+      [User.NAME, name],
+      [User.EMAIL, email],
+      [User.PASSWORD, ''],
+      [User.WEBSITE, null],
+      [User.GITHUB, providerType === 'github' ? username : null],
     );
-
-    if(existingLink.length > 0) {
-      userId = existingLink[0].user_id;
-
-
-      await authenticationProvider.update(
-        [
-          [authenticationProvider.ID, existingLink[0].id], 
-          [authenticationProvider.ACCESS_TOKEN, await encryptToken(accessToken)], 
-          [authenticationProvider.REFRESH_TOKEN, refreshToken ? await encryptToken(refreshToken) : null],
-          [authenticationProvider.ACCESS_TOKEN_EXPIRES_AT, tokenExpiresAt],
-          [authenticationProvider.SCOPE, tokens.scope || null]
-        ]
-      )    
-    } else {
-      // Atomic, race-safe upsert pattern for user
-      await User.insertOrIgnore(
-        [User.NAME, name],
-        [User.EMAIL, email],
-        [User.PASSWORD, ""],
-        [User.WEBSITE, null],
-        [User.GITHUB, providerType === "github" ? username : null],
-      );
-      // Always fetch the user after insert - ensures you get the correct id whether existing or new
-      const userRes = await User.get([User.EMAIL, email]);
-      if (!userRes || userRes.length === 0) {
-        throw new Error(`Failed to retrieve user`);
-      }
-      userId = userRes[0].id;
-        
-      await authenticationProvider.insert(
-        [authenticationProvider.USER_ID, userId],
-        [authenticationProvider.PROVIDER, providerType],
-        [authenticationProvider.PROVIDER_USER_ID, providerUserId],
-        [authenticationProvider.ACCESS_TOKEN, await encryptToken(accessToken)],
-        [authenticationProvider.REFRESH_TOKEN, refreshToken ? await encryptToken(refreshToken) : null],
-        [authenticationProvider.ACCESS_TOKEN_EXPIRES_AT, tokenExpiresAt],
-        [authenticationProvider.REFRESH_TOKEN_EXPIRES_AT, null],
-        [authenticationProvider.SCOPE, tokens.scope || null]
-      );
+    // Always fetch the user after insert - ensures you get the correct id whether existing or new
+    const userRes = await User.get([User.EMAIL, email]);
+    if (!userRes || userRes.length === 0) {
+      throw new Error(`Failed to retrieve user`);
     }
+    userId = userRes[0].id;
 
-    // break this into a Function, if it gets too repetitive throughout the whole codebase.
-    const sessionToken = require('node:crypto').randomBytes(64).toString('hex');
-    const sessionExpiredAt = moment().add(1, 'week').format('YYYY-MM-DD HH:mm:ss.sss');
+    await authenticationProvider.insert(
+      [authenticationProvider.USER_ID, userId],
+      [authenticationProvider.PROVIDER, providerType],
+      [authenticationProvider.PROVIDER_USER_ID, providerUserId],
+      [authenticationProvider.ACCESS_TOKEN, await encryptToken(accessToken)],
+      [authenticationProvider.REFRESH_TOKEN, refreshToken ? await encryptToken(refreshToken) : null],
+      [authenticationProvider.ACCESS_TOKEN_EXPIRES_AT, tokenExpiresAt],
+      [authenticationProvider.REFRESH_TOKEN_EXPIRES_AT, null],
+      [authenticationProvider.SCOPE, tokens.scope || null],
+    );
+  }
 
-    await login.insert(
-      [login.USER_ID, userId],
-      [login.TOKEN, sessionToken],
-      [login.EXPIRED_AT, sessionExpiredAt]
-    )
+  // break this into a Function, if it gets too repetitive throughout the whole codebase.
+  const sessionToken = require('node:crypto').randomBytes(64).toString('hex');
+  const sessionExpiredAt = moment().add(1, 'week').format('YYYY-MM-DD HH:mm:ss.sss');
 
-    return sessionToken;
+  await login.insert([login.USER_ID, userId], [login.TOKEN, sessionToken], [login.EXPIRED_AT, sessionExpiredAt]);
+
+  return sessionToken;
 }
 
 module.exports = authenticateWithProvider;

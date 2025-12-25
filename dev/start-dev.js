@@ -6,7 +6,7 @@ const configProcess = exec('node ./dev/config.js d', processHandler);
 configProcess.on('exit', build);
 
 function build(watch) {
-  const buildProcess = exec(`yarn config-build d && webpack --mode development ${watch ? '--watch' : ''}`, processHandler);
+  const buildProcess = exec(`npm run config-build d && webpack --mode development ${watch ? '--watch' : ''}`, processHandler);
   if (!watch) buildProcess.on('close', start);
   buildProcess.stdout.on('data', writeStdout);
   buildProcess.stderr.on('data', writeStderr);

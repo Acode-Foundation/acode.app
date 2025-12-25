@@ -2,16 +2,26 @@ const crypto = require('node:crypto');
 
 // --- Injectable state store abstraction ---
 class StateStore {
-  async set(key, value) { this._map.set(key, value); }
-  async get(key) { return this._map.get(key); }
-  async delete(key) { this._map.delete(key); }
-  async entries() { return Array.from(this._map.entries()); }
+  async set(key, value) {
+    this._map.set(key, value);
+  }
+  async get(key) {
+    return this._map.get(key);
+  }
+  async delete(key) {
+    this._map.delete(key);
+  }
+  async entries() {
+    return Array.from(this._map.entries());
+  }
   async getAndDelete(key) {
     const value = this._map.get(key);
     this._map.delete(key);
     return value;
   }
-  constructor() { this._map = new Map(); }
+  constructor() {
+    this._map = new Map();
+  }
 }
 // TODO: Implement a Redis/Memcached version for distributed scaling support.
 
@@ -35,7 +45,7 @@ class SessionStateService {
 
   // Generate a random state token for CSRF protection
   async generateState({ callbackUrl }) {
-    const codeVerifier = this.#makeToken(128)
+    const codeVerifier = this.#makeToken(128);
     const state = crypto.randomBytes(32).toString('hex');
 
     // Only stateData should be stored in cookie, IF IT's Encrypted,
@@ -83,10 +93,11 @@ class SessionStateService {
   }
 
   #makeToken(length) {
-    return crypto.randomBytes(Math.ceil((length * 3) / 4))
-      .toString("base64url")
+    return crypto
+      .randomBytes(Math.ceil((length * 3) / 4))
+      .toString('base64url')
       .slice(0, length);
-  }  
+  }
 }
 
 /**

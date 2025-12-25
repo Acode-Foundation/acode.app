@@ -20,7 +20,6 @@ class OAuthService {
    * @param config {OAuthServiceConfig}
    */
   constructor(config) {
-
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
     this.redirectUri = config.redirectUri;
@@ -29,25 +28,24 @@ class OAuthService {
     this.userInfoUrl = config.userInfoUrl;
     this.scopes = config.scopes;
     this.providerName = config.providerName;
-    this.prompt = config.prompt || "";
+    this.prompt = config.prompt || '';
 
-    this.callbackUrl = "/user";
-
+    this.callbackUrl = '/user';
     // biome-ignore lint/complexity/noForEach: ignore
-    ;["clientId", "clientSecret", "authorizationUrl", "tokenUrl", "userInfoUrl", "scopes", "providerName"].forEach(p=> {
-      if(!this[p]) throw TypeError(`"${p}" is required, but not specified in OAuthService Class Configuration`);
-     })
+    ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'userInfoUrl', 'scopes', 'providerName'].forEach((p) => {
+      if (!this[p]) throw TypeError(`"${p}" is required, but not specified in OAuthService Class Configuration`);
+    });
   }
 
   // Generate authorization URL
   async getAuthorizationUrl({ state, codeVerifier }) {
-    if(!state) throw ReferenceError("state is missing for generating Authorization URL");
+    if (!state) throw ReferenceError('state is missing for generating Authorization URL');
     /** Section 4.2 of RFC 7636 -> https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
      * S256
      * code_challenge = BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))
      **/
     const code_challenge = await this.#generateCodeChallenge(codeVerifier);
-    
+
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.clientId,
@@ -55,8 +53,8 @@ class OAuthService {
       scope: this.scopes.join(' '),
     });
 
-    if(this.redirectUri) params.append('redirect_uri', this.redirectUri);
-    if(codeVerifier) {
+    if (this.redirectUri) params.append('redirect_uri', this.redirectUri);
+    if (codeVerifier) {
       // Section 4.2 of RFC 7636 -> https://datatracker.ietf.org/doc/html/rfc7636#section-4
       params.append('code_challenge', code_challenge);
       params.append('code_challenge_method', 'S256');
@@ -67,50 +65,51 @@ class OAuthService {
 
   // Exchange authorization code for access token
   async getAccessToken({ code, codeVerifier }) {
-    if(!code) {
+    if (!code) {
       throw Error(`[${this.providerName} - getAccessToken] Code is required: ${code}`);
     }
     try {
-
       const body = {
         client_id: this.clientId,
         client_secret: this.clientSecret,
         code: code,
-        grant_type: 'authorization_code'
-      }
+        grant_type: 'authorization_code',
+      };
 
-      if(codeVerifier) {
+      if (codeVerifier) {
         body.code_verifier = codeVerifier;
       }
 
-      if(this.redirectUri) {
+      if (this.redirectUri) {
         body.redirect_uri = this.redirectUri;
       }
 
       const { data: response, error } = await betterFetch(this.tokenUrl, {
-        method: "POST",
+        method: 'POST',
         body: JSON.stringify(body),
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
         },
-        output: z.object({
-          access_token: z.string(),
-          refresh_token: z.string().optional(),
-          scope: z.string().optional(),
-          token_type: z.string(),
-          expires_in: z.number().optional(),
-        }).or(
-          z.object({
-            error: z.string(),
-            error_description: z.string().optional(),
-            error_hint: z.string().optional(),
+        output: z
+          .object({
+            access_token: z.string(),
+            refresh_token: z.string().optional(),
+            scope: z.string().optional(),
+            token_type: z.string(),
+            expires_in: z.number().optional(),
           })
-        )
-      })
-      
-      if(!response || response.error || error) {
-        console.error(`[${this.providerName} - getAccessToken] `, response|| error);
+          .or(
+            z.object({
+              error: z.string(),
+              error_description: z.string().optional(),
+              error_hint: z.string().optional(),
+            }),
+          ),
+      });
+
+      if (!response || response.error || error) {
+        console.error(`[${this.providerName} - getAccessToken] `, response || error);
         throw response || error;
       }
 
@@ -119,7 +118,7 @@ class OAuthService {
       return this.normalizeTokenResponse(response);
     } catch (e) {
       console.error(`${this.providerName} token exchange error:`, e);
-      throw (e.error ? e : new Error(`Failed to exchange code for token with ${this.providerName}`))
+      throw e.error ? e : new Error(`Failed to exchange code for token with ${this.providerName}`);
     }
   }
 
@@ -130,7 +129,7 @@ class OAuthService {
       refreshToken: data.refresh_token || null,
       expiresIn: data.expires_in || null,
       tokenType: data.token_type || 'Bearer',
-      scope: data.scope
+      scope: data.scope,
     };
   }
 
@@ -147,38 +146,36 @@ class OAuthService {
     }
 
     try {
-
-      const { data: response, error } = await betterFetch(
-        this.tokenUrl,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            client_id: this.clientId,
-            client_secret: this.clientSecret,
-            refresh_token: refreshToken,
-            grant_type: 'refresh_token'
-          }),
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          output: z.object({
+      const { data: response, error } = await betterFetch(this.tokenUrl, {
+        method: 'POST',
+        body: JSON.stringify({
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
+          refresh_token: refreshToken,
+          grant_type: 'refresh_token',
+        }),
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        output: z
+          .object({
             access_token: z.string(),
             refresh_token: z.string().optional(),
             scope: z.string().optional(),
             token_type: z.string(),
             expires_in: z.number().optional(),
-          }).or(
+          })
+          .or(
             z.object({
               error: z.string(),
               error_description: z.string().optional(),
               error_hint: z.string().optional(),
-            })
-          )
-        }
-      )
+            }),
+          ),
+      });
 
-      if(!response || response.error || error) {
+      if (!response || response.error || error) {
         console.error(`[${this.providerName} - refreshAccessToken] Token refresh failed`, error || response);
         throw response || error;
       }
@@ -190,12 +187,12 @@ class OAuthService {
     }
   }
   /**
-   * 
-   * @param {string} codeVerifier 
-   * @returns {Promise<string>} 
+   *
+   * @param {string} codeVerifier
+   * @returns {Promise<string>}
    */
   async #generateCodeChallenge(codeVerifier) {
-    if(!codeVerifier) throw ReferenceError("codeVerifier is required for generating Code Challenge");
+    if (!codeVerifier) throw ReferenceError('codeVerifier is required for generating Code Challenge');
     /** Section 4.2 of RFC 7636 -> https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
      * S256
      * code_challenge = BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))

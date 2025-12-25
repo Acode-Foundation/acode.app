@@ -360,7 +360,7 @@
         href="/termsOfService">Terms</a></footer>
   </main>
   <script>
-    (function () {
+    (() => {
       const SECONDS = 60; // change to adjust retry cycle
       const countdown = document.getElementById('count');
       const retryBtn = document.getElementById('retry');
@@ -377,7 +377,9 @@
       retryBtn.addEventListener('click', () => window.location.reload());
       // Respect reduced motion
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        document.querySelectorAll('.bar,.logo img').forEach(el => el.style.animation = 'none');
+        for (const el of document.querySelectorAll('.bar,.logo img')) {
+          el.style.animation = 'none';
+        }
       }
     })();
   </script>
