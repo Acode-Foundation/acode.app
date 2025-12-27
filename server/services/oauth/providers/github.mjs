@@ -1,4 +1,4 @@
-const OAuthService = require('../OAuthService');
+import OAuthService from '../OAuthService.mjs';
 
 class githubOAuthProvider extends OAuthService {
   constructor() {
@@ -87,4 +87,4 @@ class githubOAuthProvider extends OAuthService {
   }
 }
 
-module.exports = githubOAuthProvider;
+export default githubOAuthProvider;

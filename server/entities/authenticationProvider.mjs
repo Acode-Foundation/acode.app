@@ -1,4 +1,4 @@
-const Entity = require('./entity');
+import Entity from './entity.js';
 
 const table = `create table if not exists authentication_provider (
   id integer primary key,
@@ -57,4 +57,4 @@ class AuthenticationProvider extends Entity {
   }
 }
 
-module.exports = new AuthenticationProvider();
+export default new AuthenticationProvider();

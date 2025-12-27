@@ -1,4 +1,4 @@
-const crypto = require('node:crypto');
+import crypto from 'node:crypto';
 
 // --- Injectable state store abstraction ---
 class StateStore {
@@ -105,4 +105,4 @@ class SessionStateService {
  * Deployments with horizontal scaling (multiple app/server instances) must inject a Redis/Memcached store
  * implementing the async set/get/delete/entries contract.
  */
-module.exports = SessionStateService;
+export default SessionStateService;

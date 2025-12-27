@@ -13,7 +13,16 @@ apis.use(['/comments', '/comment'], require('../apis/comment'));
 apis.use('/faqs', require('../apis/faqs'));
 apis.use('/admin', require('../apis/admin'));
 apis.use(['/sponsor', '/sponsors'], require('../apis/sponsor'));
-apis.use('/oauth', require('../apis/oauth'));
+
+// OAuth uses ES6 modules, so we need to dynamically import it
+import('../apis/oauth.mjs')
+  .then((oauthModule) => {
+    apis.use('/oauth', oauthModule.default);
+  })
+  .catch((err) => {
+    console.error('Failed to load OAuth module:', err);
+  });
+
 // apis.use('/completion', require('../apis/completion'));
 
 apis.get('/status', (_req, res) => {
