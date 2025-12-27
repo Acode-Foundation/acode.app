@@ -1,4 +1,4 @@
-const githubOAuthProvider = require('./providers/github');
+const GitHubOAuthProvider = require('./providers/github');
 
 class OAuthProviderFactory {
   constructor() {
@@ -11,7 +11,7 @@ class OAuthProviderFactory {
    * register OAuth Providers.
    */
   initializeProviders() {
-    this.providers.set('github', new githubOAuthProvider());
+    this.providers.set('github', new GitHubOAuthProvider());
   }
 
   getProvider(providerName) {
