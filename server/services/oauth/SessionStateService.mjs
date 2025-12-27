@@ -2,6 +2,9 @@ import crypto from 'node:crypto';
 
 // --- Injectable state store abstraction ---
 class StateStore {
+  constructor() {
+    this._map = new Map();
+  }
   async set(key, value) {
     this._map.set(key, value);
   }
@@ -18,9 +21,6 @@ class StateStore {
     const value = this._map.get(key);
     this._map.delete(key);
     return value;
-  }
-  constructor() {
-    this._map = new Map();
   }
 }
 // TODO: Implement a Redis/Memcached version for distributed scaling support.

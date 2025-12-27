@@ -27,6 +27,13 @@ main();
 async function main() {
   await setAuth();
 
+  // Wait for OAuth module to load before continuing
+  try {
+    await apis.oauthReady;
+  } catch (err) {
+    console.error('OAuth initialization failed, server will continue without OAuth routes:', err);
+  }
+
   // allow origin https://localhost
   app.use((_req, res, next) => {
     res.header('Access-Control-Allow-Origin', 'https://localhost');
