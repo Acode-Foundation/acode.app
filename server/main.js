@@ -31,11 +31,11 @@ async function main() {
   await setAuth();
 
   // Validate that COOKIE_SECRET is defined and has adequate length
-  if (!process.env.COOKIE_SECRET) {
-    throw new Error('COOKIE_SECRET environment variable is required for signed cookies');
-  }
-  if (process.env.COOKIE_SECRET.length < 32) {
-    throw new Error('COOKIE_SECRET must be at least 32 characters long for adequate security');
+  if (!process.env.COOKIE_SECRET || process.env.COOKIE_SECRET.length < 32) {
+    const message = !process.env.COOKIE_SECRET
+      ? 'COOKIE_SECRET environment variable is required for signed cookies'
+      : 'COOKIE_SECRET must be at least 32 characters long for adequate security';
+    throw new Error(message);
   }
 
   // allow origin https://localhost
