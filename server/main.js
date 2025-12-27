@@ -22,7 +22,10 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-main();
+main().catch((error) => {
+  console.error('Failed to start server:', error.message);
+  process.exit(1);
+});
 
 async function main() {
   await setAuth();
