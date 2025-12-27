@@ -31,14 +31,19 @@ export default async function FAQs({ mode, oldQ, a, qHash }) {
 
   return (
     <section id='faqs'>
-      <h1>FAQs</h1>
+      <div className='faqs-header'>
+        <h1>Frequently Asked Questions</h1>
+        <p className='header-subtitle'>Find answers to common questions about Acode</p>
+      </div>
       <FAQForm />
-      <FAQsContainer />
+      <div className='faqs-container'>
+        <FAQsContainer />
+      </div>
     </section>
   );
 
   function FAQsContainer() {
-    return faqs.map(({ q, a: ans }) => <FAQ q={q} a={ans} />);
+    return faqs.map(({ q, a: ans }, index) => <FAQ q={q} a={ans} index={index} />);
   }
 
   function FAQForm() {
@@ -51,11 +56,14 @@ export default async function FAQs({ mode, oldQ, a, qHash }) {
     mdPreview.innerHTML = marked.parse(a || '');
 
     return (
-      <details open={isUpdate} style={{ margin: '20px 0' }}>
-        <summary style={{ margin: '20px 0' }}>{isUpdate ? 'Update' : 'Add'} FAQ</summary>
+      <details open={isUpdate} className='faq-form-container'>
+        <summary className='form-toggle'>
+          <span className='icon add' />
+          {isUpdate ? 'Update FAQ' : 'Add New FAQ'}
+        </summary>
         <AjaxForm ref={form} onerror={onerror} onloadend={onloadend} action='/api/faqs' method={method}>
           {isUpdate ? <Input name='old_q' required={true} hidden type='hidden' value={oldQ || ''} /> : ''}
-          <Input ref={q} name='q' required={true} label='Question' placeholder='Question' value={oldQ || ''} />
+          <Input ref={q} name='q' required={true} label='Question' placeholder='Enter your question' value={oldQ || ''} />
           <Input
             name='a'
             required={true}
@@ -63,17 +71,23 @@ export default async function FAQs({ mode, oldQ, a, qHash }) {
             oninput={oninput}
             label='Answer'
             type='textarea'
-            placeholder='Answer (Markdown)'
+            placeholder='Answer (Markdown supported)'
             value={a || ''}
           />
           <div className='preview' ref={mdPreview} />
           <div className='buttons'>
-            <button type='submit'>Submit</button>
-            {isUpdate
-              ? <button className='danger' type='button' onclick={() => Router.reload()}>
-                  Cancel
-                </button>
-              : ''}
+            <button type='submit' className='btn-primary'>
+              <span className='icon done' />
+              Submit
+            </button>
+            {isUpdate ? (
+              <button className='btn-danger' type='button' onclick={() => Router.reload()}>
+                <span className='icon clear' />
+                Cancel
+              </button>
+            ) : (
+              ''
+            )}
           </div>
         </AjaxForm>
       </details>
@@ -111,22 +125,29 @@ export default async function FAQs({ mode, oldQ, a, qHash }) {
     }
   }
 
-  function FAQ({ q, a: ans }) {
+  function FAQ({ q, a: ans, index }) {
     const id = hashString(q);
     return (
-      <div className='faq'>
-        <a href={`/faqs/${id}`} style={{ textDecoration: 'none' }}>
-          <h2 id={id} style={{ textAlign: 'left' }}>
-            {q}
-          </h2>
-        </a>
-        <p innerHTML={marked.parse(ans)} />
-        {isAdmin
-          ? <div className='icon-buttons'>
-              <span onclick={() => editFaq(q, ans)} title='Edit this FAQ' className='link icon create' />
-              <span onclick={() => deleteFaq(q)} title='Delete this FAQ' className='link icon delete danger' />
+      <div className='faq-card'>
+        <div className='faq-number'>{String(index + 1).padStart(2, '0')}</div>
+        <div className='faq-content'>
+          <a href={`/faqs/${id}`} className='faq-link'>
+            <h2 id={id}>{q}</h2>
+          </a>
+          <div className='faq-answer' innerHTML={marked.parse(ans)} />
+          {isAdmin && (
+            <div className='faq-actions'>
+              <button type='button' onclick={() => editFaq(q, ans)} title='Edit this FAQ' className='action-btn btn-edit'>
+                <span className='icon create' />
+                Edit
+              </button>
+              <button type='button' onclick={() => deleteFaq(q)} title='Delete this FAQ' className='action-btn btn-delete'>
+                <span className='icon delete' />
+                Delete
+              </button>
             </div>
-          : ''}
+          )}
+        </div>
       </div>
     );
   }

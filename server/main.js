@@ -16,16 +16,27 @@ const setAuth = require('./lib/gapis');
 
 global.ADMIN = 1;
 const app = express();
+const MIN_COOKIE_SECRET_LENGTH = 32;
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+main().catch((error) => {
+  console.error('Failed to start server:', error.message);
+  process.exit(1);
 });
-
-main();
 
 async function main() {
   await setAuth();
+
+  // Validate that COOKIE_SECRET is defined and has adequate length
+  if (process.env.COOKIE_SECRET === undefined) {
+    throw new Error('COOKIE_SECRET environment variable is required for signed cookies');
+  }
+  const secret = process.env.COOKIE_SECRET.trim();
+  if (!secret) {
+    throw new Error('COOKIE_SECRET cannot be empty or contain only whitespace');
+  }
+  if (secret.length < MIN_COOKIE_SECRET_LENGTH) {
+    throw new Error(`COOKIE_SECRET must be at least ${MIN_COOKIE_SECRET_LENGTH} characters long for adequate security`);
+  }
 
   // allow origin https://localhost
   app.use((_req, res, next) => {
@@ -35,7 +46,7 @@ async function main() {
     next();
   });
 
-  app.use(cookieParser());
+  app.use(cookieParser(process.env.COOKIE_SECRET));
   app.use(
     fileUpload({
       limits: {
@@ -174,5 +185,10 @@ async function main() {
 
     res.header('Content-Type', 'text/html;charset=utf-8');
     res.send(templateScript(defaultOg));
+  });
+
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
 }

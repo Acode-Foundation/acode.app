@@ -1,38 +1,291 @@
 #faqs {
+  max-width: 900px !important;
+  padding: 40px 20px;
+
+  @media screen and (max-width: 600px) {
+    padding: 20px 12px;
+  }
+
   &::after {
     content: '';
     display: block;
     height: 100%;
   }
 
-  h1 {
-    margin: 20px;
+  .faqs-header {
+    text-align: center;
+    margin-bottom: 48px;
+
+    @media screen and (max-width: 600px) {
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+
+      @media screen and (max-width: 600px) {
+        font-size: 1.75rem;
+      }
+
+      font-weight: 800;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.8) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header-subtitle {
+      font-size: 1.1rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
   }
 
-  .faq {
-    margin-bottom: 20px;
-    padding-bottom: 20px;
-    border-bottom: solid 1px rgba(234, 234, 234, 0.486);
+  .faqs-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 
-    h2::before {
-      content: 'Q.';
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #eaeaea;
-      margin-right: 10px;
+    @media screen and (max-width: 600px) {
+      gap: 12px;
+    }
+  }
+
+  .faq-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 28px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    transition: all 0.3s ease;
+
+    @media screen and (max-width: 600px) {
+      padding: 16px;
+      gap: 12px;
+      border-radius: 12px;
+    }
+
+    &:hover {
+      border-color: rgba(51, 153, 255, 0.3);
+      transform: translateX(8px);
+    }
+  }
+
+  .faq-number {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: rgba(51, 153, 255, 0.5);
+    line-height: 1.5;
+    min-width: 40px;
+    flex-shrink: 0;
+
+    @media screen and (max-width: 600px) {
+      font-size: 1rem;
+      min-width: 32px;
+    }
+  }
+
+  .faq-content {
+    flex: 1;
+    min-width: 0;
+
+    .faq-link {
+      text-decoration: none;
+
+      h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        line-height: 1.5;
+        color: white;
+        transition: color 0.3s ease;
+
+        @media screen and (max-width: 600px) {
+          font-size: 1rem;
+        }
+
+        &:hover {
+          color: #3399ff;
+        }
+      }
+    }
+
+    .faq-answer {
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.7;
+      font-size: 0.95rem;
+      margin-top: 12px;
+
+      p {
+        margin: 0 0 12px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+
+      a {
+        color: #3399ff;
+      }
+
+      code {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.9em;
+      }
+
+      pre {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 16px;
+        border-radius: 12px;
+        overflow-x: auto;
+        margin: 12px 0;
+
+        code {
+          background: transparent;
+          padding: 0;
+        }
+      }
+    }
+  }
+
+  .faq-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+
+      .icon {
+        font-size: 1em;
+      }
+
+      &.btn-edit {
+        background: rgba(51, 153, 255, 0.15);
+        color: #3399ff;
+
+        &:hover {
+          background: rgba(51, 153, 255, 0.25);
+        }
+      }
+
+      &.btn-delete {
+        background: rgba(255, 85, 51, 0.15);
+        color: #ff5533;
+
+        &:hover {
+          background: rgba(255, 85, 51, 0.25);
+        }
+      }
+    }
+  }
+
+  .faq-form-container {
+    margin-bottom: 40px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    overflow: hidden;
+
+    .form-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 24px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s ease;
+
+      .icon {
+        font-size: 1.2em;
+        color: #3399ff;
+      }
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+    }
+
+    form {
+      padding: 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+
+      button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+
+        .icon {
+          font-size: 1.1em;
+        }
+
+        &.btn-primary {
+          background: linear-gradient(135deg, #3399ff 0%, #2277dd 100%);
+          color: white;
+
+          &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(51, 153, 255, 0.3);
+          }
+        }
+
+        &.btn-danger {
+          background: rgba(255, 85, 51, 0.15);
+          color: #ff5533;
+
+          &:hover {
+            background: rgba(255, 85, 51, 0.25);
+          }
+        }
+      }
     }
   }
 
   .preview {
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    min-height: 150px;
+    background: rgba(0, 0, 0, 0.2);
+    margin-top: 12px;
+
     &::before {
       display: block;
-      width: 100%;
       content: 'Preview';
-      border-bottom: solid 1px rgba(234, 234, 234, 0.486);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
-
-    padding: 10px;
-    border: solid 1px rgba(234, 234, 234, 0.486);
-    min-height: 200px;
   }
 }

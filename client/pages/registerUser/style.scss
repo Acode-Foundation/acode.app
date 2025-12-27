@@ -1,4 +1,4 @@
-#user-login {
+#register-user {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -6,31 +6,12 @@
   justify-content: center;
   min-height: calc(100vh - 50px);
   width: 100%;
-  max-width: unset;
-  background-color: transparent;
-  z-index: 1;
+  max-width: unset !important;
   padding: 40px 20px;
 
-  &::before {
-    position: absolute;
-    top: 0;
-    left: 0;
+  .register-card {
     width: 100%;
-    height: 100%;
-    content: '';
-    opacity: 0.3;
-    background-color: var(--primary-color);
-    background-image: url(../../res/logo.svg);
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 500px;
-    filter: blur(80px);
-    z-index: -1;
-  }
-
-  .login-card {
-    width: 100%;
-    max-width: 420px;
+    max-width: 480px;
     padding: 40px;
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(20px);
@@ -38,61 +19,22 @@
     border-radius: 24px;
     text-align: center;
 
-    @media screen and (max-width: 600px) {
-      padding: 24px 16px;
-      border-radius: 16px;
-    }
-
     h1 {
       font-size: 1.75rem;
       font-weight: 700;
       margin-bottom: 8px;
-
-      @media screen and (max-width: 600px) {
-        font-size: 1.5rem;
-      }
     }
 
-    .login-subtitle {
+    .register-subtitle {
       color: rgba(255, 255, 255, 0.6);
       font-size: 0.95rem;
       margin-bottom: 32px;
-
-      @media screen and (max-width: 600px) {
-        margin-bottom: 20px;
-        font-size: 0.9rem;
-      }
     }
 
     form {
       width: 100%;
       max-width: none;
-    }
-  }
-
-  .login-profile {
-    height: 100px;
-    width: 100px;
-    margin: 0 auto 24px;
-    border-radius: 50%;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    background: linear-gradient(135deg, rgba(51, 153, 255, 0.2), rgba(51, 153, 255, 0.05));
-    border: 2px solid rgba(51, 153, 255, 0.3);
-    overflow: hidden;
-    z-index: 0;
-
-    @media screen and (max-width: 600px) {
-      height: 80px;
-      width: 80px;
-      margin-bottom: 16px;
-    }
-
-    img {
-      width: 80%;
-      object-fit: contain;
-      z-index: 1;
+      text-align: left;
     }
   }
 
@@ -120,7 +62,7 @@
         font-size: 1.25em;
       }
 
-      &.btn-github {
+      &.github {
         background: #24292e;
         color: white;
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -129,16 +71,6 @@
           background: #2f363d;
           transform: translateY(-2px);
           box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-        }
-      }
-
-      &.google {
-        background: white;
-        color: #333;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
         }
       }
     }
@@ -162,6 +94,31 @@
       color: rgba(255, 255, 255, 0.5);
       font-size: 0.85rem;
     }
+  }
+
+  .email-otp-group {
+    margin-bottom: 16px;
+
+    fieldset {
+      display: flex;
+      gap: 12px;
+      border: none;
+      padding: 0;
+      margin: 0;
+
+      .input-wrapper {
+        &:first-child {
+          flex: 1;
+        }
+      }
+    }
+  }
+
+  .change-password-link {
+    display: inline-block;
+    color: #3399ff;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
   }
 
   form {
@@ -221,6 +178,7 @@
       display: block;
       margin: 12px 0;
       font-size: 0.9rem;
+      text-align: center;
     }
 
     .success {
@@ -232,28 +190,39 @@
     }
   }
 
-  .login-footer {
+  .register-footer {
     margin-top: 24px;
     padding-top: 24px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
 
-    .link {
-      color: #3399ff;
-      text-decoration: none;
+    .login-link {
+      margin-bottom: 16px;
+      color: rgba(255, 255, 255, 0.7);
       font-size: 0.9rem;
-      transition: color 0.3s ease;
 
-      &:hover {
-        text-decoration: underline;
+      .link {
+        color: #3399ff;
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
       }
     }
 
-    .separator {
-      color: rgba(255, 255, 255, 0.3);
+    .terms-text {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.5);
+      line-height: 1.5;
+
+      a {
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: underline;
+
+        &:hover {
+          color: #3399ff;
+        }
+      }
     }
   }
 }

@@ -92,6 +92,20 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
       <div className='row plugin-head'>
         <div className='plugin-logo'>
           <img src={`/plugin-icon/${id}`} alt={name} />
+          <div className='logo-stats'>
+            <div className='stat'>
+              <span className='stat-value'>{+downloads ? downloads.toLocaleString() : '0'}</span>
+              <span className='stat-label'>Downloads</span>
+            </div>
+            <div className='stat'>
+              <span className='stat-value'>{votesUp + votesDown > 0 ? calcRating(votesUp, votesDown) : '-'}</span>
+              <span className='stat-label'>Rating</span>
+            </div>
+            <div className='stat'>
+              <span className='stat-value'>{commentCount || '0'}</span>
+              <span className='stat-label'>Reviews</span>
+            </div>
+          </div>
           {canInstall && (
             <button type='button' onclick={() => window.open(`acode://plugin/install/${pluginId}`)}>
               <span className='icon download' /> Install
@@ -105,38 +119,25 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           </div>
           <div className='info'>
             <span className='chip'>v {version}</span>
-            {+downloads
-              ? <div className='chip'>
-                  <span className='icon download' />
-                  <span>{downloads.toLocaleString()}</span>
-                </div>
-              : <div className='chip'>
-                  <span style={{ color: 'gold' }}>New</span>
-                </div>}
             <div className='chip'>
-              {price
-                ? <>
-                    <span style={{ marginRight: '10px' }}>&#8377;</span>
-                    <span>{price}</span>
-                  </>
-                : <span style={{ color: 'lightgreen' }}>Free</span>}
+              {price ? (
+                <>
+                  <span style={{ marginRight: '10px' }}>&#8377;</span>
+                  <span>{price}</span>
+                </>
+              ) : (
+                <span style={{ color: 'lightgreen' }}>Free</span>
+              )}
             </div>
-            {commentCount > 0 && (
-              <div className='chip' onclick={() => changeSection('comments')}>
-                <div className='icon chat_bubble' />
-                <span>{commentCount}</span>
+            {!+downloads && (
+              <div className='chip'>
+                <span style={{ color: 'gold' }}>New</span>
               </div>
             )}
             {license && license.toLowerCase() !== 'unknown' && (
               <div className='chip'>
                 <span className='icon certificate' />
                 <span>{license}</span>
-              </div>
-            )}
-            {votesUp + votesDown > 0 && (
-              <div className='chip' onclick={() => changeSection('comments')}>
-                <img src='/thumbs-up.gif' alt='thumbs up' />
-                <span>{calcRating(votesUp, votesDown)}</span>
               </div>
             )}
             {user?.isAdmin && (
@@ -380,9 +381,12 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
   if (!user) {
     return (
       <div className='comments'>
-        <span>
-          <a href={`/login?redirect=/plugin/${id}/comments`}>Sign in</a> to write your review.
-        </span>
+        <div className='sign-in-prompt'>
+          <span className='icon account_circle' />
+          <span>
+            <a href={`/login?redirect=/plugin/${id}/comments`}>Sign in</a> to write your review.
+          </span>
+        </div>
         <div ref={listRef} className='list' />
       </div>
     );
@@ -402,11 +406,13 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
         <Input maxlength={250} type='textarea' name='comment' placeholder='Comment' value={comment} />
         <div className='buttons-container'>
           <button type='submit'>Submit</button>
-          {commentId
-            ? <button onclick={deleteUserComment} type='button' className='danger' title='Delete your review'>
-                <span className='icon delete' />
-              </button>
-            : ''}
+          {commentId ? (
+            <button onclick={deleteUserComment} type='button' className='danger' title='Delete your review'>
+              <span className='icon delete' />
+            </button>
+          ) : (
+            ''
+          )}
         </div>
       </AjaxForm>
 

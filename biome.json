@@ -3,7 +3,7 @@
   "vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/public/**/*", "!**/*.d.ts", "!**/.vscode/**/*", "!**/jsconfig.json", "!**/.babelrc", "!**/.hintrc"]
+    "includes": ["**", "!**/public/**/*", "!**/*.d.ts", "!**/.vscode/**/*", "!**/jsconfig.json", "!**/.babelrc", "!**/.hintrc", "!constants.js"]
   },
   "formatter": {
     "enabled": true,
