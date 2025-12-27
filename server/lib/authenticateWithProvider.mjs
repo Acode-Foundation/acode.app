@@ -1,10 +1,10 @@
-const moment = require('moment');
-const authenticationProvider = require('../entities/authenticationProvider');
-const login = require('../entities/login');
-const User = require('../entities/user');
+import moment from 'moment';
+import authenticationProvider from '../entities/authenticationProvider.mjs';
+import login from '../entities/login.js';
+import User from '../entities/user.js';
 // Tokens are encrypted while they're stored, and SHOULD BE decrypted
 // When it's being used as values (i.e API with the tokens retrieved from the DB).
-const { encryptToken } = require('../lib/tokenCrypto');
+import { encryptToken } from '../lib/tokenCrypto.mjs';
 
 async function authenticateWithProvider(providerType, profile, tokens) {
   const { id: providerUserId, email, name, username } = profile;
@@ -64,7 +64,8 @@ async function authenticateWithProvider(providerType, profile, tokens) {
   }
 
   // break this into a Function, if it gets too repetitive throughout the whole codebase.
-  const sessionToken = require('node:crypto').randomBytes(64).toString('hex');
+  const { randomBytes } = await import('node:crypto');
+  const sessionToken = randomBytes(64).toString('hex');
   const sessionExpiredAt = moment().add(1, 'week').format('YYYY-MM-DD HH:mm:ss.sss');
 
   await login.insert([login.USER_ID, userId], [login.TOKEN, sessionToken], [login.EXPIRED_AT, sessionExpiredAt]);
@@ -72,4 +73,4 @@ async function authenticateWithProvider(providerType, profile, tokens) {
   return sessionToken;
 }
 
-module.exports = authenticateWithProvider;
+export default authenticateWithProvider;

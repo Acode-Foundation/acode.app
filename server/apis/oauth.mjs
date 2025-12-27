@@ -1,11 +1,13 @@
 // TODO: Lookout for vulnerabilities.
-const { Router } = require('express');
-const OAuthProviderFactory = require('../services/oauth/OAuthProviderFactory');
-const SessionStateServiceClass = require('../services/oauth/SessionStateService');
-const { ALLOWED_CALLBACK_HOSTS_ARRAY } = require('../../constants');
+import { Router } from 'express';
+import { ALLOWED_CALLBACK_HOSTS_ARRAY } from '../../constants.mjs';
+import OAuthProviderFactory from '../services/oauth/OAuthProviderFactory.mjs';
+import SessionStateServiceClass from '../services/oauth/SessionStateService.mjs';
+
 // For single-instance use only. For clustering/horizontal scaling, inject a distributed store (e.g. Redis) into SessionStateService.
 const sessionStateService = new SessionStateServiceClass();
-const authenticateWithProvider = require('../lib/authenticateWithProvider');
+
+import authenticateWithProvider from '../lib/authenticateWithProvider.mjs';
 
 const ERROR_REDIRECT_PATH = `/login`;
 const SUCCESS_CALLBACK_URL = `/user`;
@@ -164,4 +166,4 @@ router.get('/:provider/callback', handleOAuthCallback);
 
 router.post('/:provider/callback', handleOAuthCallback);
 
-module.exports = router;
+export default router;

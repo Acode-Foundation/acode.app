@@ -1,6 +1,6 @@
-const { betterFetch } = require('@better-fetch/fetch');
-const { TextEncoder } = require('node:util');
-const { z } = require('zod');
+import { TextEncoder } from 'node:util';
+import { betterFetch } from '@better-fetch/fetch';
+import { z } from 'zod';
 
 /**
  * @typedef OAuthServiceConfig
@@ -205,4 +205,4 @@ class OAuthService {
   }
 }
 
-module.exports = OAuthService;
+export default OAuthService;

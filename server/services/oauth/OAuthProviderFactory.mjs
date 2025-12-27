@@ -1,4 +1,4 @@
-const GitHubOAuthProvider = require('./providers/github');
+import GitHubOAuthProvider from './providers/github.mjs';
 
 class OAuthProviderFactory {
   constructor() {
@@ -31,4 +31,4 @@ class OAuthProviderFactory {
 }
 
 // Singleton instance
-module.exports = new OAuthProviderFactory();
+export default new OAuthProviderFactory();
