@@ -27,7 +27,7 @@ async function main() {
   await setAuth();
 
   // Validate that COOKIE_SECRET is defined and has adequate length
-  if (process.env.COOKIE_SECRET === undefined || process.env.COOKIE_SECRET === null) {
+  if (process.env.COOKIE_SECRET === undefined) {
     throw new Error('COOKIE_SECRET environment variable is required for signed cookies');
   }
   const secret = process.env.COOKIE_SECRET.trim();
