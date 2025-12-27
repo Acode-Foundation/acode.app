@@ -1,4 +1,4 @@
-import githubOAuthProvider from './providers/github.mjs';
+import GitHubOAuthProvider from './providers/github.mjs';
 
 class OAuthProviderFactory {
   constructor() {
@@ -11,7 +11,7 @@ class OAuthProviderFactory {
    * register OAuth Providers.
    */
   initializeProviders() {
-    this.providers.set('github', new githubOAuthProvider());
+    this.providers.set('github', new GitHubOAuthProvider());
   }
 
   getProvider(providerName) {

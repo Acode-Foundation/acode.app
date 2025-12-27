@@ -1,6 +1,6 @@
 import OAuthService from '../OAuthService.mjs';
 
-class githubOAuthProvider extends OAuthService {
+class GitHubOAuthProvider extends OAuthService {
   constructor() {
     super({
       clientId: process.env.GITHUB_CLIENT_ID,
@@ -71,7 +71,7 @@ class githubOAuthProvider extends OAuthService {
         raw: profile,
       };
     } catch (e) {
-      console.error('[githubOAuthProvider - getUserProfile] GitHub profile fetch error:', e?.response?.data || e?.message);
+      console.error('[GitHubOAuthProvider - getUserProfile] GitHub profile fetch error:', e?.response?.data || e?.message);
       throw e;
     }
   }
@@ -87,4 +87,4 @@ class githubOAuthProvider extends OAuthService {
   }
 }
 
-export default githubOAuthProvider;
+export default GitHubOAuthProvider;
