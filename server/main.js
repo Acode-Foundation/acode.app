@@ -18,11 +18,6 @@ global.ADMIN = 1;
 const app = express();
 const MIN_COOKIE_SECRET_LENGTH = 32;
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
 main().catch((error) => {
   console.error('Failed to start server:', error.message);
   process.exit(1);
@@ -187,5 +182,10 @@ async function main() {
 
     res.header('Content-Type', 'text/html;charset=utf-8');
     res.send(templateScript(defaultOg));
+  });
+
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
 }
