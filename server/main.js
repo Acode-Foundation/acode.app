@@ -27,6 +27,11 @@ main();
 async function main() {
   await setAuth();
 
+  // Validate that COOKIE_SECRET is defined
+  if (!process.env.COOKIE_SECRET) {
+    throw new Error('COOKIE_SECRET environment variable is required for signed cookies');
+  }
+
   // allow origin https://localhost
   app.use((_req, res, next) => {
     res.header('Access-Control-Allow-Origin', 'https://localhost');
