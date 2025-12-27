@@ -16,6 +16,7 @@ const setAuth = require('./lib/gapis');
 
 global.ADMIN = 1;
 const app = express();
+const MIN_COOKIE_SECRET_LENGTH = 32;
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
@@ -31,10 +32,11 @@ async function main() {
   await setAuth();
 
   // Validate that COOKIE_SECRET is defined and has adequate length
-  if (!process.env.COOKIE_SECRET || process.env.COOKIE_SECRET.length < 32) {
-    const message = !process.env.COOKIE_SECRET
+  const secret = process.env.COOKIE_SECRET?.trim();
+  if (!secret || secret.length < MIN_COOKIE_SECRET_LENGTH) {
+    const message = !secret
       ? 'COOKIE_SECRET environment variable is required for signed cookies'
-      : 'COOKIE_SECRET must be at least 32 characters long for adequate security';
+      : `COOKIE_SECRET must be at least ${MIN_COOKIE_SECRET_LENGTH} characters long for adequate security`;
     throw new Error(message);
   }
 
