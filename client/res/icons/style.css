@@ -1,5 +1,6 @@
 @font-face {
   font-family: "acode";
+  src: url("fonts/acode.eot?gc6nhk");
   src: url("acode.ttf?gc6nhk") format("truetype");
   font-weight: normal;
   font-style: normal;
@@ -22,126 +23,126 @@
 }
 
 .certificate:before {
-  content: "e90d";
+  content: "\e90d";
 }
 .googleplay:before {
-  content: "e90f";
+  content: "\e90f";
   color: #607d8b;
 }
 .f-droid:before {
-  content: "e90e";
+  content: "\e90e";
   color: #1976d2;
 }
 .bitcoin:before {
-  content: "e90c";
+  content: "\e90c";
   color: #f7931a;
 }
 .github:before {
-  content: "e901";
+  content: "\e901";
 }
 .paypal:before {
-  content: "e905";
+  content: "\e905";
   color: #00457c;
 }
 .navigate_next:before {
-  content: "e90a";
+  content: "\e90a";
 }
 .navigate_before:before {
-  content: "e90b";
+  content: "\e90b";
 }
 .chevron_left:before {
-  content: "e90b";
+  content: "\e90b";
 }
 .verified:before {
-  content: "e909";
+  content: "\e909";
 }
 .star_outline:before {
-  content: "e906";
+  content: "\e906";
 }
 .star:before {
-  content: "e907";
+  content: "\e907";
 }
 .favorite:before {
-  content: "e908";
+  content: "\e908";
 }
 .account_balance:before {
-  content: "e904";
+  content: "\e904";
 }
 .warning:before {
-  content: "e903";
+  content: "\e903";
 }
 .chat_bubble:before {
-  content: "e96d";
+  content: "\e96d";
 }
 .add:before {
-  content: "e992";
+  content: "\e992";
 }
 .clear:before {
-  content: "e999";
+  content: "\e999";
 }
 .content_copy:before {
-  content: "e99a";
+  content: "\e99a";
 }
 .create:before {
-  content: "e99d";
+  content: "\e99d";
 }
 .flag:before {
-  content: "e9a0";
+  content: "\e9a0";
 }
 .report:before {
-  content: "e9ab";
+  content: "\e9ab";
 }
 .outlined_flag:before {
-  content: "e9b9";
+  content: "\e9b9";
 }
 .access_time:before {
-  content: "e9c7";
+  content: "\e9c7";
 }
 .publish:before {
-  content: "ea26";
+  content: "\ea26";
 }
 .download:before {
-  content: "ea46";
+  content: "\ea46";
 }
 .menu:before {
-  content: "eb58";
+  content: "\eb58";
 }
 .refresh:before {
-  content: "eb5b";
+  content: "\eb5b";
 }
 .person:before {
-  content: "ebad";
+  content: "\ebad";
 }
 .share:before {
-  content: "ebb3";
+  content: "\ebb3";
 }
 .delete:before {
-  content: "ebe1";
+  content: "\ebe1";
 }
 .done:before {
-  content: "ebe4";
+  content: "\ebe4";
 }
 .done_all:before {
-  content: "ebe5";
+  content: "\ebe5";
 }
 .thumb_down:before {
-  content: "ec34";
+  content: "\ec34";
 }
 .thumb_up:before {
-  content: "ec35";
+  content: "\ec35";
 }
 .logout:before {
-  content: "ece8";
+  content: "\ece8";
 }
 .thumb_down_alt:before {
-  content: "ed07";
+  content: "\ed07";
 }
 .thumb_up_alt:before {
-  content: "ed08";
+  content: "\ed08";
 }
 .mail:before {
-  content: "e902";
+  content: "\e902";
 }
 .earth:before {
-  content: "e900";
+  content: "\e900";
 }
