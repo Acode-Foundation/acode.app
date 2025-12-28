@@ -23,7 +23,7 @@ export default async function registerUser({ mode, redirect }) {
     }
   }
 
-  const callbackUrl = redirect || '/user';
+  // const callbackUrl = redirect || '/user'; // GitHub login disabled
 
   return (
     <section id='register-user'>
@@ -31,7 +31,8 @@ export default async function registerUser({ mode, redirect }) {
         <h1>{title}</h1>
         <p className='register-subtitle'>{subtitle}</p>
 
-        {mode !== 'edit' && (
+        {/* GitHub login temporarily disabled */}
+        {/* {mode !== 'edit' && (
           <>
             <div className='social-login'>
               <a href={`/api/oauth/github?callbackUrl=${encodeURIComponent(callbackUrl)}`} className='social-btn github'>
@@ -44,7 +45,7 @@ export default async function registerUser({ mode, redirect }) {
               <span>or register with email</span>
             </div>
           </>
-        )}
+        )} */}
 
         <AjaxForm
           loading={(form) => loadingStart(form, errorText, successText)}

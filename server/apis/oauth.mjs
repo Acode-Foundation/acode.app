@@ -137,7 +137,14 @@ async function handleOAuthCallback(req, res) {
 
     // return res.status(200).send(`Fetched From Github, Hello ${profile.username} (${profile.name})`);
 
-    const loginToken = await authenticateWithProvider(provider, profile, tokens);
+    let loginToken;
+    try {
+      loginToken = await authenticateWithProvider(provider, profile, tokens);
+    } catch (authError) {
+      console.error(`[OAuth Router] - Authentication error for provider (${provider}):`, authError.message);
+      // Redirect to login with the error message
+      return res.redirect(`${ERROR_REDIRECT_PATH}?error=account_exists&error_description=${encodeURIComponent(authError.message)}`);
+    }
 
     if (!loginToken) {
       res.status(500).send({ error: 'Session Token issuing failed for Social Login.' });

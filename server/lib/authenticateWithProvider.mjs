@@ -19,6 +19,7 @@ async function authenticateWithProvider(providerType, profile, tokens) {
 
   let userId;
 
+  // Check if this provider account is already linked to a user
   const existingLink = await authenticationProvider.get(
     [authenticationProvider.ID, authenticationProvider.USER_ID],
     [authenticationProvider.PROVIDER, providerType],
@@ -26,6 +27,7 @@ async function authenticateWithProvider(providerType, profile, tokens) {
   );
 
   if (existingLink.length > 0) {
+    // Provider account already linked - just update tokens and log in
     userId = existingLink[0].user_id;
 
     await authenticationProvider.update([
@@ -36,21 +38,41 @@ async function authenticateWithProvider(providerType, profile, tokens) {
       [authenticationProvider.SCOPE, tokens.scope || null],
     ]);
   } else {
-    // Atomic, race-safe upsert pattern for user
-    await User.insertOrIgnore(
+    // No existing link for this provider account
+    // Check if a user with this email already exists
+    const existingUser = await User.get([User.EMAIL, email]);
+
+    if (existingUser && existingUser.length > 0) {
+      // User with this email exists but is NOT linked to this provider account.
+      // This could be:
+      // 1. A user who registered with email/password
+      // 2. A user who registered with a different OAuth provider
+      // 3. A different person who happens to have access to a GitHub account with this email
+      //
+      // For security, we should NOT automatically link accounts.
+      // The user should explicitly link their accounts from their profile settings.
+      throw new Error(
+        `An account with email "${email}" already exists. Please log in with your original method and link your ${providerType} account from your profile settings.`,
+      );
+    }
+
+    // No existing user with this email - create a new user
+    await User.insert(
       [User.NAME, name],
       [User.EMAIL, email],
       [User.PASSWORD, ''],
       [User.WEBSITE, null],
       [User.GITHUB, providerType === 'github' ? username : null],
     );
-    // Always fetch the user after insert - ensures you get the correct id whether existing or new
+
+    // Fetch the newly created user
     const userRes = await User.get([User.EMAIL, email]);
     if (!userRes || userRes.length === 0) {
-      throw new Error(`Failed to retrieve user`);
+      throw new Error(`Failed to create user`);
     }
     userId = userRes[0].id;
 
+    // Create the provider link for the new user
     await authenticationProvider.insert(
       [authenticationProvider.USER_ID, userId],
       [authenticationProvider.PROVIDER, providerType],

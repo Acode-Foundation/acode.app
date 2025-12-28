@@ -15,7 +15,7 @@ export default function LoginUser({ redirect, error, error_description }) {
 
   canvas.onref = () => background(canvas.el);
 
-  const callbackUrl = redirect || '/user';
+  // const callbackUrl = redirect || '/user'; // GitHub login disabled
 
   return (
     <section id='user-login'>
@@ -29,8 +29,8 @@ export default function LoginUser({ redirect, error, error_description }) {
         <h1>Welcome Back</h1>
         <p className='login-subtitle'>Sign in to your account to continue</p>
 
-        {/* Social Login Buttons */}
-        <div className='social-login'>
+        {/* Social Login Buttons - Temporarily disabled */}
+        {/* <div className='social-login'>
           <a href={`/api/oauth/github?callbackUrl=${encodeURIComponent(callbackUrl)}`} className='social-btn btn-github'>
             <span className='icon github' />
             <span>Continue with GitHub</span>
@@ -39,7 +39,7 @@ export default function LoginUser({ redirect, error, error_description }) {
 
         <div className='divider'>
           <span>or sign in with email</span>
-        </div>
+        </div> */}
 
         <AjaxForm
           loading={onloadstart}
