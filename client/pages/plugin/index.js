@@ -105,21 +105,25 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           </div>
           <div className='info'>
             <span className='chip'>v {version}</span>
-            {+downloads
-              ? <div className='chip'>
-                  <span className='icon download' />
-                  <span>{downloads.toLocaleString()}</span>
-                </div>
-              : <div className='chip'>
-                  <span style={{ color: 'gold' }}>New</span>
-                </div>}
+            {+downloads ? (
+              <div className='chip'>
+                <span className='icon download' />
+                <span>{downloads.toLocaleString()}</span>
+              </div>
+            ) : (
+              <div className='chip'>
+                <span style={{ color: 'gold' }}>New</span>
+              </div>
+            )}
             <div className='chip'>
-              {price
-                ? <>
-                    <span style={{ marginRight: '10px' }}>&#8377;</span>
-                    <span>{price}</span>
-                  </>
-                : <span style={{ color: 'lightgreen' }}>Free</span>}
+              {price ? (
+                <>
+                  <span style={{ marginRight: '10px' }}>&#8377;</span>
+                  <span>{price}</span>
+                </>
+              ) : (
+                <span style={{ color: 'lightgreen' }}>Free</span>
+              )}
             </div>
             {commentCount > 0 && (
               <div className='chip' onclick={() => changeSection('comments')}>
@@ -402,11 +406,13 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
         <Input maxlength={250} type='textarea' name='comment' placeholder='Comment' value={comment} />
         <div className='buttons-container'>
           <button type='submit'>Submit</button>
-          {commentId
-            ? <button onclick={deleteUserComment} type='button' className='danger' title='Delete your review'>
-                <span className='icon delete' />
-              </button>
-            : ''}
+          {commentId ? (
+            <button onclick={deleteUserComment} type='button' className='danger' title='Delete your review'>
+              <span className='icon delete' />
+            </button>
+          ) : (
+            ''
+          )}
         </div>
       </AjaxForm>
 

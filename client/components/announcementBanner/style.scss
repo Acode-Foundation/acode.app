@@ -1,0 +1,240 @@
+.announcement-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  padding: 12px 20px;
+  box-sizing: border-box;
+  background: linear-gradient(135deg,
+      #1a1a2e 0%,
+      #16213e 25%,
+      #0f3460 50%,
+      #1a1a2e 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.05),
+        transparent);
+    animation: shimmer 3s infinite;
+  }
+
+  &:hover {
+    background-size: 250% 250%;
+
+    .announcement-banner__cta {
+      transform: translateX(5px);
+    }
+
+    .announcement-banner__arrow {
+      transform: translateX(3px);
+    }
+  }
+
+  &.hidden {
+    display: none;
+  }
+
+  @keyframes gradientShift {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      left: -100%;
+    }
+
+    100% {
+      left: 100%;
+    }
+  }
+
+  &__content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 1200px;
+    z-index: 1;
+  }
+
+  &__logo-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 4px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+
+  &__logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    border-radius: 6px;
+  }
+
+  &__text {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__new-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #e94560, #ff6b6b);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 10px rgba(233, 69, 96, 0.4);
+  }
+
+  &__title {
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  &__subtitle {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.85rem;
+    font-weight: 400;
+  }
+
+  &__cta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #00d2d3, #54a0ff);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 210, 211, 0.3);
+    white-space: nowrap;
+  }
+
+  &__cta-text {
+    letter-spacing: 0.5px;
+  }
+
+  &__arrow {
+    font-size: 1rem;
+    transition: transform 0.3s ease;
+  }
+
+  // Responsive styles
+  @media screen and (max-width: 768px) {
+    padding: 10px 16px;
+
+    &__content {
+      gap: 12px;
+    }
+
+    &__logo-wrapper {
+      width: 32px;
+      height: 32px;
+    }
+
+    &__logo {
+      width: 24px;
+      height: 24px;
+    }
+
+    &__text {
+      gap: 8px;
+    }
+
+    &__new-badge {
+      padding: 3px 8px;
+      font-size: 0.6rem;
+    }
+
+    &__title {
+      font-size: 0.85rem;
+    }
+
+    &__subtitle {
+      display: none;
+    }
+
+    &__cta {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    padding: 8px 12px;
+
+    &__content {
+      gap: 8px;
+    }
+
+    &__logo-wrapper {
+      width: 28px;
+      height: 28px;
+      padding: 3px;
+    }
+
+    &__logo {
+      width: 20px;
+      height: 20px;
+    }
+
+    &__new-badge {
+      display: none;
+    }
+
+    &__title {
+      font-size: 0.8rem;
+    }
+
+    &__cta {
+      padding: 5px 10px;
+      font-size: 0.7rem;
+      gap: 4px;
+    }
+
+    &__arrow {
+      font-size: 0.85rem;
+    }
+  }
+}

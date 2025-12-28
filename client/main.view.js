@@ -1,3 +1,4 @@
+import AnnouncementBanner from 'components/announcementBanner';
 import $loginText from 'components/loginText';
 import './main.scss';
 import digitalOceanLogo from 'res/digitalocean-icon.svg';
@@ -5,6 +6,7 @@ import logo from 'res/logo.svg';
 
 export default ({ routes }) => (
   <>
+    <AnnouncementBanner />
     <header id='main-header' data-name='header'>
       <label attr-for='menu-toggler' className='icon menu' />
       <nav>

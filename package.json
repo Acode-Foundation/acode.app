@@ -61,7 +61,7 @@
   "scripts": {
     "prepare": "husky",
     "config-build": "node ./dev/config",
-    "build": "yarn config-build p && webpack --mode production",
+    "build": "npm run config-build p && webpack --mode production",
     "dev": "node ./dev/start-dev",
     "update-schema": "node ./updateSchema",
     "start": "node ./server/main",
