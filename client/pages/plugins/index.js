@@ -13,83 +13,65 @@ export default async function PluginList({ filter }) {
 
   plugins.onref = renderPlugins.bind(null, filter);
   return (
-    <section id='plugins'>
-      <div className='plugins-header'>
-        <div className='header-content'>
-          <h1 ref={title}>Explore Plugins</h1>
-          <p className='header-subtitle'>Discover powerful plugins to enhance your Acode experience</p>
-        </div>
-
-        <div className='search-container'>
-          <div className='search-wrapper'>
-            <span className='icon search-icon'>&#xe9a7;</span>
-            <Input
-              oninput={(e) => {
-                clearTimeout(changeTimeout);
-                changeTimeout = setTimeout(() => {
-                  plugins.el.content = <Plugins name={e.target.value} />;
-                }, 500);
-              }}
-              type='search'
-              name='search'
-              placeholder='Search plugins...'
-              label=''
-            />
-          </div>
-        </div>
-
-        <div className='filter-tabs'>
-          {loggedInUser?.isAdmin && (
-            <div className='admin-filters'>
-              <button type='button' className='filter-chip' onclick={updatePlugins} data-filter='all'>
-                All
-              </button>
-              <button type='button' className='filter-chip' onclick={updatePlugins} data-filter='approved'>
-                Approved
-              </button>
-              <button type='button' className='filter-chip' onclick={updatePlugins} data-filter='pending'>
-                Pending
-              </button>
-              <button type='button' className='filter-chip' onclick={updatePlugins} data-filter='rejected'>
-                Rejected
-              </button>
-              <button type='button' className='filter-chip' onclick={updatePlugins} data-filter='deleted'>
-                Deleted
-              </button>
-            </div>
-          )}
-          <div className='sort-filters'>
-            <button type='button' className='filter-chip active' onclick={updatePlugins} data-filter='newest'>
-              <span className='icon access_time' />
-              Newest
-            </button>
-            <button type='button' className='filter-chip' onclick={updatePlugins} data-filter='downloads'>
-              <span className='icon download' />
-              Most Downloaded
-            </button>
-          </div>
-        </div>
+    <section style={{ padding: '20px 0' }} id='plugins'>
+      <div className='header'>
+        <h1 style={{ textAlign: 'center' }} ref={title}>
+          Plugins
+        </h1>
+        {loggedInUser?.isAdmin && (
+          <nav>
+            <span className='link' onclick={updatePlugins} data-filter='all'>
+              All
+            </span>
+            <span className='link' onclick={updatePlugins} data-filter='approved'>
+              Approved
+            </span>
+            <span className='link' onclick={updatePlugins} data-filter='pending'>
+              Pending
+            </span>
+            <span className='link' onclick={updatePlugins} data-filter='rejected'>
+              Rejected
+            </span>
+            <span className='link' onclick={updatePlugins} data-filter='deleted'>
+              Deleted
+            </span>
+          </nav>
+        )}
+        <nav>
+          <span className='link' onclick={updatePlugins} data-filter='newest'>
+            New
+          </span>
+          <span className='link' onclick={updatePlugins} data-filter='downloads'>
+            Most Downloaded
+          </span>
+        </nav>
+        <nav>
+          <Input
+            oninput={(e) => {
+              clearTimeout(changeTimeout);
+              changeTimeout = setTimeout(() => {
+                plugins.el.content = <Plugins name={e.target.value} />;
+              }, 500);
+            }}
+            type='search'
+            name='search'
+            placeholder='e.g. lint'
+            label='Search'
+          />
+        </nav>
       </div>
-
       <div ref={plugins} className='plugins-container' />
     </section>
   );
 
   function updatePlugins(e) {
-    // Remove active class from all chips and add to clicked one
-    const allChips = document.querySelectorAll('.sort-filters .filter-chip');
-    for (const chip of allChips) {
-      chip.classList.remove('active');
-    }
-    e.target.closest('.filter-chip')?.classList.add('active');
-
-    filter = e.target.closest('.filter-chip')?.dataset.filter || e.target.dataset.filter;
+    filter = e.target.dataset.filter;
     Router.setUrl(`/plugins?filter=${filter}`);
     renderPlugins();
   }
 
   function renderPlugins() {
-    let titleText = 'Explore Plugins';
+    let titleText = 'Plugins';
     let orderBy;
     if (filter === 'approved') {
       titleText = 'Approved Plugins';

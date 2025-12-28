@@ -9,50 +9,33 @@
     text-align: center;
     width: 100%;
     margin: 10px;
-    font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.6);
   }
 
   .plugin {
-    width: calc(33.33% - 20px);
+    width: calc(33% - 30px);
     min-width: 250px;
-    margin: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 10px 0 0 10px;
+    background-color: var(--secondary-color);
     color: var(--secondary-text-color);
-    padding: 16px;
+    padding: 10px;
     text-align: center;
-    border-radius: 16px;
+    border-radius: 4px;
     text-decoration: none;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
 
     h2 {
-      margin-bottom: 8px;
-      font-size: 1.1rem;
-      font-weight: 600;
+      margin-bottom: 5px;
     }
 
     @media screen and (max-width: 925px) {
-      width: calc(50% - 20px);
+      width: calc(50% - 35px);
     }
 
     @media screen and (max-width: 600px) {
-      width: calc(100% - 20px);
+      width: calc(100% - 40px);
     }
 
     &:hover {
-      transform: translateY(-4px);
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(51, 153, 255, 0.3);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-
-      .plugin-icon {
-        transform: scale(1.05);
-      }
+      box-shadow: -2px 2px 12px 2px rgba($color: #000000, $alpha: 0.4);
     }
 
     .plugin-icon {
@@ -62,193 +45,36 @@
       background-position: center;
       background-size: 100px;
       margin: auto;
-      border-radius: 16px;
-      transition: transform 0.3s ease;
-    }
-
-    .plugin-info {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-
-      >p {
-        margin: 4px 0;
-        font-size: 0.85rem;
-        color: rgba(255, 255, 255, 0.5);
-      }
-
-      >small {
-        font-size: 0.75rem;
-        color: rgba(255, 255, 255, 0.4);
-      }
-    }
-
-    .plugin-actions {
-      margin-top: auto;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-
-      &:empty {
-        display: none;
-      }
-
-      .action-btn {
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.08);
-        transition: all 0.2s ease;
-        cursor: pointer;
-
-        .icon {
-          margin: 0;
-        }
-
-        &:hover {
-          background: rgba(255, 255, 255, 0.15);
-          transform: scale(1.1);
-        }
-
-        &.btn-delete:hover {
-          background: rgba(255, 85, 51, 0.2);
-          color: #ff5533;
-        }
-
-        &.btn-edit:hover {
-          background: rgba(51, 153, 255, 0.2);
-          color: #3399ff;
-        }
-      }
-
-      .status-btn {
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        &.pending {
-          background: linear-gradient(135deg, #3399ff 0%, #2277dd 100%);
-          color: white;
-          border: none;
-
-          &:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(51, 153, 255, 0.4);
-          }
-        }
-
-        &.approved {
-          background: rgba(51, 255, 153, 0.15);
-          color: #33ff99;
-          border: 1px solid rgba(51, 255, 153, 0.3);
-
-          &:hover {
-            background: rgba(51, 255, 153, 0.25);
-            transform: scale(1.05);
-          }
-        }
-
-        &.rejected {
-          background: rgba(255, 85, 51, 0.15);
-          color: #ff5533;
-          border: 1px solid rgba(255, 85, 51, 0.3);
-
-          &:hover {
-            background: rgba(255, 85, 51, 0.25);
-          }
-        }
-      }
-    }
-
-    .icon-buttons {
-      margin-top: auto;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-
-      .icon {
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.08);
-        transition: all 0.2s ease;
-
-        &:hover {
-          background: rgba(255, 255, 255, 0.15);
-          transform: scale(1.1);
-        }
-
-        &.danger:hover {
-          background: rgba(255, 85, 51, 0.2);
-        }
-      }
     }
   }
 
   .info {
     display: flex;
     justify-content: center;
-    flex-wrap: wrap;
-    gap: 6px 0;
     cursor: default;
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.7);
 
     >*:not(:last-child)::after {
       content: '•';
       font-weight: bolder;
-      margin: 0 8px;
-      color: rgba(255, 255, 255, 0.3);
+      margin: 0 5px;
     }
   }
 
   .status-indicator {
-    text-transform: uppercase;
+    text-transform: capitalize;
     cursor: pointer;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    transition: all 0.2s ease;
-
-    &:hover {
-      transform: scale(1.05);
-    }
   }
 
   .pending {
-    color: #ffaa33;
-    background: rgba(255, 170, 51, 0.15);
-    border: 1px solid rgba(255, 170, 51, 0.3);
+    color: #39f;
   }
 
   .approved {
-    color: #33ff99;
-    background: rgba(51, 255, 153, 0.15);
-    border: 1px solid rgba(51, 255, 153, 0.3);
+    color: #3f9;
   }
 
   .deleted,
   .rejected {
-    color: #ff5533;
-    background: rgba(255, 85, 51, 0.15);
-    border: 1px solid rgba(255, 85, 51, 0.3);
+    color: #f33;
   }
 }

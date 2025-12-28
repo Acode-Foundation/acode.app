@@ -4,7 +4,6 @@ const db = require('../lib/db');
 
 const apis = Router();
 
-// Synchronously register all CommonJS routes
 apis.use('/user', require('../apis/user'));
 apis.use('/login', require('../apis/login'));
 apis.use(['/plugin', '/plugins'], require('../apis/plugin'));
@@ -14,23 +13,6 @@ apis.use(['/comments', '/comment'], require('../apis/comment'));
 apis.use('/faqs', require('../apis/faqs'));
 apis.use('/admin', require('../apis/admin'));
 apis.use(['/sponsor', '/sponsors'], require('../apis/sponsor'));
-
-// Asynchronously load OAuth ES6 module
-const oauthPromise = import('../apis/oauth.mjs')
-  .then((oauthModule) => {
-    apis.use('/oauth', oauthModule.default);
-    console.log('OAuth module loaded successfully');
-    return oauthModule;
-  })
-  .catch((err) => {
-    console.error('Failed to load OAuth module:', err);
-    throw err;
-  });
-
-// Export both the router and the initialization promise
-module.exports = apis;
-module.exports.oauthReady = oauthPromise;
-
 // apis.use('/completion', require('../apis/completion'));
 
 apis.get('/status', (_req, res) => {

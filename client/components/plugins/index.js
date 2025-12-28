@@ -75,6 +75,11 @@ function Plugin({
           <div title='Downloads counter'>
             {downloads.toLocaleString()} <span className='icon download' />
           </div>
+          {Boolean(status) && (
+            <span data-id={id} onclick={isAdmin ? changePluginStatus : undefined} title='Plugin status' className={`status-indicator ${status}`}>
+              {status}
+            </span>
+          )}
           <div>{calcRating(upVotes, downVotes)}</div>
           {comments > 0 && (
             <div>
@@ -89,7 +94,7 @@ function Plugin({
           </small>
         </p>
         <small>{updatedAt ? `Updated ${since(updatedAt)}` : ' '}</small>
-        <Actions id={id} isAdmin={isAdmin} user={userId} pluginsUser={pluginUser} status={status} />
+        <Actions id={id} isAdmin={isAdmin} user={userId} pluginsUser={pluginUser} />
       </div>
     </a>
   );
@@ -192,29 +197,13 @@ async function changePluginStatus(e) {
   }
 }
 
-function Actions({ user, pluginsUser, id, isAdmin, status }) {
-  const $el = <div className='plugin-actions' />;
-  const $delete = (
-    <span title='delete plugin' className='action-btn btn-delete' onclick={(e) => deletePlugin(e, id)}>
-      <span className='icon delete' />
-    </span>
-  );
+function Actions({ user, pluginsUser, id, isAdmin }) {
+  const $el = <small className='icon-buttons' />;
+  const $delete = <span title='delete plugin' className='link icon delete danger' onclick={(e) => deletePlugin(e, id)} />;
 
   if (user && user === pluginsUser) {
-    $el.append(
-      <span title='edit plugin' className='action-btn btn-edit' onclick={(e) => edit(e, id)}>
-        <span className='icon create' />
-      </span>,
-      $delete,
-    );
+    $el.append(<span title='edit plugin' className='link icon create' onclick={(e) => edit(e, id)} />, $delete);
   } else if (isAdmin) {
-    if (status) {
-      $el.append(
-        <span data-id={id} onclick={changePluginStatus} title='Change plugin status' className={`status-btn ${status}`}>
-          {status === 'pending' ? 'Approve' : status}
-        </span>,
-      );
-    }
     $el.append($delete);
   }
 

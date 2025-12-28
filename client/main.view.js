@@ -5,15 +5,6 @@ import logo from 'res/logo.svg';
 
 export default ({ routes }) => (
   <>
-    <a href='https://betterkeep.app/welcome' target='_blank' rel='noopener noreferrer' className='announcement-bar'>
-      <img src='https://betterkeep.app/icons/logo.png' alt='Better Keep' className='announcement-logo' />
-      <span className='announcement-text'>
-        <strong>Better Keep Notes</strong> — Your Notes, Reimagined. <span className='announcement-trust'>From the makers of Acode</span>
-      </span>
-      <span className='announcement-cta'>
-        Try Now <span className='icon arrow_forward' />
-      </span>
-    </a>
     <header id='main-header' data-name='header'>
       <label attr-for='menu-toggler' className='icon menu' />
       <nav>
