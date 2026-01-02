@@ -53,11 +53,9 @@ export default async function registerUser({ mode, redirect }) {
 
         <Input value={user.github} type='text' name='github' label='Github' placeholder='e.g. johndoe' />
         <Input value={user.website} type='url' name='website' label='Website' placeholder='e.g. https://john.dev' />
-        {mode === 'edit' ? (
-          <a href='/change-password'>Change password</a>
-        ) : (
-          <Input type='password' name='password' label='Password' placeholder='password' />
-        )}
+        {mode === 'edit'
+          ? <a href='/change-password'>Change password</a>
+          : <Input type='password' name='password' label='Password' placeholder='password' />}
 
         <div className='error'>{errorText}</div>
         <div className='success'>{successText}</div>

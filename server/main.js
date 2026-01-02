@@ -32,6 +32,7 @@ async function main() {
     res.header('Access-Control-Allow-Origin', 'https://localhost');
     // allow content-type
     res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Access-Control-Allow-Credentials', 'true');
     next();
   });
 

@@ -13,6 +13,7 @@ apis.use(['/comments', '/comment'], require('../apis/comment'));
 apis.use('/faqs', require('../apis/faqs'));
 apis.use('/admin', require('../apis/admin'));
 apis.use(['/sponsor', '/sponsors'], require('../apis/sponsor'));
+apis.use('/razorpay', require('../apis/razorpay'));
 // apis.use('/completion', require('../apis/completion'));
 
 apis.get('/status', (_req, res) => {

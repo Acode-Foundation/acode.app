@@ -29,8 +29,7 @@
         "noDelete": "warn"
       },
       "complexity": {
-        "noForEach": "warn",
-        "noImportantStyles": "off"
+        "noForEach": "warn"
       },
       "suspicious": {
         "noConsole": { "level": "error", "options": { "allow": ["error"] } }
