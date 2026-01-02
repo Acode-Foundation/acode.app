@@ -37,7 +37,8 @@ export async function checkPluginOwnership(pluginId) {
     const res = await fetch(`/api/razorpay/check-ownership/${pluginId}`);
     const data = await res.json();
     return data.owned === true;
-  } catch {
+  } catch (error) {
+    console.error('Failed to check plugin ownership:', error);
     return false;
   }
 }
@@ -63,9 +64,10 @@ const RAZORPAY_CONFIG = {
  * @param {string} [userInfo.email] - User's email address
  * @param {string} [userInfo.name] - User's name
  * @param {Function} onSuccess - Callback on successful payment
+ * @param {Function} [onCancel] - Callback when checkout is cancelled
  * @returns {Promise<void>}
  */
-export async function initiateCheckout(pluginId, userInfo = {}, onSuccess) {
+export async function initiateCheckout(pluginId, userInfo = {}, onSuccess, onCancel) {
   try {
     // Load Razorpay script if not already loaded
     await loadRazorpayScript();
@@ -135,7 +137,7 @@ export async function initiateCheckout(pluginId, userInfo = {}, onSuccess) {
         escape: true, // Allow ESC to close
         animation: true, // Enable animations
         ondismiss: () => {
-          // Checkout closed by user
+          if (onCancel) onCancel();
         },
       },
       // Additional checkout preferences
@@ -173,19 +175,19 @@ export default function BuyButton({ pluginId, price, user, onPurchaseComplete })
     buttonRef.el.disabled = true;
     buttonTextRef.el.textContent = 'Processing...';
 
-    // Pass user info for email prefill
-    const userInfo = user ? { email: user.email, name: user.name } : {};
-    await initiateCheckout(pluginId, userInfo, () => {
+    const handleSuccess = () => {
       buttonTextRef.el.textContent = 'Purchased ✓';
       buttonRef.el.disabled = true;
       if (onPurchaseComplete) onPurchaseComplete();
-    });
+    };
 
-    // Reset button if payment was cancelled
-    if (buttonTextRef.el.textContent === 'Processing...') {
+    const handleCancel = () => {
       buttonTextRef.el.textContent = `Buy ₹${price}`;
       buttonRef.el.disabled = false;
-    }
+    };
+
+    const userInfo = user ? { email: user.email, name: user.name } : {};
+    await initiateCheckout(pluginId, userInfo, handleSuccess, handleCancel);
   };
 
   return (

@@ -60,6 +60,38 @@ router.get('/download/:id', async (req, res) => {
 
     const clientIp = req.headers['x-forwarded-for'] || req.ip;
 
+    /**
+     * Helper function to record plugin download
+     * @param {string} pkgName - Package name (or 'web' for web downloads)
+     */
+    async function recordDownload(pkgName) {
+      try {
+        if (!device || !clientIp || !pkgName) return;
+        const columns = [
+          [Download.PLUGIN_ID, id],
+          [Download.DEVICE_ID, device],
+          [Download.CLIENT_IP, clientIp],
+          [Download.PACKAGE_NAME, pkgName],
+        ];
+        const deviceCountOnIp = await Download.count([
+          [Download.CLIENT_IP, clientIp],
+          [Download.PLUGIN_ID, id],
+        ]);
+        if (deviceCountOnIp < 5) {
+          const [download] = await Download.get([
+            [Download.PLUGIN_ID, id],
+            [Download.DEVICE_ID, device],
+          ]);
+          if (!download) {
+            await Download.insert(...columns);
+            await Plugin.increment(Plugin.DOWNLOADS, 1, [Plugin.ID, id]);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to record download:', error);
+      }
+    }
+
     if (row.price) {
       const loggedInUser = await getLoggedInUser(req);
 
@@ -73,32 +105,7 @@ router.get('/download/:id', async (req, res) => {
         if (userOrder) {
           // User has valid purchase, allow download
           res.sendFile(path.resolve(__dirname, '../../data/plugins', `${id}.zip`));
-          try {
-            if (device && clientIp && packageName) {
-              const columns = [
-                [Download.PLUGIN_ID, id],
-                [Download.DEVICE_ID, device],
-                [Download.CLIENT_IP, clientIp],
-                [Download.PACKAGE_NAME, packageName || 'web'],
-              ];
-              const deviceCountOnIp = await Download.count([
-                [Download.CLIENT_IP, clientIp],
-                [Download.PLUGIN_ID, id],
-              ]);
-              if (deviceCountOnIp < 5) {
-                const [download] = await Download.get([
-                  [Download.PLUGIN_ID, id],
-                  [Download.DEVICE_ID, device],
-                ]);
-                if (!download) {
-                  await Download.insert(...columns);
-                  await Plugin.increment(Plugin.DOWNLOADS, 1, [Plugin.ID, id]);
-                }
-              }
-            }
-          } catch (error) {
-            console.error(error);
-          }
+          await recordDownload(packageName || 'web');
           return;
         }
       }
@@ -145,33 +152,7 @@ router.get('/download/:id', async (req, res) => {
     }
 
     res.sendFile(path.resolve(__dirname, '../../data/plugins', `${id}.zip`));
-    try {
-      if (device && clientIp && packageName) {
-        const columns = [
-          [Download.PLUGIN_ID, id],
-          [Download.DEVICE_ID, device],
-          [Download.CLIENT_IP, clientIp],
-          [Download.PACKAGE_NAME, packageName],
-        ];
-        const deviceCountOnIp = await Download.count([
-          [Download.CLIENT_IP, clientIp],
-          [Download.PLUGIN_ID, id],
-        ]);
-        if (deviceCountOnIp < 5) {
-          const [download] = await Download.get([
-            [Download.PLUGIN_ID, id],
-            [Download.DEVICE_ID, device],
-          ]);
-          if (!download) {
-            await Download.insert(...columns);
-            await Plugin.increment(Plugin.DOWNLOADS, 1, [Plugin.ID, id]);
-          }
-        }
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error);
-    }
+    await recordDownload(packageName);
   } catch (error) {
     res.status(500).send({ error: error.message });
   }
