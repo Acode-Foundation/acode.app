@@ -260,12 +260,13 @@ router.post('/webhook', async (req, res) => {
       return;
     }
 
-    // Verify webhook signature
+    // req.body is a raw Buffer when using express.raw() middleware
+    const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body));
+
+    // Verify webhook signature using raw body
     if (webhookSecret) {
       const signature = req.headers['x-razorpay-signature'];
-      const body = JSON.stringify(req.body);
-
-      const expectedSignature = crypto.createHmac('sha256', webhookSecret).update(body).digest('hex');
+      const expectedSignature = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
 
       if (signature !== expectedSignature) {
         console.warn('Webhook signature verification failed');
@@ -274,8 +275,8 @@ router.post('/webhook', async (req, res) => {
       }
     }
 
-    const { event, payload } = req.body;
-    console.log(`Razorpay webhook received: ${event}`);
+    // Parse the raw body to get event data
+    const { event, payload } = JSON.parse(rawBody.toString());
 
     switch (event) {
       case 'payment.captured': {
