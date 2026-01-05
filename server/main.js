@@ -44,6 +44,9 @@ async function main() {
       },
     }),
   );
+
+  app.use('/api/razorpay/webhook', express.raw({ type: 'application/json' }));
+
   app.use(
     express.json({
       limit: '50mb',
