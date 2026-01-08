@@ -21,127 +21,127 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-.certificate:before {
+.icon.certificate:before {
   content: "\e90d";
 }
-.googleplay:before {
+.icon.googleplay:before {
   content: "\e90f";
   color: #607d8b;
 }
-.f-droid:before {
+.icon.f-droid:before {
   content: "\e90e";
   color: #1976d2;
 }
-.bitcoin:before {
+.icon.bitcoin:before {
   content: "\e90c";
   color: #f7931a;
 }
-.github:before {
+.icon.github:before {
   content: "\e901";
 }
-.paypal:before {
+.icon.paypal:before {
   content: "\e905";
   color: #00457c;
 }
-.navigate_next:before {
+.icon.navigate_next:before {
   content: "\e90a";
 }
-.navigate_before:before {
+.icon.navigate_before:before {
   content: "\e90b";
 }
-.chevron_left:before {
+.icon.chevron_left:before {
   content: "\e90b";
 }
-.verified:before {
+.icon.verified:before {
   content: "\e909";
 }
-.star_outline:before {
+.icon.star_outline:before {
   content: "\e906";
 }
-.star:before {
+.icon.star:before {
   content: "\e907";
 }
-.favorite:before {
+.icon.favorite:before {
   content: "\e908";
 }
-.account_balance:before {
+.icon.account_balance:before {
   content: "\e904";
 }
-.warning:before {
+.icon.warning:before {
   content: "\e903";
 }
-.chat_bubble:before {
+.icon.chat_bubble:before {
   content: "\e96d";
 }
-.add:before {
+.icon.add:before {
   content: "\e992";
 }
-.clear:before {
+.icon.clear:before {
   content: "\e999";
 }
-.content_copy:before {
+.icon.content_copy:before {
   content: "\e99a";
 }
-.create:before {
+.icon.create:before {
   content: "\e99d";
 }
-.flag:before {
+.icon.flag:before {
   content: "\e9a0";
 }
-.report:before {
+.icon.report:before {
   content: "\e9ab";
 }
-.outlined_flag:before {
+.icon.outlined_flag:before {
   content: "\e9b9";
 }
-.access_time:before {
+.icon.access_time:before {
   content: "\e9c7";
 }
-.publish:before {
+.icon.publish:before {
   content: "\ea26";
 }
-.download:before {
+.icon.download:before {
   content: "\ea46";
 }
-.menu:before {
+.icon.menu:before {
   content: "\eb58";
 }
-.refresh:before {
+.icon.refresh:before {
   content: "\eb5b";
 }
-.person:before {
+.icon.person:before {
   content: "\ebad";
 }
-.share:before {
+.icon.share:before {
   content: "\ebb3";
 }
-.delete:before {
+.icon.delete:before {
   content: "\ebe1";
 }
-.done:before {
+.icon.done:before {
   content: "\ebe4";
 }
-.done_all:before {
+.icon.done_all:before {
   content: "\ebe5";
 }
-.thumb_down:before {
+.icon.thumb_down:before {
   content: "\ec34";
 }
-.thumb_up:before {
+.icon.thumb_up:before {
   content: "\ec35";
 }
-.logout:before {
+.icon.logout:before {
   content: "\ece8";
 }
-.thumb_down_alt:before {
+.icon.thumb_down_alt:before {
   content: "\ed07";
 }
-.thumb_up_alt:before {
+.icon.thumb_up_alt:before {
   content: "\ed08";
 }
-.mail:before {
+.icon.mail:before {
   content: "\e902";
 }
-.earth:before {
+.icon.earth:before {
   content: "\e900";
 }
