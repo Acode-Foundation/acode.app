@@ -1,12 +1,13 @@
 .announcement-banner {
-  z-index: 9;
+  z-index: 100;
   margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  position: sticky;
+  top: 0;
   width: 100%;
-  padding: 12px 20px;
+  padding: 12px 50px 12px 20px;
   box-sizing: border-box;
   background: linear-gradient(135deg,
       #1a1a2e 0%,
@@ -20,6 +21,10 @@
   overflow: hidden;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   transition: background 0.5s ease, background-size 0.3s ease;
+
+  &[data-visible='true']+header {
+    top: 60px;
+  }
 
   // Hanging Piece theme - chess-inspired dark green
   &--hangingpiece {
@@ -72,6 +77,42 @@
 
   &.hidden {
     display: none;
+  }
+
+  &__close {
+    position: absolute;
+    right: 12px;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 2;
+    padding: 0;
+
+    .icon {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+
+      .icon {
+        color: #fff;
+      }
+    }
   }
 
   @keyframes gradientShift {

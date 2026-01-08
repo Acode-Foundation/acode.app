@@ -37,9 +37,15 @@ export default function AnnouncementBanner() {
   const $subtitle = <span className='announcement-banner__subtitle' />;
   const $ctaText = <span className='announcement-banner__cta-text' />;
 
+  const $closeBtn = (
+    <button type='button' className='announcement-banner__close' aria-label='Close announcement'>
+      <span className='icon clear' />
+    </button>
+  );
+
   const $link = (
     // biome-ignore lint/a11y/useValidAnchor: URL is dynamic
-    <a target='_blank' rel='noopener noreferrer' className='announcement-banner'>
+    <a target='_blank' rel='noopener noreferrer' data-visible='true' className='announcement-banner'>
       <div className='announcement-banner__content'>
         <div className='announcement-banner__logo-wrapper'>{$logo}</div>
         <div className='announcement-banner__text'>
@@ -57,8 +63,41 @@ export default function AnnouncementBanner() {
           <span className={`announcement-banner__indicator ${index === 0 ? 'active' : ''}`} data-index={index} />
         ))}
       </div>
+      {$closeBtn}
     </a>
   );
+
+  let intervalId;
+
+  const updateHeaderTop = (bannerVisible) => {
+    const header = document.getElementById('main-header');
+    if (header) {
+      if (bannerVisible) {
+        const bannerHeight = $link.offsetHeight;
+        header.style.top = `${bannerHeight}px`;
+      } else {
+        header.style.top = '0';
+      }
+    }
+  };
+
+  $closeBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    $link.classList.add('hidden');
+    clearInterval(intervalId);
+    sessionStorage.setItem('announcement-banner-closed', 'true');
+    updateHeaderTop(false);
+    $link.removeAttribute('data-visible');
+  });
+
+  // Check if banner was closed in this session
+  if (sessionStorage.getItem('announcement-banner-closed') === 'true') {
+    $link.classList.add('hidden');
+  } else {
+    // Set header top after banner is rendered
+    requestAnimationFrame(() => updateHeaderTop(true));
+  }
 
   const $content = $link.querySelector('.announcement-banner__content');
 
@@ -105,7 +144,7 @@ export default function AnnouncementBanner() {
   updateBanner(0);
 
   // Toggle banners periodically
-  setInterval(() => {
+  intervalId = setInterval(() => {
     currentIndex = (currentIndex + 1) % BANNERS.length;
     updateBanner(currentIndex, true);
   }, TOGGLE_INTERVAL);
