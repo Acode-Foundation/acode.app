@@ -1,10 +1,13 @@
 .announcement-banner {
+  z-index: 100;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  position: sticky;
+  top: 0;
   width: 100%;
-  padding: 12px 20px;
+  padding: 12px 50px 12px 20px;
   box-sizing: border-box;
   background: linear-gradient(135deg,
       #1a1a2e 0%,
@@ -17,7 +20,34 @@
   cursor: pointer;
   overflow: hidden;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
+  transition: background 0.5s ease, background-size 0.3s ease;
+
+  &[data-visible='true']+header {
+    top: 60px;
+  }
+
+  // Hanging Piece theme - chess-inspired dark green
+  &--hangingpiece {
+    background: linear-gradient(135deg,
+        #1a1a1a 0%,
+        #2d2d2d 25%,
+        #1e3a2f 50%,
+        #1a1a1a 100%);
+
+    .announcement-banner__new-badge {
+      background: #009966;
+      box-shadow: 0 2px 10px rgba(0, 153, 102, 0.4);
+    }
+
+    .announcement-banner__cta {
+      background: #009966;
+      box-shadow: 0 4px 15px rgba(0, 153, 102, 0.3);
+    }
+
+    .announcement-banner__logo-wrapper {
+      background: rgba(0, 153, 102, 0.15);
+    }
+  }
 
   &::before {
     content: '';
@@ -49,6 +79,42 @@
     display: none;
   }
 
+  &__close {
+    position: absolute;
+    right: 12px;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 2;
+    padding: 0;
+
+    .icon {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+
+      .icon {
+        color: #fff;
+      }
+    }
+  }
+
   @keyframes gradientShift {
     0% {
       background-position: 0% 50%;
@@ -73,7 +139,41 @@
     }
   }
 
+  @keyframes slideOutLeft {
+    0% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+  }
+
+  @keyframes slideInRight {
+    0% {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
   &__content {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+
+    &.slide-out {
+      animation: slideOutLeft 0.3s ease forwards;
+    }
+
+    &.slide-in {
+      animation: slideInRight 0.3s ease forwards;
+    }
+
     display: flex;
     align-items: center;
     gap: 16px;
@@ -90,14 +190,14 @@
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
-    padding: 4px;
+    // padding: 4px;
     flex-shrink: 0;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   }
 
   &__logo {
-    width: 28px;
-    height: 28px;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
     border-radius: 6px;
   }
@@ -160,6 +260,29 @@
     transition: transform 0.3s ease;
   }
 
+  &__indicators {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 2;
+  }
+
+  &__indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+
+    &.active {
+      background: rgba(255, 255, 255, 0.9);
+      transform: scale(1.2);
+    }
+  }
+
   // Responsive styles
   @media screen and (max-width: 768px) {
     padding: 10px 16px;
@@ -215,8 +338,8 @@
     }
 
     &__logo {
-      width: 20px;
-      height: 20px;
+      width: 100%;
+      height: 100%;
     }
 
     &__new-badge {
