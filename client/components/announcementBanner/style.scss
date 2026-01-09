@@ -287,6 +287,10 @@
   @media screen and (max-width: 768px) {
     padding: 10px 16px;
 
+    &[data-visible='true']+header {
+      top: 50px;
+    }
+
     &__content {
       gap: 12px;
     }
