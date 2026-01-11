@@ -44,7 +44,13 @@ async function runMigration() {
   }
 
   console.log('Migration completed successfully!');
-  process.exit(0);
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err);
+      process.exit(1);
+    }
+    process.exit(0);
+  });
 }
 
 runMigration();

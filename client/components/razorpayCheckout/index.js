@@ -98,25 +98,31 @@ export async function initiateCheckout(pluginId, userInfo = {}, onSuccess, onCan
       image: RAZORPAY_CONFIG.branding.image,
       order_id: orderId,
       handler: async (response) => {
-        // Verify payment on server
-        const verifyRes = await fetch('/api/razorpay/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-            pluginId,
-          }),
-        });
+        try {
+          const verifyRes = await fetch('/api/razorpay/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              pluginId,
+            }),
+          });
 
-        const verifyData = await verifyRes.json();
+          if (!verifyRes.ok) throw new Error('Verification request failed');
 
-        if (verifyData.success) {
-          alert('SUCCESS', 'Payment successful! You can now download this plugin.');
-          if (onSuccess) onSuccess();
-        } else {
-          alert('ERROR', verifyData.error || 'Payment verification failed');
+          const verifyData = await verifyRes.json();
+
+          if (verifyData.success) {
+            alert('SUCCESS', 'Payment successful! You can now download this plugin.');
+            if (onSuccess) onSuccess();
+          } else {
+            alert('ERROR', verifyData.error || 'Payment verification failed');
+          }
+        } catch (error) {
+          console.error('Verification error:', error);
+          alert('ERROR', 'Payment may have succeeded but verification failed. Please contact support if charged.');
         }
       },
       // Prefill user information (email preferred over contact for web)

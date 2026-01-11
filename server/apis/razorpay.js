@@ -70,7 +70,7 @@ router.post('/create-order', async (req, res) => {
 
     // Create Razorpay order (amount in paise)
     const order = await getRazorpay().orders.create({
-      amount: plugin.price * 100,
+      amount: Math.round(plugin.price * 100),
       currency: 'INR',
       receipt: `plugin_${plugin.id}_${user.id}_${Date.now()}`,
       notes: {
@@ -268,7 +268,7 @@ router.post('/webhook', async (req, res) => {
       const signature = req.headers['x-razorpay-signature'];
       const expectedSignature = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
 
-      if (signature !== expectedSignature) {
+      if (!signature || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
         console.warn('Webhook signature verification failed');
         res.status(400).send({ error: 'Invalid signature' });
         return;
@@ -284,14 +284,14 @@ router.post('/webhook', async (req, res) => {
         const payment = payload.payment.entity;
         const orderId = payment.order_id;
         const paymentId = payment.id;
-        const amount = payment.amount / 100; // Convert paise to INR
+        const amount = Math.round(payment.amount) / 100;
 
         // Check if order already exists
         const [existingOrder] = await Order.get([Order.ORDER_ID, orderId]);
 
         if (existingOrder) {
           // Update existing order state if not already purchased
-          if (existingOrder.state !== Order.STATE_PURCHASED) {
+          if (Number(existingOrder.state) !== Order.STATE_PURCHASED) {
             await Order.update(
               [
                 [Order.STATE, Order.STATE_PURCHASED],
@@ -349,7 +349,7 @@ router.post('/webhook', async (req, res) => {
         const orderId = order.id;
 
         const [existingOrder] = await Order.get([Order.ORDER_ID, orderId]);
-        if (existingOrder && existingOrder.state !== Order.STATE_PURCHASED) {
+        if (existingOrder && Number(existingOrder.state) !== Order.STATE_PURCHASED) {
           await Order.update([[Order.STATE, Order.STATE_PURCHASED]], [Order.ORDER_ID, orderId]);
           console.log(`Order ${orderId} marked as paid via webhook`);
         }

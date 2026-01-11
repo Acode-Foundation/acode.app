@@ -45,7 +45,7 @@ async function main() {
     }),
   );
 
-  app.use('/api/razorpay/webhook', express.raw({ type: 'application/json' }));
+  // IMPORTANT: Must come before express.json() to preserve raw body for signature verification\n  app.use('/api/razorpay/webhook', express.raw({ type: 'application/json' }));
 
   app.use(
     express.json({
