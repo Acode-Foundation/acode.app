@@ -32,25 +32,23 @@ export default async function changePassword({ mode, redirect }) {
         loading={(form) => loadingStart(form, errorText, successText)}
         loadingEnd={(form) => loadingEnd(form, 'Change password')}
       >
-        {mode === 'reset' ? (
-          <div>
-            <fieldset>
-              <Input
-                onchange={(e) => {
-                  email = e.target.value;
-                }}
-                type='email'
-                name='email'
-                label='Email'
-                placeholder='e.g. john@gmail.com'
-              />
-              <Input style={{ width: '140px' }} type='number' name='otp' label='OTP' placeholder='e.g. 1234' />
-            </fieldset>
-            <SendOtp type='reset' errorText={errorText} getEmail={() => email} />
-          </div>
-        ) : (
-          <Input type='password' name='oldPassword' label='Old password' placeholder='old password' />
-        )}
+        {mode === 'reset'
+          ? <div>
+              <fieldset>
+                <Input
+                  onchange={(e) => {
+                    email = e.target.value;
+                  }}
+                  type='email'
+                  name='email'
+                  label='Email'
+                  placeholder='e.g. john@gmail.com'
+                />
+                <Input style={{ width: '140px' }} type='number' name='otp' label='OTP' placeholder='e.g. 1234' />
+              </fieldset>
+              <SendOtp type='reset' errorText={errorText} getEmail={() => email} />
+            </div>
+          : <Input type='password' name='oldPassword' label='Old password' placeholder='old password' />}
         <Input type='password' name='password' label='Password' placeholder='password' />
         <span className='error'>{errorText}</span>
         <span className='success'>{successText}</span>
