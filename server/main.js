@@ -32,6 +32,7 @@ async function main() {
     res.header('Access-Control-Allow-Origin', 'https://localhost');
     // allow content-type
     res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Access-Control-Allow-Credentials', 'true');
     next();
   });
 
@@ -43,6 +44,9 @@ async function main() {
       },
     }),
   );
+
+  // IMPORTANT: Must come before express.json() to preserve raw body for signature verification\n  app.use('/api/razorpay/webhook', express.raw({ type: 'application/json' }));
+
   app.use(
     express.json({
       limit: '50mb',
