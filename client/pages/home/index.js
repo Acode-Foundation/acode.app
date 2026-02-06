@@ -54,7 +54,7 @@ export default async function home() {
           </picture>
           <picture className='tablet'>
             <source srcset={tabletImageWebp} type='image/webp' />
-            <img src={tabletImageJpg} alt='Aco₹de on tablet' />
+            <img src={tabletImageJpg} alt='Acode on tablet' />
           </picture>
         </div>
         <div className='heading'>
