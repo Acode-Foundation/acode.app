@@ -8,6 +8,7 @@ import phoneImageJpg from 'res/phone.jpg';
 import phoneImageWebp from 'res/phone.webp';
 import tabletImageJpg from 'res/tablet.jpg';
 import tabletImageWebp from 'res/tablet.webp';
+import icons from './icons';
 
 export default async function home() {
   const canvas = Ref();
@@ -24,8 +25,8 @@ export default async function home() {
       forks.value = data.forks_count.toLocaleString();
     })
     .catch(() => {
-      stars.value = '1.2k+';
-      forks.value = '200+';
+      stars.value = '4k+';
+      forks.value = '700+';
     });
 
   let plugins = [];
@@ -53,15 +54,11 @@ export default async function home() {
           </picture>
           <picture className='tablet'>
             <source srcset={tabletImageWebp} type='image/webp' />
-            <img src={tabletImageJpg} alt='Acode on tablet' />
+            <img src={tabletImageJpg} alt='Aco₹de on tablet' />
           </picture>
         </div>
         <div className='heading'>
           <p>An extensible, powerful and open-source code editor for Android</p>
-          <div className='stat-badge'>
-            <span className='stat-number'>1M+</span>
-            <span className='stat-label'>downloads</span>
-          </div>
           <div className='download-buttons'>
             <a
               title='Download from Google Play'
@@ -70,10 +67,7 @@ export default async function home() {
               target='_blank'
               rel='noopener'
             >
-              <svg width='18' height='18' viewBox='0 0 24 24' fill='currentColor'>
-                <title>Google Play</title>
-                <path d='M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z' />
-              </svg>
+              <span className='icon googleplay'></span>
               <span>Google Play</span>
             </a>
             <a
@@ -83,16 +77,14 @@ export default async function home() {
               target='_blank'
               rel='noopener'
             >
-              <svg width='18' height='18' viewBox='0 0 24 24' fill='currentColor'>
-                <title>F-Droid</title>
-                <path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z' />
-              </svg>
+              <span className='icon f-droid'></span>
               <span>F-Droid</span>
             </a>
           </div>
           <div className='gh-buttons'>
-            <GhButton count={stars} url='https://github.com/acode-foundation/acode' title='Star' />
-            <GhButton count={forks} url='https://github.com/acode-foundation/acode/fork' title='Fork' />
+            <GhButton count='5m+' url='https://github.com/acode-foundation/acode/releases' title='Downloads' icon='download' />
+            <GhButton count={stars} url='https://github.com/acode-foundation/acode' title='Stars' icon='star' />
+            <GhButton count={forks} url='https://github.com/acode-foundation/acode/fork' title='Forks' icon='fork' />
           </div>
         </div>
       </div>
@@ -110,14 +102,20 @@ export default async function home() {
   );
 }
 
-function GhButton({ url, title, count }) {
+/**
+ * GitHub button component to display stars, forks, and downloads.
+ * @param {object} props
+ * @param {string} props.url
+ * @param {string} props.title
+ * @param {string} props.count
+ * @param {'github'|'fork'|'download'|'star'} [props.icon]
+ * @returns
+ */
+async function GhButton({ url, title, count, icon = 'github' }) {
   return (
     <a href={url} className='gh-button-modern' target='_blank' rel='noopener'>
       <div className='gh-button-main'>
-        <svg viewBox='0 0 16 16' width='14' height='14' fill='currentColor'>
-          <title>GitHub</title>
-          <path d='M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 01-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 010 8c0-4.42 3.58-8 8-8Z' />
-        </svg>
+        {icons[icon] ?? <span className={`icon ${icon}`} />}
         <span>{title}</span>
       </div>
       <div className='gh-button-count'>{count}</div>
