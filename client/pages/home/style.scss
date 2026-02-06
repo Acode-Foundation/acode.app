@@ -67,7 +67,6 @@
 
   .intro {
     display: flex;
-    flex-wrap: wrap-reverse;
     justify-content: space-between;
     width: 100%;
     min-height: 500px;
@@ -125,7 +124,7 @@
       flex-direction: column;
       align-items: flex-start;
 
-      > p {
+      >p {
         font-family: 'Lexend', sans-serif;
         font-size: clamp(1.8rem, 5vw, 3rem);
         line-height: 1.1;
@@ -165,6 +164,7 @@
 
       .gh-buttons {
         display: flex;
+        flex-wrap: wrap;
         gap: 12px;
         align-items: center;
         margin-bottom: 0;
@@ -295,7 +295,7 @@
         align-items: center;
         text-align: center;
 
-        > p {
+        >p {
           font-size: clamp(1.6rem, 8vw, 2.2rem);
         }
 
@@ -315,7 +315,7 @@
       .heading {
         padding: 0 10px;
 
-        > p {
+        >p {
           font-size: 1.5rem;
         }
 
@@ -422,11 +422,9 @@
           left: 0;
           right: 0;
           bottom: 0;
-          background: radial-gradient(
-            circle at top right,
-            rgba(0, 212, 255, 0.1),
-            transparent 70%
-          );
+          background: radial-gradient(circle at top right,
+              rgba(0, 212, 255, 0.1),
+              transparent 70%);
           opacity: 0;
           transition: opacity 0.4s ease;
         }
