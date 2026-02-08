@@ -60,7 +60,57 @@ router.get('/download/:id', async (req, res) => {
 
     const clientIp = req.headers['x-forwarded-for'] || req.ip;
 
+    /**
+     * Helper function to record plugin download
+     * @param {string} pkgName - Package name (or 'web' for web downloads)
+     */
+    async function recordDownload(pkgName) {
+      try {
+        if (!device || !clientIp || !pkgName) return;
+        const columns = [
+          [Download.PLUGIN_ID, id],
+          [Download.DEVICE_ID, device],
+          [Download.CLIENT_IP, clientIp],
+          [Download.PACKAGE_NAME, pkgName],
+        ];
+        const deviceCountOnIp = await Download.count([
+          [Download.CLIENT_IP, clientIp],
+          [Download.PLUGIN_ID, id],
+        ]);
+        if (deviceCountOnIp < 5) {
+          const [download] = await Download.get([
+            [Download.PLUGIN_ID, id],
+            [Download.DEVICE_ID, device],
+          ]);
+          if (!download) {
+            await Download.insert(...columns);
+            await Plugin.increment(Plugin.DOWNLOADS, 1, [Plugin.ID, id]);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to record download:', error);
+      }
+    }
+
     if (row.price) {
+      const loggedInUser = await getLoggedInUser(req);
+
+      // Check for user-linked purchase (Razorpay or any provider)
+      if (loggedInUser) {
+        const [userOrder] = await Order.get([
+          [Order.USER_ID, loggedInUser.id],
+          [Order.PLUGIN_ID, row.id],
+          [Order.STATE, Order.STATE_PURCHASED],
+        ]);
+        if (userOrder) {
+          // User has valid purchase, allow download
+          res.sendFile(path.resolve(__dirname, '../../data/plugins', `${id}.zip`));
+          await recordDownload(packageName || 'web');
+          return;
+        }
+      }
+
+      // Fall back to token-based validation (Google Play)
       if (!token || !packageName) {
         res.status(403).send({ error: 'Forbidden' });
         return;
@@ -102,33 +152,7 @@ router.get('/download/:id', async (req, res) => {
     }
 
     res.sendFile(path.resolve(__dirname, '../../data/plugins', `${id}.zip`));
-    try {
-      if (device && clientIp && packageName) {
-        const columns = [
-          [Download.PLUGIN_ID, id],
-          [Download.DEVICE_ID, device],
-          [Download.CLIENT_IP, clientIp],
-          [Download.PACKAGE_NAME, packageName],
-        ];
-        const deviceCountOnIp = await Download.count([
-          [Download.CLIENT_IP, clientIp],
-          [Download.PLUGIN_ID, id],
-        ]);
-        if (deviceCountOnIp < 5) {
-          const [download] = await Download.get([
-            [Download.PLUGIN_ID, id],
-            [Download.DEVICE_ID, device],
-          ]);
-          if (!download) {
-            await Download.insert(...columns);
-            await Plugin.increment(Plugin.DOWNLOADS, 1, [Plugin.ID, id]);
-          }
-        }
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error);
-    }
+    await recordDownload(packageName);
   } catch (error) {
     res.status(500).send({ error: error.message });
   }
@@ -306,6 +330,7 @@ router.post('/refund', async (_req, res) => {
 
 router.post('/order', async (req, res) => {
   try {
+    const loggedInUser = await getLoggedInUser(req);
     const { id, token, package: packageName } = req.body;
     const [plugin] = await Plugin.get([Plugin.ID, id]);
     if (!plugin) {
@@ -333,13 +358,19 @@ router.post('/order', async (req, res) => {
 
       const [{ price }] = await Plugin.get([Plugin.PRICE], [Plugin.ID, id]);
 
-      await Order.insert(
+      const orderInsert = [
         [Order.PLUGIN_ID, id],
         [Order.TOKEN, token],
         [Order.PACKAGE, packageName],
         [Order.AMOUNT, price],
         [Order.STATE, purchase.data.purchaseState],
-      );
+        [Order.PROVIDER, Order.PROVIDER_GOOGLE_PLAY],
+      ];
+      // Link to user account if logged in (enables cross-platform sync)
+      if (loggedInUser) {
+        orderInsert.push([Order.USER_ID, loggedInUser.id]);
+      }
+      await Order.insert(...orderInsert);
       res.send({ success: 'Order saved.' });
     } catch (error) {
       const message = `Error while validating purchase: ${error.errors?.map((e) => e.message).join(', ') || error.message}`;
@@ -853,8 +884,9 @@ async function registerSKU(name, id, price) {
         autoConvertMissingPrices: true,
       });
     } catch (error) {
-      const message = error.errors?.map(({ message: msg }) => msg).join('\n');
-      throw new Error(`Failed to register SKU, ${message}`);
+      const message = error.errors?.map(({ message: msg }) => msg).join('\n') || error.message;
+      console.warn(`Failed to register SKU for ${packageName}, ${message}`);
+      // Proceed without throwing, to allow Razorpay-only or local testing
     }
   }
 }

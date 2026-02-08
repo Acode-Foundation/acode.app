@@ -56,6 +56,7 @@
     "marked": "^16.1.2",
     "moment": "^2.30.1",
     "nodemailer": "^7.0.7",
+    "razorpay": "^2.9.6",
     "sqlite3": "^5.1.7"
   },
   "scripts": {
@@ -66,7 +67,8 @@
     "update-schema": "node ./updateSchema",
     "start": "node ./server/main",
     "sitemap": "node dev/generateSitemap.js",
-    "reports": "node ./server/reportsCli"
+    "reports": "node ./server/reportsCli",
+    "migrate": "node ./server/migrations/add_purchase_order_columns.js"
   },
   "browserslist": [
     "> 0.25%, not dead"

@@ -8,9 +8,12 @@ const table = `CREATE TABLE IF NOT EXISTS purchase_order (
   order_id VARCHAR(255),
   token TEXT NOT NULL UNIQUE,
   state TEXT DEFAULT 2,
+  user_id INTEGER,
+  provider TEXT DEFAULT 'google_play',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (plugin_id) REFERENCES plugin(id)
+  FOREIGN KEY (plugin_id) REFERENCES plugin(id),
+  FOREIGN KEY (user_id) REFERENCES user(id)
 );
 
 CREATE TRIGGER IF NOT EXISTS orders_updated_at
@@ -30,17 +33,22 @@ class PurchaseOrder extends Entity {
   ORDER_ID = 'order_id';
   AMOUNT = 'amount';
   STATE = 'state';
+  USER_ID = 'user_id';
+  PROVIDER = 'provider';
 
   STATE_PURCHASED = 0;
   STATE_CANCELED = 1;
   STATE_PENDING = 2;
+
+  PROVIDER_GOOGLE_PLAY = 'google_play';
+  PROVIDER_RAZORPAY = 'razorpay';
 
   constructor() {
     super(table);
   }
 
   get minColumns() {
-    return [this.PACKAGE, this.AMOUNT, this.STATE, this.CREATED_AT, this.ORDER_ID];
+    return [this.PACKAGE, this.AMOUNT, this.STATE, this.CREATED_AT, this.ORDER_ID, this.PROVIDER];
   }
 }
 

@@ -7,6 +7,7 @@ import confirm from 'components/dialogs/confirm';
 import prompt from 'components/dialogs/prompt';
 import Input from 'components/input';
 import MonthSelect from 'components/MonthSelect';
+import BuyButton, { checkPluginOwnership } from 'components/razorpayCheckout';
 import YearSelect from 'components/YearSelect';
 import hilightjs from 'highlight.js';
 import Ref from 'html-tag-js/ref';
@@ -64,6 +65,12 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
   const shouldShowOrders = user && (user.id === userId || user.isAdmin) && !!plugin.price;
 
   let canInstall = /android/i.test(navigator.userAgent);
+  let userOwnsPlugin = false;
+
+  // Check if logged-in user owns this paid plugin (for web purchases)
+  if (user && price > 0) {
+    userOwnsPlugin = await checkPluginOwnership(id);
+  }
 
   if (user?.isAdmin && plugin.status !== 'approved') {
     canInstall = false;
@@ -87,6 +94,35 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
     table.replaceWith(<div className='table-wrapper'>{table.cloneNode(true)}</div>);
   }
 
+  function renderPurchaseButton() {
+    if (userOwnsPlugin) {
+      return (
+        <div className='owned-badge'>
+          <span className='icon check_circle' />
+          <span>Purchased</span>
+        </div>
+      );
+    }
+    if (user) {
+      return (
+        <BuyButton
+          pluginId={id}
+          price={price}
+          user={user}
+          onPurchaseComplete={() => {
+            window.location.reload();
+          }}
+        />
+      );
+    }
+    return (
+      <a href={`/login?redirect=/plugin/${pluginId}`} className='login-to-buy'>
+        <span className='icon account_circle' />
+        <span>Login to Purchase</span>
+      </a>
+    );
+  }
+
   return (
     <section id='plugin'>
       <div className='row plugin-head'>
@@ -105,25 +141,21 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           </div>
           <div className='info'>
             <span className='chip'>v {version}</span>
-            {+downloads ? (
-              <div className='chip'>
-                <span className='icon download' />
-                <span>{downloads.toLocaleString()}</span>
-              </div>
-            ) : (
-              <div className='chip'>
-                <span style={{ color: 'gold' }}>New</span>
-              </div>
-            )}
+            {+downloads
+              ? <div className='chip'>
+                  <span className='icon download' />
+                  <span>{downloads.toLocaleString()}</span>
+                </div>
+              : <div className='chip'>
+                  <span style={{ color: 'gold' }}>New</span>
+                </div>}
             <div className='chip'>
-              {price ? (
-                <>
-                  <span style={{ marginRight: '10px' }}>&#8377;</span>
-                  <span>{price}</span>
-                </>
-              ) : (
-                <span style={{ color: 'lightgreen' }}>Free</span>
-              )}
+              {price
+                ? <>
+                    <span style={{ marginRight: '10px' }}>&#8377;</span>
+                    <span>{price}</span>
+                  </>
+                : <span style={{ color: 'lightgreen' }}>Free</span>}
             </div>
             {commentCount > 0 && (
               <div className='chip' onclick={() => changeSection('comments')}>
@@ -160,6 +192,8 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
               </a>
             )}
           </div>
+          {/* Payment Section for paid plugins - placed after plugin info */}
+          {price > 0 && !canInstall && <div className='purchase-section'>{renderPurchaseButton()}</div>}
         </div>
       </div>
       <div className='detailed'>
@@ -406,13 +440,11 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
         <Input maxlength={250} type='textarea' name='comment' placeholder='Comment' value={comment} />
         <div className='buttons-container'>
           <button type='submit'>Submit</button>
-          {commentId ? (
-            <button onclick={deleteUserComment} type='button' className='danger' title='Delete your review'>
-              <span className='icon delete' />
-            </button>
-          ) : (
-            ''
-          )}
+          {commentId
+            ? <button onclick={deleteUserComment} type='button' className='danger' title='Delete your review'>
+                <span className='icon delete' />
+              </button>
+            : ''}
         </div>
       </AjaxForm>
 
