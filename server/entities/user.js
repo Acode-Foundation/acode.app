@@ -15,8 +15,6 @@ const table = `create table if not exists user (
   threshold integer default 1000,
   password text not null,
   verified boolean default false,
-  two_factor_enabled boolean default false,
-  two_factor_secret text,
   created_at timestamp default current_timestamp,
   updated_at timestamp default current_timestamp
 );
@@ -38,8 +36,6 @@ class User extends Entity {
   PASSWORD = 'password';
   VERIFIED = 'verified';
   THRESHOLD = 'threshold';
-  TWO_FACTOR_ENABLED = 'two_factor_enabled';
-  TWO_FACTOR_SECRET = 'two_factor_secret';
   CREATED_AT = 'created_at';
   UPDATED_AT = 'updated_at';
 
@@ -73,15 +69,13 @@ class User extends Entity {
       this.PASSWORD,
       this.VERIFIED,
       this.THRESHOLD,
-      this.TWO_FACTOR_ENABLED,
-      this.TWO_FACTOR_SECRET,
       this.CREATED_AT,
       this.UPDATED_AT,
     ];
   }
 
   get safeColumns() {
-    return [this.ID, this.NAME, this.ROLE, this.EMAIL, this.GITHUB, this.WEBSITE, this.VERIFIED, this.THRESHOLD, this.TWO_FACTOR_ENABLED, this.CREATED_AT, this.UPDATED_AT];
+    return [this.ID, this.NAME, this.ROLE, this.EMAIL, this.GITHUB, this.WEBSITE, this.VERIFIED, this.THRESHOLD, this.CREATED_AT, this.UPDATED_AT];
   }
 
   get initialColumns() {
@@ -92,10 +86,8 @@ class User extends Entity {
       this.EMAIL,
       this.VERIFIED,
       this.THRESHOLD,
-      this.TWO_FACTOR_ENABLED,
-      this.TWO_FACTOR_SECRET,
-      `IFNULL(github, '') as github`,
-      `IFNULL(website, '') as website`,
+      'IFNULL(github, "") as github',
+      'IFNULL(website, "") as website',
       this.PASSWORD,
       this.CREATED_AT,
       this.UPDATED_AT,
