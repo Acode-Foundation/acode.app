@@ -27,11 +27,11 @@ class Entity {
    * @param {string} sql
    */
   constructor(sql) {
-    db.exec(sql, (err) => {
-      if (err) {
-        console.error('Failed to execute SQL:', sql, err);
-      }
-    });
+    try {
+      db.exec(sql);
+    } catch (err) {
+      console.error('Failed to execute SQL:', sql, err);
+    }
   }
 
   /**
@@ -351,22 +351,33 @@ class Entity {
    */
   static execSql(sql, values, entity) {
     return new Promise((resolve, reject) => {
-      db.all(sql, values, (err, rows) => {
-        if (err) {
-          // eslint-disable-next-line no-console
-          console.log('Table:', entity.table);
-          // eslint-disable-next-line no-console
-          console.log('Error:', err.message);
-          // eslint-disable-next-line no-console
-          console.log('SQL:', sql);
-          // eslint-disable-next-line no-console
-          console.log('Values:', values);
-          err.message = `table<${entity.table}> sql execution failed.`;
-          reject(err);
+      try {
+        const trimmedSql = sql.trim().toUpperCase();
+        const isModifyingStatement = trimmedSql.startsWith('INSERT') || 
+                                      trimmedSql.startsWith('UPDATE') || 
+                                      trimmedSql.startsWith('DELETE');
+        
+        if (isModifyingStatement) {
+          // INSERT/UPDATE/DELETE use .run() which returns { changes, lastInsertRowid }
+          const result = db.prepare(sql).run(...values);
+          resolve(result);
         } else {
+          // SELECT uses .all() which returns rows
+          const rows = db.prepare(sql).all(...values);
           resolve(rows);
         }
-      });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.log('Table:', entity.table);
+        // eslint-disable-next-line no-console
+        console.log('Error:', err.message, err.stack);
+        // eslint-disable-next-line no-console
+        console.log('SQL:', sql);
+        // eslint-disable-next-line no-console
+        console.log('Values:', values);
+        err.message = `table<${entity.table}> sql execution failed.`;
+        reject(err);
+      }
     });
   }
 
@@ -378,14 +389,13 @@ class Entity {
    */
   static execSqlGet(sql, values, entity) {
     return new Promise((resolve, reject) => {
-      db.get(sql, values, (err, rows) => {
-        if (err) {
-          err.message = `<${entity.table}>\n${err.message}`;
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
+      try {
+        const row = db.prepare(sql).get(...values);
+        resolve(row);
+      } catch (err) {
+        err.message = `<${entity.table}>\n${err.message}`;
+        reject(err);
+      }
     });
   }
 

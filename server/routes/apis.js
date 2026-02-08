@@ -20,14 +20,12 @@ apis.get('/status', (_req, res) => {
 });
 
 apis.get('/server-time', (_req, res) => {
-  db.all('select current_timestamp as time', (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err });
-      return;
-    }
-
-    res.json(rows[0]);
-  });
+  try {
+    const rows = db.prepare('select current_timestamp as time').get();
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 apis.get('/telegram-members-count', async (_req, res) => {
