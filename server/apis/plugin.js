@@ -82,7 +82,7 @@ router.get('/download/:id', async (req, res) => {
         const { purchaseState } = purchase.data;
 
         if (!order) {
-          Order.insert(
+          await Order.insert(
             [Order.TOKEN, token],
             [Order.PACKAGE, packageName],
             [Order.AMOUNT, row.price],
@@ -121,7 +121,7 @@ router.get('/download/:id', async (req, res) => {
           ]);
           if (!download) {
             await Download.insert(...columns);
-            await Plugin.increment(Plugin.DOWNLOADS, 1, [Plugin.ID, id]);
+            await Plugin.increment(Plugin.DOWNLOADS, String(1), [Plugin.ID, id]);
           }
         }
       }

@@ -27,11 +27,11 @@ class Entity {
    * @param {string} sql
    */
   constructor(sql) {
-    db.exec(sql, (err) => {
-      if (err) {
-        console.error('Failed to execute SQL:', sql, err);
-      }
-    });
+    try {
+      db.exec(sql);
+    } catch (err) {
+      console.error('Failed to execute SQL:', sql, err);
+    }
   }
 
   /**
@@ -351,22 +351,30 @@ class Entity {
    */
   static execSql(sql, values, entity) {
     return new Promise((resolve, reject) => {
-      db.all(sql, values, (err, rows) => {
-        if (err) {
-          // eslint-disable-next-line no-console
-          console.log('Table:', entity.table);
-          // eslint-disable-next-line no-console
-          console.log('Error:', err.message);
-          // eslint-disable-next-line no-console
-          console.log('SQL:', sql);
-          // eslint-disable-next-line no-console
-          console.log('Values:', values);
-          err.message = `table<${entity.table}> sql execution failed.`;
-          reject(err);
+      try {
+        const stmt = db.prepare(sql);
+        let result;
+        if (stmt.reader) {
+          result = stmt.all(...values);
         } else {
-          resolve(rows);
+          // (if needed, in future) `result` could be set as { rows: [], changes: ..., lastInsertRowid: ... }
+          // for now, we'll just set it as an empty array
+          stmt.run(...values);
+          result = [];
         }
-      });
+        resolve(result);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.log('Table:', entity.table);
+        // eslint-disable-next-line no-console
+        console.log('Error:', err.message, err.stack);
+        // eslint-disable-next-line no-console
+        console.log('SQL:', sql);
+        // eslint-disable-next-line no-console
+        console.log('Values:', values);
+        err.message = `table<${entity.table}> sql execution failed.`;
+        reject(err);
+      }
     });
   }
 
@@ -378,14 +386,13 @@ class Entity {
    */
   static execSqlGet(sql, values, entity) {
     return new Promise((resolve, reject) => {
-      db.get(sql, values, (err, rows) => {
-        if (err) {
-          err.message = `<${entity.table}>\n${err.message}`;
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
+      try {
+        const row = db.prepare(sql).get(...values);
+        resolve(row);
+      } catch (err) {
+        err.message = `<${entity.table}>\n${err.message}`;
+        reject(err);
+      }
     });
   }
 
