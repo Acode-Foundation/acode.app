@@ -121,7 +121,7 @@ router.get('/download/:id', async (req, res) => {
           ]);
           if (!download) {
             await Download.insert(...columns);
-            await Plugin.increment(Plugin.DOWNLOADS, 1, [Plugin.ID, id]);
+            await Plugin.increment(Plugin.DOWNLOADS, String(1), [Plugin.ID, id]);
           }
         }
       }
