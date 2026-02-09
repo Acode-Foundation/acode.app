@@ -19,7 +19,7 @@ const queries = ['ALTER TABLE sponsor ADD COLUMN tagline TEXT'];
           reject(err);
         }
       }
-      });
+    });
   }
 
   await new Promise((resolve, reject) => {

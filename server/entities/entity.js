@@ -376,7 +376,7 @@ class Entity {
         reject(err);
       }
     });
-}
+  }
 
   /**
    *
