@@ -18,7 +18,7 @@ const queries = ['ALTER TABLE sponsor ADD COLUMN tagline TEXT'];
           process.stderr.write(`Error executing query: ${err.message}\n`);
           reject(err);
         }
-        }
+      }
       });
   }
 
