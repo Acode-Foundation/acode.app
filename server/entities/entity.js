@@ -352,20 +352,17 @@ class Entity {
   static execSql(sql, values, entity) {
     return new Promise((resolve, reject) => {
       try {
-        const trimmedSql = sql.trim().toUpperCase();
-        const isModifyingStatement = trimmedSql.startsWith('INSERT') || 
-                                      trimmedSql.startsWith('UPDATE') || 
-                                      trimmedSql.startsWith('DELETE');
-        
-        if (isModifyingStatement) {
-          // INSERT/UPDATE/DELETE use .run() which returns { changes, lastInsertRowid }
-          const result = db.prepare(sql).run(...values);
-          resolve(result);
+        const stmt = db.prepare(sql);
+        let result;
+        if (stmt.reader) {
+          result = stmt.all(...values);
         } else {
-          // SELECT uses .all() which returns rows
-          const rows = db.prepare(sql).all(...values);
-          resolve(rows);
+          // (if needed, in future) `result` could be set as { rows: [], changes: ..., lastInsertRowid: ... }
+          // for now, we'll just set it as an empty array
+          stmt.run(...values);
+          result = [];
         }
+        resolve(result);
       } catch (err) {
         // eslint-disable-next-line no-console
         console.log('Table:', entity.table);
@@ -379,7 +376,7 @@ class Entity {
         reject(err);
       }
     });
-  }
+}
 
   /**
    *
