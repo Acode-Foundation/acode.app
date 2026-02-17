@@ -7,6 +7,7 @@ import confirm from 'components/dialogs/confirm';
 import prompt from 'components/dialogs/prompt';
 import Input from 'components/input';
 import MonthSelect from 'components/MonthSelect';
+import PluginStatus from 'components/pluginStatus';
 import YearSelect from 'components/YearSelect';
 import hilightjs from 'highlight.js';
 import Ref from 'html-tag-js/ref';
@@ -25,6 +26,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
     id,
     name,
     price,
+    status,
     author,
     version,
     license,
@@ -97,6 +99,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
               <span className='icon download' /> Install
             </button>
           )}
+          <PluginStatus status={status} id={id} style='button' />
         </div>
         <div className='info-container'>
           <div className='info'>
@@ -392,8 +395,9 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
     );
   }
 
-  const { comment, vote, id: commentId } = userComment;
+  const { comment, vote } = userComment;
   const form = Ref();
+  let commentId = userComment.id;
 
   return (
     <div className='comments'>
@@ -428,11 +432,12 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
 
     let $comment;
 
+    commentId = commentId || res.id;
     if (commentId) {
       userComment = await fetch(`/api/comment/${commentId}`).then((userRes) => userRes.json());
       $comment = tag.get(`#comment_${commentId}`);
     } else {
-      userComment = await getUserComment(id);
+      userComment = await getUserComment(commentId);
     }
 
     if (!userComment?.comment) {

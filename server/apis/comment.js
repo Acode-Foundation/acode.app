@@ -126,7 +126,7 @@ router.post('/', async (req, res) => {
 
       if (updates.length) {
         await Comment.update(updates, [Comment.ID, alreadyVoted.id]);
-        res.send({ message: 'Comment updated' });
+        res.send({ message: 'Comment updated', id: alreadyVoted.id, comment, vote });
         if (isVoteChanged) {
           updateVoteInPlugin(vote, pluginId);
         }
@@ -136,7 +136,7 @@ router.post('/', async (req, res) => {
         return;
       }
 
-      res.send({ message: 'Comment unchanged' });
+      res.send({ message: 'Comment unchanged', id: alreadyVoted.id, comment: alreadyVoted.comment, vote: alreadyVoted.vote });
       return;
     }
 
@@ -150,7 +150,7 @@ router.post('/', async (req, res) => {
     if (vote !== Comment.VOTE_NULL) {
       updateVoteInPlugin(vote, pluginId);
     }
-    res.send({ message: 'Comment added', comment: row });
+    res.send({ message: 'Comment added', id: row.id, comment, vote });
     voteMessage = vote !== Comment.VOTE_NULL ? `${loggedInUser.name} voted ${Comment.getVoteString(vote)}` : '';
     commentMessage = comment ? `${loggedInUser.name} commented: ${comment}` : '';
     sendEmail(plugin.author_email, plugin.author, `New review for your Acode plugin - ${plugin.name}.`, getNotificationMessage());

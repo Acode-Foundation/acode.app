@@ -2,9 +2,9 @@ import './style.scss';
 import AdSense from 'components/adsense';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
-import prompt from 'components/dialogs/prompt';
 import select from 'components/dialogs/select';
-import { calcRating, capitalize, getLoggedInUser, hideLoading, showLoading, since } from 'lib/helpers';
+import PluginStatus from 'components/pluginStatus';
+import { calcRating, getLoggedInUser, hideLoading, showLoading, since } from 'lib/helpers';
 import Router from 'lib/Router';
 
 export default function Plugins({ user, orderBy, status, name }) {
@@ -75,11 +75,7 @@ function Plugin({
           <div title='Downloads counter'>
             {downloads.toLocaleString()} <span className='icon download' />
           </div>
-          {Boolean(status) && (
-            <span data-id={id} onclick={isAdmin ? changePluginStatus : undefined} title='Plugin status' className={`status-indicator ${status}`}>
-              {status}
-            </span>
-          )}
+          <PluginStatus status={status} id={id} />
           <div>{calcRating(upVotes, downVotes)}</div>
           {comments > 0 && (
             <div>
@@ -147,49 +143,6 @@ async function deletePlugin(e, id) {
     }
 
     Router.reload();
-  } catch (error) {
-    alert('Error', error.message);
-  } finally {
-    hideLoading();
-  }
-}
-
-/**
- *
- * @param {MouseEvent} e
- * @returns
- */
-async function changePluginStatus(e) {
-  e.preventDefault();
-  e.stopPropagation();
-  try {
-    const { target } = e;
-    const { id } = target.dataset;
-    const status = await select('Change plugin status', ['approve', 'reject']);
-    if (!status) return;
-
-    let reason;
-    if (status === 'reject') {
-      reason = await prompt('Reason', { type: 'textarea' });
-    }
-    showLoading();
-    const res = await fetch('/api/plugin', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ status, id, reason }),
-    });
-    const data = await res.json();
-    if (data.error) {
-      alert('Error', data.error);
-      return;
-    }
-
-    const pluginRes = await fetch(`/api/plugin/${id}`);
-    const pluginData = await pluginRes.json();
-    target.textContent = capitalize(pluginData.status);
-    target.className = pluginData.status;
   } catch (error) {
     alert('Error', error.message);
   } finally {
