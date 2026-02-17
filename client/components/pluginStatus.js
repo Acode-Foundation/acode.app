@@ -1,4 +1,5 @@
 import { capitalize, getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
+import alert from './dialogs/alert';
 import prompt from './dialogs/prompt';
 import select from './dialogs/select';
 
