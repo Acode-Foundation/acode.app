@@ -437,7 +437,7 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
       userComment = await fetch(`/api/comment/${commentId}`).then((userRes) => userRes.json());
       $comment = tag.get(`#comment_${commentId}`);
     } else {
-      userComment = await getUserComment(commentId);
+      userComment = await getUserComment(id);
     }
 
     if (!userComment?.comment) {
@@ -577,8 +577,13 @@ async function flagComment(id, flagRef) {
   }
 }
 
-async function getUserComment(id) {
-  const res = await fetch(`/api/user/comment/${id}`).then((commentRes) => commentRes.json());
+/**
+ * Gets the current user's comment for a specific plugin.
+ * @param {string} pluginId Plugin ID
+ * @returns {Promise<Object>} The user's comment for the specified plugin.
+ */
+async function getUserComment(pluginId) {
+  const res = await fetch(`/api/user/comment/${pluginId}`).then((commentRes) => commentRes.json());
   return res;
 }
 
