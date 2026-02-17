@@ -11,4 +11,9 @@ if (!fs.existsSync(dbFile)) {
   fs.writeFileSync(dbFile, '');
 }
 
-module.exports = sqlite3(dbFile);
+const db = sqlite3(dbFile);
+
+// Enable foreign key constraints
+db.pragma('foreign_keys = ON');
+
+module.exports = db;

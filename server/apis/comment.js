@@ -140,12 +140,7 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    await Comment.insert(
-      [Comment.PLUGIN_ID, pluginId],
-      [Comment.USER_ID, loggedInUser.id],
-      [Comment.COMMENT, comment],
-      [Comment.VOTE, vote],
-    );
+    await Comment.insert([Comment.PLUGIN_ID, pluginId], [Comment.USER_ID, loggedInUser.id], [Comment.COMMENT, comment], [Comment.VOTE, vote]);
 
     if (vote !== Comment.VOTE_NULL) {
       updateVoteInPlugin(vote, pluginId);

@@ -382,7 +382,7 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    const { name, price, version, minVersionCode } = pluginJson;
+    const { name, price, version, minVersionCode = -1 } = pluginJson;
 
     if (!VERSION_REGEX.test(version)) {
       res.status(400).send({
@@ -392,7 +392,7 @@ router.post('/', async (req, res) => {
     }
 
     if (typeof minVersionCode !== 'number') {
-      res.status(400).send({ error: 'minVersionCode should be a number' });
+      res.status(400).send({ error: `minVersionCode should be a number but got ${typeof minVersionCode}` });
       return;
     }
 
