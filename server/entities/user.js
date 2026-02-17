@@ -58,6 +58,15 @@ class User extends Entity {
     }
   }
 
+  async delete(where, operator = 'AND') {
+    const [row] = await this.get(this.allColumns, where, operator);
+    if (!row) {
+      throw new Error('User not found');
+    }
+
+    return super.delete(where, operator);
+  }
+
   get columns() {
     return [
       this.ID,

@@ -136,7 +136,15 @@ class Plugin extends Entity {
     return this.update([this.STATUS, this.STATUS_INACTIVE], where, operator);
   }
 
-  deletePermanently(where, operator = 'AND') {
+  async deletePermanently(where, operator = 'AND') {
+    const [row] = await this.get(this.allColumns, where, operator);
+    if (!row) {
+      throw new Error('Plugin not found');
+    }
+
+    await Entity.execSql('DELETE FROM comment WHERE plugin_id = ?', [row.id]);
+    await Entity.execSql('DELETE FROM download WHERE plugin_id = ?', [row.id]);
+
     return super.delete(where, operator);
   }
 
