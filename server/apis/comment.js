@@ -147,7 +147,7 @@ router.post('/', async (req, res) => {
     }
 
     const [row] = await Comment.get([Comment.ID, Comment.COMMENT, Comment.VOTE], [Comment.PLUGIN_ID, pluginId], [Comment.USER_ID, loggedInUser.id]);
-    
+
     res.send({ message: 'Comment added', id: row.id, comment, vote });
     voteMessage = vote !== Comment.VOTE_NULL ? `${loggedInUser.name} voted ${Comment.getVoteString(vote)}` : '';
     commentMessage = comment ? `${loggedInUser.name} commented: ${comment}` : '';
