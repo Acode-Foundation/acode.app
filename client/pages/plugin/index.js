@@ -432,7 +432,7 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
 
     let $comment;
 
-    commentId = commentId || res.id;
+    commentId = res.id;
     if (commentId) {
       userComment = await fetch(`/api/comment/${commentId}`).then((userRes) => userRes.json());
       $comment = tag.get(`#comment_${commentId}`);
@@ -469,6 +469,8 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
     try {
       const deleted = await deleteComment(commentId);
       if (!deleted) return;
+      alert('SUCCESS', 'Comment deleted successfully');
+      commentId = null;
       form.el.reset();
       for (const input of form.getAll('input[name=vote]')) {
         input.checked = false;

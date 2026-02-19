@@ -140,16 +140,17 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    const [row] = await Comment.insert(
-      [Comment.PLUGIN_ID, pluginId],
-      [Comment.USER_ID, loggedInUser.id],
-      [Comment.COMMENT, comment],
-      [Comment.VOTE, vote],
-    );
+    await Comment.insert([Comment.PLUGIN_ID, pluginId], [Comment.USER_ID, loggedInUser.id], [Comment.COMMENT, comment], [Comment.VOTE, vote]);
 
     if (vote !== Comment.VOTE_NULL) {
       updateVoteInPlugin(vote, pluginId);
     }
+
+    const [row] = await Comment.get([Comment.ID, Comment.COMMENT, Comment.VOTE], [
+      [Comment.PLUGIN_ID, pluginId],
+      [Comment.USER_ID, loggedInUser.id],
+    ]);
+
     res.send({ message: 'Comment added', id: row.id, comment, vote });
     voteMessage = vote !== Comment.VOTE_NULL ? `${loggedInUser.name} voted ${Comment.getVoteString(vote)}` : '';
     commentMessage = comment ? `${loggedInUser.name} commented: ${comment}` : '';

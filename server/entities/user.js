@@ -58,6 +58,15 @@ class User extends Entity {
     }
   }
 
+  async delete(where, operator = 'AND') {
+    const [row] = await this.get(this.allColumns, where, operator);
+    if (!row) {
+      throw new Error('User not found');
+    }
+
+    return super.delete(where, operator);
+  }
+
   get columns() {
     return [
       this.ID,
@@ -86,8 +95,8 @@ class User extends Entity {
       this.EMAIL,
       this.VERIFIED,
       this.THRESHOLD,
-      'IFNULL(github, "") as github',
-      'IFNULL(website, "") as website',
+      `IFNULL(github, '') as github`,
+      `IFNULL(website, '') as website`,
       this.PASSWORD,
       this.CREATED_AT,
       this.UPDATED_AT,

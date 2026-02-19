@@ -312,7 +312,7 @@ route.post('/payment-method', async (req, res) => {
 
     const count = await PaymentMethod.count([PaymentMethod.USER_ID, loggedInUser.id]);
     insert.push([PaymentMethod.USER_ID, loggedInUser.id]);
-    await PaymentMethod.insert(...insert, [PaymentMethod.IS_DEFAULT, count === 0]);
+    await PaymentMethod.insert(...insert, [PaymentMethod.IS_DEFAULT, count === 0 ? 1 : 0]);
     res.send({ message: 'Payment method added' });
   } catch (error) {
     handleError(res, error);
@@ -434,15 +434,19 @@ route.put('/', async (req, res) => {
     }
 
     if (email) {
-      const row = await User.get([User.EMAIL, email]);
+      if (!sentOtp) {
+        res.status(400).send({ error: 'Missing OTP' });
+        return;
+      }
 
+      const row = await User.get([User.EMAIL, email]);
       if (row.length) {
         res.status(400).send({ error: 'User already' });
         return;
       }
 
-      const [{ otp: storedOtp }] = await Otp.get([Otp.EMAIL, email]);
-      if (storedOtp !== sentOtp) {
+      const [otpRow] = await Otp.get([Otp.EMAIL, email]);
+      if (otpRow?.otp !== sentOtp) {
         res.status(400).send({ error: 'Invalid OTP' });
         return;
       }
