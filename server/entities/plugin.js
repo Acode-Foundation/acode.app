@@ -142,8 +142,9 @@ class Plugin extends Entity {
       throw new Error('Plugin not found');
     }
 
-    await Entity.execSql('DELETE FROM comment WHERE plugin_id = ?', [row.id]);
-    await Entity.execSql('DELETE FROM download WHERE plugin_id = ?', [row.id]);
+    await Entity.execSql('DELETE FROM comment WHERE plugin_id = ?', [row.id], this);
+    await Entity.execSql('DELETE FROM download WHERE plugin_id = ?', [row.id], this);
+    await Entity.execSql('DELETE FROM purchase_order WHERE plugin_id = ?', [row.id], this);
 
     return super.delete(where, operator);
   }
@@ -163,7 +164,7 @@ class Plugin extends Entity {
     ) u
     left join payment_method p on u.id = p.user_id and p.is_default = true`;
 
-    return Entity.execSql(sql);
+    return Entity.execSql(sql, [], this);
   }
 
   get minColumns() {
