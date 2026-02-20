@@ -545,7 +545,7 @@ router.put('/', async (req, res) => {
       updates.push([Plugin.CHANGELOGS, req.body.changelogs]);
     }
 
-    if (req.body?.supported_editor) {
+    if (req.body?.supported_editor && ['ace', 'cm', 'all'].includes(req.body.supported_editor)) {
       updates.push([Plugin.SUPPORTED_EDITOR, req.body.supported_editor]);
     }
 
