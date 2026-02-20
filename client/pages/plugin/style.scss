@@ -9,6 +9,28 @@
     color: #39f;
   }
 
+  .editor-badge {
+    font-weight: 600;
+
+    &[data-editor='cm'] {
+      background: rgba(16, 185, 129, 0.2) !important;
+      border: 1px solid #10b981;
+      color: #10b981;
+    }
+
+    &[data-editor='ace'] {
+      background: rgba(239, 68, 68, 0.2) !important;
+      border: 1px solid #ef4444;
+      color: #ef4444;
+    }
+
+    &[data-editor='all'] {
+      background: rgba(59, 130, 246, 0.2) !important;
+      border: 1px solid #3b82f6;
+      color: #3b82f6;
+    }
+  }
+
   .plugin-head {
     height: fit-content;
     border-bottom: solid 1px rgba(234, 234, 234, 0.486);

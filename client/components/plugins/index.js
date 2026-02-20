@@ -7,47 +7,58 @@ import PluginStatus from 'components/pluginStatus';
 import { calcRating, getLoggedInUser, hideLoading, showLoading, since } from 'lib/helpers';
 import Router from 'lib/Router';
 
-export default function Plugins({ user, orderBy, status, name }) {
+export default async function Plugins({ user, orderBy, status, name, editor }) {
   const el = <div className='plugins' data-msg='loading...' />;
 
-  (async () => {
-    try {
-      showLoading();
-      let url = '/api/plugin';
+  try {
+    showLoading();
+    const params = new URLSearchParams();
 
-      if (user) {
-        url += `?user=${user}`;
-      } else if (status !== undefined) {
-        url += `?status=${status}`;
-      } else if (name) {
-        url += `?name=${name}`;
-      } else if (orderBy) {
-        url += `?orderBy=${orderBy}`;
-      }
-
-      const res = await fetch(url);
-      const { isAdmin, id: userId } = (await getLoggedInUser()) || {};
-      const plugins = await res.json();
-      const adsPosition = [2, 15, 28];
-
-      el.setAttribute('data-msg', 'No plugins found. :(');
-      for (let i = 0; i < plugins.length; i++) {
-        const plugin = plugins[i];
-        if (adsPosition.includes(i) || (i > 33 && Math.random() < 0.1)) {
-          el.append(<AdSense className='plugin' style={{ position: 'relative' }} />);
-        }
-        el.append(<Plugin {...plugin} isAdmin={isAdmin} userId={userId} />);
-      }
-    } catch (error) {
-      el.append(
-        <div className='error'>
-          <h2>{error.error}</h2>
-        </div>,
-      );
-    } finally {
-      hideLoading();
+    if (user) {
+      params.set('user', user);
     }
-  })();
+
+    if (status !== undefined) {
+      params.set('status', status);
+    }
+
+    if (name) {
+      params.set('name', name);
+    }
+
+    if (editor) {
+      params.set('supported_editor', editor);
+    }
+
+    if (orderBy) {
+      params.set('orderBy', orderBy);
+    }
+
+    const query = params.toString();
+    const url = `/api/plugin${query ? `?${query}` : ''}`;
+
+    const res = await fetch(url);
+    const { isAdmin, id: userId } = (await getLoggedInUser()) || {};
+    const plugins = await res.json();
+    const adsPosition = [2, 15, 28];
+
+    el.setAttribute('data-msg', 'No plugins found. :(');
+    for (let i = 0; i < plugins.length; i++) {
+      const plugin = plugins[i];
+      if (adsPosition.includes(i) || (i > 33 && Math.random() < 0.1)) {
+        el.append(<AdSense className='plugin' style={{ position: 'relative' }} />);
+      }
+      el.append(<Plugin {...plugin} isAdmin={isAdmin} userId={userId} />);
+    }
+  } catch (error) {
+    el.append(
+      <div className='error'>
+        <h2>{error.error}</h2>
+      </div>,
+    );
+  } finally {
+    hideLoading();
+  }
 
   return el;
 }
@@ -62,12 +73,14 @@ function Plugin({
   downloads,
   votes_up: upVotes,
   user_id: pluginUser,
-  package_updated_at: updatedAt,
   votes_down: downVotes,
   comment_count: comments,
+  supported_editor: editorType,
+  package_updated_at: updatedAt,
 }) {
   return (
     <a href={`/plugin/${id}`} className='plugin'>
+      <span className={`badge editor-type ${editorType}`} />
       <div className='plugin-icon' style={{ backgroundImage: `url(/plugin-icon/${id})` }} />
       <div className='plugin-info'>
         <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</h2>

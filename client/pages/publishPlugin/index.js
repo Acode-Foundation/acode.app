@@ -6,6 +6,7 @@ import Ref from 'html-tag-js/ref';
 import JSZip from 'jszip';
 import { capitalize, getLoggedInUser, hideLoading, loadingEnd, loadingStart, showLoading } from 'lib/helpers';
 import Router from 'lib/Router';
+import './style.scss';
 
 export default async function PublishPlugin({ mode = 'publish', id }) {
   const user = await getLoggedInUser();
@@ -42,9 +43,46 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
   const method = mode === 'publish' ? 'post' : 'put';
   const pluginIcon = <img style={{ height: '120px', width: '120px' }} src={plugin?.icon || '#'} alt='Plugin icon' />;
 
+  let supportedEditorText = '?';
+
+  switch (plugin?.supported_editor) {
+    case 'ace':
+      supportedEditorText = 'Ace';
+      break;
+
+    case 'cm':
+      supportedEditorText = 'CodeMirror';
+      break;
+
+    case 'all':
+      supportedEditorText = 'Both';
+      break;
+
+    default:
+      break;
+  }
+
   return (
     <section id='publish-plugin'>
       <h1 style={{ textAlign: 'center' }}>{capitalize(mode)} plugin</h1>
+
+      {mode === 'update' && (
+        <div className='update-banner'>
+          <div className='icon-wrapper'>
+            <span className='icon announcement' />
+            <span>
+              We've upgraded from Ace to CodeMirror!
+              <span className='badge'>MANDATORY UPDATE</span>
+            </span>
+          </div>
+          <p>
+            Your plugin currently supports <strong>{supportedEditorText}</strong> editor(s). Please update your plugin to ensure compatibility with
+            CodeMirror for the best experience.
+          </p>
+          <a href={`update-plugin-editor/${pluginId.value}`}>Update Editor Support Now</a>
+        </div>
+      )}
+
       <AjaxForm
         action='/api/plugin'
         method={method}
@@ -71,6 +109,18 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
             <tr>
               <th>ID</th>
               <td>{pluginId}</td>
+            </tr>
+            <tr>
+              <th>Editor Type</th>
+              <td>
+                <select name='supported_editor' id='editor_type' value={plugin?.supported_editor || 'cm'}>
+                  <option value='ace'>Ace</option>
+                  <option value='cm' selected>
+                    CodeMirror
+                  </option>
+                  <option value='all'>Both</option>
+                </select>
+              </td>
             </tr>
             <tr>
               <th>Name</th>

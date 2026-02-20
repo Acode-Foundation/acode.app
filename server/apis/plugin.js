@@ -220,7 +220,7 @@ router.get('/description/:id', async (req, res) => {
 router.get('{/:pluginId}', async (req, res) => {
   try {
     const { pluginId } = req.params;
-    const { user, name, status, page, limit, orderBy } = req.query;
+    const { user, name, status, page, limit, orderBy, supported_editor } = req.query;
     const loggedInUser = await getLoggedInUser(req);
     const columns = Plugin.minColumns;
     const where = [];
@@ -256,12 +256,22 @@ router.get('{/:pluginId}', async (req, res) => {
 
     if (pluginId) {
       where.push([Plugin.ID, pluginId]);
-    } else if (userId) {
-      where.push([Plugin.USER_ID, userId]);
-    } else if (name) {
-      where.push([Plugin.NAME, name, 'LIKE']);
-    } else if (status && loggedInUser?.isAdmin) {
-      where.push([Plugin.STATUS, status]);
+    } else {
+      if (userId) {
+        where.push([Plugin.USER_ID, userId]);
+      }
+
+      if (name) {
+        where.push([Plugin.NAME, name, 'LIKE']);
+      }
+
+      if (status && loggedInUser?.isAdmin) {
+        where.push([Plugin.STATUS, status]);
+      }
+
+      if (supported_editor && ['ace', 'cm', 'all'].includes(supported_editor)) {
+        where.push([Plugin.SUPPORTED_EDITOR, supported_editor]);
+      }
     }
 
     const options = { page, limit };
@@ -365,7 +375,7 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    const { pluginJson, icon, readme, changelogs } = await exploreZip(pluginZip.data);
+    const { pluginJson, icon, readme, changelogs, supported_editor } = await exploreZip(pluginZip.data);
 
     try {
       validatePlugin(pluginJson, icon, readme);
@@ -416,6 +426,7 @@ router.post('/', async (req, res) => {
       [Plugin.DESCRIPTION, readme],
       [Plugin.SKU, getPluginSKU(pluginId)],
       [Plugin.MIN_VERSION_CODE, minVersionCode],
+      [Plugin.SUPPORTED_EDITOR, supported_editor],
     ];
 
     if (changelogs) {
@@ -480,7 +491,7 @@ router.put('/', async (req, res) => {
       return;
     }
 
-    const { pluginJson, icon, readme, changelogs } = await exploreZip(pluginZip.data);
+    const { pluginJson, icon, readme, changelogs, supported_editor } = await exploreZip(pluginZip.data);
 
     try {
       validatePlugin(pluginJson, icon, readme);
@@ -525,6 +536,10 @@ router.put('/', async (req, res) => {
 
     if (pluginJson.changelogs) {
       updates.push([Plugin.CHANGELOGS, pluginJson.changelogs]);
+    }
+
+    if (pluginJson.supported_editor) {
+      updates.push([Plugin.SUPPORTED_EDITOR, supported_editor]);
     }
 
     if (changelogs) {
@@ -609,6 +624,36 @@ router.patch('/', async (req, res) => {
       console.log(error);
     }
   } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+router.patch('/:id/supported-editor', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { supported_editor } = req.body;
+    const user = await getLoggedInUser(req);
+
+    if (!user) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!id || !supported_editor) {
+      res.status(400).send({ error: 'Missing required fields' });
+      return;
+    }
+
+    const [plugin] = await Plugin.get([Plugin.ID, Plugin.USER_ID], [Plugin.ID, id]);
+    if (!plugin || plugin.user_id !== user.id) {
+      res.status(404).send({ error: 'Plugin not found' });
+      return;
+    }
+
+    await Plugin.update([Plugin.SUPPORTED_EDITOR, supported_editor], [Plugin.ID, id]);
+    res.send({ message: 'Plugin updated successfully' });
+  } catch (error) {
+    console.error('Error updating plugin supported editor:', error);
     res.status(500).send({ error: error.message });
   }
 });
