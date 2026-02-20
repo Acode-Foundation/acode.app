@@ -375,7 +375,7 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    const { pluginJson, icon, readme, changelogs, supported_editor } = await exploreZip(pluginZip.data);
+    const { pluginJson, icon, readme, changelogs } = await exploreZip(pluginZip.data);
 
     try {
       validatePlugin(pluginJson, icon, readme);
@@ -426,15 +426,10 @@ router.post('/', async (req, res) => {
       [Plugin.DESCRIPTION, readme],
       [Plugin.SKU, getPluginSKU(pluginId)],
       [Plugin.MIN_VERSION_CODE, minVersionCode],
-      [Plugin.SUPPORTED_EDITOR, supported_editor],
     ];
 
     if (changelogs) {
       insert.push([Plugin.CHANGELOGS, changelogs]);
-    }
-
-    if (req.body?.changelogs) {
-      insert.push([Plugin.CHANGELOGS, req.body.changelogs]);
     }
 
     if (pluginJson.license) {
@@ -451,6 +446,10 @@ router.post('/', async (req, res) => {
 
     if (pluginJson.repository) {
       insert.push([Plugin.REPOSITORY, pluginJson.repository]);
+    }
+
+    if (req.body?.changelogs) {
+      insert.push([Plugin.CHANGELOGS, req.body.changelogs]);
     }
 
     await Plugin.insert(...insert);
@@ -491,7 +490,7 @@ router.put('/', async (req, res) => {
       return;
     }
 
-    const { pluginJson, icon, readme, changelogs, supported_editor } = await exploreZip(pluginZip.data);
+    const { pluginJson, icon, readme, changelogs } = await exploreZip(pluginZip.data);
 
     try {
       validatePlugin(pluginJson, icon, readme);
@@ -538,16 +537,16 @@ router.put('/', async (req, res) => {
       updates.push([Plugin.CHANGELOGS, pluginJson.changelogs]);
     }
 
-    if (pluginJson.supported_editor) {
-      updates.push([Plugin.SUPPORTED_EDITOR, supported_editor]);
-    }
-
     if (changelogs) {
       updates.push([Plugin.CHANGELOGS, changelogs]);
     }
 
     if (req.body?.changelogs) {
       updates.push([Plugin.CHANGELOGS, req.body.changelogs]);
+    }
+
+    if (req.body?.supported_editor) {
+      updates.push([Plugin.SUPPORTED_EDITOR, req.body.supported_editor]);
     }
 
     if (version !== row.version) {
