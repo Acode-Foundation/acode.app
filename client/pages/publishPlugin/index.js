@@ -79,7 +79,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
             Your plugin currently supports <strong>{supportedEditorText}</strong> editor(s). Please update your plugin to ensure compatibility with
             CodeMirror for the best experience.
           </p>
-          <a href={`update-plugin-editor/${pluginId.value}`}>Update Editor Support Now</a>
+          <a href={`/update-plugin-editor/${pluginId.value}`}>Update Editor Support Now</a>
         </div>
       )}
 
