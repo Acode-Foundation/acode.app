@@ -632,7 +632,7 @@ router.patch('/:id/supported-editor', async (req, res) => {
   try {
     const { id } = req.params;
     const { supported_editor } = req.body;
-    
+
     if (!['ace', 'cm', 'all'].includes(supported_editor)) {
       res.status(400).send({ error: 'Invalid editor type. Must be ace, cm, or all' });
       return;

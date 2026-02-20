@@ -8,6 +8,8 @@ const queries = ['ALTER TABLE plugin ADD COLUMN supported_editor TEXT DEFAULT "a
     await new Promise((resolve, reject) => {
       try {
         db.exec(query);
+        // TODO: Remove in next schema update.
+        // safe to send email when successfully added the column, if it already exists, it means the email has already been sent in a previous run.
         sendUpdateEmail();
         resolve();
       } catch (err) {
