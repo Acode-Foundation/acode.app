@@ -115,9 +115,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
               <td>
                 <select name='supported_editor' id='editor_type' value={plugin?.supported_editor || 'cm'}>
                   <option value='ace'>Ace</option>
-                  <option value='cm'>
-                    CodeMirror
-                  </option>
+                  <option value='cm'>CodeMirror</option>
                   <option value='all'>Both</option>
                 </select>
               </td>

@@ -271,6 +271,8 @@ router.get('{/:pluginId}', async (req, res) => {
 
       if (supported_editor && ['ace', 'cm', 'all'].includes(supported_editor)) {
         where.push([Plugin.SUPPORTED_EDITOR, supported_editor]);
+      } else {
+        where.push([Plugin.SUPPORTED_EDITOR, 'all'], 'OR', [Plugin.SUPPORTED_EDITOR, 'ace']);
       }
     }
 
