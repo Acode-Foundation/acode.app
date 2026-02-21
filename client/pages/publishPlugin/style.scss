@@ -65,8 +65,9 @@
       strong {
         display: inline-flex;
         align-items: center;
+        line-height: 1;
         margin: 0 6px;
-        padding: 4px 12px;
+        padding: 0px 6px;
         background: rgba(255, 255, 255, 0.2);
         border-radius: 6px;
         font-weight: 600;
@@ -203,7 +204,6 @@
     }
 
     a {
-      width: 100%;
       justify-content: center;
       padding: 14px 20px;
     }
