@@ -87,9 +87,7 @@ export default async function User({ userId }) {
             )}
           </div>
           <div className='socials' onclick={(e) => e.target.dataset.href && Router.loadUrl(e.target.dataset.href)}>
-            {shouldShowSensitiveInfo && (
-              <button type='button' title='email' className='icon mail' data-href={`mailto:${user.email}`} />
-            )}
+            {shouldShowSensitiveInfo && <button type='button' title='email' className='icon mail' data-href={`mailto:${user.email}`} />}
             {user.github && (
               <button type='button' title='go to github account' className='icon github' data-href={`https://github.com/${user.github}`} />
             )}

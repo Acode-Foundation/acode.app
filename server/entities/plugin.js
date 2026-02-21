@@ -22,6 +22,7 @@ const table = `CREATE TABLE IF NOT EXISTS plugin (
   license TEXT DEFAULT 'Unknown',
   download_count INTEGER DEFAULT 0,
   min_version_code INTEGER DEFAULT -1,
+  supported_editor TEXT DEFAULT 'ace',
   created_at TIMESTAMP DEFAULT (current_timestamp),
   updated_at TIMESTAMP DEFAULT (current_timestamp),
   CONSTRAINT PLUGIN_PK PRIMARY KEY (id),
@@ -68,7 +69,9 @@ class Plugin extends Entity {
   COMMENT_COUNT = 'comment_count';
   AUTHOR_GITHUB = 'author_github';
   AUTHOR_WEBSITE = 'author_website';
+  DOWNLOAD_COUNT = 'download_count';
   AUTHOR_VERIFIED = 'author_verified';
+  SUPPORTED_EDITOR = 'supported_editor';
   MIN_VERSION_CODE = 'min_version_code';
   STATUS_CHANGE_DATE = 'status_change_date';
   PACKAGE_UPDATED_AT = 'package_updated_at';
@@ -78,6 +81,10 @@ class Plugin extends Entity {
   STATUS_APPROVED = 1;
   STATUS_REJECTED = 2;
   STATUS_INACTIVE = 3;
+
+  EDITOR_ACE = 'ace';
+  EDITOR_CM = 'cm';
+  EDITOR_ALL = 'all';
 
   constructor() {
     super(table);
@@ -186,6 +193,7 @@ class Plugin extends Entity {
       this.UPDATED_AT,
       this.CREATED_AT,
       this.COMMENT_COUNT,
+      this.SUPPORTED_EDITOR,
       this.AUTHOR_VERIFIED,
       this.MIN_VERSION_CODE,
       this.PACKAGE_UPDATED_AT,
@@ -215,6 +223,7 @@ class Plugin extends Entity {
       this.VOTES_UP,
       this.DOWNLOADS,
       this.REPOSITORY,
+      this.SUPPORTED_EDITOR,
       this.MIN_VERSION_CODE,
       this.STATUS_CHANGE_DATE,
       this.PACKAGE_UPDATED_AT,
@@ -239,6 +248,7 @@ class Plugin extends Entity {
       'p.created_at as created_at',
       'p.updated_at as updated_at',
       'p.status as status',
+      'p.supported_editor as supported_editor',
       'p.min_version_code as min_version_code',
       'p.repository as repository',
       'p.status_change_message as status_change_message',

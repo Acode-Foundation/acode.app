@@ -63,6 +63,7 @@ window.onload = async () => {
   Router.add('/plugin/:id/:section?', (params) => loadModule('plugin', params));
   Router.add('/user/:userId?', (params) => loadModule('user', params));
   Router.add('/earnings', (_params, query) => loadModule('earnings', query));
+  Router.add('/update-plugin-editor/:id', (params) => loadModule('updatePluginEditor', params));
   Router.add('/:filename(index.html?)?', () => loadModule('home'));
 
   Router.add('*', () => {

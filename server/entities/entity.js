@@ -281,21 +281,37 @@ class Entity {
    */
   static formatWhere(where, operator = 'AND', values = []) {
     let result = '';
+    let closeBracket = false;
     const [firstClause] = where;
+
     if (!Array.isArray(firstClause)) {
       where = [where];
     }
+
     where.forEach((condition, i) => {
       if (typeof condition === 'string') {
         return;
       }
 
-      const nextCondition = where[i + 1];
-      result += ` ${formatCondition(condition)}`;
+      const nextOperator = where[i + 1];
 
-      if (nextCondition) {
-        const thisOperator = typeof nextCondition === 'string' ? nextCondition : operator;
-        result += ` ${thisOperator} `;
+      if (nextOperator && typeof nextOperator === 'string') {
+        let clause = ` ${formatCondition(condition)} ${nextOperator} `;
+
+        if (!closeBracket && /OR/i.test(nextOperator)) {
+          clause = ` ( ${clause}`;
+          closeBracket = true;
+        }
+
+        result += clause;
+      } else {
+        result += ` ${formatCondition(condition)} `;
+        if (closeBracket) {
+          result += ') ';
+          closeBracket = false;
+        }
+
+        result += ` ${operator} `;
       }
     });
 
@@ -364,13 +380,9 @@ class Entity {
         }
         resolve(result);
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.log('Table:', entity.table);
-        // eslint-disable-next-line no-console
         console.log('Error:', err.message, err.stack);
-        // eslint-disable-next-line no-console
         console.log('SQL:', sql);
-        // eslint-disable-next-line no-console
         console.log('Values:', values);
         err.message = `table<${entity.table}> sql execution failed.`;
         reject(err);

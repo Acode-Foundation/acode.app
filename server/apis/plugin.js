@@ -220,7 +220,7 @@ router.get('/description/:id', async (req, res) => {
 router.get('{/:pluginId}', async (req, res) => {
   try {
     const { pluginId } = req.params;
-    const { user, name, status, page, limit, orderBy } = req.query;
+    const { user, name, status, page, limit, orderBy, supported_editor } = req.query;
     const loggedInUser = await getLoggedInUser(req);
     const columns = Plugin.minColumns;
     const where = [];
@@ -256,12 +256,27 @@ router.get('{/:pluginId}', async (req, res) => {
 
     if (pluginId) {
       where.push([Plugin.ID, pluginId]);
-    } else if (userId) {
-      where.push([Plugin.USER_ID, userId]);
-    } else if (name) {
-      where.push([Plugin.NAME, name, 'LIKE']);
-    } else if (status && loggedInUser?.isAdmin) {
-      where.push([Plugin.STATUS, status]);
+    } else {
+      if (userId) {
+        where.push([Plugin.USER_ID, userId]);
+      }
+
+      if (name) {
+        where.push([Plugin.NAME, name, 'LIKE']);
+      }
+
+      if (status && loggedInUser?.isAdmin) {
+        where.push([Plugin.STATUS, status]);
+      }
+
+      const origin = req.headers.origin || req.headers.referer;
+      const allowAllEditors = Boolean(origin?.startsWith(process.env.HOST));
+
+      if (supported_editor && ['ace', 'cm', 'all'].includes(supported_editor)) {
+        where.push([Plugin.SUPPORTED_EDITOR, supported_editor]);
+      } else if (!supported_editor && !allowAllEditors) {
+        where.push([Plugin.SUPPORTED_EDITOR, 'all'], 'OR', [Plugin.SUPPORTED_EDITOR, 'ace']);
+      }
     }
 
     const options = { page, limit };
@@ -422,10 +437,6 @@ router.post('/', async (req, res) => {
       insert.push([Plugin.CHANGELOGS, changelogs]);
     }
 
-    if (req.body?.changelogs) {
-      insert.push([Plugin.CHANGELOGS, req.body.changelogs]);
-    }
-
     if (pluginJson.license) {
       insert.push([Plugin.LICENSE, pluginJson.license]);
     }
@@ -440,6 +451,10 @@ router.post('/', async (req, res) => {
 
     if (pluginJson.repository) {
       insert.push([Plugin.REPOSITORY, pluginJson.repository]);
+    }
+
+    if (req.body?.changelogs) {
+      insert.push([Plugin.CHANGELOGS, req.body.changelogs]);
     }
 
     await Plugin.insert(...insert);
@@ -535,6 +550,10 @@ router.put('/', async (req, res) => {
       updates.push([Plugin.CHANGELOGS, req.body.changelogs]);
     }
 
+    if (req.body?.supported_editor && ['ace', 'cm', 'all'].includes(req.body.supported_editor)) {
+      updates.push([Plugin.SUPPORTED_EDITOR, req.body.supported_editor]);
+    }
+
     if (version !== row.version) {
       if (!isVersionGreater(version, row.version)) {
         res.status(400).send({
@@ -609,6 +628,41 @@ router.patch('/', async (req, res) => {
       console.log(error);
     }
   } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+router.patch('/:id/supported-editor', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { supported_editor } = req.body;
+
+    if (!['ace', 'cm', 'all'].includes(supported_editor)) {
+      res.status(400).send({ error: 'Invalid editor type. Must be ace, cm, or all' });
+      return;
+    }
+    const user = await getLoggedInUser(req);
+
+    if (!user) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!id || !supported_editor) {
+      res.status(400).send({ error: 'Missing required fields' });
+      return;
+    }
+
+    const [plugin] = await Plugin.get([Plugin.ID, Plugin.USER_ID], [Plugin.ID, id]);
+    if (!plugin || plugin.user_id !== user.id) {
+      res.status(404).send({ error: 'Plugin not found' });
+      return;
+    }
+
+    await Plugin.update([Plugin.SUPPORTED_EDITOR, supported_editor], [Plugin.ID, id]);
+    res.send({ message: 'Plugin updated successfully' });
+  } catch (error) {
+    console.error('Error updating plugin supported editor:', error);
     res.status(500).send({ error: error.message });
   }
 });

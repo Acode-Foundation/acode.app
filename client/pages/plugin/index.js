@@ -39,7 +39,14 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
     comment_count: commentCount,
     package_updated_at: updatedAt,
     author_verified: authorVerified,
+    supported_editor: supportedEditor,
   } = plugin;
+
+  const getEditorDisplayName = (editor) => {
+    if (editor === 'cm') return 'CodeMirror';
+    if (editor === 'ace') return 'Ace';
+    return 'Both Editors';
+  };
 
   const user = await getLoggedInUser();
   const userComment = await getUserComment(pluginId);
@@ -138,6 +145,11 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
               <div className='chip'>
                 <span className='icon certificate' />
                 <span>{license}</span>
+              </div>
+            )}
+            {supportedEditor && (
+              <div className='chip editor-badge' data-editor={supportedEditor}>
+                <span>{getEditorDisplayName(supportedEditor)}</span>
               </div>
             )}
             {votesUp + votesDown > 0 && (
@@ -469,7 +481,6 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
     try {
       const deleted = await deleteComment(commentId);
       if (!deleted) return;
-      alert('SUCCESS', 'Comment deleted successfully');
       commentId = null;
       form.el.reset();
       for (const input of form.getAll('input[name=vote]')) {

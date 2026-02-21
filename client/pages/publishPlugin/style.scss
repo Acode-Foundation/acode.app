@@ -1,0 +1,211 @@
+#publish-plugin {
+  .update-banner {
+    position: relative;
+    margin: 20px auto 30px;
+    padding: 24px 28px;
+    max-width: 800px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    box-shadow:
+      0 4px 24px rgba(102, 126, 234, 0.25),
+      0 8px 48px rgba(118, 75, 162, 0.2);
+    overflow: hidden;
+    animation: fadeInScale 0.5s ease-out;
+
+    // Animated background gradient
+    background-size: 200% 200%;
+    animation: fadeInScale 0.5s ease-out, gradientShift 8s ease infinite;
+
+    // Decorative elements
+    &::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    &::after {
+      content: "\e910";
+      font-family: 'acode' !important;
+      position: absolute;
+      top: 20px;
+      right: 28px;
+      font-size: 28px;
+      color: rgba(255, 255, 255, 0.3);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .icon-wrapper {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+
+      .icon {
+        font-size: 24px;
+        color: rgba(255, 255, 255, 0.95);
+      }
+    }
+
+    p {
+      position: relative;
+      margin: 0 0 16px;
+      color: #ffffff;
+      font-size: 16px;
+      line-height: 1.6;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+      strong {
+        display: inline-flex;
+        align-items: center;
+        margin: 0 6px;
+        padding: 4px 12px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+    }
+
+    a {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      color: #667eea;
+      background: #ffffff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 15px;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &::before {
+        content: '→';
+        font-size: 18px;
+        font-weight: bold;
+        transition: transform 0.3s ease;
+      }
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+        background: #f8f9ff;
+
+        &::before {
+          transform: translateX(4px);
+        }
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
+
+    // Badge for "mandatory" or "new"
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 12px;
+      padding: 4px 12px;
+      background: rgba(255, 255, 255, 0.95);
+      color: #764ba2;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+  }
+}
+
+// Animations
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes gradientShift {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  33% {
+    transform: translate(20px, -20px);
+  }
+
+  66% {
+    transform: translate(-10px, 10px);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  #publish-plugin .update-banner {
+    margin: 16px 12px 24px;
+    padding: 20px 20px;
+
+    &::after {
+      right: 20px;
+      font-size: 24px;
+    }
+
+    p {
+      font-size: 15px;
+      margin-bottom: 14px;
+    }
+
+    a {
+      width: 100%;
+      justify-content: center;
+      padding: 14px 20px;
+    }
+  }
+}
