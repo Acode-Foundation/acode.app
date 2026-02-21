@@ -143,6 +143,20 @@ export default async function UpdatePluginEditor({ id }) {
         <span className='error'>{errorText}</span>
         <span className='success'>{successText}</span>
 
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginBottom: '16px',
+            gap: '8px',
+          }}
+        >
+          <input type='checkbox' name='agree_tested' id='tested_agreement' required={true} />
+          <label htmlFor='tested_agreement' className='agreement'>
+            I have tested my plugin with the selected editor(s) and confirm that it works correctly.
+          </label>
+        </div>
+
         <button ref={submitButton} type='submit'>
           <span className='icon save' />
           {buttonText}
