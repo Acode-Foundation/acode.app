@@ -33,8 +33,9 @@ async function sendUpdateEmail() {
   }
 
   for (const userId of userIds) {
-    const [user] = query('SELECT email, name FROM "user" WHERE id = ?', [userId]);
-    const activePlugins = query('SELECT name, id FROM plugin WHERE user_id = ? AND status = 1', [userId]);
+    const user = query('SELECT email, name FROM "user" WHERE id = ?', [userId]);
+    if (!user || user.length === 0) continue;
+    const [{ email, name }] = user;
     const emailBody = `We have recently updated our plugin system to support CodeMirror editor. Following plugins are pending update to specify supported editor:
 <ul>
 ${activePlugins
