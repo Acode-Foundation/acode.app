@@ -81,8 +81,6 @@ class Entity {
       operator,
     });
 
-    console.log('Generated SQL:', sql, 'Values:', values);
-
     return Entity.execSql(sql, values, this);
   }
 
@@ -298,7 +296,6 @@ class Entity {
       const nextOperator = where[i + 1];
 
       if (nextOperator && typeof nextOperator === 'string') {
-        console.log('Next operator:', nextOperator);
         let clause = ` ${formatCondition(condition)} ${nextOperator} `;
 
         if (!closeBracket && /OR/i.test(nextOperator)) {
@@ -383,13 +380,9 @@ class Entity {
         }
         resolve(result);
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.log('Table:', entity.table);
-        // eslint-disable-next-line no-console
         console.log('Error:', err.message, err.stack);
-        // eslint-disable-next-line no-console
         console.log('SQL:', sql);
-        // eslint-disable-next-line no-console
         console.log('Values:', values);
         err.message = `table<${entity.table}> sql execution failed.`;
         reject(err);
