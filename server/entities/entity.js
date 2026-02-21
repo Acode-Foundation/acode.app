@@ -81,6 +81,8 @@ class Entity {
       operator,
     });
 
+    console.log('Generated SQL:', sql, 'Values:', values);
+
     return Entity.execSql(sql, values, this);
   }
 
@@ -281,21 +283,38 @@ class Entity {
    */
   static formatWhere(where, operator = 'AND', values = []) {
     let result = '';
+    let closeBracket = false;
     const [firstClause] = where;
+
     if (!Array.isArray(firstClause)) {
       where = [where];
     }
+
     where.forEach((condition, i) => {
       if (typeof condition === 'string') {
         return;
       }
 
-      const nextCondition = where[i + 1];
-      result += ` ${formatCondition(condition)}`;
+      const nextOperator = where[i + 1];
 
-      if (nextCondition) {
-        const thisOperator = typeof nextCondition === 'string' ? nextCondition : operator;
-        result += ` ${thisOperator} `;
+      if (nextOperator && typeof nextOperator === 'string') {
+        console.log('Next operator:', nextOperator);
+        let clause = ` ${formatCondition(condition)} ${nextOperator} `;
+
+        if (!closeBracket && /OR/i.test(nextOperator)) {
+          clause = ` ( ${clause}`;
+          closeBracket = true;
+        }
+
+        result += clause;
+      } else {
+        result += ` ${formatCondition(condition)} `;
+        if (closeBracket) {
+          result += ') ';
+          closeBracket = false;
+        }
+
+        result += ` ${operator} `;
       }
     });
 

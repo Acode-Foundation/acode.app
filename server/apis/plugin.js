@@ -269,9 +269,12 @@ router.get('{/:pluginId}', async (req, res) => {
         where.push([Plugin.STATUS, status]);
       }
 
+      const origin = req.headers.origin || req.headers.referer;
+      const allowAllEditors = Boolean(origin?.startsWith(process.env.HOST));
+
       if (supported_editor && ['ace', 'cm', 'all'].includes(supported_editor)) {
         where.push([Plugin.SUPPORTED_EDITOR, supported_editor]);
-      } else {
+      } else if (!supported_editor && !allowAllEditors) {
         where.push([Plugin.SUPPORTED_EDITOR, 'all'], 'OR', [Plugin.SUPPORTED_EDITOR, 'ace']);
       }
     }
