@@ -461,6 +461,10 @@ router.post('/', async (req, res) => {
       insert.push([Plugin.CHANGELOGS, req.body.changelogs]);
     }
 
+    if (req.body?.supported_editor && ['ace', 'cm', 'all'].includes(req.body.supported_editor)) {
+      insert.push([Plugin.SUPPORTED_EDITOR, req.body.supported_editor]);
+    }
+
     await Plugin.insert(...insert);
 
     savePlugin(pluginId, pluginZip, icon);
