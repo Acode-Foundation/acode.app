@@ -26,10 +26,14 @@ main();
 async function main() {
   await setAuth();
 
-  // allow origin https://localhost
   app.use((_req, res, next) => {
     res.header('Access-Control-Allow-Origin', 'https://localhost');
     res.header('Access-Control-Allow-Headers', 'Content-Type, x-auth-token');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    if (_req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
     next();
   });
 
