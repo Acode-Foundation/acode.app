@@ -87,11 +87,11 @@ router.get('/download/:id', async (req, res) => {
             [Order.PACKAGE, packageName],
             [Order.AMOUNT, row.price],
             [Order.PLUGIN_ID, row.id],
-            [Order.STATE, purchaseState],
+            [Order.STATE, Number(purchaseState)],
           );
         }
 
-        if (purchaseState !== 0) {
+        if (Number(purchaseState) !== 0) {
           throw new Error('Purchase is not active');
         }
       } catch (error) {

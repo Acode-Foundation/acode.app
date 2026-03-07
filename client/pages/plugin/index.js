@@ -283,7 +283,7 @@ async function renderOrders(ref, pluginId, year, month) {
 
   for (const order of orders) {
     const date = moment(order.created_at).format('DD MMMM YYYY');
-    const status = order.state === '0' ? 'Completed' : 'Cancelled';
+    const status = Number(order.state) === 0 ? 'Completed' : 'Cancelled';
     const packageName = /free$/.test(order.package) ? 'Free' : 'Paid';
     ref.append(
       <tr className='order'>

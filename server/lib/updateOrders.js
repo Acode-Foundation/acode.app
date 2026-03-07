@@ -51,11 +51,11 @@ async function updateOrder(startDate, endDate, google) {
         updates.push([PurchaseOrder.ORDER_ID, purchaseOrderId]);
       }
 
-      if (purchaseState !== state) {
-        updates.push([PurchaseOrder.STATE, purchaseState]);
+      if (Number(purchaseState) !== Number(state)) {
+        updates.push([PurchaseOrder.STATE, Number(purchaseState)]);
       }
 
-      if (purchaseState !== PurchaseOrder.STATE_PURCHASED) {
+      if (Number(purchaseState) !== Number(PurchaseOrder.STATE_PURCHASED)) {
         updates.push([PurchaseOrder.AMOUNT, 0]);
       }
 
