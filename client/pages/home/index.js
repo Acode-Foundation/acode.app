@@ -98,6 +98,20 @@ export default async function home() {
         </div>
         <ul className='featured-plugins__list'>{plugins}</ul>
       </div>
+
+      <div className='from-the-creator'>
+        <div className='section-header'>
+          <h2>Announcements</h2>
+        </div>
+        <ProjectCard
+          logo='https://academy.acode.app/icon.png'
+          alt='Acode Academy'
+          title='Acode Academy'
+          subtitle='Learn to build Acode plugins and master the editor — interactive courses by the creator'
+          url='https://academy.acode.app'
+          cta='Explore Courses'
+        />
+      </div>
     </section>
   );
 }
@@ -119,6 +133,19 @@ async function GhButton({ url, title, count, icon = 'github' }) {
         <span>{title}</span>
       </div>
       <div className='gh-button-count'>{count}</div>
+    </a>
+  );
+}
+
+function ProjectCard({ logo, alt, title, subtitle, url, cta }) {
+  return (
+    <a href={url} target='_blank' rel='noopener noreferrer' className='project-card'>
+      <img src={logo} alt={alt} className='project-card__logo' />
+      <div className='project-card__body'>
+        <h3 className='project-card__title'>{title}</h3>
+        <p className='project-card__subtitle'>{subtitle}</p>
+      </div>
+      <span className='project-card__cta'>{cta} →</span>
     </a>
   );
 }
