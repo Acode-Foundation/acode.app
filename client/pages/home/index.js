@@ -108,7 +108,7 @@ export default async function home() {
           alt='Acode Academy'
           title='Acode Academy'
           subtitle='Learn to build Acode plugins and master the editor — interactive courses by the creator'
-          url='https://acode.app/plugin/io.foxbiz.acode_academy'
+          url='https://academy.acode.app'
           cta='Explore Courses'
         />
       </div>
