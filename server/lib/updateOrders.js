@@ -35,7 +35,7 @@ async function updateOrder(startDate, endDate, google) {
       const [plugin] = await Plugin.get([Plugin.SKU], [Plugin.ID, pluginId]);
       if (!plugin) {
         console.log(`Plugin ${pluginId} not found`);
-        return;
+        continue;
       }
 
       const purchase = await androidpublisher.purchases.products.get({
