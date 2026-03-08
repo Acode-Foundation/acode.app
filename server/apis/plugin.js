@@ -11,6 +11,8 @@ const Download = require('../entities/download');
 const badWords = require('../badWords.json');
 const { getLoggedInUser, getPluginSKU } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
+const buildScanSummary = require('../lib/pluginScanner');
+const { marked } = require('marked');
 
 const androidpublisher = google.androidpublisher('v3');
 
@@ -32,6 +34,29 @@ const validLicenses = [
   'AGPL-3.0',
   'Proprietary',
 ];
+
+router.get('/scan/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const filePath = path.resolve(__dirname, '../../data/plugins', `${id}.scan-report.md`);
+
+    let summary = '';
+
+    if (!fs.existsSync(filePath)) {
+      summary = await buildScanSummary(fs.readFileSync(path.resolve(__dirname, '../../data/plugins', `${id}.zip`)), `${id}.zip`);
+    } else {
+      summary = fs.readFileSync(filePath, 'utf-8');
+    }
+
+    if (req.get('accept')?.includes('text/html')) {
+      summary = marked.parse(summary);
+    }
+
+    res.send(summary);
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
 
 router.get('/owned/:sku', async (req, res) => {
   try {
@@ -467,6 +492,9 @@ router.post('/', async (req, res) => {
 
     await Plugin.insert(...insert);
 
+    buildScanSummary(pluginZip.data, pluginZip.name).catch((err) => {
+      console.error('Error building scan summary:', err);
+    });
     savePlugin(pluginId, pluginZip, icon);
     res.send({ message: 'Plugin uploaded successfully' });
 
@@ -587,6 +615,9 @@ router.put('/', async (req, res) => {
     await Plugin.update(updates, [Plugin.ID, pluginId]);
 
     if (savePluginZip) {
+      try {
+        fs.unlinkSync(path.join(__dirname, `../../data/plugins/${pluginId}.scan-report.md`));
+      } catch (_) {}
       savePlugin(pluginId, pluginZip, icon);
     }
     res.send({ message: 'Plugin updated successfully' });
@@ -691,9 +722,9 @@ router.delete('/:id', async (req, res) => {
       try {
         fs.unlinkSync(path.join(__dirname, `../../data/plugins/${id}.zip`));
         fs.unlinkSync(path.join(__dirname, `../../data/icons/${id}.png`));
+        fs.unlinkSync(path.join(__dirname, `../../data/plugins/${id}.scan-report.md`));
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.log(error);
+        console.error(error);
       }
       res.send({ message: 'Plugin deleted successfully' });
       return;
@@ -768,7 +799,6 @@ async function exploreZip(file) {
 function savePlugin(id, file, icon) {
   file.mv(path.resolve(__dirname, '../../data/plugins', `${id}.zip`));
   fs.writeFile(path.resolve(__dirname, '../../data/icons', `${id}.png`), icon, 'base64', (err) => {
-    // eslint-disable-next-line no-console
     if (err) console.log(err);
   });
 }

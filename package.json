@@ -66,7 +66,8 @@
     "update-schema": "node ./updateSchema",
     "start": "node ./server/main",
     "sitemap": "node dev/generateSitemap.js",
-    "reports": "node ./server/reportsCli"
+    "reports": "node ./server/reportsCli",
+    "scan": "node ./server/lib/pluginScanner.js"
   },
   "browserslist": [
     "> 0.25%, not dead"
