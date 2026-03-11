@@ -84,6 +84,8 @@ export default ({ routes }) => (
             <a href='https://foxbiz.io'>Foxbiz Software</a>
             <a href='/policy'>Privacy Policy</a>
             <a href='/terms'>Terms of Service</a>
+            <a href='/refund'>Refund Policy</a>
+            <a href='/contact'>Contact Us</a>
           </nav>
         </div>
 
