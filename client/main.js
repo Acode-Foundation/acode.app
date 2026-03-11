@@ -53,6 +53,8 @@ window.onload = async () => {
   Router.add('/faqs/:qHash?', (params) => loadModule('FAQs', params));
   Router.add('/policy', () => loadModule('privacyPolicy'));
   Router.add('/terms', () => loadModule('termsOfService'));
+  Router.add('/refund', () => loadModule('refundPolicy'));
+  Router.add('/contact', () => loadModule('contactUs'));
   Router.add('/login', (_params, query) => loadModule('loginUser', query));
   Router.add('/plugins', (_params, query) => loadModule('plugins', query));
   Router.add('/logout', logout);

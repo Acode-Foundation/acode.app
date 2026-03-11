@@ -1,0 +1,71 @@
+#contact-us {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+
+  h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    text-align: left;
+  }
+
+  .subtitle {
+    color: var(--secondary-text-color, #aaa);
+    margin-bottom: 2rem;
+  }
+
+  .contact-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    background: var(--secondary-color, #1e1e2e);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+
+    .icon.email::before {
+      font-size: 1.5rem;
+    }
+
+    .contact-info {
+      h2 {
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--secondary-text-color, #aaa);
+        margin-bottom: 0.25rem;
+      }
+
+      a {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--primary-color, #4fa3e3);
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      p {
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: var(--secondary-text-color, #aaa);
+      }
+    }
+  }
+
+  .company-info {
+    font-size: 0.9rem;
+    color: var(--secondary-text-color, #aaa);
+
+    p {
+      margin: 0.25rem 0;
+    }
+
+    strong {
+      color: var(--text-color, #fff);
+    }
+  }
+}
