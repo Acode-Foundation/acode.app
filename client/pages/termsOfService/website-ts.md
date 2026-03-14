@@ -16,8 +16,6 @@ You retain ownership of any plugins you upload to our website. However, by uploa
 
 We will pay you for your plugin sales and download count. Payments will be made to the bank account or PayPal email address you provide as your default payment method. If your earnings from the previous month(s) sum up to an amount equal to or greater than the threshold, your payment will be automatically transferred to your default payment method on the 16th of each month. If the 16th falls on a weekend, the transfer will occur on the next working day. Please note that it may take up to 5 working days for the amount to be credited to your account. You are responsible for any taxes or fees associated with receiving payments.
 
-Please let me know if you would like any further changes or updates to the Terms of Service.
-
 ## Payment Threshold
 
 The payment threshold is the minimum amount of earnings required for a payment to be processed and transferred to your designated payment method. Different minimum thresholds apply depending on the chosen payment method:
