@@ -91,7 +91,7 @@ router.post('/', async (req, res) => {
       [Sponsor.NAME, name],
       [Sponsor.TIER, tier],
       [Sponsor.EMAIL, email],
-      [Sponsor.PUBLIC, show],
+      [Sponsor.PUBLIC, show ? 1 : 0],
       [Sponsor.IMAGE, filename],
       [Sponsor.WEBSITE, website],
       [Sponsor.TAGLINE, tagline],
