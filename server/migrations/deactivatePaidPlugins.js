@@ -13,3 +13,4 @@ const stmt = db.prepare(
 
 const result = stmt.run();
 console.log(`Deactivated ${result.changes} paid plugin(s).`);
+process.exit(0);
