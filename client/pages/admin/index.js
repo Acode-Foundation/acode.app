@@ -204,7 +204,7 @@ function EmailUsers() {
   let message = '';
 
   const fetchCount = async (selectedFilter) => {
-    const res = await fetch(`api/admin/email-recipients-count?filter=${selectedFilter}`);
+    const res = await fetch(`/api/admin/email-recipients-count?filter=${selectedFilter}`);
     const json = await res.json();
     recipientCount.value = json.count;
   };
