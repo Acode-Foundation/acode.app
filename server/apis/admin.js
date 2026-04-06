@@ -140,7 +140,9 @@ router.post('/send-email', async (req, res) => {
   }
   const users = await User.getUsersByFilter(filter);
   for (const user of users) {
-    await sendEmail(user.email, user.name, subject.trim(), message.trim());
+    sendEmail(user.email, user.name, subject.trim(), message.trim()).catch((err) => {
+      console.error(`Failed to send email to ${user.email}:`, err);
+    });
   }
   res.send({ sent: users.length });
 });
