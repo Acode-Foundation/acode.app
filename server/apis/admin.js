@@ -116,4 +116,33 @@ router.delete('/user/:id', async (req, res) => {
   res.send(user);
 });
 
+const ALLOWED_FILTERS = ['all', 'with_plugins', 'with_paid_plugins', 'with_payment'];
+
+router.get('/email-recipients-count', async (req, res) => {
+  const { filter = 'all' } = req.query;
+  if (!ALLOWED_FILTERS.includes(filter)) {
+    res.status(400).send({ error: 'Invalid filter' });
+    return;
+  }
+  const count = await User.countUsersByFilter(filter);
+  res.send({ count });
+});
+
+router.post('/send-email', async (req, res) => {
+  const { filter = 'all', subject, message } = req.body;
+  if (!ALLOWED_FILTERS.includes(filter)) {
+    res.status(400).send({ error: 'Invalid filter' });
+    return;
+  }
+  if (!subject?.trim() || !message?.trim()) {
+    res.status(400).send({ error: 'Subject and message are required' });
+    return;
+  }
+  const users = await User.getUsersByFilter(filter);
+  for (const user of users) {
+    await sendEmail(user.email, user.name, subject.trim(), message.trim());
+  }
+  res.send({ sent: users.length });
+});
+
 module.exports = router;
