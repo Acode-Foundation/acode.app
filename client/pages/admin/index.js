@@ -226,7 +226,7 @@ function EmailUsers() {
     sendBtn.disabled = true;
     sendBtn.textContent = 'Sending...';
     try {
-      const res = await fetch('api/admin/send-email', {
+      const res = await fetch('/api/admin/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filter, subject, message }),
