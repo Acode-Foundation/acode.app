@@ -1,4 +1,26 @@
 #publish-plugin {
+  .paid-plugin-notice.update-banner {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    box-shadow:
+      0 4px 24px rgba(245, 158, 11, 0.25),
+      0 8px 48px rgba(217, 119, 6, 0.2);
+    margin-bottom: 16px;
+
+    &::after {
+      content: "\e915";
+    }
+
+    .icon-wrapper .icon {
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    span {
+      color: #fff;
+      font-size: 15px;
+      font-weight: 500;
+    }
+  }
+
   .update-banner {
     position: relative;
     margin: 20px auto 30px;

@@ -16,6 +16,23 @@ You retain ownership of any plugins you upload to our website. However, by uploa
 
 We will pay you for your plugin sales and download count. Payments will be made to the bank account or PayPal email address you provide as your default payment method. If your earnings from the previous month(s) sum up to an amount equal to or greater than the threshold, your payment will be automatically transferred to your default payment method on the 16th of each month. If the 16th falls on a weekend, the transfer will occur on the next working day. Please note that it may take up to 5 working days for the amount to be credited to your account. You are responsible for any taxes or fees associated with receiving payments.
 
+## Paid Plugin Discontinuation
+
+Effective **6 April 2026**, paid plugin support has been discontinued. All previously approved paid plugins have been deactivated from the Acode plugin store.
+
+**For plugin developers:**
+
+- You can restore your plugin to the store at no cost by visiting your plugin page and clicking **"Make Free."**
+- Once made free, your plugin will be immediately available to all Acode users again.
+
+**Compensation for pending earnings:**
+
+- Developers with outstanding unpaid earnings from paid plugin sales will be compensated in full.
+- International developers will receive an Amazon gift card of equivalent value to their total pending earnings.
+- If you have pending earnings, please ensure your account email is up to date and contact us at [contact@acode.app](mailto:contact@acode.app) to initiate your compensation.
+
+We sincerely apologize for any inconvenience this may cause and thank you for your continued support of the Acode community.
+
 ## Payment Threshold
 
 The payment threshold is the minimum amount of earnings required for a payment to be processed and transferred to your designated payment method. Different minimum thresholds apply depending on the chosen payment method:
