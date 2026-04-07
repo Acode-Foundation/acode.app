@@ -71,6 +71,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
   };
   const $orders = <Order />;
   const shouldShowOrders = user && (user.id === userId || user.isAdmin) && !!plugin.price;
+  const isSelf = user && user.id === userId;
 
   let canInstall = /android/i.test(navigator.userAgent);
 
@@ -177,6 +178,18 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           </div>
         </div>
       </div>
+      {isSelf && status === 'deleted' && price > 0 && (
+        <div className='paid-plugin-notice'>
+          <div className='notice-header'>
+            <span className='icon warning' />
+            <strong>Paid plugins discontinued</strong>
+          </div>
+          <p>This plugin was deactivated because paid plugins are no longer supported. Make it free to restore it to the store.</p>
+          <button type='button' className='make-free-btn' onclick={makeFree}>
+            Make Free &amp; Restore
+          </button>
+        </div>
+      )}
       <div className='detailed'>
         <div
           className='options'
@@ -205,6 +218,17 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
       </div>
     </section>
   );
+
+  async function makeFree() {
+    const confirmed = await confirm('Make Plugin Free', 'This will set your plugin price to \u20B90 (free) and restore it to the store. Continue?');
+    if (!confirmed) return;
+    const res = await fetch(`/api/plugin/${id}/make-free`, { method: 'PATCH' }).then((r) => r.json());
+    if (res.error) {
+      alert('Error', res.error);
+      return;
+    }
+    alert('Success', 'Your plugin is now free and has been restored to the store.', () => Router.loadUrl(`/plugin/${id}`), true);
+  }
 
   /**
    *

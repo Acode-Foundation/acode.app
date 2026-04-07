@@ -15,8 +15,6 @@ const sendEmail = require('../lib/sendEmail');
 const androidpublisher = google.androidpublisher('v3');
 
 const router = Router();
-const MIN_PRICE = 10;
-const MAX_PRICE = 10000;
 const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
 const ID_REGEX = /^[a-z][a-z0-9._]{3,49}$/i;
 const validLicenses = [
@@ -244,14 +242,21 @@ router.get('{/:pluginId}', async (req, res) => {
       columns.push(Plugin.AUTHOR_GITHUB);
     }
 
-    if (loggedInUser && (loggedInUser.isAdmin || loggedInUser.id === userId)) {
+    if (loggedInUser && (loggedInUser.isAdmin || loggedInUser.id === userId || !!pluginId)) {
       columns.push(Plugin.STATUS);
     }
 
-    if (!loggedInUser) {
-      where.push([Plugin.STATUS, Plugin.STATUS_APPROVED]);
-    } else if (loggedInUser.id === userId && !loggedInUser.isAdmin) {
-      where.push([Plugin.STATUS, Plugin.STATUS_INACTIVE, '<>']);
+    if (pluginId) {
+      // Single plugin fetch: apply status filter only for anonymous users;
+      // logged-in users get all statuses, access is checked after fetch.
+      if (!loggedInUser) {
+        where.push([Plugin.STATUS, Plugin.STATUS_APPROVED]);
+      }
+    } else {
+      // List mode: owner and admin see all statuses; everyone else sees only approved.
+      if (!loggedInUser || (!loggedInUser.isAdmin && loggedInUser.id !== userId)) {
+        where.push([Plugin.STATUS, Plugin.STATUS_APPROVED]);
+      }
     }
 
     if (pluginId) {
@@ -305,6 +310,13 @@ router.get('{/:pluginId}', async (req, res) => {
     if (pluginId) {
       const row = rows[0];
       if (!row) {
+        res.status(404).send({ error: 'Not found' });
+        return;
+      }
+
+      // Non-owner, non-admin users can only see approved plugins.
+      const isOwner = loggedInUser && loggedInUser.id === row.user_id;
+      if (row.status !== 'approved' && !isOwner && !loggedInUser?.isAdmin) {
         res.status(404).send({ error: 'Not found' });
         return;
       }
@@ -415,15 +427,11 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    if (price) {
-      if (price < MIN_PRICE || price > MAX_PRICE) {
-        res.status(400).send({
-          error: `Price should be between INR ${MIN_PRICE} and INR ${MAX_PRICE}`,
-        });
-        return;
-      }
-
-      await registerSKU(name, pluginId, price);
+    if (price > 0) {
+      res.status(400).send({
+        error: 'Paid plugins are no longer supported. Please set price to 0 and resubmit your plugin as free.',
+      });
+      return;
     }
 
     const insert = [
@@ -578,8 +586,11 @@ router.put('/', async (req, res) => {
     }
 
     if (row.price !== price) {
-      if (price) {
-        await registerSKU(name, pluginId, price);
+      if (price > 0) {
+        res.status(400).send({
+          error: 'Paid plugins are no longer supported. Please set price to 0.',
+        });
+        return;
       }
       updates.push([Plugin.PRICE, price]);
     }
@@ -593,6 +604,44 @@ router.put('/', async (req, res) => {
   } catch (error) {
     console.error('Error updating plugin:', error);
     res.status(500).send({ error: 'Unable to update plugin, please try again later, if issue persists contact support.' });
+  }
+});
+
+router.patch('/:id/make-free', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await getLoggedInUser(req);
+
+    if (!user) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const [plugin] = await Plugin.get([Plugin.ID, Plugin.USER_ID, Plugin.PRICE, Plugin.STATUS], [Plugin.ID, id]);
+    if (!plugin) {
+      res.status(404).send({ error: 'Plugin not found' });
+      return;
+    }
+
+    if (plugin.user_id !== user.id && !user.isAdmin) {
+      res.status(403).send({ error: 'Forbidden' });
+      return;
+    }
+
+    if (!plugin.price || plugin.price <= 0) {
+      res.status(400).send({ error: 'Plugin is already free' });
+      return;
+    }
+
+    const updates = [[Plugin.PRICE, 0]];
+    if (plugin.status === 'deleted') {
+      updates.push([Plugin.STATUS, Plugin.STATUS_APPROVED]);
+    }
+
+    await Plugin.update(updates, [Plugin.ID, id]);
+    res.send({ message: 'Plugin is now free and has been restored to the store.' });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
   }
 });
 
@@ -850,79 +899,6 @@ function validatePlugin(json, icon, readmeFile) {
   }
 
   return null;
-}
-
-/**
- * Create a in-app product
- * @param {string} package
- * @param {string} name
- * @param {string} id
- * @param {number} price
- */
-async function registerSKU(name, id, price) {
-  const sku = getPluginSKU(id);
-  if (!isValidPrice(price)) {
-    throw new Error('Invalid price');
-  }
-
-  await register('com.foxdebug.acode');
-  await register('com.foxdebug.acodefree');
-  async function register(packageName) {
-    try {
-      const requestBody = {
-        sku,
-        packageName,
-        status: 'active',
-        defaultPrice: {
-          currency: 'INR',
-          priceMicros: price * 1000000,
-        },
-        defaultLanguage: 'en-US',
-        purchaseType: 'managedUser',
-        listings: {
-          'en-US': {
-            title: name,
-            description: `Purchase ${name} (${id}) plugin for Acode editor`,
-          },
-        },
-      };
-
-      let skuAlreadyExists = false;
-
-      try {
-        await androidpublisher.inappproducts.get({
-          sku,
-          packageName,
-        });
-        skuAlreadyExists = true;
-      } catch (_error) {
-        // SKU does not exist
-      }
-
-      if (skuAlreadyExists) {
-        await androidpublisher.inappproducts.update({
-          sku,
-          packageName,
-          requestBody,
-          autoConvertMissingPrices: true,
-        });
-        return;
-      }
-
-      await androidpublisher.inappproducts.insert({
-        packageName,
-        requestBody,
-        autoConvertMissingPrices: true,
-      });
-    } catch (error) {
-      const message = error.errors?.map(({ message: msg }) => msg).join('\n');
-      throw new Error(`Failed to register SKU, ${message}`);
-    }
-  }
-}
-
-function isValidPrice(price) {
-  return price && !Number.isNaN(price) && price >= MIN_PRICE && price <= MAX_PRICE;
 }
 
 function isVersionGreater(newV, oldV) {

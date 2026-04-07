@@ -26,7 +26,6 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
   const pluginName = Reactive(plugin?.name);
   const license = Reactive(plugin?.license);
   const pluginVersion = Reactive(plugin?.version);
-  const pluginPrice = Reactive(+plugin?.price ? `INR ${plugin.price}` : 'Free');
   const keywords = Reactive(plugin?.keywords && json(plugin.keywords)?.join(', '));
   const contributors = Reactive(
     plugin?.contributors &&
@@ -65,6 +64,13 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
   return (
     <section id='publish-plugin'>
       <h1 style={{ textAlign: 'center' }}>{capitalize(mode)} plugin</h1>
+
+      <div className='paid-plugin-notice update-banner'>
+        <div className='icon-wrapper'>
+          <span className='icon warning' />
+          <span>Paid plugin support has been discontinued. Plugins submitted with a price will be rejected.</span>
+        </div>
+      </div>
 
       {mode === 'update' && (
         <div className='update-banner'>
@@ -157,10 +163,6 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
               <td>{minVersionCode}</td>
             </tr>
             <tr>
-              <th>Price</th>
-              <td>{pluginPrice}</td>
-            </tr>
-            <tr>
               <th>Icon</th>
               <td>{pluginIcon}</td>
             </tr>
@@ -208,7 +210,6 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
       pluginName.value = '';
       pluginVersion.value = '';
       pluginAuthor.value = '';
-      pluginPrice.value = '';
       pluginIcon.src = '#';
       minVersionCode.value = '';
       submitButton.el.disabled = true;
@@ -272,12 +273,6 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
 
         if (id) {
           updateType.value = `(${getUpdateType(manifest.version, plugin.version)} from ${plugin.version})`;
-        }
-
-        if (+manifest.price) {
-          pluginPrice.value = `INR ${manifest.price || 0}`;
-        } else {
-          pluginPrice.value = 'Free';
         }
 
         pluginId.value = manifest.id;

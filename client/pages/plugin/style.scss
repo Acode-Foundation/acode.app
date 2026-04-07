@@ -5,6 +5,62 @@
     height: 100%;
   }
 
+  .paid-plugin-notice {
+    margin: 16px 0;
+    padding: 16px 20px;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    border-left: 4px solid #f59e0b;
+    border-radius: 10px;
+
+    .notice-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+
+      .icon {
+        color: #f59e0b;
+        font-size: 20px;
+      }
+
+      strong {
+        font-size: 15px;
+        color: #f59e0b;
+      }
+    }
+
+    p {
+      margin: 0 0 14px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--secondary-text-color);
+    }
+
+    .make-free-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 20px;
+      background: #f59e0b;
+      color: #000;
+      font-weight: 600;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+
+      &:hover {
+        background: #d97706;
+      }
+
+      &:active {
+        background: #b45309;
+      }
+    }
+  }
+
   .verified {
     color: #39f;
   }

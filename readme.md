@@ -54,8 +54,8 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Contact
 
-For any inquiries or support, please visit our [contact page](https://acode.app/contact) or reach out via [email](mailto:support@acode.app).
+For any inquiries or support, please visit our [contact page](https://acode.app/contact) or reach out via [email](mailto:contact@acode.app).
 
 ---
 
-*Empower your coding journey with Acode—code anytime, anywhere.*
+_Empower your coding journey with Acode—code anytime, anywhere._

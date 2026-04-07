@@ -52,7 +52,6 @@ export default async function User({ userId }) {
 
   if (shouldShowSensitiveInfo) {
     renderEarnings();
-    renderPaymentMethods();
   }
 
   return (
@@ -76,16 +75,6 @@ export default async function User({ userId }) {
           ) : (
             ''
           )}
-          <div onwheel={onwheel} ref={paymentMethods} className='payment-methods'>
-            {isSelf ? (
-              <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
-                <span className='icon add' />
-                <span>Payment method</span>
-              </div>
-            ) : (
-              ''
-            )}
-          </div>
           <div className='socials' onclick={(e) => e.target.dataset.href && Router.loadUrl(e.target.dataset.href)}>
             {shouldShowSensitiveInfo && <button type='button' title='email' className='icon mail' data-href={`mailto:${user.email}`} />}
             {user.github && (
@@ -101,15 +90,6 @@ export default async function User({ userId }) {
       <Plugins user={user.id} />
     </section>
   );
-
-  /**
-   * Scroll payment methods horizontally on mouse wheel
-   * @param {WheelEvent} e
-   */
-  function onwheel(e) {
-    e.preventDefault();
-    this.scrollLeft += e.deltaY;
-  }
 
   function PaymentMethod({
     id,
@@ -201,14 +181,6 @@ export default async function User({ userId }) {
     } finally {
       hideLoading();
     }
-  }
-
-  /**
-   * Add payment method
-   */
-  async function addPaymentMethod() {
-    const option = await select('Add payment method', ['Paypal', 'Bank account', 'Crypto']);
-    Router.loadUrl(`/add-payment-method/${option.toLowerCase().replace(' ', '-')}`);
   }
 
   async function renderPaymentMethods() {
