@@ -1,6 +1,6 @@
 const { CronJob } = require('cron');
 const updateOrders = require('./updateOrders');
-const updateEarnings = require('../lib/updateEarnings');
+const updateEarnings = require('./updateEarnings');
 const cleanDb = require('./cleanDb');
 const updateSponsors = require('./updateSponsors');
 
