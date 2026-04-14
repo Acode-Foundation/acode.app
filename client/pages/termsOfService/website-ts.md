@@ -14,17 +14,11 @@ You retain ownership of any plugins you upload to our website. However, by uploa
 
 ## Payments
 
-We will pay you for your plugin sales and download count. Payments will be made to the bank account or PayPal email address you provide as your default payment method. If your earnings from the previous month(s) sum up to an amount equal to or greater than the threshold, your payment will be automatically transferred to your default payment method on the 16th of each month. If the 16th falls on a weekend, the transfer will occur on the next working day. Please note that it may take up to 5 working days for the amount to be credited to your account. You are responsible for any taxes or fees associated with receiving payments.
+We will pay you for your plugin sales and download count. Payments will be made to the bank account you provide as your default payment method. If your earnings from the previous month(s) sum up to an amount equal to or greater than the threshold, your payment will be automatically transferred to your default payment method on the 16th of each month. If the 16th falls on a weekend, the transfer will occur on the next working day. Please note that it may take up to 5 working days for the amount to be credited to your account. You are responsible for any taxes or fees associated with receiving payments.
 
 ## Payment Threshold
 
-The payment threshold is the minimum amount of earnings required for a payment to be processed and transferred to your designated payment method. Different minimum thresholds apply depending on the chosen payment method:
-
-- For international payments: The minimum threshold is 5000 INR.
-- For payments via cryptocurrency: The minimum threshold is 4000 INR.
-- For all other payment methods: The minimum threshold is 1000 INR.
-
-If you choose to change your payment threshold, it cannot be set lower than the respective minimum threshold specified above. However, regardless of the user-set threshold, if the selected payment method falls under one of the mentioned categories, the respective minimum threshold will be applied for processing payments.
+The payment threshold is fixed at **₹30,000 INR** for all payment methods. This is the minimum amount of earnings required for a payment to be processed and transferred to your designated payment method. This threshold cannot be changed by users.
 
 Please note that all bank charges and taxes associated with receiving payments will be deducted from the payment amount.
 
