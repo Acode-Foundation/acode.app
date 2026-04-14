@@ -107,7 +107,7 @@ export default async function home() {
           logo='https://academy.acode.app/icon.png'
           alt='Acode Academy'
           title='Acode Academy'
-          subtitle='Learn to build Acode plugins and master the editor — interactive courses by the creator'
+          subtitle='Best-crafted courses, hands-on exercises, and progress tracking — right inside Acode. Earn a certificate when you finish.'
           url='https://academy.acode.app'
           cta='Explore Courses'
         />

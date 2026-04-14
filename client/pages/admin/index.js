@@ -19,6 +19,7 @@ export default async function Admin() {
       <h1>Admin Panel</h1>
       <Dashboard />
       <Users />
+      <EmailUsers />
     </section>
   );
 }
@@ -193,4 +194,91 @@ async function deleteUser(id) {
   } else {
     alert('Success', 'User deleted successfully');
   }
+}
+
+function EmailUsers() {
+  const recipientCount = Reactive(0);
+  const sendBtn = Ref();
+  let filter = 'all';
+  let subject = '';
+  let message = '';
+
+  const fetchCount = async (selectedFilter) => {
+    const res = await fetch(`api/admin/email-recipients-count?filter=${selectedFilter}`);
+    const json = await res.json();
+    recipientCount.value = json.count;
+  };
+
+  fetchCount(filter);
+
+  const onFilterChange = (e) => {
+    filter = e.target.value;
+    fetchCount(filter);
+  };
+
+  const onSend = async () => {
+    if (!subject.trim() || !message.trim()) {
+      alert('ERROR', 'Subject and message are required');
+      return;
+    }
+    const confirmation = await confirm('Confirm', `Send email to ${recipientCount.value} recipient(s)?`);
+    if (!confirmation) return;
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sending...';
+    try {
+      const res = await fetch('api/admin/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filter, subject, message }),
+      });
+      const json = await res.json();
+      if (json.error) {
+        alert('ERROR', json.error);
+      } else {
+        alert('Success', `Email sent to ${json.sent} user(s)`);
+      }
+    } catch {
+      alert('ERROR', 'Failed to send emails');
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Send Email';
+    }
+  };
+
+  return (
+    <div className='email-users'>
+      <h2>Email Users</h2>
+      <div className='email-form'>
+        <div className='form-group'>
+          <label>Recipients</label>
+          <select onchange={onFilterChange}>
+            <option value='all'>All Users</option>
+            <option value='with_plugins'>Users with Plugins</option>
+            <option value='with_paid_plugins'>Users with Paid Plugins</option>
+            <option value='with_payment'>Users who Received Payment</option>
+          </select>
+          <small>{recipientCount} recipient(s) will receive this email</small>
+        </div>
+        <Input
+          label='Subject'
+          placeholder='Email subject'
+          oninput={(e) => {
+            subject = e.target.value;
+          }}
+        />
+        <div className='form-group'>
+          <label>Message</label>
+          <textarea
+            placeholder='Email message...'
+            oninput={(e) => {
+              message = e.target.value;
+            }}
+          />
+        </div>
+        <button ref={sendBtn} type='button' onclick={onSend} className='send-btn'>
+          Send Email
+        </button>
+      </div>
+    </div>
+  );
 }
