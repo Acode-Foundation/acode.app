@@ -83,7 +83,7 @@ export default async function User({ userId }) {
               : ''}
           </div>
           <div className='socials' onclick={(e) => e.target.dataset.href && Router.loadUrl(e.target.dataset.href)}>
-            <button type='button' title='email' className='icon mail' data-href={`mailto:${user.email}`} />
+            {shouldShowSensitiveInfo && <button type='button' title='email' className='icon mail' data-href={`mailto:${user.email}`} />}
             {user.github && (
               <button type='button' title='go to github account' className='icon github' data-href={`https://github.com/${user.github}`} />
             )}
@@ -107,41 +107,12 @@ export default async function User({ userId }) {
     this.scrollLeft += e.deltaY;
   }
 
-  function PaymentMethod({
-    id,
-    paypal_email: paypalEmail,
-    bank_account_number: bankAccountNumber,
-    bank_account_type: bankAccountType,
-    is_default: isDefault,
-    wallet_address: walletAddress,
-    wallet_type: walletType,
-  }) {
+  function PaymentMethod({ id, bank_account_number: bankAccountNumber, bank_account_type: bankAccountType, is_default: isDefault }) {
     isDefault = isDefault ? 'default' : '';
-    let title = paypalEmail ? `PayPal ${paypalEmail}` : `${bankAccountType} ${bankAccountNumber}`;
+    let title = `${bankAccountType} ${bankAccountNumber}`;
 
     if (isDefault) {
       title += ' (default)';
-    }
-
-    if (paypalEmail) {
-      return (
-        <div on:click={onPaymentMethodClick} title={title} data-id={id} className='payment-method' data-default={isDefault}>
-          <span className='icon paypal' />
-          <span className='info'>{paypalEmail}</span>
-        </div>
-      );
-    }
-
-    if (walletAddress && walletType) {
-      return (
-        <div on:click={onPaymentMethodClick} data-id={id} title={title} className='payment-method' data-default={isDefault}>
-          <span className='icon bitcoin' />
-          <div className='info'>
-            <strong>{walletType}</strong>
-            <span>{walletAddress}</span>
-          </div>
-        </div>
-      );
     }
 
     return (
@@ -203,8 +174,7 @@ export default async function User({ userId }) {
    * Add payment method
    */
   async function addPaymentMethod() {
-    const option = await select('Add payment method', ['Paypal', 'Bank account', 'Crypto']);
-    Router.loadUrl(`/add-payment-method/${option.toLowerCase().replace(' ', '-')}`);
+    Router.loadUrl('/add-payment-method/bank-account');
   }
 
   async function renderPaymentMethods() {
@@ -244,7 +214,7 @@ export default async function User({ userId }) {
       amount.el.parentElement.onclick = async () => {
         Router.setUrl(`/earnings?user=${user.id}`);
         showLoading();
-        tag.get('main').content = await Earnings({ user: user.id, threshold: user.threshold });
+        tag.get('main').content = await Earnings({ user: user.id });
         hideLoading();
       };
     } catch (error) {

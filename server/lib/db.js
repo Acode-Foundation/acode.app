@@ -1,11 +1,19 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const sqlite3 = require('sqlite3').verbose();
+const sqlite3 = require('better-sqlite3');
 
 const dbFile = path.resolve(__dirname, '../../data/db.sqlite3');
 
 if (!fs.existsSync(dbFile)) {
+  if (!fs.existsSync(path.resolve(__dirname, '../../data'))) {
+    fs.mkdirSync(path.resolve(__dirname, '../../data'));
+  }
   fs.writeFileSync(dbFile, '');
 }
 
-module.exports = new sqlite3.Database(dbFile);
+const db = sqlite3(dbFile);
+
+// Enable foreign key constraints
+db.pragma('foreign_keys = ON');
+
+module.exports = db;

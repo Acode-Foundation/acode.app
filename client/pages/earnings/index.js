@@ -1,6 +1,5 @@
 import './style.scss';
 import alert from 'components/dialogs/alert';
-import prompt from 'components/dialogs/prompt';
 import MonthSelect from 'components/MonthSelect';
 import YearSelect from 'components/YearSelect';
 import Reactive from 'html-tag-js/reactive';
@@ -10,20 +9,14 @@ import moment from 'moment';
 
 let loggedInUser;
 
-export default async function Earnings({ user, threshold }) {
+export default async function Earnings({ user }) {
   loggedInUser = user;
-
-  if (!threshold) {
-    const userData = await fetchJson(user);
-    threshold = userData.threshold;
-  }
 
   const paymentsTable = Ref();
   const earningsYear = Ref();
   const earningsMonth = Ref();
   const paymentsYear = Ref();
   const earnings = Reactive('Loading...');
-  const thresholdText = Reactive(threshold.toLocaleString());
 
   let unpaidEarnings;
   try {
@@ -80,9 +73,7 @@ export default async function Earnings({ user, threshold }) {
             <tr>
               <th>Payment Threshold</th>
               <td>
-                <div on:click={updateThreshold}>
-                  &#8377; {thresholdText} {loggedInUser !== '1' && <span className='icon create' />}
-                </div>
+                <div>&#8377; 30,000</div>
                 <p>
                   You will be paid when your earnings reach this amount. Please read <a href='/terms'>Terms of Service</a> "Payment threshold" section
                   for more info.
@@ -114,29 +105,6 @@ export default async function Earnings({ user, threshold }) {
       </div>
     </section>
   );
-
-  async function updateThreshold() {
-    const newThreshold = await prompt('Enter new threshold amount', {
-      type: 'number',
-      defaultValue: threshold,
-    });
-    if (!newThreshold) return;
-    try {
-      showLoading();
-      await fetch('/api/user/threshold', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ threshold: newThreshold }),
-      });
-      thresholdText.value = newThreshold.toLocaleString();
-    } catch (error) {
-      alert('Error', error.message);
-    } finally {
-      hideLoading();
-    }
-  }
 
   /**
    * Renders earnings table
@@ -178,31 +146,19 @@ export default async function Earnings({ user, threshold }) {
 }
 
 function Payment(props) {
-  const { paypal_email: paypalEmail, bank_name: bankName, bank_account_number: bankAccountNumber } = props;
-  let method;
-
-  if (paypalEmail) {
-    method = (
-      <div>
-        <span className='icon paypal' />
-        <span>{paypalEmail}</span>
-      </div>
-    );
-  } else {
-    method = (
-      <div>
-        <span className='icon bank' />
-        <span>{bankName}</span>
-        <span>{bankAccountNumber}</span>
-      </div>
-    );
-  }
+  const { bank_name: bankName, bank_account_number: bankAccountNumber } = props;
 
   return (
     <tr>
       <td className='download'>{moment(props.created_at).format('DD MMM YYYY')}</td>
       <td className='amount'>&#8377; {props.amount.toLocaleString()}</td>
-      <td className='payment-method'>{method}</td>
+      <td className='payment-method'>
+        <div>
+          <span className='icon bank' />
+          <span>{bankName}</span>
+          <span>{bankAccountNumber}</span>
+        </div>
+      </td>
       <td className='status'>{props.status}</td>
       <td className='download'>
         <button type='button' onclick={() => window.open(`/api/user/receipt/${props.id}`, '_blank')} title='download' className='icon download' />

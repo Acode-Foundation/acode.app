@@ -1,6 +1,6 @@
 @font-face {
-  font-family: "acode";
-  src: url("acode.ttf?gc6nhk#iefix");
+  font-family: 'acode';
+  src:  url('acode.ttf?k7bos8');
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -8,8 +8,7 @@
 
 .icon {
   /* use !important to prevent issues with browser extensions that change fonts */
-  font-family: "acode" !important;
-  speak: never;
+  font-family: 'acode' !important;
   font-style: normal;
   font-weight: normal;
   font-variant: normal;
@@ -21,6 +20,30 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+.icon.bullhorn:before {
+  content: "\e910";
+}
+.icon.megaphone:before {
+  content: "\e910";
+}
+.icon.announcement:before {
+  content: "\e910";
+}
+.icon.advertisement:before {
+  content: "\e910";
+}
+.icon.news:before {
+  content: "\e910";
+}
+.icon.mail:before {
+  content: "\e902";
+}
+.icon.earth:before {
+  content: "\e900";
+}
+.icon.code-fork:before {
+  content: "\e911";
+}
 .icon.certificate:before {
   content: "\e90d";
 }
@@ -138,10 +161,4 @@
 }
 .icon.thumb_up_alt:before {
   content: "\ed08";
-}
-.icon.mail:before {
-  content: "\e902";
-}
-.icon.earth:before {
-  content: "\e900";
 }

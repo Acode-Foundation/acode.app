@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const moment = require('moment');
 const Plugin = require('../entities/plugin');
 const Payment = require('../entities/payment');
@@ -6,11 +7,7 @@ const calcEarnings = require('./calcEarnings');
 const UserEarnings = require('../entities/userEarnings');
 const PaymentMethod = require('../entities/paymentMethod');
 const sendEmail = require('./sendEmail');
-
-const now = moment();
-
-// previous month (0-11) and year
-const [currentYear, currentMonth] = previous(now.year(), now.month());
+const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
 
 const args = process.argv.slice(2);
 const yearArg = args[0];
@@ -45,7 +42,11 @@ function previous(year, month) {
  * @param {number} year YYYY year (default: current year)
  * @param {number} month month (0-11)
  */
-async function updateEarnings(year = currentYear, month = currentMonth) {
+async function updateEarnings(year, month) {
+  if (year === undefined || month === undefined) {
+    const now = moment();
+    [year, month] = previous(now.year(), now.month());
+  }
   try {
     const [previousYear, previousMonth] = previous(year, month);
     const report = await downloadReport(year, month + 1);
@@ -64,7 +65,7 @@ async function updateEarnings(year = currentYear, month = currentMonth) {
     for (const user of users) {
       const { payment_method_id, email, name } = user;
       const earnings = await calcEarnings.total(year, month, user, report);
-      let { threshold } = user;
+      const threshold = PAYMENT_THRESHOLD;
 
       const [row] = await UserEarnings.get([
         [UserEarnings.USER_ID, user.id],
@@ -88,20 +89,29 @@ async function updateEarnings(year = currentYear, month = currentMonth) {
       const { ids: unpaidEarningsId, earnings: unpaid, from, to } = await calcEarnings.unpaid(user);
       console.log(`Earnings for ${user.name} is ${unpaid}`);
 
-      const [paymentMethod] = await PaymentMethod.get([PaymentMethod.ID, user.payment_method_id]);
-      if (paymentMethod.wallet_address) {
-        threshold = Math.max(4000, threshold);
-      } else if (paymentMethod.bank_swift_code) {
-        threshold = Math.max(5000, threshold);
-      }
-
       if (unpaid < threshold) continue;
-      // create integer random unique payment id
-      const paymentId = Math.floor(Math.random() * 1000000000);
 
-      if (!payment_method_id) {
-        sendEmail(email, name, 'Payment method not found', 'Please add payment method to receive payment.');
+      const [paymentMethod] = await PaymentMethod.get([PaymentMethod.ID, payment_method_id]);
+      if (!paymentMethod) {
+        sendEmail(
+          email,
+          name,
+          'Payment method not found',
+          'Your earnings have reached the payment threshold. Please add a bank account to receive your payments.',
+        ).catch((err) => console.error(`Failed to send email to ${email}:`, err));
+        continue;
       }
+      if (paymentMethod.paypal_email || paymentMethod.wallet_address) {
+        sendEmail(
+          email,
+          name,
+          'Payment method not supported',
+          'Your earnings have reached the payment threshold, but PayPal and cryptocurrency payment methods are no longer supported. Please add a bank account to receive your payments.',
+        ).catch((err) => console.error(`Failed to send email to ${email}:`, err));
+        continue;
+      }
+
+      const paymentId = crypto.randomInt(1, 2147483647);
 
       await Payment.insert(
         [Payment.ID, paymentId],

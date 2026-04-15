@@ -8,6 +8,7 @@ import prompt from 'components/dialogs/prompt';
 import Input from 'components/input';
 import MonthSelect from 'components/MonthSelect';
 import BuyButton, { checkPluginOwnership } from 'components/razorpayCheckout';
+import PluginStatus from 'components/pluginStatus';
 import YearSelect from 'components/YearSelect';
 import hilightjs from 'highlight.js';
 import Ref from 'html-tag-js/ref';
@@ -26,6 +27,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
     id,
     name,
     price,
+    status,
     author,
     version,
     license,
@@ -38,7 +40,14 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
     comment_count: commentCount,
     package_updated_at: updatedAt,
     author_verified: authorVerified,
+    supported_editor: supportedEditor,
   } = plugin;
+
+  const getEditorDisplayName = (editor) => {
+    if (editor === 'cm') return 'CodeMirror';
+    if (editor === 'ace') return 'Ace';
+    return 'Both Editors';
+  };
 
   const user = await getLoggedInUser();
   const userComment = await getUserComment(pluginId);
@@ -133,6 +142,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
               <span className='icon download' /> Install
             </button>
           )}
+          <PluginStatus status={status} id={id} style='button' />
         </div>
         <div className='info-container'>
           <div className='info'>
@@ -167,6 +177,11 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
               <div className='chip'>
                 <span className='icon certificate' />
                 <span>{license}</span>
+              </div>
+            )}
+            {supportedEditor && (
+              <div className='chip editor-badge' data-editor={supportedEditor}>
+                <span>{getEditorDisplayName(supportedEditor)}</span>
               </div>
             )}
             {votesUp + votesDown > 0 && (
@@ -302,7 +317,7 @@ async function renderOrders(ref, pluginId, year, month) {
 
   for (const order of orders) {
     const date = moment(order.created_at).format('DD MMMM YYYY');
-    const status = order.state === '0' ? 'Completed' : 'Cancelled';
+    const status = Number(order.state) === 0 ? 'Completed' : 'Cancelled';
     const packageName = /free$/.test(order.package) ? 'Free' : 'Paid';
     ref.append(
       <tr className='order'>
@@ -426,8 +441,9 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
     );
   }
 
-  const { comment, vote, id: commentId } = userComment;
+  const { comment, vote } = userComment;
   const form = Ref();
+  let commentId = userComment.id;
 
   return (
     <div className='comments'>
@@ -460,6 +476,7 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
 
     let $comment;
 
+    commentId = res.id;
     if (commentId) {
       userComment = await fetch(`/api/comment/${commentId}`).then((userRes) => userRes.json());
       $comment = tag.get(`#comment_${commentId}`);
@@ -496,6 +513,7 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
     try {
       const deleted = await deleteComment(commentId);
       if (!deleted) return;
+      commentId = null;
       form.el.reset();
       for (const input of form.getAll('input[name=vote]')) {
         input.checked = false;
@@ -604,8 +622,13 @@ async function flagComment(id, flagRef) {
   }
 }
 
-async function getUserComment(id) {
-  const res = await fetch(`/api/user/comment/${id}`).then((commentRes) => commentRes.json());
+/**
+ * Gets the current user's comment for a specific plugin.
+ * @param {string} pluginId Plugin ID
+ * @returns {Promise<Object>} The user's comment for the specified plugin.
+ */
+async function getUserComment(pluginId) {
+  const res = await fetch(`/api/user/comment/${pluginId}`).then((commentRes) => commentRes.json());
   return res;
 }
 

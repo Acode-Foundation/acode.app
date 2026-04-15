@@ -53,6 +53,8 @@ window.onload = async () => {
   Router.add('/faqs/:qHash?', (params) => loadModule('FAQs', params));
   Router.add('/policy', () => loadModule('privacyPolicy'));
   Router.add('/terms', () => loadModule('termsOfService'));
+  Router.add('/refund', () => loadModule('refundPolicy'));
+  Router.add('/contact', () => loadModule('contactUs'));
   Router.add('/login', (_params, query) => loadModule('loginUser', query));
   Router.add('/plugins', (_params, query) => loadModule('plugins', query));
   Router.add('/logout', logout);
@@ -63,6 +65,7 @@ window.onload = async () => {
   Router.add('/plugin/:id/:section?', (params) => loadModule('plugin', params));
   Router.add('/user/:userId?', (params) => loadModule('user', params));
   Router.add('/earnings', (_params, query) => loadModule('earnings', query));
+  Router.add('/update-plugin-editor/:id', (params) => loadModule('updatePluginEditor', params));
   Router.add('/:filename(index.html?)?', () => loadModule('home'));
 
   Router.add('*', () => {

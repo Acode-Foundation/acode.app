@@ -58,6 +58,64 @@ class User extends Entity {
     }
   }
 
+  async delete(where, operator = 'AND') {
+    const [row] = await this.get(this.allColumns, where, operator);
+    if (!row) {
+      throw new Error('User not found');
+    }
+
+    return super.delete(where, operator);
+  }
+
+  getUsersByFilter(filter) {
+    let sql;
+    switch (filter) {
+      case 'with_plugins':
+        sql = `SELECT DISTINCT u.name, u.email FROM user u
+          INNER JOIN plugin p ON u.id = p.user_id
+          WHERE u.role != 'admin' AND p.status != 3`;
+        break;
+      case 'with_paid_plugins':
+        sql = `SELECT DISTINCT u.name, u.email FROM user u
+          INNER JOIN plugin p ON u.id = p.user_id
+          WHERE u.role != 'admin' AND p.price > 0 AND p.status != 3`;
+        break;
+      case 'with_payment':
+        sql = `SELECT DISTINCT u.name, u.email FROM user u
+          INNER JOIN payment pay ON u.id = pay.user_id
+          WHERE u.role != 'admin' AND pay.status = 1`;
+        break;
+      default:
+        sql = `SELECT name, email FROM user WHERE role != 'admin'`;
+    }
+    return Entity.execSql(sql, [], this);
+  }
+
+  async countUsersByFilter(filter) {
+    let sql;
+    switch (filter) {
+      case 'with_plugins':
+        sql = `SELECT COUNT(DISTINCT u.id) as count FROM user u
+          INNER JOIN plugin p ON u.id = p.user_id
+          WHERE u.role != 'admin' AND p.status != 3`;
+        break;
+      case 'with_paid_plugins':
+        sql = `SELECT COUNT(DISTINCT u.id) as count FROM user u
+          INNER JOIN plugin p ON u.id = p.user_id
+          WHERE u.role != 'admin' AND p.price > 0 AND p.status != 3`;
+        break;
+      case 'with_payment':
+        sql = `SELECT COUNT(DISTINCT u.id) as count FROM user u
+          INNER JOIN payment pay ON u.id = pay.user_id
+          WHERE u.role != 'admin' AND pay.status = 1`;
+        break;
+      default:
+        sql = `SELECT COUNT(*) as count FROM user WHERE role != 'admin'`;
+    }
+    const [{ count }] = await Entity.execSql(sql, [], this);
+    return count;
+  }
+
   get columns() {
     return [
       this.ID,
@@ -86,8 +144,8 @@ class User extends Entity {
       this.EMAIL,
       this.VERIFIED,
       this.THRESHOLD,
-      'IFNULL(github, "") as github',
-      'IFNULL(website, "") as website',
+      `IFNULL(github, '') as github`,
+      `IFNULL(website, '') as website`,
       this.PASSWORD,
       this.CREATED_AT,
       this.UPDATED_AT,

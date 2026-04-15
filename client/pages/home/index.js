@@ -1,6 +1,5 @@
 import './style.scss';
 
-import { render } from 'github-buttons';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import background from 'lib/background';
@@ -9,12 +8,26 @@ import phoneImageJpg from 'res/phone.jpg';
 import phoneImageWebp from 'res/phone.webp';
 import tabletImageJpg from 'res/tablet.jpg';
 import tabletImageWebp from 'res/tablet.webp';
+import icons from './icons';
 
 export default async function home() {
   const canvas = Ref();
   const pluginCount = Reactive('...');
+  const stars = Reactive('...');
+  const forks = Reactive('...');
 
   showLoading();
+
+  fetch('https://api.github.com/repos/acode-foundation/acode')
+    .then((res) => res.json())
+    .then((data) => {
+      stars.value = `${(data.stargazers_count / 1000).toFixed(1)}k`;
+      forks.value = data.forks_count.toLocaleString();
+    })
+    .catch(() => {
+      stars.value = '4k+';
+      forks.value = '700+';
+    });
 
   let plugins = [];
   try {
@@ -46,69 +59,95 @@ export default async function home() {
         </div>
         <div className='heading'>
           <p>An extensible, powerful and open-source code editor for Android</p>
-          <div className='gh-buttons'>
-            <GhButton icon='star' url='https://github.com/acode-foundation/acode' title='Star' />
-            <GhButton icon='repo-forked' url='https://github.com/acode-foundation/acode/fork' title='Fork' />
-          </div>
           <div className='download-buttons'>
             <a
-              title='Download Acode from Google Play store'
-              className='play-store'
+              title='Download from Google Play'
+              className='download-button play-store'
               href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'
+              target='_blank'
+              rel='noopener'
             >
-              <span className='hidden'>Download from Google Play store</span>
+              <span className='icon googleplay'></span>
+              <span>Google Play</span>
             </a>
-            <a title='Download Acode from F-Droid' rel='nofollow' className='f-droid' href='https://f-droid.org/en/packages/com.foxdebug.acode/'>
-              <span className='hidden'>Download from F-Droid</span>
+            <a
+              title='Download from F-Droid'
+              className='download-button f-droid'
+              href='https://f-droid.org/en/packages/com.foxdebug.acode/'
+              target='_blank'
+              rel='noopener'
+            >
+              <span className='icon f-droid'></span>
+              <span>F-Droid</span>
             </a>
+          </div>
+          <div className='gh-buttons'>
+            <GhButton count='5m+' url='https://github.com/acode-foundation/acode/releases' title='Downloads' icon='download' />
+            <GhButton count={stars} url='https://github.com/acode-foundation/acode' title='Stars' icon='star' />
+            <GhButton count={forks} url='https://github.com/acode-foundation/acode/fork' title='Forks' icon='fork' />
           </div>
         </div>
       </div>
 
-      <div className='download-buttons'>
-        <a
-          title='Download Acode from Google Play store'
-          className='play-store'
-          href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'
-        >
-          <span className='hidden'>Download from Google Play store</span>
-        </a>
-        <a
-          title='Download Acode from F-Droid'
-          rel='nofollow'
-          className='f-droid'
-          href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'
-        >
-          <span className='hidden'>Download from F-Droid</span>
-        </a>
+      <div className='featured-plugins'>
+        <div className='section-header'>
+          <h2>Featured Plugins</h2>
+          <a href='/plugins' className='see-all'>
+            Browse all <span className='icon chevron-right' />
+          </a>
+        </div>
+        <ul className='featured-plugins__list'>{plugins}</ul>
       </div>
 
-      <div className='featured-plugins'>
-        <p>Featured Plugins</p>
-        <ul className='featured-plugins__list'>{plugins}</ul>
+      <div className='from-the-creator'>
+        <div className='section-header'>
+          <h2>Announcements</h2>
+        </div>
+        <ProjectCard
+          logo='https://academy.acode.app/icon.png'
+          alt='Acode Academy'
+          title='Acode Academy'
+          subtitle='Best-crafted courses, hands-on exercises, and progress tracking — right inside Acode. Earn a certificate when you finish.'
+          url='https://academy.acode.app'
+          cta='Explore Courses'
+        />
       </div>
     </section>
   );
 }
 
-function GhButton({ url, title, icon }) {
-  const el = <div style={{ height: '20px' }} />;
-  render(
-    <a
-      class='github-button'
-      href={url}
-      data-color-scheme='no-preference: dark_high_contrast; light: dark_high_contrast; dark: dark_high_contrast;'
-      data-icon={`octicon-${icon}`}
-      data-show-count='true'
-      aria-label={title}
-    >
-      {title}
-    </a>,
-    (button) => {
-      el.replaceWith(button);
-    },
+/**
+ * GitHub button component to display stars, forks, and downloads.
+ * @param {object} props
+ * @param {string} props.url
+ * @param {string} props.title
+ * @param {string} props.count
+ * @param {'github'|'fork'|'download'|'star'} [props.icon]
+ * @returns
+ */
+async function GhButton({ url, title, count, icon = 'github' }) {
+  return (
+    <a href={url} className='gh-button-modern' target='_blank' rel='noopener'>
+      <div className='gh-button-main'>
+        {icons[icon] ?? <span className={`icon ${icon}`} />}
+        <span>{title}</span>
+      </div>
+      <div className='gh-button-count'>{count}</div>
+    </a>
   );
-  return el;
+}
+
+function ProjectCard({ logo, alt, title, subtitle, url, cta }) {
+  return (
+    <a href={url} target='_blank' rel='noopener noreferrer' className='project-card'>
+      <img src={logo} alt={alt} className='project-card__logo' />
+      <div className='project-card__body'>
+        <h3 className='project-card__title'>{title}</h3>
+        <p className='project-card__subtitle'>{subtitle}</p>
+      </div>
+      <span className='project-card__cta'>{cta} →</span>
+    </a>
+  );
 }
 
 function Plugin({ data }) {

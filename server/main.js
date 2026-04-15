@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 require('dotenv').config();
 require('./crons');
+require('./updateSchema');
 const fs = require('node:fs');
 const path = require('node:path');
 const express = require('express');
@@ -10,11 +11,9 @@ const Handlebars = require('handlebars');
 const markdownToText = require('markdown-to-txt');
 const defaultOg = require('./defaultOg.json');
 const Plugin = require('./entities/plugin');
-
 const apis = require('./routes/apis');
 const setAuth = require('./lib/gapis');
 
-global.ADMIN = 1;
 const app = express();
 
 const PORT = process.env.PORT || 3000;
@@ -27,12 +26,16 @@ main();
 async function main() {
   await setAuth();
 
-  // allow origin https://localhost
   app.use((_req, res, next) => {
     res.header('Access-Control-Allow-Origin', 'https://localhost');
     // allow content-type
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
     res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, x-auth-token');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    if (_req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
     next();
   });
 

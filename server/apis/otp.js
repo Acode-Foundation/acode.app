@@ -29,12 +29,12 @@ route.post('/', async (req, res) => {
     const row = await Otp.get([Otp.EMAIL, email]);
 
     if (row.length) {
-      await Otp.update([Otp.OTP, otp], [Otp.EMAIL, email]);
+      await Otp.update([Otp.OTP, String(otp)], [Otp.EMAIL, email]);
       res.send({ message: 'OTP sent' });
       return;
     }
 
-    await Otp.insert([Otp.EMAIL, email], [Otp.OTP, otp]);
+    await Otp.insert([Otp.EMAIL, email], [Otp.OTP, String(otp)]);
     res.send({ message: 'OTP sent' });
   } catch (error) {
     console.error(error);

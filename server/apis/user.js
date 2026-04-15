@@ -9,6 +9,7 @@ const Payment = require('../entities/payment');
 const PaymentMethod = require('../entities/paymentMethod');
 const UserEarnings = require('../entities/userEarnings');
 const calcEarnings = require('../lib/calcEarnings');
+const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
 
 const route = Router();
 
@@ -20,7 +21,7 @@ route.get('/payment-methods', async (req, res) => {
       [PaymentMethod.IS_DELETED, 0],
     ]);
 
-    res.send(rows);
+    res.send(rows.filter((row) => !row.paypal_email && !row.wallet_address));
   } catch (error) {
     handleError(res, error);
   }
@@ -85,7 +86,7 @@ route.get('/unpaid-earnings', async (req, res) => {
         // send earnings from this month
         const thisMonthEarnings = await calcEarnings.total(now.year(), now.month(), user);
         res.send({
-          threshold: +process.env.PAYMENT_THRESHOLD,
+          threshold: PAYMENT_THRESHOLD,
           earnings: thisMonthEarnings,
           from: now.startOf('month').format('YYYY-MM-DD'),
           to: now.endOf('month').format('YYYY-MM-DD'),
@@ -94,7 +95,7 @@ route.get('/unpaid-earnings', async (req, res) => {
       }
 
       res.send({
-        threshold: +process.env.PAYMENT_THRESHOLD,
+        threshold: PAYMENT_THRESHOLD,
         earnings: lastMonthEarnings,
         from: lastMonth.startOf('month').format('YYYY-MM-DD'),
         to: lastMonth.endOf('month').format('YYYY-MM-DD'),
@@ -103,7 +104,7 @@ route.get('/unpaid-earnings', async (req, res) => {
     }
 
     res.send({
-      threshold: +process.env.PAYMENT_THRESHOLD,
+      threshold: PAYMENT_THRESHOLD,
       earnings,
       from,
       to,
@@ -258,61 +259,42 @@ route.post('/payment-method', async (req, res) => {
     }
 
     const {
-      paypal_email: paypal,
       bank_name: bankName,
       bank_account_number: bankAccount,
       bank_ifsc_code: bankIFSC,
       bank_swift_code: bankSwift,
       bank_account_holder: bankAccountHolder,
       bank_account_type: bankAccountType = PaymentMethod.BANK_ACCOUNT_TYPE_SAVINGS,
-      wallet_address: walletAddress,
-      wallet_type: walletType,
     } = req.body;
 
-    const insert = [];
-    if (paypal) {
-      const [row] = await PaymentMethod.get([
-        [PaymentMethod.PAYPAL_EMAIL, paypal],
-        [PaymentMethod.USER_ID, loggedInUser.id],
-        [PaymentMethod.IS_DELETED, 0],
-      ]);
-      if (row) {
-        res.status(400).send({ error: 'Paypal email already exists' });
-        return;
-      }
-      insert.push([PaymentMethod.PAYPAL_EMAIL, paypal]);
-    } else if (walletAddress && walletType) {
-      insert.push([PaymentMethod.WALLET_ADDRESS, walletAddress], [PaymentMethod.WALLET_TYPE, walletType]);
-    } else {
-      if (!bankName || !bankAccount || !bankIFSC || !bankAccountHolder) {
-        res.status(400).send({ error: 'Missing required fields' });
-        return;
-      }
-
-      const [row] = await PaymentMethod.get([
-        [PaymentMethod.BANK_ACCOUNT_NUMBER, bankAccount],
-        [PaymentMethod.USER_ID, loggedInUser.id],
-        [PaymentMethod.IS_DELETED, 0],
-      ]);
-
-      if (row) {
-        res.status(400).send({ error: 'Bank account already exists' });
-        return;
-      }
-
-      insert.push(
-        [PaymentMethod.BANK_NAME, bankName],
-        [PaymentMethod.BANK_IFSC_CODE, bankIFSC],
-        [PaymentMethod.BANK_SWIFT_CODE, bankSwift],
-        [PaymentMethod.BANK_ACCOUNT_NUMBER, bankAccount],
-        [PaymentMethod.BANK_ACCOUNT_TYPE, bankAccountType],
-        [PaymentMethod.BANK_ACCOUNT_HOLDER, bankAccountHolder],
-      );
+    if (!bankName || !bankAccount || !bankIFSC || !bankAccountHolder) {
+      res.status(400).send({ error: 'Missing required fields' });
+      return;
     }
+
+    const [row] = await PaymentMethod.get([
+      [PaymentMethod.BANK_ACCOUNT_NUMBER, bankAccount],
+      [PaymentMethod.USER_ID, loggedInUser.id],
+      [PaymentMethod.IS_DELETED, 0],
+    ]);
+
+    if (row) {
+      res.status(400).send({ error: 'Bank account already exists' });
+      return;
+    }
+
+    const insert = [
+      [PaymentMethod.BANK_NAME, bankName],
+      [PaymentMethod.BANK_IFSC_CODE, bankIFSC],
+      [PaymentMethod.BANK_SWIFT_CODE, bankSwift],
+      [PaymentMethod.BANK_ACCOUNT_NUMBER, bankAccount],
+      [PaymentMethod.BANK_ACCOUNT_TYPE, bankAccountType],
+      [PaymentMethod.BANK_ACCOUNT_HOLDER, bankAccountHolder],
+    ];
 
     const count = await PaymentMethod.count([PaymentMethod.USER_ID, loggedInUser.id]);
     insert.push([PaymentMethod.USER_ID, loggedInUser.id]);
-    await PaymentMethod.insert(...insert, [PaymentMethod.IS_DEFAULT, count === 0]);
+    await PaymentMethod.insert(...insert, [PaymentMethod.IS_DEFAULT, count === 0 ? 1 : 0]);
     res.send({ message: 'Payment method added' });
   } catch (error) {
     handleError(res, error);
@@ -376,27 +358,8 @@ route.post('/', async (req, res) => {
   }
 });
 
-route.put('/threshold', async (req, res) => {
-  try {
-    const loggedInUser = await getLoggedInUser(req);
-    if (!loggedInUser) {
-      res.status(401).send({ error: 'Not logged in' });
-      return;
-    }
-
-    const { threshold } = req.body;
-
-    if (threshold < 1000) {
-      res.status(400).send({ error: 'Invalid threshold' });
-      return;
-    }
-
-    await User.update([User.THRESHOLD, threshold], [User.ID, loggedInUser.id]);
-
-    res.send({ message: 'Threshold updated' });
-  } catch (error) {
-    handleError(res, error);
-  }
+route.put('/threshold', async (_req, res) => {
+  res.status(410).send({ error: 'Payment threshold is now fixed at ₹30,000 for all users.' });
 });
 
 route.put('/', async (req, res) => {
@@ -434,15 +397,19 @@ route.put('/', async (req, res) => {
     }
 
     if (email) {
-      const row = await User.get([User.EMAIL, email]);
+      if (!sentOtp) {
+        res.status(400).send({ error: 'Missing OTP' });
+        return;
+      }
 
+      const row = await User.get([User.EMAIL, email]);
       if (row.length) {
         res.status(400).send({ error: 'User already' });
         return;
       }
 
-      const [{ otp: storedOtp }] = await Otp.get([Otp.EMAIL, email]);
-      if (storedOtp !== sentOtp) {
+      const [otpRow] = await Otp.get([Otp.EMAIL, email]);
+      if (otpRow?.otp !== sentOtp) {
         res.status(400).send({ error: 'Invalid OTP' });
         return;
       }

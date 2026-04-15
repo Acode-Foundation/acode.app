@@ -4,74 +4,43 @@ import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { loadingEnd, loadingStart } from 'lib/helpers';
 
-export default async function AddPaymentMethod({ mode }) {
+export default async function AddPaymentMethod() {
   const form = Ref();
   const errorText = Reactive('');
   const successText = Reactive('');
   const buttonText = Reactive('Save');
-  let title = 'Add New Bank Account';
+  const title = 'Add New Bank Account';
 
-  if (mode === 'paypal') {
-    title = 'Add New Paypal Account';
-    form.append(
-      <div>
-        <Input type='email' name='paypal_email' placeholder='e.g. johndoe@gmail.com' label='Paypal Email' />
-        <span className='error'>{errorText}</span>
-        <span className='success'>{successText}</span>
-        <div className='buttons-container'>
-          <button type='submit' style={{ width: '120px' }}>
-            Save
-          </button>
-        </div>
-      </div>,
-    );
-  } else if (mode === 'bank-account') {
-    form.append(
-      <div>
-        <Input type='text' name='bank_account_holder' placeholder='e.g. John Doe' label='* Account holder' required={true} />
-        <Input type='text' name='bank_account_number' placeholder='e.g. 98765643210' label='* Account Number' required={true} />
-        <Input type='text' name='bank_name' placeholder='e.g. ICICI Bank' label='* Bank Name' required={true} />
-        <Input type='text' name='bank_ifsc_code' placeholder='e.g. ICIC0000282' label='* Bank IFSC Code' required={true} />
-        <Input type='text' name='bank_swift_code' placeholder='e.g. ICICINBBNRI' label='Bank Swift Code' />
+  form.append(
+    <div>
+      <Input type='text' name='bank_account_holder' placeholder='e.g. John Doe' label='* Account holder' required={true} />
+      <Input type='text' name='bank_account_number' placeholder='e.g. 98765643210' label='* Account Number' required={true} />
+      <Input type='text' name='bank_name' placeholder='e.g. ICICI Bank' label='* Bank Name' required={true} />
+      <Input type='text' name='bank_ifsc_code' placeholder='e.g. ICIC0000282' label='* Bank IFSC Code' required={true} />
+      <Input type='text' name='bank_swift_code' placeholder='e.g. ICICINBBNRI' label='Bank Swift Code' />
 
-        <fieldset>
-          <legend style={{ marginBottom: '10px' }}>Account type</legend>
-          <Input type='radio' name='bank_account_type' value='savings' label='Savings' checked={true} />
-          <Input type='radio' name='bank_account_type' value='current' label='Current' />
-        </fieldset>
+      <fieldset>
+        <legend style={{ marginBottom: '10px' }}>Account type</legend>
+        <Input type='radio' name='bank_account_type' value='savings' label='Savings' checked={true} />
+        <Input type='radio' name='bank_account_type' value='current' label='Current' />
+      </fieldset>
 
-        <span className='error'>{errorText}</span>
-        <span className='success'>{successText}</span>
+      <span className='error'>{errorText}</span>
+      <span className='success'>{successText}</span>
 
-        <small style={{ marginTop: '20px', display: 'block' }}>
-          <sup>*</sup> are required.
-        </small>
-        <div className='buttons-container'>
-          <button type='submit' style={{ width: '120px' }}>
-            {buttonText}
-          </button>
-          <button type='reset' className='danger' style={{ width: '120px' }}>
-            Reset
-          </button>
-        </div>
-      </div>,
-    );
-  } else if (mode === 'crypto') {
-    title = 'Add New Wallet';
-    form.append(
-      <div>
-        <Input required={true} type='text' name='wallet_address' placeholder='e.g. 0x1234567890abcdef' label='Wallet Address' />
-        <Input required={true} type='text' name='wallet_type' placeholder='e.g. Ethereum' label='Wallet Type' />
-        <span className='error'>{errorText}</span>
-        <span className='success'>{successText}</span>
-        <div className='buttons-container'>
-          <button type='submit' style={{ width: '120px' }}>
-            {buttonText}
-          </button>
-        </div>
-      </div>,
-    );
-  }
+      <small style={{ marginTop: '20px', display: 'block' }}>
+        <sup>*</sup> are required.
+      </small>
+      <div className='buttons-container'>
+        <button type='submit' style={{ width: '120px' }}>
+          {buttonText}
+        </button>
+        <button type='reset' className='danger' style={{ width: '120px' }}>
+          Reset
+        </button>
+      </div>
+    </div>,
+  );
 
   return (
     <section id='add-payment-method'>
