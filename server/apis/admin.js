@@ -3,6 +3,7 @@ const moment = require('moment');
 const User = require('../entities/user');
 const Payment = require('../entities/payment');
 const PaymentMethod = require('../entities/paymentMethod');
+const AppConfig = require('../entities/appConfig');
 const { getLoggedInUser } = require('../lib/helpers');
 const purchaseOrder = require('../entities/purchaseOrder');
 const plugin = require('../entities/plugin');
@@ -143,6 +144,49 @@ router.post('/send-email', async (req, res) => {
     await sendEmail(user.email, user.name, subject.trim(), message.trim());
   }
   res.send({ sent: users.length });
+});
+
+const ALLOWED_CONFIG_KEYS = ['acode_pro_price'];
+
+router.get('/config', async (_req, res) => {
+  try {
+    const config = {};
+    for (const key of ALLOWED_CONFIG_KEYS) {
+      config[key] = await AppConfig.getValue(key);
+    }
+    res.send(config);
+  } catch {
+    res.status(500).send({ error: 'Failed to fetch config' });
+  }
+});
+
+router.put('/config', async (req, res) => {
+  try {
+    const { key, value } = req.body;
+
+    if (!key || value === undefined || value === null) {
+      res.status(400).send({ error: 'Key and value are required' });
+      return;
+    }
+
+    if (!ALLOWED_CONFIG_KEYS.includes(key)) {
+      res.status(400).send({ error: `Invalid config key: ${key}` });
+      return;
+    }
+
+    if (key === 'acode_pro_price') {
+      const price = Number(value);
+      if (Number.isNaN(price) || price <= 0) {
+        res.status(400).send({ error: 'Price must be a positive number' });
+        return;
+      }
+    }
+
+    await AppConfig.setValue(key, value);
+    res.send({ success: true, key, value });
+  } catch {
+    res.status(500).send({ error: 'Failed to update config' });
+  }
 });
 
 module.exports = router;

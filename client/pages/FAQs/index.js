@@ -69,11 +69,13 @@ export default async function FAQs({ mode, oldQ, a, qHash }) {
           <div className='preview' ref={mdPreview} />
           <div className='buttons'>
             <button type='submit'>Submit</button>
-            {isUpdate
-              ? <button className='danger' type='button' onclick={() => Router.reload()}>
-                  Cancel
-                </button>
-              : ''}
+            {isUpdate ? (
+              <button className='danger' type='button' onclick={() => Router.reload()}>
+                Cancel
+              </button>
+            ) : (
+              ''
+            )}
           </div>
         </AjaxForm>
       </details>
@@ -121,12 +123,14 @@ export default async function FAQs({ mode, oldQ, a, qHash }) {
           </h2>
         </a>
         <p innerHTML={marked.parse(ans)} />
-        {isAdmin
-          ? <div className='icon-buttons'>
-              <span onclick={() => editFaq(q, ans)} title='Edit this FAQ' className='link icon create' />
-              <span onclick={() => deleteFaq(q)} title='Delete this FAQ' className='link icon delete danger' />
-            </div>
-          : ''}
+        {isAdmin ? (
+          <div className='icon-buttons'>
+            <span onclick={() => editFaq(q, ans)} title='Edit this FAQ' className='link icon create' />
+            <span onclick={() => deleteFaq(q)} title='Delete this FAQ' className='link icon delete danger' />
+          </div>
+        ) : (
+          ''
+        )}
       </div>
     );
   }

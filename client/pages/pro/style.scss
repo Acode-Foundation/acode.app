@@ -1,0 +1,276 @@
+#pro-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 60px 24px 40px;
+
+  .pro-hero {
+    text-align: center;
+    margin-bottom: 50px;
+
+    .pro-badge-label {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #f59e0b;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      border-radius: 20px;
+      padding: 6px 16px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+
+      .highlight {
+        background: linear-gradient(135deg, #f59e0b, #f97316);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+    }
+
+    .subtitle {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 1.1rem;
+      line-height: 1.7;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+  }
+
+  .pro-perks {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 50px;
+
+    .perk-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 28px 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(245, 158, 11, 0.3);
+        transform: translateY(-4px);
+      }
+
+      .perk-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: rgba(245, 158, 11, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 16px;
+
+        .icon {
+          font-size: 1.3rem;
+          color: #f59e0b;
+        }
+      }
+
+      h3 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      p {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.5);
+        line-height: 1.5;
+        margin: 0;
+      }
+    }
+
+    @media screen and (max-width: 600px) {
+      grid-template-columns: 1fr;
+      gap: 12px;
+
+      .perk-card {
+        display: flex;
+        align-items: center;
+        text-align: left;
+        padding: 20px;
+        gap: 16px;
+
+        .perk-icon {
+          margin: 0;
+          flex-shrink: 0;
+        }
+
+        h3 {
+          margin-bottom: 4px;
+        }
+      }
+    }
+  }
+
+  .pro-action {
+    text-align: center;
+    margin-bottom: 40px;
+
+    .price-tag {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 2px;
+      margin-bottom: 20px;
+
+      .currency {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      .amount {
+        font-size: 3.5rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1;
+      }
+    }
+
+    .btn-buy {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 40px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      color: #000;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3);
+
+      .icon {
+        font-size: 1.2rem;
+        margin: 0;
+      }
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 28px rgba(245, 158, 11, 0.4);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+    }
+
+    .btn.primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 40px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+        opacity: 0.9;
+      }
+    }
+
+    .one-time {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .pro-active {
+      .active-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        padding: 14px 28px;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        font-weight: 700;
+
+        .icon {
+          color: #f59e0b;
+          font-size: 1.4rem;
+        }
+      }
+
+      .thank-you {
+        margin-top: 12px;
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      .refund-section {
+        margin-top: 24px;
+        padding-top: 24px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+        .refund-info {
+          color: rgba(255, 255, 255, 0.4);
+          font-size: 0.85rem;
+          margin-bottom: 12px;
+        }
+
+        .btn-refund {
+          background: transparent;
+          color: orangered;
+          border: 1px solid rgba(255, 69, 0, 0.4);
+          padding: 8px 24px;
+          border-radius: 8px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: rgba(255, 69, 0, 0.1);
+            border-color: orangered;
+          }
+        }
+      }
+    }
+  }
+
+  .pro-footer-note {
+    text-align: center;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+
+    p {
+      color: rgba(255, 255, 255, 0.35);
+      font-size: 0.8rem;
+      line-height: 1.8;
+      margin: 0;
+    }
+  }
+}

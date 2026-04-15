@@ -21,7 +21,7 @@ async function fromPaidPlugins(year, month, user, report) {
   ]);
 
   const amounts = await Promise.all(
-    orders.map(async ({ id: rowId, order_id: orderId, amount, state }) => {
+    orders.map(async ({ id: rowId, order_id: orderId, amount, state, provider }) => {
       state = Number.parseInt(state, 10);
       if (state === PurchaseOrder.STATE_CANCELED) {
         return 0;
@@ -31,7 +31,10 @@ async function fromPaidPlugins(year, month, user, report) {
         const updates = [];
 
         let calculatedAmount = 0;
-        if (report) {
+        if (provider === 'razorpay') {
+          // Razorpay orders: 30% platform cut (no Google Play involved)
+          calculatedAmount = amount * 0.7;
+        } else if (report) {
           const reportRows = report.filter((r) => r.Description === orderId);
           if (!reportRows.length) {
             calculatedAmount = amount * 0.65;

@@ -65,22 +65,27 @@ export default async function User({ userId }) {
               {user.name}
               <div className='extra-info'>
                 {isSelf && user.role === 'admin' && <small className='tag'>Admin</small>}
+                {Boolean(user.acode_pro) && <small className='tag pro-tag'>Pro</small>}
                 <VerifyButton />
               </div>
             </div>
           </h1>
-          {shouldShowSensitiveInfo
-            ? <small className='link earnings' title='Your earnings for this month'>
-                <strong className='loading' ref={amount} />|<span>{moment().format('YYYY MMMM')}</span>
-              </small>
-            : ''}
+          {shouldShowSensitiveInfo ? (
+            <small className='link earnings' title='Your earnings for this month'>
+              <strong className='loading' ref={amount} />|<span>{moment().format('YYYY MMMM')}</span>
+            </small>
+          ) : (
+            ''
+          )}
           <div onwheel={onwheel} ref={paymentMethods} className='payment-methods'>
-            {isSelf
-              ? <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
-                  <span className='icon add' />
-                  <span>Payment method</span>
-                </div>
-              : ''}
+            {isSelf ? (
+              <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
+                <span className='icon add' />
+                <span>Payment method</span>
+              </div>
+            ) : (
+              ''
+            )}
           </div>
           <div className='socials' onclick={(e) => e.target.dataset.href && Router.loadUrl(e.target.dataset.href)}>
             {shouldShowSensitiveInfo && <button type='button' title='email' className='icon mail' data-href={`mailto:${user.email}`} />}

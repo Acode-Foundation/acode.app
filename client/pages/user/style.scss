@@ -41,6 +41,11 @@
           padding: 0 5px;
           border-radius: 9px;
           margin-left: 5px;
+
+          &.pro-tag {
+            background-color: #f59e0b;
+            color: #000;
+          }
         }
       }
     }

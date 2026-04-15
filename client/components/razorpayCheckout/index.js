@@ -165,6 +165,101 @@ export async function initiateCheckout(pluginId, userInfo = {}, onSuccess, onCan
 }
 
 /**
+ * Initiate Razorpay checkout for Acode Pro purchase
+ * @param {Object} userInfo - User information for prefill
+ * @param {string} [userInfo.email] - User's email address
+ * @param {string} [userInfo.name] - User's name
+ * @param {Function} onSuccess - Callback on successful payment
+ * @param {Function} [onCancel] - Callback when checkout is cancelled
+ * @returns {Promise<void>}
+ */
+export async function initiateProCheckout(userInfo = {}, onSuccess, onCancel) {
+  try {
+    await loadRazorpayScript();
+
+    const orderRes = await fetch('/api/razorpay/create-pro-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const orderData = await orderRes.json();
+
+    if (orderData.error) {
+      alert('ERROR', orderData.error);
+      return;
+    }
+
+    const { orderId, amount, currency, keyId, userEmail } = orderData;
+
+    const options = {
+      key: keyId,
+      amount,
+      currency,
+      name: 'Acode',
+      description: 'Acode Pro - Support Open Source',
+      image: RAZORPAY_CONFIG.branding.image,
+      order_id: orderId,
+      handler: async (response) => {
+        try {
+          const verifyRes = await fetch('/api/razorpay/verify-pro', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          });
+
+          if (!verifyRes.ok) throw new Error('Verification request failed');
+
+          const verifyData = await verifyRes.json();
+
+          if (verifyData.success) {
+            alert('SUCCESS', 'Thank you for supporting Acode! Pro features are now active.');
+            if (onSuccess) onSuccess();
+          } else {
+            alert('ERROR', verifyData.error || 'Payment verification failed');
+          }
+        } catch (error) {
+          console.error('Verification error:', error);
+          alert('ERROR', 'Payment may have succeeded but verification failed. Please contact support if charged.');
+        }
+      },
+      prefill: {
+        email: userInfo.email || userEmail || '',
+        name: userInfo.name || '',
+      },
+      theme: {
+        color: RAZORPAY_CONFIG.theme.color,
+        backdrop_color: RAZORPAY_CONFIG.theme.backdrop_color,
+      },
+      modal: {
+        confirm_close: true,
+        escape: true,
+        animation: true,
+        ondismiss: () => {
+          if (onCancel) onCancel();
+        },
+      },
+      notes: {
+        type: 'acode_pro',
+        source: 'acode_web',
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.on('payment.failed', (response) => {
+      alert('ERROR', `Payment failed: ${response.error.description}`);
+    });
+    rzp.open();
+  } catch (error) {
+    console.error('Pro checkout error:', error);
+    alert('ERROR', error.message || 'Failed to initiate checkout');
+  }
+}
+
+/**
  * Buy Button Component for paid plugins
  * @param {Object} props
  * @param {string} props.pluginId - Plugin ID

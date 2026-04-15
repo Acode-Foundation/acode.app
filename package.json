@@ -68,8 +68,7 @@
     "update-schema": "node ./updateSchema",
     "start": "node ./server/main",
     "sitemap": "node dev/generateSitemap.js",
-    "reports": "node ./server/reportsCli",
-    "migrate": "node ./server/migrations/add_purchase_order_columns.js"
+    "reports": "node ./server/reportsCli"
   },
   "browserslist": [
     "> 0.25%, not dead"

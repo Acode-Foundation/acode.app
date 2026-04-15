@@ -1,6 +1,5 @@
 {
-  "javascript.preferences.quoteStyle": "single",
-  "typescript.preferences.quoteStyle": "single",
+  "js/ts.preferences.quoteStyle": "single",
   "emmet.syntaxProfiles": {
     "xml": {
       "attr_quotes": "single"
