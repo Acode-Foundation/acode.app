@@ -44,6 +44,21 @@ window.onload = async () => {
     $loginText.value = user.name;
   }
 
+  // Show "Get Pro" button if user is not pro
+  if (!user?.acode_pro) {
+    const header = app.get('#main-header');
+    const navUser = header.get('nav:last-of-type');
+    if (navUser) {
+      const loginLink = navUser.get('a');
+      navUser.insertBefore(
+        <a href='/pro' className='get-pro-btn'>
+          <span className='icon favorite' /> Get Pro
+        </a>,
+        loginLink,
+      );
+    }
+  }
+
   const main = app.get('main');
 
   Router.add('/payments', (params) => loadModule('payments', params));
@@ -55,6 +70,7 @@ window.onload = async () => {
   Router.add('/terms', () => loadModule('termsOfService'));
   Router.add('/refund', () => loadModule('refundPolicy'));
   Router.add('/contact', () => loadModule('contactUs'));
+  Router.add('/pro', () => loadModule('pro'));
   Router.add('/login', (_params, query) => loadModule('loginUser', query));
   Router.add('/plugins', (_params, query) => loadModule('plugins', query));
   Router.add('/logout', logout);

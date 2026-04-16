@@ -28,13 +28,49 @@ async function main() {
 
   app.use((_req, res, next) => {
     res.header('Access-Control-Allow-Origin', 'https://localhost');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, x-auth-token');
+    // allow content-type
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, x-auth-token, X-Requested-With');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     if (_req.method === 'OPTIONS') {
       res.sendStatus(204);
       return;
     }
     next();
+  });
+
+  // CSRF protection: require a custom header or same-origin on state-changing requests
+  // Browsers won't send custom headers on cross-origin form submissions
+  // Skip for webhooks (Razorpay sends raw JSON without custom headers)
+  app.use((req, res, next) => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      next();
+      return;
+    }
+    // Skip webhook endpoint (receives callbacks from Razorpay servers)
+    if (req.path === '/api/razorpay/webhook') {
+      next();
+      return;
+    }
+    // Accept if custom header is present (triggers CORS preflight for cross-origin)
+    if (req.headers['x-auth-token'] || req.headers['x-requested-with']) {
+      next();
+      return;
+    }
+    // Accept if Content-Type is application/json (requires CORS preflight)
+    const contentType = req.headers['content-type'] || '';
+    if (contentType.includes('application/json')) {
+      next();
+      return;
+    }
+    // For form submissions (multipart/urlencoded), verify Origin/Referer is same-site
+    const origin = req.headers.origin || req.headers.referer || '';
+    const host = req.headers.host || '';
+    if (origin && (origin.includes(host) || origin.includes('localhost'))) {
+      next();
+      return;
+    }
+    res.status(403).send({ error: 'Forbidden: CSRF validation failed' });
   });
 
   app.use(cookieParser());
@@ -45,6 +81,9 @@ async function main() {
       },
     }),
   );
+
+  // IMPORTANT: Must come before express.json() to preserve raw body for signature verification\n  app.use('/api/razorpay/webhook', express.raw({ type: 'application/json' }));
+
   app.use(
     express.json({
       limit: '50mb',

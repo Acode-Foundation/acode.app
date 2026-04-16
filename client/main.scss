@@ -10,14 +10,12 @@ html {
   width: 100%;
   overflow: hidden;
   margin: 0;
-  background: linear-gradient(
-    135deg,
-    #1a1f2e 0%,
-    #2a2f3e 25%,
-    var(--primary-color) 50%,
-    #252a38 75%,
-    var(--secondary-color) 100%
-  );
+  background: linear-gradient(135deg,
+      #1a1f2e 0%,
+      #2a2f3e 25%,
+      var(--primary-color) 50%,
+      #252a38 75%,
+      var(--secondary-color) 100%);
   color: var(--primary-text-color);
   font-family: 'Montserrat', sans-serif;
 }
@@ -91,7 +89,7 @@ header {
   align-items: center;
   transition: all 1s ease-in-out;
 
-  > .icon {
+  >.icon {
     height: 60px;
     width: 60px;
     display: flex;
@@ -121,7 +119,11 @@ header {
       justify-content: center;
     }
 
-    #menu-toggler ~ .mask {
+    nav:first-of-type a.logo .text {
+      display: none;
+    }
+
+    #menu-toggler~.mask {
       position: fixed;
       top: 0;
       left: 0;
@@ -132,11 +134,11 @@ header {
       transition: all 0.3s ease-in-out;
     }
 
-    #menu-toggler:checked ~ nav:nth-of-type(2) {
+    #menu-toggler:checked~nav:nth-of-type(2) {
       transform: translateX(0);
     }
 
-    #menu-toggler:checked ~ .mask {
+    #menu-toggler:checked~.mask {
       pointer-events: all;
       background-color: rgba($color: #000000, $alpha: 0.5);
     }
@@ -215,6 +217,27 @@ header {
 
       &:not(.logo):hover {
         background-color: rgba(0, 0, 0, 0.5);
+      }
+
+      &.get-pro-btn {
+        background: linear-gradient(135deg, #f59e0b, #f97316);
+        color: #000;
+        font-weight: 700;
+        font-size: 0.85rem;
+        border-radius: 20px;
+        padding: 0 14px;
+        gap: 4px;
+        margin-left: 6px;
+        justify-content: center;
+
+        .icon {
+          font-size: 0.9rem;
+          margin: 0;
+        }
+
+        &:hover {
+          background: linear-gradient(135deg, #fbbf24, #fb923c);
+        }
       }
     }
   }
@@ -428,11 +451,9 @@ code {
 }
 
 footer {
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.05) 0%,
-    rgba(0, 0, 0, 0.3) 100%
-  );
+  background: linear-gradient(180deg,
+      rgba(0, 0, 0, 0.05) 0%,
+      rgba(0, 0, 0, 0.3) 100%);
   backdrop-filter: blur(30px);
   border-top: 1px solid rgba(51, 153, 255, 0.15);
   position: relative;

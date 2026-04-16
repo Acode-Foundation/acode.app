@@ -10,6 +10,7 @@ const Order = require('../entities/purchaseOrder');
 const Download = require('../entities/download');
 const badWords = require('../badWords.json');
 const { getLoggedInUser, getPluginSKU } = require('../lib/helpers');
+const getRazorpay = require('../lib/razorpay');
 const sendEmail = require('../lib/sendEmail');
 
 const androidpublisher = google.androidpublisher('v3');
@@ -61,12 +62,39 @@ router.get('/download/:id', async (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.ip;
 
     if (row.price) {
+      const loggedInUser = await getLoggedInUser(req);
+
+      // Check for user-linked purchase (Razorpay or any provider)
+      if (loggedInUser) {
+        const [userOrder] = await Order.for('internal').get(
+          [Order.ID, Order.TOKEN, Order.PROVIDER, Order.PACKAGE],
+          [
+            [Order.USER_ID, loggedInUser.id],
+            [Order.PLUGIN_ID, row.id],
+            [Order.STATE, Order.STATE_PURCHASED],
+          ],
+        );
+        if (userOrder) {
+          const purchaseValid = await verifyPurchase(userOrder, row);
+          if (purchaseValid) {
+            res.sendFile(path.resolve(__dirname, '../../data/plugins', `${id}.zip`));
+            await recordDownload(id, device, clientIp, packageName || 'web');
+            return;
+          }
+          // Purchase revoked (refunded outside our system) — cancel in DB
+          await Order.update([[Order.STATE, Order.STATE_CANCELED]], [Order.ID, userOrder.id]);
+          res.status(403).send({ error: 'Purchase is no longer active.' });
+          return;
+        }
+      }
+
+      // Fall back to token-based validation (Google Play)
       if (!token || !packageName) {
         res.status(403).send({ error: 'Forbidden' });
         return;
       }
 
-      const [order] = await Order.get([Order.TOKEN, token]);
+      const [order] = await Order.for('internal').get([Order.TOKEN, token]);
 
       if (order?.state && Number.parseInt(order.state, 10) !== Order.STATE_PURCHASED) {
         res.status(403).send({ error: 'Purchase not active.' });
@@ -82,13 +110,18 @@ router.get('/download/:id', async (req, res) => {
         const { purchaseState } = purchase.data;
 
         if (!order) {
-          await Order.insert(
+          const orderInsert = [
             [Order.TOKEN, token],
             [Order.PACKAGE, packageName],
             [Order.AMOUNT, row.price],
             [Order.PLUGIN_ID, row.id],
             [Order.STATE, Number(purchaseState)],
-          );
+            [Order.PROVIDER, Order.PROVIDER_GOOGLE_PLAY],
+          ];
+          if (loggedInUser) {
+            orderInsert.push([Order.USER_ID, loggedInUser.id]);
+          }
+          await Order.insert(...orderInsert);
         }
 
         if (Number(purchaseState) !== 0) {
@@ -102,33 +135,7 @@ router.get('/download/:id', async (req, res) => {
     }
 
     res.sendFile(path.resolve(__dirname, '../../data/plugins', `${id}.zip`));
-    try {
-      if (device && clientIp && packageName) {
-        const columns = [
-          [Download.PLUGIN_ID, id],
-          [Download.DEVICE_ID, device],
-          [Download.CLIENT_IP, clientIp],
-          [Download.PACKAGE_NAME, packageName],
-        ];
-        const deviceCountOnIp = await Download.count([
-          [Download.CLIENT_IP, clientIp],
-          [Download.PLUGIN_ID, id],
-        ]);
-        if (deviceCountOnIp < 5) {
-          const [download] = await Download.get([
-            [Download.PLUGIN_ID, id],
-            [Download.DEVICE_ID, device],
-          ]);
-          if (!download) {
-            await Download.insert(...columns);
-            await Plugin.increment(Plugin.DOWNLOADS, String(1), [Plugin.ID, id]);
-          }
-        }
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error);
-    }
+    await recordDownload(id, device, clientIp, packageName);
   } catch (error) {
     res.status(500).send({ error: error.message });
   }
@@ -220,7 +227,7 @@ router.get('/description/:id', async (req, res) => {
 router.get('{/:pluginId}', async (req, res) => {
   try {
     const { pluginId } = req.params;
-    const { user, name, status, page, limit, orderBy, supported_editor } = req.query;
+    const { user, name, status, page, limit, orderBy, supported_editor, owned } = req.query;
     const loggedInUser = await getLoggedInUser(req);
     const columns = Plugin.minColumns;
     const where = [];
@@ -269,6 +276,25 @@ router.get('{/:pluginId}', async (req, res) => {
         where.push([Plugin.STATUS, status]);
       }
 
+      if (owned === 'true') {
+        if (!loggedInUser) {
+          res.status(401).send({ error: 'Unauthorized' });
+          return;
+        }
+        const ownedOrders = await Order.for('internal').get(
+          [Order.PLUGIN_ID],
+          [
+            [Order.USER_ID, loggedInUser.id],
+            [Order.STATE, Order.STATE_PURCHASED],
+          ],
+        );
+        if (!ownedOrders.length) {
+          res.send([]);
+          return;
+        }
+        where.push([Plugin.ID, ownedOrders.map((o) => String(o.plugin_id)), 'IN']);
+      }
+
       const origin = req.headers.origin || req.headers.referer;
       const allowAllEditors = Boolean(origin?.startsWith(process.env.HOST));
 
@@ -309,8 +335,45 @@ router.get('{/:pluginId}', async (req, res) => {
         return;
       }
 
+      if (loggedInUser) {
+        if (row.price) {
+          const [userOrder] = await Order.for('internal').get(
+            [Order.PLUGIN_ID],
+            [
+              [Order.USER_ID, loggedInUser.id],
+              [Order.PLUGIN_ID, row.id],
+              [Order.STATE, Order.STATE_PURCHASED],
+            ],
+          );
+          row.owned = !!userOrder;
+        } else {
+          row.owned = true;
+        }
+      }
+
       res.send(row);
       return;
+    }
+
+    if (loggedInUser) {
+      const paidPluginIds = rows.filter((r) => r.price).map((r) => r.id);
+      let ownedIds = new Set();
+
+      if (paidPluginIds.length) {
+        const ownedOrders = await Order.for('internal').get(
+          [Order.PLUGIN_ID],
+          [
+            [Order.USER_ID, loggedInUser.id],
+            [Order.PLUGIN_ID, paidPluginIds, 'IN'],
+            [Order.STATE, Order.STATE_PURCHASED],
+          ],
+        );
+        ownedIds = new Set(ownedOrders.map((o) => String(o.plugin_id)));
+      }
+
+      for (const row of rows) {
+        row.owned = !row.price || ownedIds.has(String(row.id));
+      }
     }
 
     res.send(rows);
@@ -325,6 +388,7 @@ router.post('/refund', async (_req, res) => {
 
 router.post('/order', async (req, res) => {
   try {
+    const loggedInUser = await getLoggedInUser(req);
     const { id, token, package: packageName } = req.body;
     const [plugin] = await Plugin.get([Plugin.ID, id]);
     if (!plugin) {
@@ -352,13 +416,19 @@ router.post('/order', async (req, res) => {
 
       const [{ price }] = await Plugin.get([Plugin.PRICE], [Plugin.ID, id]);
 
-      await Order.insert(
+      const orderInsert = [
         [Order.PLUGIN_ID, id],
         [Order.TOKEN, token],
         [Order.PACKAGE, packageName],
         [Order.AMOUNT, price],
         [Order.STATE, purchase.data.purchaseState],
-      );
+        [Order.PROVIDER, Order.PROVIDER_GOOGLE_PLAY],
+      ];
+      // Link to user account if logged in (enables cross-platform sync)
+      if (loggedInUser) {
+        orderInsert.push([Order.USER_ID, loggedInUser.id]);
+      }
+      await Order.insert(...orderInsert);
       res.send({ success: 'Order saved.' });
     } catch (error) {
       const message = `Error while validating purchase: ${error.errors?.map((e) => e.message).join(', ') || error.message}`;
@@ -915,14 +985,75 @@ async function registerSKU(name, id, price) {
         autoConvertMissingPrices: true,
       });
     } catch (error) {
-      const message = error.errors?.map(({ message: msg }) => msg).join('\n');
-      throw new Error(`Failed to register SKU, ${message}`);
+      const message = error.errors?.map(({ message: msg }) => msg).join('\n') || error.message;
+      console.warn(`Failed to register SKU for ${packageName}, ${message}`);
+      // Proceed without throwing, to allow Razorpay-only or local testing
     }
   }
 }
 
 function isValidPrice(price) {
   return price && !Number.isNaN(price) && price >= MIN_PRICE && price <= MAX_PRICE;
+}
+
+/**
+ * Verify a purchase is still active with the payment provider.
+ * Returns true if valid, false if revoked. Falls back to true on API errors
+ * so a provider outage doesn't block legitimate downloads.
+ * @param {object} order - purchase_order row (id, token, provider, package)
+ * @param {object} plugin - plugin row (sku)
+ */
+async function verifyPurchase(order, plugin) {
+  try {
+    if (order.provider === Order.PROVIDER_RAZORPAY) {
+      const payment = await getRazorpay().payments.fetch(order.token);
+      return payment.status === 'captured';
+    }
+
+    if (order.provider === Order.PROVIDER_GOOGLE_PLAY) {
+      const purchase = await androidpublisher.purchases.products.get({
+        packageName: order.package,
+        productId: plugin.sku,
+        token: order.token,
+      });
+      return Number(purchase.data.purchaseState) === 0;
+    }
+
+    // Unknown provider — don't trust without verification
+    console.warn(`Unknown purchase provider: ${order.provider} (order=${order.id})`);
+    return false;
+  } catch (err) {
+    // Provider API unreachable — don't block download, log for monitoring
+    console.error(`Purchase verification failed (provider=${order.provider}):`, err.message);
+    return true;
+  }
+}
+
+async function recordDownload(pluginId, device, clientIp, pkgName) {
+  try {
+    if (!device || !clientIp || !pkgName) return;
+    const deviceCountOnIp = await Download.count([
+      [Download.CLIENT_IP, clientIp],
+      [Download.PLUGIN_ID, pluginId],
+    ]);
+    if (deviceCountOnIp < 5) {
+      const [download] = await Download.get([
+        [Download.PLUGIN_ID, pluginId],
+        [Download.DEVICE_ID, device],
+      ]);
+      if (!download) {
+        await Download.insert(
+          [Download.PLUGIN_ID, pluginId],
+          [Download.DEVICE_ID, device],
+          [Download.CLIENT_IP, clientIp],
+          [Download.PACKAGE_NAME, pkgName],
+        );
+        await Plugin.increment(Plugin.DOWNLOADS, 1, [Plugin.ID, pluginId]);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to record download:', error);
+  }
 }
 
 function isVersionGreater(newV, oldV) {

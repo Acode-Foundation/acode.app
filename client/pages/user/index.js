@@ -65,6 +65,7 @@ export default async function User({ userId }) {
               {user.name}
               <div className='extra-info'>
                 {isSelf && user.role === 'admin' && <small className='tag'>Admin</small>}
+                {Boolean(user.acode_pro) && <small className='tag pro-tag'>Pro</small>}
                 <VerifyButton />
               </div>
             </div>
