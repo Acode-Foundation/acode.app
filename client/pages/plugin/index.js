@@ -12,7 +12,7 @@ import BuyButton, { checkPluginOwnership } from 'components/razorpayCheckout';
 import YearSelect from 'components/YearSelect';
 import hilightjs from 'highlight.js';
 import Ref from 'html-tag-js/ref';
-import { calcRating, getLoggedInUser, gravatar, since } from 'lib/helpers';
+import { calcRating, formatPrice, getLoggedInUser, gravatar, since } from 'lib/helpers';
 import Router from 'lib/Router';
 import { marked } from 'marked';
 import moment from 'moment/moment';
@@ -151,7 +151,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
             </div>
             {purchaseInfo && (
               <div className='purchase-card-details'>
-                <span>Paid &#8377;{purchaseInfo.purchaseAmount}</span>
+                <span>Paid &#8377;{formatPrice(purchaseInfo.purchaseAmount)}</span>
                 <span className='dot'>·</span>
                 <span>{moment(purchaseInfo.purchasedAt).format('DD MMM YYYY')}</span>
                 <span className='dot'>·</span>
@@ -175,7 +175,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           <div className='purchase-card-main'>
             <div className='purchase-card-price'>
               <span className='currency'>&#8377;</span>
-              <span className='amount'>{price}</span>
+              <span className='amount'>{formatPrice(price)}</span>
             </div>
             <div className='purchase-card-details'>
               <span>One-time purchase</span>
@@ -247,7 +247,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
               {price ? (
                 <>
                   <span style={{ marginRight: '10px' }}>&#8377;</span>
-                  <span>{price}</span>
+                  <span>{formatPrice(price)}</span>
                 </>
               ) : (
                 <span style={{ color: 'lightgreen' }}>Free</span>
@@ -300,7 +300,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
               <div className='purchase-card-main'>
                 <div className='purchase-card-price'>
                   <span className='currency'>&#8377;</span>
-                  <span className='amount'>{price}</span>
+                  <span className='amount'>{formatPrice(price)}</span>
                 </div>
                 <div className='purchase-card-details'>
                   <span>Purchase this plugin from within the Acode app</span>

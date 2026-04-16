@@ -1,5 +1,15 @@
 import moment from 'moment';
 
+/**
+ * Format a currency amount, fixing floating point noise (e.g. 39.199999999 → 39.2).
+ * Removes unnecessary trailing zeros (40.00 → 40, 39.20 → 39.2).
+ * @param {number} amount
+ * @returns {number}
+ */
+export function formatPrice(amount) {
+  return parseFloat(Number(amount).toFixed(2));
+}
+
 const on = {
   showloading: [],
   hideloading: [],

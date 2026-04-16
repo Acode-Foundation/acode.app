@@ -1,6 +1,5 @@
 const crypto = require('node:crypto');
 const { Router } = require('express');
-const Razorpay = require('razorpay');
 const Plugin = require('../entities/plugin');
 const Order = require('../entities/purchaseOrder');
 const User = require('../entities/user');
@@ -8,27 +7,9 @@ const AppConfig = require('../entities/appConfig');
 const { getLoggedInUser } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
 const { REFUND_WINDOW_MS } = require('../../constants.mjs');
+const getRazorpay = require('../lib/razorpay');
 
 const router = Router();
-
-// Lazy initialization of Razorpay instance
-let razorpayInstance = null;
-function getRazorpay() {
-  if (!razorpayInstance) {
-    const keyId = process.env.PG_KEY_ID;
-    const keySecret = process.env.PG_KEY_SECRET;
-
-    if (!keyId || !keySecret) {
-      throw new Error('Razorpay API keys not configured');
-    }
-
-    razorpayInstance = new Razorpay({
-      key_id: keyId,
-      key_secret: keySecret,
-    });
-  }
-  return razorpayInstance;
-}
 
 /**
  * Create a Razorpay order for a plugin purchase

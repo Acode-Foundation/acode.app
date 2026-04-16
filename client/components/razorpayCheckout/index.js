@@ -5,6 +5,7 @@
 
 import alert from 'components/dialogs/alert';
 import Ref from 'html-tag-js/ref';
+import { formatPrice } from 'lib/helpers';
 
 // Load Razorpay script dynamically
 let razorpayLoaded = false;
@@ -283,7 +284,7 @@ export default function BuyButton({ pluginId, price, user, onPurchaseComplete })
     };
 
     const handleCancel = () => {
-      buttonTextRef.el.textContent = `Buy ₹${price}`;
+      buttonTextRef.el.textContent = `Buy ₹${formatPrice(price)}`;
       buttonRef.el.disabled = false;
     };
 
@@ -294,7 +295,7 @@ export default function BuyButton({ pluginId, price, user, onPurchaseComplete })
   return (
     <button ref={buttonRef} type='button' className='buy-button' onclick={handleClick}>
       <span className='icon shopping_cart' />
-      <span ref={buttonTextRef}>Buy ₹{price}</span>
+      <span ref={buttonTextRef}>Buy ₹{formatPrice(price)}</span>
     </button>
   );
 }
