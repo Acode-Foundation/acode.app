@@ -76,13 +76,15 @@ async function main() {
   app.use(cookieParser());
   app.use(
     fileUpload({
+      abortOnLimit: true,
       limits: {
         fileSize: 50 * 1024 * 1024, // 50 MB
       },
     }),
   );
 
-  // IMPORTANT: Must come before express.json() to preserve raw body for signature verification\n  app.use('/api/razorpay/webhook', express.raw({ type: 'application/json' }));
+  // Must come before express.json() to preserve raw body for Razorpay signature verification
+  app.use('/api/razorpay/webhook', express.raw({ type: 'application/json' }));
 
   app.use(
     express.json({
@@ -215,5 +217,15 @@ async function main() {
 
     res.header('Content-Type', 'text/html;charset=utf-8');
     res.send(templateScript(defaultOg));
+  });
+
+  // eslint-disable-next-line no-unused-vars
+  app.use((err, _req, res, _next) => {
+    if (err.message === 'Unexpected end of form') {
+      res.status(400).send({ error: 'Upload was interrupted. Please try again.' });
+      return;
+    }
+    console.error('Unhandled error:', err);
+    res.status(500).send({ error: 'Internal server error' });
   });
 }
