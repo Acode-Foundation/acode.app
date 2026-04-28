@@ -23,15 +23,19 @@ app.listen(PORT, () => {
 
 main();
 
+const ALLOWED_ORIGINS = new Set(['https://localhost', 'https://acode.app']);
+
 async function main() {
   await setAuth();
 
   app.use((_req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'https://localhost');
-    // allow content-type
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, x-auth-token, X-Requested-With');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    const origin = _req.headers.origin;
+    if (ALLOWED_ORIGINS.has(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, x-auth-token, X-Requested-With');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    }
     if (_req.method === 'OPTIONS') {
       res.sendStatus(204);
       return;
