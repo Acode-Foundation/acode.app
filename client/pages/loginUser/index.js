@@ -6,12 +6,30 @@ import Ref from 'html-tag-js/ref';
 import background from 'lib/background';
 import { loadingEnd, loadingStart } from 'lib/helpers';
 import userImage from 'res/user.svg';
+import { getLoggedInUser } from '../../lib/helpers';
 
-export default function LoginUser({ redirect }) {
+export default async function LoginUser({ redirect: redirectUlr }) {
   const errorText = Reactive('');
   const successText = Reactive('');
   const button = Ref();
   const canvas = Ref();
+
+  try {
+    const user = await getLoggedInUser();
+    if (user) {
+      redirect(getCookie('token'));
+      return (
+        <section id='user-login'>
+          <div className='redirect-message'>
+            <div className='error'>{errorText}</div>
+            <div className='success'>{successText}</div>
+          </div>
+        </section>
+      );
+    }
+  } catch (error) {
+    return <div>{error.message}</div>;
+  }
 
   canvas.onref = () => background(canvas.el);
 
@@ -40,14 +58,20 @@ export default function LoginUser({ redirect }) {
           Login
         </button>
         <div style={{ margin: 'auto' }}>
-          <a className='link' href={`/register?redirect=${redirect}`}>
+          <a className='link' href={`/register?redirect=${redirectUlr}`}>
             New account.
           </a>{' '}
           |{' '}
-          <a className='link' href={`/change-password?redirect=${redirect}&mode=reset`}>
+          <a className='link' href={`/change-password?redirect=${redirectUlr}&mode=reset`}>
             Forgot password?
           </a>
         </div>
+        <div className='oauth-divider'>
+          <span>or</span>
+        </div>
+        <a className='btn-github' href={`/api/oauth/github${redirectUlr ? `?callbackUrl=${encodeURIComponent(redirectUlr)}` : ''}`}>
+          Login with GitHub
+        </a>
       </AjaxForm>
     </section>
   );
@@ -62,18 +86,36 @@ export default function LoginUser({ redirect }) {
       return;
     }
 
-    successText.value = 'Login successful. Redirecting...';
-    button.el.disabled = true;
-    setTimeout(() => {
-      if (redirect === 'app') {
-        redirect = `acode://user/login/${data.token}`;
-      }
-      window.location.replace(redirect || '/');
-    }, 1000);
+    redirect(data.token);
   }
 
   function onerror(error) {
     button.el.disabled = false;
     errorText.value = error;
   }
+
+  function redirect(token) {
+    successText.value = 'Login successful. Redirecting...';
+
+    if (button.el) {
+      button.el.disabled = true;
+    }
+
+    setTimeout(() => {
+      if (redirectUlr === 'app') {
+        redirectUlr = `acode://user/login/${token}`;
+      }
+      window.location.replace(redirectUlr || '/');
+    }, 1000);
+  }
+}
+
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+
+  if (parts.length === 2) {
+    return parts.pop().split(';').shift();
+  }
+  return null;
 }
