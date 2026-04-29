@@ -66,12 +66,6 @@ export default async function LoginUser({ redirect: redirectUlr }) {
             Forgot password?
           </a>
         </div>
-        <div className='oauth-divider'>
-          <span>or</span>
-        </div>
-        <a className='btn-github' href={`/api/oauth/github${redirectUlr ? `?callbackUrl=${encodeURIComponent(redirectUlr)}` : ''}`}>
-          Login with GitHub
-        </a>
       </AjaxForm>
     </section>
   );

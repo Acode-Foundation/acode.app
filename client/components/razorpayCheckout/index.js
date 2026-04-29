@@ -95,7 +95,7 @@ export async function initiateCheckout(pluginId, userInfo = {}, onSuccess, onCan
       amount,
       currency,
       name: RAZORPAY_CONFIG.branding.name,
-      description: `Purchase: ${pluginName}`,
+      description: `Purchase: ${pluginName}`.replace(/[\u{10000}-\u{10FFFF}]/gu, ''),
       image: RAZORPAY_CONFIG.branding.image,
       order_id: orderId,
       handler: async (response) => {

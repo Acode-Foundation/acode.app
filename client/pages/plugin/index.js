@@ -112,7 +112,7 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
     table.replaceWith(<div className='table-wrapper'>{table.cloneNode(true)}</div>);
   }
 
-  function renderPurchaseSection() {
+  function PurchaseSection() {
     if (userOwnsPlugin) {
       const refundHandler = async (e) => {
         const ok = await confirm('REFUND', 'Are you sure you want to refund this plugin? This action cannot be undone.');
@@ -293,23 +293,13 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
               </a>
             )}
           </div>
-          {/* Payment Section for paid plugins */}
-          {price > 0 && (!canInstall || userOwnsPlugin) && renderPurchaseSection()}
-          {price > 0 && canInstall && !userOwnsPlugin && (
-            <div className='purchase-card'>
-              <div className='purchase-card-main'>
-                <div className='purchase-card-price'>
-                  <span className='currency'>&#8377;</span>
-                  <span className='amount'>{formatPrice(price)}</span>
-                </div>
-                <div className='purchase-card-details'>
-                  <span>Purchase this plugin from within the Acode app</span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+      {price > 0 && (
+        <div className='row plugin-head'>
+          <PurchaseSection />
+        </div>
+      )}
       <div className='detailed'>
         <div
           className='options'

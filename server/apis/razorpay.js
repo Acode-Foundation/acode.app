@@ -59,9 +59,9 @@ router.post('/create-order', async (req, res) => {
       currency: 'INR',
       receipt,
       notes: {
-        pluginId: plugin.id,
-        pluginName: plugin.name,
         userId: user.id,
+        pluginId: plugin.id,
+        pluginName: plugin.name.replace(/[\u{10000}-\u{10FFFF}]/gu, ''),
         userEmail: user.email,
       },
     });

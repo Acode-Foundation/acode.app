@@ -70,124 +70,6 @@
       }
     }
 
-    .purchase-card {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-top: 16px;
-      padding: 16px 20px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-
-      &.purchased {
-        background: rgba(16, 185, 129, 0.06);
-        border-color: rgba(16, 185, 129, 0.2);
-      }
-
-      .purchase-card-main {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        min-width: 0;
-      }
-
-      .purchase-card-badge {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: #10b981;
-        font-weight: 600;
-        font-size: 15px;
-
-        .icon {
-          font-size: 1.1em;
-        }
-      }
-
-      .purchase-card-price {
-        display: flex;
-        align-items: baseline;
-        gap: 2px;
-
-        .currency {
-          font-size: 18px;
-          font-weight: 500;
-          opacity: 0.7;
-        }
-
-        .amount {
-          font-size: 28px;
-          font-weight: 700;
-        }
-      }
-
-      .purchase-card-details {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12px;
-        opacity: 0.55;
-        flex-wrap: wrap;
-
-        .dot {
-          font-weight: 700;
-        }
-      }
-
-      .refund-button {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 16px;
-        background: transparent;
-        color: #f87171;
-        border: 1px solid rgba(248, 113, 113, 0.3);
-        border-radius: 8px;
-        font-weight: 500;
-        font-size: 13px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-
-        .icon {
-          font-size: 1em;
-        }
-
-        &:hover {
-          background: rgba(248, 113, 113, 0.1);
-          border-color: rgba(248, 113, 113, 0.5);
-        }
-
-        &:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-      }
-
-      @media (max-width: 500px) {
-        flex-direction: column;
-        align-items: stretch;
-        text-align: center;
-
-        .purchase-card-main {
-          align-items: center;
-        }
-
-        .purchase-card-details {
-          justify-content: center;
-        }
-
-        .refund-button,
-        .buy-button,
-        .login-to-buy {
-          justify-content: center;
-          width: 100%;
-        }
-      }
-    }
-
     .login-to-buy {
       display: inline-flex;
       align-items: center;
@@ -234,6 +116,132 @@
         opacity: 0.7;
         cursor: not-allowed;
         transform: none;
+      }
+    }
+  }
+
+  .purchase-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 16px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    margin-bottom: 16px;
+
+    &.purchased {
+      background: rgba(16, 185, 129, 0.06);
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .purchase-card-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .purchase-card-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #10b981;
+      font-weight: 600;
+      font-size: 15px;
+
+      .icon {
+        font-size: 1.1em;
+      }
+    }
+
+    .purchase-card-price {
+      display: flex;
+      align-items: baseline;
+      gap: 2px;
+
+      .currency {
+        font-size: 18px;
+        font-weight: 500;
+        opacity: 0.7;
+      }
+
+      .amount {
+        font-size: 28px;
+        font-weight: 700;
+      }
+    }
+
+    .purchase-card-details {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      opacity: 0.55;
+      flex-wrap: wrap;
+
+      .dot {
+        font-weight: 700;
+      }
+    }
+
+    .refund-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: transparent;
+      color: #f87171;
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+
+      .icon {
+        font-size: 1em;
+      }
+
+      &:hover {
+        background: rgba(248, 113, 113, 0.1);
+        border-color: rgba(248, 113, 113, 0.5);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    .refund-button,
+    .buy-button,
+    .login-to-buy {
+      margin: auto 0 auto auto;
+    }
+
+    @media (max-width: 500px) {
+      flex-direction: column;
+      align-items: stretch;
+      text-align: center;
+
+      .purchase-card-main {
+        align-items: center;
+      }
+
+      .purchase-card-details {
+        justify-content: center;
+      }
+
+      .refund-button,
+      .buy-button,
+      .login-to-buy {
+        margin: auto;
+        justify-content: center;
+        width: 100%;
       }
     }
   }
