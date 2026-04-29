@@ -18,6 +18,7 @@ export default async function Admin() {
     <section ref={usersList} id='admin'>
       <h1>Admin Panel</h1>
       <Dashboard />
+      <AppSettings />
       <Users />
       <EmailUsers />
     </section>
@@ -66,6 +67,69 @@ function Card({ title, text, icon, onclick }) {
     <div className='card' onclick={onclick}>
       {icon ? <span className={`content icon ${icon}`} /> : <span className='content'>{text?.toLocaleString()}</span>}
       <span className='title'>{title}</span>
+    </div>
+  );
+}
+
+function AppSettings() {
+  const priceRef = Ref();
+  const statusRef = Ref();
+
+  (async () => {
+    try {
+      const res = await fetch('/api/admin/config');
+      const config = await res.json();
+      if (priceRef.el) {
+        priceRef.el.value = config.acode_pro_price || '370';
+      }
+    } catch {
+      if (statusRef.el) {
+        statusRef.el.textContent = 'Failed to load config';
+      }
+    }
+  })();
+
+  const onSave = async () => {
+    const price = priceRef.el.value;
+    const numPrice = Number(price);
+    if (Number.isNaN(numPrice) || numPrice <= 0) {
+      alert('ERROR', 'Price must be a positive number');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'acode_pro_price', value: price }),
+      });
+      const json = await res.json();
+      if (json.error) {
+        alert('ERROR', json.error);
+      } else {
+        statusRef.el.textContent = 'Saved!';
+        setTimeout(() => {
+          if (statusRef.el) statusRef.el.textContent = '';
+        }, 2000);
+      }
+    } catch {
+      alert('ERROR', 'Failed to save config');
+    }
+  };
+
+  return (
+    <div className='app-settings'>
+      <h2>App Settings</h2>
+      <div className='setting-row'>
+        <label>Acode Pro Price (INR)</label>
+        <div className='setting-input'>
+          <input ref={priceRef} type='number' min='1' step='1' placeholder='370' />
+          <button type='button' onclick={onSave}>
+            Save
+          </button>
+          <span ref={statusRef} className='status' />
+        </div>
+      </div>
     </div>
   );
 }
