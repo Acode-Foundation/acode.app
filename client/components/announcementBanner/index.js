@@ -1,29 +1,42 @@
 import './style.scss';
-import hpLogo from 'res/hp-logo.png';
+import shellularLogo from 'res/shellular-logo.png';
 
 const BANNERS = [
+  {
+    id: 'shellular',
+    logo: shellularLogo,
+    url: 'https://shellular.dev',
+    alt: 'Shellular',
+    badge: 'NEW',
+    mobileTitle: 'Shellular - Remote control for your AI agents & terminals',
+    title: 'Try Shellular',
+    subtitle: 'Access your Codex, Claude Code, OpenCode, terminals, files, and ports from your phone.',
+    cta: 'Get now',
+    theme: 'shellular',
+  },
   {
     id: 'betterkeep',
     logo: 'https://betterkeep.app/icons/logo.png',
     url: 'https://betterkeep.app/welcome?utm_source=acode_announcement_banner',
     alt: 'Better Keep Notes',
     badge: 'NEW',
+    mobileTitle: 'Better Keep Notes - Secure & Private',
     title: 'Introducing Better Keep Notes',
     subtitle: 'A beautiful, private note-taking app. Try it free!',
     cta: 'Learn More',
     theme: 'betterkeep',
   },
-  {
-    id: 'hangingpiece',
-    logo: hpLogo,
-    url: 'https://www.hangingpiece.com?utm_source=acode_announcement_banner',
-    alt: 'Hanging Piece',
-    badge: 'NEW',
-    title: 'Hanging Piece - Claude Code for Chess',
-    subtitle: 'Understand WHY you blundered and HOW to improve!',
-    cta: 'Try Now',
-    theme: 'hangingpiece',
-  },
+  // {
+  //   id: 'hangingpiece',
+  //   logo: hpLogo,
+  //   url: 'https://www.hangingpiece.com?utm_source=acode_announcement_banner',
+  //   alt: 'Hanging Piece',
+  //   badge: 'NEW',
+  //   title: 'Hanging Piece - Claude Code for Chess',
+  //   subtitle: 'Understand WHY you blundered and HOW to improve!',
+  //   cta: 'Try Now',
+  //   theme: 'hangingpiece',
+  // },
 ];
 
 const TOGGLE_INTERVAL = 8000;
@@ -33,6 +46,7 @@ export default function AnnouncementBanner() {
 
   const $logo = <img alt='App Logo' className='announcement-banner__logo' />;
   const $badge = <span className='announcement-banner__new-badge' />;
+  const $mobileTitle = <span className='announcement-banner__mobile-title' />;
   const $title = <span className='announcement-banner__title' />;
   const $subtitle = <span className='announcement-banner__subtitle' />;
   const $ctaText = <span className='announcement-banner__cta-text' />;
@@ -50,6 +64,7 @@ export default function AnnouncementBanner() {
         <div className='announcement-banner__logo-wrapper'>{$logo}</div>
         <div className='announcement-banner__text'>
           {$badge}
+          {$mobileTitle}
           {$title}
           {$subtitle}
         </div>
@@ -110,6 +125,7 @@ export default function AnnouncementBanner() {
       $logo.src = b.logo;
       $logo.alt = b.alt;
       $badge.textContent = b.badge;
+      $mobileTitle.textContent = b.mobileTitle || b.title;
       $title.textContent = b.title;
       $subtitle.textContent = b.subtitle;
       $ctaText.textContent = b.cta;
