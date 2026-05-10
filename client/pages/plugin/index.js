@@ -17,7 +17,7 @@ import Router from 'lib/Router';
 import { marked } from 'marked';
 import moment from 'moment/moment';
 
-export default async function Plugin({ id: pluginId, section = 'description' }) {
+export default async function Plugin({ id: pluginId, section = 'description', callback = '' }) {
   const plugin = await fetch(`/api/plugin/${pluginId}`).then((res) => res.json());
   if (plugin.error) {
     return <div className='error'>{plugin.error}</div>;
@@ -128,7 +128,11 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           });
           const data = await res.json();
           if (data.success) {
-            window.location.reload();
+            if (callback === 'app') {
+              window.location = `acode://plugin/uninstall/${id}`;
+            } else {
+              window.location.reload();
+            }
           } else {
             await alert('ERROR', data.error || 'Refund failed');
             btn.disabled = false;
@@ -188,7 +192,11 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
             price={price}
             user={user}
             onPurchaseComplete={() => {
-              window.location.reload();
+              if (callback === 'app') {
+                window.location = `acode://plugin/purchased/${id}`;
+              } else {
+                window.location.reload();
+              }
             }}
           />
         </div>
@@ -232,6 +240,11 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
             {updatedAt && <small>Updated {since(updatedAt)}</small>}
           </div>
           <div className='info'>
+            {supportedEditor && (
+              <div className='chip editor-badge' data-editor={supportedEditor}>
+                <span>{getEditorDisplayName(supportedEditor)}</span>
+              </div>
+            )}
             <span className='chip'>v {version}</span>
             {+downloads ? (
               <div className='chip'>
@@ -243,31 +256,10 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
                 <span style={{ color: 'gold' }}>New</span>
               </div>
             )}
-            <div className='chip'>
-              {price ? (
-                <>
-                  <span style={{ marginRight: '10px' }}>&#8377;</span>
-                  <span>{formatPrice(price)}</span>
-                </>
-              ) : (
-                <span style={{ color: 'lightgreen' }}>Free</span>
-              )}
-            </div>
-            {commentCount > 0 && (
-              <div className='chip' onclick={() => changeSection('comments')}>
-                <div className='icon chat_bubble' />
-                <span>{commentCount}</span>
-              </div>
-            )}
             {license && license.toLowerCase() !== 'unknown' && (
               <div className='chip'>
                 <span className='icon certificate' />
                 <span>{license}</span>
-              </div>
-            )}
-            {supportedEditor && (
-              <div className='chip editor-badge' data-editor={supportedEditor}>
-                <span>{getEditorDisplayName(supportedEditor)}</span>
               </div>
             )}
             {votesUp + votesDown > 0 && (
@@ -315,8 +307,8 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           <h2 onclick={() => changeSection('changelogs')} ref={sectionChangelogs}>
             Changelogs
           </h2>
-          <h2 onclick={() => changeSection('comments')} ref={sectionComments}>
-            Reviews
+          <h2 onclick={() => changeSection('comments')} ref={sectionComments} style={{ whiteSpace: 'nowrap' }}>
+            {commentCount} Reviews
           </h2>
           {shouldShowOrders && (
             <h2 onclick={() => changeSection('orders')} ref={sectionOrders}>
