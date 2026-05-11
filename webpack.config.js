@@ -2,6 +2,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
+const { EnvironmentPlugin } = require('webpack');
 
 const PUBLIC = path.resolve(__dirname, 'public');
 
@@ -38,6 +39,10 @@ module.exports = (_env, options) => {
       new MiniCssExtractPlugin({
         filename: '[name].css',
         chunkFilename: '[id].css',
+      }),
+      new EnvironmentPlugin({
+        DEV_MODE: mode === 'development',
+        RAZORPAY_ENABLED: false,
       }),
     ],
   };

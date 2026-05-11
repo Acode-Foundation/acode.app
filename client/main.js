@@ -45,7 +45,7 @@ window.onload = async () => {
   }
 
   // Show "Get Pro" button if user is not pro
-  if (!user?.acode_pro) {
+  if (!user?.acode_pro && process.env.RAZORPAY_ENABLED) {
     const header = app.get('#main-header');
     const navUser = header.get('nav:last-of-type');
     if (navUser) {
@@ -70,7 +70,11 @@ window.onload = async () => {
   Router.add('/terms', () => loadModule('termsOfService'));
   Router.add('/refund', () => loadModule('refundPolicy'));
   Router.add('/contact', () => loadModule('contactUs'));
-  Router.add('/pro', () => loadModule('pro'));
+
+  if (process.env.RAZORPAY_ENABLED) {
+    Router.add('/pro', () => loadModule('pro'));
+  }
+
   Router.add('/login', (_params, query) => loadModule('loginUser', query));
   Router.add('/plugins', (_params, query) => loadModule('plugins', query));
   Router.add('/logout', logout);

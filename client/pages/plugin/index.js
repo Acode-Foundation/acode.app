@@ -287,7 +287,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
           </div>
         </div>
       </div>
-      {price > 0 && (
+      {process.env.RAZORPAY_ENABLED && price > 0 && (
         <div className='row plugin-head'>
           <PurchaseSection />
         </div>
