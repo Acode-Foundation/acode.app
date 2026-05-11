@@ -15,6 +15,7 @@ function runMigration() {
   const queries = [
     // Add user_id column if it doesn't exist
     `ALTER TABLE purchase_order ADD COLUMN user_id INTEGER REFERENCES user(id)`,
+    `ALTER TABLE purchase_order ADD COLUMN provider TEXT DEFAULT 'google_play'`,
   ];
 
   for (const query of queries) {
