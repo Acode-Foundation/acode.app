@@ -30,7 +30,10 @@ async function updateOrder(startDate, endDate, google) {
 
   for (const order of orders) {
     try {
-      const { package: packageName, plugin_id: pluginId, order_id: orderId, id: rowId, token, state } = order;
+      const { package: packageName, plugin_id: pluginId, order_id: orderId, id: rowId, token, state, provider } = order;
+
+      // Skip Razorpay orders — they don't need Google Play verification
+      if (provider === 'razorpay') continue;
 
       const [plugin] = await Plugin.get([Plugin.SKU], [Plugin.ID, pluginId]);
       if (!plugin) {

@@ -234,12 +234,10 @@ class Router {
     if (!($el instanceof HTMLAnchorElement)) return;
     if ($el.target === '_blank') return;
 
-    e.preventDefault();
-
-    /**
-     * @type {string}
-     */
     const href = $el.getAttribute('href');
+    if (href.startsWith('acode://')) return;
+
+    e.preventDefault();
     this.loadUrl(href);
   }
 

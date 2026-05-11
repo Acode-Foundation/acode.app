@@ -43,14 +43,53 @@ async function main() {
     next();
   });
 
+  // CSRF protection: require a custom header or same-origin on state-changing requests
+  // Browsers won't send custom headers on cross-origin form submissions
+  // Skip for webhooks (Razorpay sends raw JSON without custom headers)
+  app.use((req, res, next) => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      next();
+      return;
+    }
+    // Skip webhook endpoint (receives callbacks from Razorpay servers)
+    if (req.path === '/api/razorpay/webhook') {
+      next();
+      return;
+    }
+    // Accept if custom header is present (triggers CORS preflight for cross-origin)
+    if (req.headers['x-auth-token'] || req.headers['x-requested-with']) {
+      next();
+      return;
+    }
+    // Accept if Content-Type is application/json (requires CORS preflight)
+    const contentType = req.headers['content-type'] || '';
+    if (contentType.includes('application/json')) {
+      next();
+      return;
+    }
+    // For form submissions (multipart/urlencoded), verify Origin/Referer is same-site
+    const origin = req.headers.origin || req.headers.referer || '';
+    const host = req.headers.host || '';
+    if (origin && (origin.includes(host) || origin.includes('localhost'))) {
+      next();
+      return;
+    }
+    res.status(403).send({ error: 'Forbidden: CSRF validation failed' });
+  });
+
   app.use(cookieParser());
   app.use(
     fileUpload({
+      abortOnLimit: true,
       limits: {
         fileSize: 50 * 1024 * 1024, // 50 MB
       },
     }),
   );
+
+  // Must come before express.json() to preserve raw body for Razorpay signature verification
+  app.use('/api/razorpay/webhook', express.raw({ type: 'application/json' }));
+
   app.use(
     express.json({
       limit: '50mb',
@@ -182,5 +221,15 @@ async function main() {
 
     res.header('Content-Type', 'text/html;charset=utf-8');
     res.send(templateScript(defaultOg));
+  });
+
+  // eslint-disable-next-line no-unused-vars
+  app.use((err, _req, res, _next) => {
+    if (err.message === 'Unexpected end of form') {
+      res.status(400).send({ error: 'Upload was interrupted. Please try again.' });
+      return;
+    }
+    console.error('Unhandled error:', err);
+    res.status(500).send({ error: 'Internal server error' });
   });
 }

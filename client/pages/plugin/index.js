@@ -8,15 +8,16 @@ import prompt from 'components/dialogs/prompt';
 import Input from 'components/input';
 import MonthSelect from 'components/MonthSelect';
 import PluginStatus from 'components/pluginStatus';
+import BuyButton, { checkPluginOwnership } from 'components/razorpayCheckout';
 import YearSelect from 'components/YearSelect';
 import hilightjs from 'highlight.js';
 import Ref from 'html-tag-js/ref';
-import { calcRating, getLoggedInUser, gravatar, since } from 'lib/helpers';
+import { calcRating, formatPrice, getLoggedInUser, gravatar, since } from 'lib/helpers';
 import Router from 'lib/Router';
 import { marked } from 'marked';
 import moment from 'moment/moment';
 
-export default async function Plugin({ id: pluginId, section = 'description' }) {
+export default async function Plugin({ id: pluginId, section = 'description', callback = '' }) {
   const plugin = await fetch(`/api/plugin/${pluginId}`).then((res) => res.json());
   if (plugin.error) {
     return <div className='error'>{plugin.error}</div>;
@@ -73,6 +74,21 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
   const shouldShowOrders = user && (user.id === userId || user.isAdmin) && !!plugin.price;
 
   let canInstall = /android/i.test(navigator.userAgent);
+  let userOwnsPlugin = false;
+  let purchaseInfo = null;
+
+  // Check if logged-in user owns this paid plugin (for web purchases)
+  if (user && price > 0) {
+    userOwnsPlugin = await checkPluginOwnership(id);
+    if (userOwnsPlugin) {
+      try {
+        const purchases = await fetch('/api/razorpay/my-purchases').then((r) => r.json());
+        purchaseInfo = purchases.find((p) => p.id === id);
+      } catch (err) {
+        console.error('Failed to fetch purchase info:', err);
+      }
+    }
+  }
 
   if (user?.isAdmin && plugin.status !== 'approved') {
     canInstall = false;
@@ -96,6 +112,116 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
     table.replaceWith(<div className='table-wrapper'>{table.cloneNode(true)}</div>);
   }
 
+  function PurchaseSection() {
+    if (userOwnsPlugin) {
+      const refundHandler = async (e) => {
+        const ok = await confirm('REFUND', 'Are you sure you want to refund this plugin? This action cannot be undone.');
+        if (!ok) return;
+        const btn = e.target.closest('.refund-button');
+        btn.disabled = true;
+        btn.querySelector('span:last-child').textContent = 'Processing...';
+        try {
+          const res = await fetch('/api/razorpay/refund-plugin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId: purchaseInfo.purchaseOrderId }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            if (callback === 'app') {
+              window.location = `acode://plugin/uninstall/${id}`;
+            } else {
+              window.location.reload();
+            }
+          } else {
+            await alert('ERROR', data.error || 'Refund failed');
+            btn.disabled = false;
+            btn.querySelector('span:last-child').textContent = 'Request Refund';
+          }
+        } catch (err) {
+          console.error('Plugin refund error:', err);
+          await alert('ERROR', 'Failed to process refund. Please try again.');
+          btn.disabled = false;
+          btn.querySelector('span:last-child').textContent = 'Request Refund';
+        }
+      };
+
+      return (
+        <div className='purchase-card purchased'>
+          <div className='purchase-card-main'>
+            <div className='purchase-card-badge'>
+              <span className='icon check_circle' />
+              <span>You own this plugin</span>
+            </div>
+            {purchaseInfo && (
+              <div className='purchase-card-details'>
+                <span>Paid &#8377;{formatPrice(purchaseInfo.purchaseAmount)}</span>
+                <span className='dot'>·</span>
+                <span>{moment(purchaseInfo.purchasedAt).format('DD MMM YYYY')}</span>
+                <span className='dot'>·</span>
+                <span>{purchaseInfo.purchaseProvider === 'razorpay' ? 'Razorpay' : 'Google Play'}</span>
+              </div>
+            )}
+          </div>
+          {purchaseInfo?.refundEligible && (
+            <button type='button' className='refund-button' onclick={refundHandler}>
+              <span className='icon replay' />
+              <span>Request Refund</span>
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    if (user) {
+      return (
+        <div className='purchase-card'>
+          <div className='purchase-card-main'>
+            <div className='purchase-card-price'>
+              <span className='currency'>&#8377;</span>
+              <span className='amount'>{formatPrice(price)}</span>
+            </div>
+            <div className='purchase-card-details'>
+              <span>One-time purchase</span>
+              <span className='dot'>·</span>
+              <span>Instant access</span>
+            </div>
+          </div>
+          <BuyButton
+            pluginId={id}
+            price={price}
+            user={user}
+            onPurchaseComplete={() => {
+              if (callback === 'app') {
+                window.location = `acode://plugin/purchased/${id}`;
+              } else {
+                window.location.reload();
+              }
+            }}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className='purchase-card'>
+        <div className='purchase-card-main'>
+          <div className='purchase-card-price'>
+            <span className='currency'>&#8377;</span>
+            <span className='amount'>{price}</span>
+          </div>
+          <div className='purchase-card-details'>
+            <span>One-time purchase</span>
+          </div>
+        </div>
+        <a href={`/login?redirect=/plugin/${pluginId}`} className='login-to-buy'>
+          <span className='icon account_circle' />
+          <span>Login to Purchase</span>
+        </a>
+      </div>
+    );
+  }
+
   return (
     <section id='plugin'>
       <div className='row plugin-head'>
@@ -114,6 +240,11 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
             {updatedAt && <small>Updated {since(updatedAt)}</small>}
           </div>
           <div className='info'>
+            {supportedEditor && (
+              <div className='chip editor-badge' data-editor={supportedEditor}>
+                <span>{getEditorDisplayName(supportedEditor)}</span>
+              </div>
+            )}
             <span className='chip'>v {version}</span>
             {+downloads ? (
               <div className='chip'>
@@ -125,31 +256,10 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
                 <span style={{ color: 'gold' }}>New</span>
               </div>
             )}
-            <div className='chip'>
-              {price ? (
-                <>
-                  <span style={{ marginRight: '10px' }}>&#8377;</span>
-                  <span>{price}</span>
-                </>
-              ) : (
-                <span style={{ color: 'lightgreen' }}>Free</span>
-              )}
-            </div>
-            {commentCount > 0 && (
-              <div className='chip' onclick={() => changeSection('comments')}>
-                <div className='icon chat_bubble' />
-                <span>{commentCount}</span>
-              </div>
-            )}
             {license && license.toLowerCase() !== 'unknown' && (
               <div className='chip'>
                 <span className='icon certificate' />
                 <span>{license}</span>
-              </div>
-            )}
-            {supportedEditor && (
-              <div className='chip editor-badge' data-editor={supportedEditor}>
-                <span>{getEditorDisplayName(supportedEditor)}</span>
               </div>
             )}
             {votesUp + votesDown > 0 && (
@@ -177,6 +287,11 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           </div>
         </div>
       </div>
+      {process.env.RAZORPAY_ENABLED && price > 0 && (
+        <div className='row plugin-head'>
+          <PurchaseSection />
+        </div>
+      )}
       <div className='detailed'>
         <div
           className='options'
@@ -192,8 +307,8 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
           <h2 onclick={() => changeSection('changelogs')} ref={sectionChangelogs}>
             Changelogs
           </h2>
-          <h2 onclick={() => changeSection('comments')} ref={sectionComments}>
-            Reviews
+          <h2 onclick={() => changeSection('comments')} ref={sectionComments} style={{ whiteSpace: 'nowrap' }}>
+            {commentCount} Reviews
           </h2>
           {shouldShowOrders && (
             <h2 onclick={() => changeSection('orders')} ref={sectionOrders}>
@@ -258,13 +373,14 @@ export default async function Plugin({ id: pluginId, section = 'description' }) 
               <tr>
                 <th>Date</th>
                 <th>Package</th>
+                <th>Provider</th>
                 <th>Amount</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody ref={ordersList}>
               <tr>
-                <td colspan='3'>Loading...</td>
+                <td colspan='5'>Loading...</td>
               </tr>
             </tbody>
           </table>
@@ -281,16 +397,30 @@ async function renderOrders(ref, pluginId, year, month) {
   const url = `/api/plugin/orders/${pluginId}/${year}/${month}`;
   const orders = await fetch(url).then((res) => res.json());
 
+  if (!orders.length) {
+    ref.append(
+      <tr>
+        <td colspan='5' style={{ textAlign: 'center', opacity: 0.6, padding: '20px 0' }}>
+          No orders for this period
+        </td>
+      </tr>,
+    );
+    return;
+  }
+
   for (const order of orders) {
     const date = moment(order.created_at).format('DD MMMM YYYY');
-    const status = Number(order.state) === 0 ? 'Completed' : 'Cancelled';
+    const statusLabel = Number(order.state) === 0 ? 'Completed' : 'Cancelled';
+    const statusClass = statusLabel.toLowerCase();
     const packageName = /free$/.test(order.package) ? 'Free' : 'Paid';
+    const provider = order.provider === 'razorpay' ? 'Razorpay' : 'Google Play';
     ref.append(
       <tr className='order'>
         <td className='date'>{date}</td>
         <td className='date'>{packageName}</td>
+        <td>{provider}</td>
         <td className='amount'>&#8377; {order.amount.toFixed(2)}</td>
-        <td className={`order-status ${status}`}>{status}</td>
+        <td className={`order-status ${statusClass}`}>{statusLabel}</td>
       </tr>,
     );
   }
@@ -300,7 +430,7 @@ async function renderComments(ref, pluginUserId, user, id, author) {
   const comments = await fetch(`/api/comments/${id}`).then((res) => res.json());
 
   for (const comment of comments) {
-    if (!comment.comment) confirm;
+    if (!comment.comment) continue;
     comment.user = user;
     comment.pluginUserId = pluginUserId;
     comment.pluginAuthor = author;

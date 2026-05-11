@@ -36,6 +36,9 @@ class User extends Entity {
   PASSWORD = 'password';
   VERIFIED = 'verified';
   THRESHOLD = 'threshold';
+  ACODE_PRO = 'acode_pro';
+  PRO_PURCHASE_TOKEN = 'pro_purchase_token';
+  PRO_PURCHASED_AT = 'pro_purchased_at';
   CREATED_AT = 'created_at';
   UPDATED_AT = 'updated_at';
 
@@ -127,13 +130,29 @@ class User extends Entity {
       this.PASSWORD,
       this.VERIFIED,
       this.THRESHOLD,
+      this.ACODE_PRO,
+      this.PRO_PURCHASE_TOKEN,
+      this.PRO_PURCHASED_AT,
       this.CREATED_AT,
       this.UPDATED_AT,
     ];
   }
 
   get safeColumns() {
-    return [this.ID, this.NAME, this.ROLE, this.EMAIL, this.GITHUB, this.WEBSITE, this.VERIFIED, this.THRESHOLD, this.CREATED_AT, this.UPDATED_AT];
+    return [
+      this.ID,
+      this.NAME,
+      this.ROLE,
+      this.EMAIL,
+      this.GITHUB,
+      this.WEBSITE,
+      this.VERIFIED,
+      this.THRESHOLD,
+      this.ACODE_PRO,
+      this.PRO_PURCHASED_AT,
+      this.CREATED_AT,
+      this.UPDATED_AT,
+    ];
   }
 
   get initialColumns() {
@@ -144,6 +163,9 @@ class User extends Entity {
       this.EMAIL,
       this.VERIFIED,
       this.THRESHOLD,
+      this.ACODE_PRO,
+      this.PRO_PURCHASE_TOKEN,
+      this.PRO_PURCHASED_AT,
       `IFNULL(github, '') as github`,
       `IFNULL(website, '') as website`,
       this.PASSWORD,

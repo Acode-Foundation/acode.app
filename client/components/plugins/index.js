@@ -4,7 +4,7 @@ import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import select from 'components/dialogs/select';
 import PluginStatus from 'components/pluginStatus';
-import { calcRating, getLoggedInUser, hideLoading, showLoading, since } from 'lib/helpers';
+import { calcRating, formatPrice, getLoggedInUser, hideLoading, showLoading, since } from 'lib/helpers';
 import Router from 'lib/Router';
 
 export default async function Plugins({ user, orderBy, status, name, editor }) {
@@ -66,6 +66,8 @@ export default async function Plugins({ user, orderBy, status, name, editor }) {
 function Plugin({
   id,
   name,
+  price,
+  owned,
   status,
   userId,
   version,
@@ -81,6 +83,15 @@ function Plugin({
   return (
     <a href={`/plugin/${id}`} className='plugin'>
       <span className={`badge editor-type ${editorType}`} />
+      {price > 0 &&
+        (owned ? (
+          <span className='badge owned'>
+            <span className='icon check_circle' />
+            Owned
+          </span>
+        ) : (
+          <span className='badge price'>&#8377;{formatPrice(price)}</span>
+        ))}
       <div className='plugin-icon' style={{ backgroundImage: `url(/plugin-icon/${id})` }} />
       <div className='plugin-info'>
         <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</h2>

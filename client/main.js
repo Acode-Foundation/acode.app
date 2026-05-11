@@ -44,6 +44,21 @@ window.onload = async () => {
     $loginText.value = user.name;
   }
 
+  // Show "Get Pro" button if user is not pro
+  if (!user?.acode_pro && process.env.RAZORPAY_ENABLED) {
+    const header = app.get('#main-header');
+    const navUser = header.get('nav:last-of-type');
+    if (navUser) {
+      const loginLink = navUser.get('a');
+      navUser.insertBefore(
+        <a href='/pro' className='get-pro-btn'>
+          <span className='icon favorite' /> Get Pro
+        </a>,
+        loginLink,
+      );
+    }
+  }
+
   const main = app.get('main');
 
   Router.add('/payments', (params) => loadModule('payments', params));
@@ -55,6 +70,11 @@ window.onload = async () => {
   Router.add('/terms', () => loadModule('termsOfService'));
   Router.add('/refund', () => loadModule('refundPolicy'));
   Router.add('/contact', () => loadModule('contactUs'));
+
+  if (process.env.RAZORPAY_ENABLED) {
+    Router.add('/pro', () => loadModule('pro'));
+  }
+
   Router.add('/login', (_params, query) => loadModule('loginUser', query));
   Router.add('/plugins', (_params, query) => loadModule('plugins', query));
   Router.add('/logout', logout);
@@ -62,7 +82,7 @@ window.onload = async () => {
   Router.add('/change-password', (_params, query) => loadModule('changePassword', query));
   Router.add('/edit-user', () => loadModule('registerUser', { mode: 'edit' }));
   Router.add('/publish', (_params, query) => loadModule('publishPlugin', query));
-  Router.add('/plugin/:id/:section?', (params) => loadModule('plugin', params));
+  Router.add('/plugin/:id/:section?', (params, queries) => loadModule('plugin', { ...params, ...queries }));
   Router.add('/user/:userId?', (params) => loadModule('user', params));
   Router.add('/earnings', (_params, query) => loadModule('earnings', query));
   Router.add('/update-plugin-editor/:id', (params) => loadModule('updatePluginEditor', params));
