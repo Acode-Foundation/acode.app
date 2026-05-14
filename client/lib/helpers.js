@@ -112,7 +112,7 @@ export function loadingStart(el, errorText, successText, buttonText) {
   if (errorText) {
     errorText.value = '';
   }
-  if (errorText) {
+  if (successText) {
     successText.value = '';
   }
   if (buttonText) {
