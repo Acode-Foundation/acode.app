@@ -104,6 +104,10 @@ async function getGoogleUser(accessToken) {
 
   const data = await response.json();
 
+  if (!data.email) {
+    throw new Error('No email found. Please verify your email with Google and try again.');
+  }
+
   return {
     id: String(data.id),
     name: data.name,

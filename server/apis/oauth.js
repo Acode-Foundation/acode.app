@@ -69,7 +69,7 @@ route.get('/github/callback', async (req, res) => {
     }
   } catch (error) {
     console.error('GitHub OAuth error:', error);
-    res.redirect(`/login?error=${encodeURIComponent('OAuth failed')}`);
+    res.redirect(`/login?error=${encodeURIComponent(error.message || 'OAuth failed')}`);
   }
 });
 
@@ -117,7 +117,7 @@ route.get('/google/callback', async (req, res) => {
     }
   } catch (error) {
     console.error('Google OAuth error:', error);
-    res.redirect(`/login?error=${encodeURIComponent('OAuth failed')}`);
+    res.redirect(`/login?error=${encodeURIComponent(error.message || 'OAuth failed')}`);
   }
 });
 
