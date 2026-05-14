@@ -4,16 +4,6 @@
   align-items: center;
   width: 40px;
 
-  &.ace::before {
-    content: '';
-    background-image: url(./ace-logo.png);
-  }
-
-  &.cm::before {
-    content: '';
-    background-image: url(./cm-logo.svg);
-  }
-
   &::before,
   &::after {
     display: inline-block;
@@ -36,5 +26,15 @@
       background-image: url(./cm-logo.svg);
       margin-left: 2px;
     }
+  }
+
+  &.ace::before {
+    content: '';
+    background-image: url(./ace-logo.png);
+  }
+
+  &.cm::before {
+    content: '';
+    background-image: url(./cm-logo.svg);
   }
 }
