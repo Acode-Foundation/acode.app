@@ -19,12 +19,19 @@ const ID_COL = {
   google: user.GOOGLE_ID,
 };
 
+function validatedRedirect(url) {
+  if (!url || typeof url !== 'string') return null;
+  if (!/^\/[^/]/.test(url)) return null;
+  return url;
+}
+
 route.get('/github', (req, res) => {
   if (req.query.intent === 'link') {
     res.cookie('oauth_intent', 'link', { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
   }
-  if (req.query.redirect) {
-    res.cookie('oauth_redirect', req.query.redirect, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
+  const redirect = validatedRedirect(req.query.redirect);
+  if (redirect) {
+    res.cookie('oauth_redirect', redirect, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
   }
   const state = generateState();
   res.cookie('oauth_state', state, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
@@ -70,8 +77,9 @@ route.get('/google', (req, res) => {
   if (req.query.intent === 'link') {
     res.cookie('oauth_intent', 'link', { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
   }
-  if (req.query.redirect) {
-    res.cookie('oauth_redirect', req.query.redirect, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
+  const redirect = validatedRedirect(req.query.redirect);
+  if (redirect) {
+    res.cookie('oauth_redirect', redirect, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
   }
   const state = generateState();
   res.cookie('oauth_state', state, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
@@ -196,7 +204,7 @@ async function handleLogin(provider, oauthUser, req, res) {
   }
 
   await issueTokenAndLogin(userRow.id, res);
-  res.redirect(req.query.redirect || '/');
+  res.redirect(validatedRedirect(req.query.redirect) || '/');
 }
 
 module.exports = route;
