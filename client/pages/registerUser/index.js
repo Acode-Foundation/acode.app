@@ -157,7 +157,7 @@ function AuthButton({ type, user }) {
               const res = await fetch(`/api/user/link/${type}`, { method: 'DELETE' });
               const data = await res.json();
               if (data.error) {
-                throw new Error(data.error.message);
+                throw new Error(data.error);
               }
               window.location.reload();
             } catch (error) {
