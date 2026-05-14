@@ -54,6 +54,9 @@ async function getGitHubUser(accessToken) {
   const emailsData = await emailsResponse.json();
 
   const primaryEmail = emailsData.find((e) => e.primary)?.email;
+  if (!primaryEmail) {
+    throw new Error('No primary email found. Please make your email public on GitHub and try again.');
+  }
 
   return {
     id: String(userData.id),
