@@ -23,6 +23,9 @@ route.get('/github', (req, res) => {
   if (req.query.intent === 'link') {
     res.cookie('oauth_intent', 'link', { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
   }
+  if (req.query.redirect) {
+    res.cookie('oauth_redirect', req.query.redirect, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
+  }
   const state = generateState();
   res.cookie('oauth_state', state, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
   res.redirect(getGitHubAuthURL(state));
@@ -42,6 +45,13 @@ route.get('/github/callback', async (req, res) => {
     const intent = req.cookies.oauth_intent;
     res.clearCookie('oauth_intent');
 
+    const oauthRedirect = req.cookies.oauth_redirect;
+    res.clearCookie('oauth_redirect');
+
+    if (oauthRedirect) {
+      req.query.redirect = oauthRedirect;
+    }
+
     const accessToken = await getGitHubToken(code);
     const ghUser = await getGitHubUser(accessToken);
 
@@ -59,6 +69,9 @@ route.get('/github/callback', async (req, res) => {
 route.get('/google', (req, res) => {
   if (req.query.intent === 'link') {
     res.cookie('oauth_intent', 'link', { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
+  }
+  if (req.query.redirect) {
+    res.cookie('oauth_redirect', req.query.redirect, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
   }
   const state = generateState();
   res.cookie('oauth_state', state, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
@@ -78,6 +91,13 @@ route.get('/google/callback', async (req, res) => {
 
     const intent = req.cookies.oauth_intent;
     res.clearCookie('oauth_intent');
+
+    const oauthRedirect = req.cookies.oauth_redirect;
+    res.clearCookie('oauth_redirect');
+
+    if (oauthRedirect) {
+      req.query.redirect = oauthRedirect;
+    }
 
     const accessToken = await getGoogleToken(code);
     const googleUser = await getGoogleUser(accessToken);
@@ -103,7 +123,7 @@ async function handleLink(provider, oauthUser, req, res) {
   const existingById = await user.for('internal').get([idCol, oauthUser.id]);
 
   if (existingById.length && existingById[0].id !== loggedInUser.id) {
-    const target = provider === 'github' ? '/edit-user' : '/user';
+    const target = provider === 'github' ? '/edit' : '/profile';
     return res.redirect(`${target}?error=${encodeURIComponent(`This ${provider} account is already linked to another user.`)}`);
   }
 

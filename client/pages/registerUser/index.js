@@ -6,6 +6,7 @@ import OAuthButton from 'components/oauthButton';
 import SendOtp from 'components/sendOtp';
 import Reactive from 'html-tag-js/reactive';
 import { getLoggedInUser, hideLoading, loadingEnd, loadingStart, showLoading } from 'lib/helpers';
+import Router from 'lib/Router';
 
 export default async function registerUser({ mode = 'register', redirect }) {
   const isRegister = mode === 'register';
@@ -24,10 +25,14 @@ export default async function registerUser({ mode = 'register', redirect }) {
       return null;
     }
 
-    const qp = new URLSearchParams(window.location.search);
-    const linkError = qp.get('error');
+    const search = new URLSearchParams(window.location.search);
+    const linkError = search.get('error');
     if (linkError) {
-      alert('Error', linkError);
+      alert('Error', linkError, () => {
+        search.delete('error');
+        const newSearch = search.toString();
+        Router.loadUrl(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`);
+      });
     }
   }
 
@@ -45,6 +50,7 @@ export default async function registerUser({ mode = 'register', redirect }) {
         <h1>{title}</h1>
         {mode === 'edit' && (
           <div className='oauth-links'>
+            <h3>Link Accounts</h3>
             <AuthButton type='github' user={user} />
             <AuthButton type='google' user={user} />
           </div>

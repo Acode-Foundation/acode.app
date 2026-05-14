@@ -9,7 +9,6 @@ const queries = [
   'ALTER TABLE user ADD COLUMN google_id TEXT;',
   'CREATE UNIQUE INDEX IF NOT EXISTS idx_user_google_id ON user(google_id);',
   'ALTER TABLE user ADD COLUMN avatar_url TEXT;',
-  'CREATE UNIQUE INDEX IF NOT EXISTS idx_user_avatar_url ON user(avatar_url);',
   "ALTER TABLE user ADD COLUMN primary_auth TEXT DEFAULT 'email';",
 ];
 

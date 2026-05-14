@@ -59,12 +59,20 @@ export default async function User({ userId }) {
   const linked = params.get('linked');
   if (linked) {
     const label = linked === 'github' ? 'GitHub' : 'Google';
-    alert('Success', `${label} account linked successfully.`);
+    alert('Success', `${label} account linked successfully.`, () => {
+      params.delete('linked');
+      const newSearch = params.toString();
+      Router.loadUrl(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`);
+    });
   }
 
   const linkError = params.get('error');
   if (linkError) {
-    alert('Error', linkError);
+    alert('Error', linkError, () => {
+      params.delete('error');
+      const newSearch = params.toString();
+      Router.loadUrl(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`);
+    });
   }
 
   return (
