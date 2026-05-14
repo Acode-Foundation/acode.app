@@ -235,11 +235,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
             {updatedAt && <small>Updated {since(updatedAt)}</small>}
           </div>
           <div className='info'>
-            {supportedEditor && (
-              <div className='chip editor-badge' data-editor={supportedEditor}>
-                <EditorType type={supportedEditor} />
-              </div>
-            )}
+            {supportedEditor && <EditorType type={supportedEditor} className='chip' />}
             <span className='chip'>v {version}</span>
             {+downloads ? (
               <div className='chip'>

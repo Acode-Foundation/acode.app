@@ -83,7 +83,7 @@ function Plugin({
 }) {
   return (
     <a href={`/plugin/${id}`} className='plugin'>
-      <EditorType type={editorType} className='badge' />
+      <EditorType type={editorType} />
       {price > 0 &&
         (owned ? (
           <span className='badge owned'>
