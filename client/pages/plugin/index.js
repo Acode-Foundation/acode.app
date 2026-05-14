@@ -5,6 +5,7 @@ import AjaxForm from 'components/ajaxForm';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import prompt from 'components/dialogs/prompt';
+import EditorType from 'components/editorType';
 import Input from 'components/input';
 import MonthSelect from 'components/MonthSelect';
 import PluginStatus from 'components/pluginStatus';
@@ -42,12 +43,6 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     author_verified: authorVerified,
     supported_editor: supportedEditor,
   } = plugin;
-
-  const getEditorDisplayName = (editor) => {
-    if (editor === 'cm') return 'CodeMirror';
-    if (editor === 'ace') return 'Ace';
-    return 'Both Editors';
-  };
 
   const user = await getLoggedInUser();
   const userComment = await getUserComment(pluginId);
@@ -240,11 +235,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
             {updatedAt && <small>Updated {since(updatedAt)}</small>}
           </div>
           <div className='info'>
-            {supportedEditor && (
-              <div className='chip editor-badge' data-editor={supportedEditor}>
-                <span>{getEditorDisplayName(supportedEditor)}</span>
-              </div>
-            )}
+            {supportedEditor && <EditorType type={supportedEditor} className='chip' />}
             <span className='chip'>v {version}</span>
             {+downloads ? (
               <div className='chip'>
@@ -288,8 +279,12 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
         </div>
       </div>
       {process.env.RAZORPAY_ENABLED && price > 0 && (
-        <div className='row plugin-head'>
+        <div className='plugin-head'>
           <PurchaseSection />
+          <div className='website-purchase-info'>
+            <span className='icon info' />
+            Purchases made via website are supported in Acode v1.12.0 and above.
+          </div>
         </div>
       )}
       <div className='detailed'>

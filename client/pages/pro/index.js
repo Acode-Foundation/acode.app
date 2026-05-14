@@ -58,6 +58,12 @@ export default async function Pro() {
       </div>
 
       <div ref={statusRef} className='pro-action'>
+        {process.env.RAZORPAY_ENABLED && (
+          <div className='website-purchase-info' style={{ justifyContent: 'center', marginBottom: '16px' }}>
+            <span className='icon info' />
+            Purchases made via website are supported in Acode v1.12.0 and above.
+          </div>
+        )}
         {renderAction()}
       </div>
 

@@ -6,6 +6,7 @@ import select from 'components/dialogs/select';
 import PluginStatus from 'components/pluginStatus';
 import { calcRating, formatPrice, getLoggedInUser, hideLoading, showLoading, since } from 'lib/helpers';
 import Router from 'lib/Router';
+import EditorType from '../editorType';
 
 export default async function Plugins({ user, orderBy, status, name, editor }) {
   const el = <div className='plugins' data-msg='loading...' />;
@@ -82,7 +83,7 @@ function Plugin({
 }) {
   return (
     <a href={`/plugin/${id}`} className='plugin'>
-      <span className={`badge editor-type ${editorType}`} />
+      <EditorType type={editorType} />
       {price > 0 &&
         (owned ? (
           <span className='badge owned'>
