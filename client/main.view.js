@@ -2,6 +2,7 @@ import './main.scss';
 import AnnouncementBanner from 'components/announcementBanner';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
+import { gravatar } from 'lib/helpers';
 import digitalOceanLogo from 'res/digitalocean-icon.svg';
 import logo from 'res/logo.svg';
 
@@ -147,11 +148,7 @@ export function updateAccountButton(user) {
       </a>
     );
   } else {
-    let avatarUrl = user.avatar_url;
-
-    if (!avatarUrl && user.github) {
-      avatarUrl = `https://avatars.githubusercontent.com/${user.github}`;
-    }
+    const avatarUrl = user.avatar_url || gravatar(user.github);
 
     button = (
       <label
@@ -165,7 +162,7 @@ export function updateAccountButton(user) {
           userMenuRef.el.style.right = `${window.innerWidth - rect.right}px`;
         }}
       >
-        {avatarUrl ? <img src={avatarUrl} alt={user.name} /> : <span className='icon person' />}
+        <img src={avatarUrl} alt={user.name} />
       </label>
     );
     userName.value = user.name;

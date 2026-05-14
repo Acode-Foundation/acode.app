@@ -163,26 +163,9 @@ async function handleLogin(provider, oauthUser, req, res) {
   } else {
     const existingByEmail = await user.for('internal').get([user.EMAIL, oauthUser.email]);
     if (existingByEmail.length) {
-      userRow = existingByEmail[0];
-
-      try {
-        await user.update([idCol, oauthUser.id], [user.ID, userRow.id]);
-      } catch (err) {
-        if (err.message?.includes('UNIQUE constraint')) {
-          const conflicting = await user.for('internal').get([idCol, oauthUser.id]);
-          if (conflicting.length && conflicting[0].id !== userRow.id) {
-            return res.redirect(
-              '/login?error=' +
-                encodeURIComponent(
-                  'This ' +
-                    provider +
-                    ' account is already linked to a different user. Please login with your password and link it from your profile.',
-                ),
-            );
-          }
-        }
-        throw err;
-      }
+      return res.redirect(
+        `/login?error=${encodeURIComponent(`User already exists with email, please login to link to ${provider === 'github' ? 'Github' : 'Google'} account.`)}`,
+      );
     } else {
       const insertCols = [
         [user.NAME, oauthUser.name],

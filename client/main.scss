@@ -117,19 +117,11 @@ header {
       background-color: inherit !important;
     }
 
-    .icon,
     img {
       height: 38px;
       width: 38px;
       border-radius: 50%;
       object-fit: cover;
-    }
-
-    .icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
     }
   }
 

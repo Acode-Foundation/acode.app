@@ -8,7 +8,6 @@ import { getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers
 import Router from 'lib/Router';
 import moment from 'moment';
 import Earnings from 'pages/earnings';
-import userImage from 'res/user.png';
 
 export default async function User({ userId }) {
   const amount = Ref();
@@ -38,17 +37,6 @@ export default async function User({ userId }) {
   const isSelf = loggedInUser && loggedInUser.id === user.id;
   const shouldShowSensitiveInfo = isSelf || loggedInUser?.isAdmin;
   const paymentMethods = Ref();
-  const img = Ref();
-
-  // get user image from github
-  const ghImage = gravatar(user.github);
-
-  // check if github user has image
-  fetch(ghImage).then((res) => {
-    if (res.status === 200) {
-      img.el.src = ghImage;
-    }
-  });
 
   if (shouldShowSensitiveInfo) {
     renderEarnings();
@@ -78,7 +66,7 @@ export default async function User({ userId }) {
   return (
     <section id='user'>
       <div className='profile'>
-        <img ref={img} src={userImage} alt='' className='profile-image' />
+        <img src={loggedInUser.avatar_url || gravatar(user.github)} alt={loggedInUser.email} className='profile-image' />
         <div className='profile-info'>
           <h1>
             <div className='user-name'>

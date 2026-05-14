@@ -1,11 +1,13 @@
 import './style.scss';
 import AjaxForm from 'components/ajaxForm';
+import alert from 'components/dialogs/alert';
 import Input from 'components/input';
 import OAuthButton from 'components/oauthButton';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import background from 'lib/background';
 import { getLoggedInUser, loadingEnd, loadingStart } from 'lib/helpers';
+import Router from 'lib/Router';
 import userImage from 'res/user.svg';
 
 export default async function LoginUser({ redirect = '/' }) {
@@ -29,6 +31,16 @@ export default async function LoginUser({ redirect = '/' }) {
     }
   } catch (error) {
     return <div>{error.message}</div>;
+  }
+
+  const search = new URLSearchParams(window.location.search);
+  const linkError = search.get('error');
+  if (linkError) {
+    alert('Error', linkError, () => {
+      search.delete('error');
+      const newSearch = search.toString();
+      Router.loadUrl(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`);
+    });
   }
 
   canvas.onref = () => background(canvas.el);

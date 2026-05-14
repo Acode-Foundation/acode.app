@@ -156,7 +156,7 @@ export function gravatar(github) {
     return `https://avatars.githubusercontent.com/${github}`;
   }
 
-  return '/user.png';
+  return '/user.svg';
 }
 
 /**
