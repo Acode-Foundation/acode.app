@@ -42,7 +42,7 @@ module.exports = (_env, options) => {
       }),
       new EnvironmentPlugin({
         DEV_MODE: mode === 'development',
-        RAZORPAY_ENABLED: false,
+        RAZORPAY_ENABLED: true,
       }),
     ],
   };
