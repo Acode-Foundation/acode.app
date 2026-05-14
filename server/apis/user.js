@@ -203,6 +203,58 @@ route.get('/receipt/:paymentId', async (req, res) => {
   }
 });
 
+route.delete('/link/github', async (req, res) => {
+  try {
+    const loggedInUser = await getLoggedInUser(req);
+    if (!loggedInUser) {
+      return res.status(401).send({ error: 'Not logged in' });
+    }
+
+    if (!loggedInUser.github_id) {
+      return res.status(400).send({ error: 'GitHub is not linked' });
+    }
+
+    if (loggedInUser.primary_auth === 'github') {
+      return res.status(400).send({ error: 'Cannot unlink your primary login method' });
+    }
+
+    await User.update(
+      [
+        [User.GITHUB_ID, null],
+        [User.GITHUB, null],
+      ],
+      [User.ID, loggedInUser.id],
+    );
+
+    res.send({ message: 'GitHub account unlinked' });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+route.delete('/link/google', async (req, res) => {
+  try {
+    const loggedInUser = await getLoggedInUser(req);
+    if (!loggedInUser) {
+      return res.status(401).send({ error: 'Not logged in' });
+    }
+
+    if (!loggedInUser.google_id) {
+      return res.status(400).send({ error: 'Google is not linked' });
+    }
+
+    if (loggedInUser.primary_auth === 'google') {
+      return res.status(400).send({ error: 'Cannot unlink your primary login method' });
+    }
+
+    await User.update([[User.GOOGLE_ID, null]], [User.ID, loggedInUser.id]);
+
+    res.send({ message: 'Google account unlinked' });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
 route.get('/:idOrEmail', async (req, res) => {
   const { idOrEmail } = req.params;
 
@@ -350,6 +402,7 @@ route.post('/', async (req, res) => {
       [User.PASSWORD, encryptPassword(password)],
       [User.WEBSITE, website],
       [User.GITHUB, github],
+      [User.PRIMARY_AUTH, 'email'],
     );
 
     res.send({ message: 'User created' });

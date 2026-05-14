@@ -213,7 +213,7 @@ function Users() {
       ...users.map((user) => (
         <tr id={`user-${user.id}`}>
           <td>
-            <a href={`/user/${user.email}`}>{user.id}</a>
+            <a href={`/profile/${user.id}`}>{user.id}</a>
           </td>
           <td>{user.name}</td>
           <td>{user.email}</td>

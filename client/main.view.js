@@ -1,22 +1,28 @@
-import AnnouncementBanner from 'components/announcementBanner';
-import $loginText from 'components/loginText';
 import './main.scss';
+import AnnouncementBanner from 'components/announcementBanner';
+import Reactive from 'html-tag-js/reactive';
+import Ref from 'html-tag-js/ref';
 import digitalOceanLogo from 'res/digitalocean-icon.svg';
 import logo from 'res/logo.svg';
 
+const accountButtonRef = Ref();
+const userMenuRef = Ref();
+const userName = Reactive('Profile');
+
 export default ({ routes }) => (
   <>
+    <input hidden type='checkbox' id='user-menu-toggler' />
     <AnnouncementBanner />
     <header id='main-header' data-name='header'>
-      <label attr-for='menu-toggler' className='icon menu' />
+      <label attr-for='nav-menu-toggler' className='icon menu' />
       <nav>
         <a className='logo' href='/'>
           <img src={logo} alt='Acode' />
           <span className='text'>Acode</span>
         </a>
       </nav>
-      <input hidden type='checkbox' id='menu-toggler' name='menu toggler' />
-      <label attr-for='menu-toggler' className='mask' />
+      <input hidden type='checkbox' id='nav-menu-toggler' />
+      <label attr-for='nav-menu-toggler' className='mask' />
       <nav>
         {routes.map(({ href, text, icon }) => (
           <a href={href}>
@@ -25,10 +31,7 @@ export default ({ routes }) => (
         ))}
       </nav>
       <nav>
-        <a href='/user'>
-          <span className='icon person' />
-          {$loginText}
-        </a>
+        <span ref={accountButtonRef} />
       </nav>
     </header>
     <main />
@@ -108,5 +111,66 @@ export default ({ routes }) => (
         <p className='footer-love'>Built with passion for developers</p>
       </div>
     </footer>
+
+    <label attr-for='user-menu-toggler' className='mask' />
+    <div id='user-menu' ref={userMenuRef}>
+      <a href='/profile'>
+        <span className='icon person' />
+        {userName}
+      </a>
+      <a href='/edit'>
+        <span className='icon create' />
+        Edit Profile
+      </a>
+      <span className='divider' />
+      <a href='/logout' className='danger-text'>
+        <span className='icon logout' />
+        Logout
+      </a>
+    </div>
   </>
 );
+
+/**
+ * sets account button
+ * @param {import('lib/helpers').User} user
+ */
+export function updateAccountButton(user) {
+  /** @type {HTMLElement} */
+  let button = null;
+
+  if (!user) {
+    button = (
+      <a href='/login'>
+        <span className='icon person' />
+        Login
+      </a>
+    );
+  } else {
+    let avatarUrl = user.avatar_url;
+
+    if (!avatarUrl && user.github) {
+      avatarUrl = `https://avatars.githubusercontent.com/${user.github}`;
+    }
+
+    button = (
+      <label
+        className='user-avatar'
+        attr-for='user-menu-toggler'
+        onclick={(e) => {
+          const { target } = e;
+          const rect = target.getBoundingClientRect();
+
+          userMenuRef.el.style.top = `${rect.bottom}px`;
+          userMenuRef.el.style.right = `${window.innerWidth - rect.right}px`;
+        }}
+      >
+        {avatarUrl ? <img src={avatarUrl} alt={user.name} /> : <span className='icon person' />}
+      </label>
+    );
+    userName.value = user.name;
+  }
+
+  accountButtonRef.el.replaceWith(button);
+  accountButtonRef.el = button;
+}

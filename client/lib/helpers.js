@@ -1,6 +1,30 @@
 import moment from 'moment';
 
 /**
+ * @typedef {object} User
+ * @property {number} id
+ * @property {string} name
+ * @property {string} role
+ * @property {string} email
+ * @property {string} [github]
+ * @property {string} [website]
+ * @property {number} verified
+ * @property {number} threshold
+ * @property {number} acode_pro
+ * @property {string} [pro_purchased_at]
+ * @property {string} [github_id]
+ * @property {string} [google_id]
+ * @property {string} [avatar_url]
+ * @property {'github' | 'google' | 'email'} primary_auth
+ * @property {string} created_at
+ * @property {string} updated_at
+ * @property {boolean} isAdmin
+ */
+
+/** @type {User} */
+let loggedInUser = null;
+
+/**
  * Format a currency amount, fixing floating point noise (e.g. 39.199999999 → 39.2).
  * Removes unnecessary trailing zeros (40.00 → 40, 39.20 → 39.2).
  * @param {number} amount
@@ -50,12 +74,25 @@ export function capitalize(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
+/**
+ * @returns {Promise<User>}
+ */
 export async function getLoggedInUser() {
+  if (loggedInUser) {
+    return loggedInUser;
+  }
+
   const res = await fetch('/api/login');
   const user = await res.json();
   if (user.error) {
     return null;
   }
+
+  loggedInUser = user;
+
+  setTimeout(() => {
+    loggedInUser = null;
+  }, 5 * 1000);
 
   return user;
 }
@@ -63,16 +100,21 @@ export async function getLoggedInUser() {
 /**
  *
  * @param {HTMLElement} el
- * @param {Text} errorText
- * @param {Text} successText
- * @param {Text} buttonText
+ * @param {Text} [errorText]
+ * @param {Text} [successText]
+ * @param {Text} [buttonText]
  */
 export function loadingStart(el, errorText, successText, buttonText) {
   const button = el.get('button[type=submit]');
-  errorText.value = '';
-  successText.value = '';
   button.classList.add('loading');
   button.disabled = true;
+
+  if (errorText) {
+    errorText.value = '';
+  }
+  if (errorText) {
+    successText.value = '';
+  }
   if (buttonText) {
     buttonText.value = 'Loading...';
     return;

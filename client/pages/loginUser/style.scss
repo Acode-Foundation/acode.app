@@ -56,4 +56,80 @@
       z-index: 1;
     }
   }
+
+  .oauth-section {
+    margin-top: 24px;
+    width: 100%;
+  }
+
+  .oauth-divider {
+    display: flex;
+    align-items: center;
+    margin: 20px 0 16px;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    span {
+      padding: 0 12px;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  .oauth-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .oauth-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.2s ease;
+    cursor: pointer;
+
+    &__icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    &--github {
+      .oauth-btn__icon {
+        color: #fff;
+      }
+      background: #24292e;
+      color: #fff;
+
+      &:hover {
+        background: #2f363d;
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+    }
+
+    &--google {
+      background: #fff;
+      color: #333;
+
+      &:hover {
+        background: #f1f1f1;
+        border-color: rgba(0, 0, 0, 0.2);
+      }
+    }
+  }
 }

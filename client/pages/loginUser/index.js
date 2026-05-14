@@ -1,14 +1,14 @@
 import './style.scss';
 import AjaxForm from 'components/ajaxForm';
 import Input from 'components/input';
+import OAuthButton from 'components/oauthButton';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import background from 'lib/background';
-import { loadingEnd, loadingStart } from 'lib/helpers';
+import { getLoggedInUser, loadingEnd, loadingStart } from 'lib/helpers';
 import userImage from 'res/user.svg';
-import { getLoggedInUser } from '../../lib/helpers';
 
-export default async function LoginUser({ redirect: redirectUlr }) {
+export default async function LoginUser({ redirect = '/' }) {
   const errorText = Reactive('');
   const successText = Reactive('');
   const button = Ref();
@@ -17,7 +17,7 @@ export default async function LoginUser({ redirect: redirectUlr }) {
   try {
     const user = await getLoggedInUser();
     if (user) {
-      redirect(getCookie('token'));
+      redirectAfterDone(getCookie('token'));
       return (
         <section id='user-login'>
           <div className='redirect-message'>
@@ -57,12 +57,21 @@ export default async function LoginUser({ redirect: redirectUlr }) {
         <button ref={button} type='submit' style={{ width: '120px' }}>
           Login
         </button>
+        <div className='oauth-section'>
+          <div className='oauth-divider'>
+            <span>or continue with</span>
+          </div>
+          <div className='oauth-buttons'>
+            <OAuthButton provider='github' redirectUrl={redirect} />
+            <OAuthButton provider='google' redirectUrl={redirect} />
+          </div>
+        </div>
         <div style={{ margin: 'auto' }}>
-          <a className='link' href={`/register?redirect=${redirectUlr}`}>
-            New account.
-          </a>{' '}
-          |{' '}
-          <a className='link' href={`/change-password?redirect=${redirectUlr}&mode=reset`}>
+          <a className='link' href={`/register?redirect=${redirect}`}>
+            Create Account
+          </a>
+          &nbsp;|&nbsp;
+          <a className='link' href={`/change-password?redirect=${redirect}&mode=reset`}>
             Forgot password?
           </a>
         </div>
@@ -80,7 +89,7 @@ export default async function LoginUser({ redirect: redirectUlr }) {
       return;
     }
 
-    redirect(data.token);
+    redirectAfterDone(data.token);
   }
 
   function onerror(error) {
@@ -88,7 +97,7 @@ export default async function LoginUser({ redirect: redirectUlr }) {
     errorText.value = error;
   }
 
-  function redirect(token) {
+  function redirectAfterDone(token) {
     successText.value = 'Login successful. Redirecting...';
 
     if (button.el) {
@@ -96,10 +105,10 @@ export default async function LoginUser({ redirect: redirectUlr }) {
     }
 
     setTimeout(() => {
-      if (redirectUlr === 'app') {
-        redirectUlr = `acode://user/login/${token}`;
+      if (redirect === 'app') {
+        redirect = `acode://user/login/${token}`;
       }
-      window.location.replace(redirectUlr || '/');
+      window.location.replace(redirect || '/');
     }, 1000);
   }
 }

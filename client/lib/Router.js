@@ -1,4 +1,5 @@
 class Router {
+  #thisSite = new RegExp(`(^https?://(www.)?${location.hostname}(/.*)?)|(^/)`);
   #customEvent = new CustomEvent('locationchange');
   #routes = {};
   #beforeNavigate = {};
@@ -229,9 +230,12 @@ class Router {
    * @returns
    */
   #listenForAnchor(e) {
-    const $el = e.target;
+    let $el = e.target;
 
-    if (!($el instanceof HTMLAnchorElement)) return;
+    if (!($el instanceof HTMLAnchorElement)) {
+      $el = $el.closest('a');
+      if (!$el) return;
+    }
     if ($el.target === '_blank') return;
 
     const href = $el.getAttribute('href');
@@ -247,15 +251,14 @@ class Router {
    */
   loadUrl(href) {
     const { location, history } = window;
-    const thisSite = new RegExp(`(^https?://(www.)?${location.hostname}(/.*)?)|(^/)`);
-    if (!thisSite.test(href)) {
+    if (!this.#thisSite.test(href)) {
       window.location.href = href;
     }
 
     const currentUrl = location.pathname + location.search;
     if (href !== currentUrl) {
       history.pushState(history.state, document.title, href);
-      document.dispatchEvent(this.#customEvent);
+      this.navigate();
     }
   }
 

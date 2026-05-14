@@ -81,6 +81,18 @@ body.loading {
   }
 }
 
+label.mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  pointer-events: none;
+  background-color: rgba($color: #000000, $alpha: 0);
+  transition: all 0.3s ease-in-out;
+  z-index: -1;
+}
+
 header {
   top: 0;
   z-index: 10;
@@ -88,6 +100,30 @@ header {
   position: sticky;
   align-items: center;
   transition: all 1s ease-in-out;
+  background-color: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  box-shadow: rgba(0, 0, 0, 0) 0px 2px 5px;
+  transition: background-color 0.3s, backdrop-filter 0.3s, box-shadow 0.3s;
+
+
+  .user-avatar {
+    height: fit-content;
+    overflow: hidden;
+    padding: 0;
+    margin: 0 10px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: inherit !important;
+    }
+
+    img {
+      height: 38px;
+      width: 38px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+  }
 
   >.icon {
     height: 60px;
@@ -106,12 +142,12 @@ header {
     }
   }
 
-  label[for='menu-toggler'] {
+  label[for='nav-menu-toggler']:not(.mask) {
     display: none;
   }
 
   @media screen and (max-width: 600px) {
-    label[for='menu-toggler'] {
+    label[for='nav-menu-toggler']:not(.mask) {
       display: flex;
       height: 40px;
       width: 40px;
@@ -123,22 +159,12 @@ header {
       display: none;
     }
 
-    #menu-toggler~.mask {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100vh;
-      width: 100vw;
-      pointer-events: none;
-      background-color: rgba($color: #000000, $alpha: 0);
-      transition: all 0.3s ease-in-out;
-    }
-
-    #menu-toggler:checked~nav:nth-of-type(2) {
+    #nav-menu-toggler:checked~nav:nth-of-type(2) {
       transform: translateX(0);
     }
 
-    #menu-toggler:checked~.mask {
+    #nav-menu-toggler:checked~.mask {
+      z-index: unset;
       pointer-events: all;
       background-color: rgba($color: #000000, $alpha: 0.5);
     }
@@ -157,6 +183,7 @@ header {
       background-color: var(--secondary-color);
       transition: all 0.3s ease-in-out;
 
+      label,
       a {
         margin-left: 0;
         width: 100%;
@@ -171,10 +198,12 @@ header {
     align-items: center;
     white-space: nowrap;
 
+    label,
     &:last-of-type {
       margin-left: auto;
     }
 
+    label,
     a {
       color: var(--secondary-text-color);
       display: inline-flex;
@@ -643,4 +672,73 @@ footer {
 
 .text-center {
   text-align: center;
+}
+
+#user-menu {
+  position: fixed;
+  top: 100px;
+  right: 0;
+  width: 150px;
+  flex-direction: column;
+  z-index: 999;
+  background-color: var(--secondary-color);
+  color: var(--secondary-text-color);
+  border-radius: 4px;
+  overflow: hidden;
+  transform: scale(0.5);
+  transform-origin: top right;
+  opacity: 0;
+  transition: all 0.15s ease;
+  pointer-events: none;
+
+  .divider {
+    height: 1px;
+    background-color: var(--primary-color);
+  }
+
+  a {
+    position: relative;
+    display: flex;
+    width: 100%;
+    text-decoration: none;
+    color: inherit;
+    padding: 10px;
+    margin: 0;
+    box-sizing: border-box;
+    z-index: 0;
+
+    &:hover::before {
+      content: '';
+      position: absolute;
+      height: 100%;
+      width: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      top: 0;
+      left: 0;
+      z-index: -1;
+    }
+
+    .icon {
+      margin-right: 10px;
+    }
+
+    &.danger-text {
+      color: var(--danger-color);
+    }
+  }
+}
+
+#user-menu-toggler:checked {
+  ~#user-menu {
+    pointer-events: all;
+    display: flex;
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  ~label[for="user-menu-toggler"].mask {
+    z-index: 998;
+    pointer-events: all;
+    background-color: rgba($color: #000000, $alpha: 0.5);
+  }
 }

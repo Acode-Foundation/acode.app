@@ -43,37 +43,6 @@
     flex-direction: column;
     gap: 12px;
     margin-bottom: 24px;
-
-    .social-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      padding: 14px 24px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      text-decoration: none;
-      transition: all 0.3s ease;
-      cursor: pointer;
-      border: none;
-
-      .icon {
-        font-size: 1.25em;
-      }
-
-      &.github {
-        background: #24292e;
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-
-        &:hover {
-          background: #2f363d;
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-        }
-      }
-    }
   }
 
   .divider {
@@ -187,6 +156,93 @@
 
     .error {
       color: #ff5533;
+    }
+  }
+
+  .oauth-links {
+    margin-bottom: 28px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+
+    h3 {
+      margin: 0 0 14px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+      text-align: left;
+    }
+  }
+
+  .oauth-link-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+
+    .oauth-link-icon {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .oauth-link-label {
+      display: flex;
+      gap: 10px;
+    }
+
+    .oauth-status {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      font-size: 16px;
+      color: #33ff99;
+    }
+
+    .oauth-btn {
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      margin: 0 0 0 auto;
+
+      &.connect {
+        border: 1px solid rgba(51, 153, 255, 0.25);
+        background: rgba(51, 153, 255, 0.15);
+        color: #3399ff;
+
+        &:hover {
+          background: rgba(51, 153, 255, 0.25);
+          border-color: rgba(51, 153, 255, 0.4);
+        }
+      }
+
+      &.unlink {
+        background: rgba(255, 85, 51, 0.1);
+        color: #ff5533;
+        border: 1px solid rgba(255, 85, 51, 0.2);
+
+        &:hover {
+          background: rgba(255, 85, 51, 0.2);
+          border-color: rgba(255, 85, 51, 0.35);
+        }
+      }
+    }
+
+    .oauth-primary-badge {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
     }
   }
 

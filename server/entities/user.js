@@ -15,6 +15,13 @@ const table = `create table if not exists user (
   threshold integer default 1000,
   password text not null,
   verified boolean default false,
+  acode_pro boolean default false,
+  pro_purchase_token text,
+  pro_purchased_at timestamp,
+  github_id text unique,
+  google_id text unique,
+  avatar_url text,
+  primary_auth text default 'email',
   created_at timestamp default current_timestamp,
   updated_at timestamp default current_timestamp
 );
@@ -33,6 +40,10 @@ class User extends Entity {
   EMAIL = 'email';
   GITHUB = 'github';
   WEBSITE = 'website';
+  GITHUB_ID = 'github_id';
+  GOOGLE_ID = 'google_id';
+  AVATAR_URL = 'avatar_url';
+  PRIMARY_AUTH = 'primary_auth';
   PASSWORD = 'password';
   VERIFIED = 'verified';
   THRESHOLD = 'threshold';
@@ -133,6 +144,10 @@ class User extends Entity {
       this.ACODE_PRO,
       this.PRO_PURCHASE_TOKEN,
       this.PRO_PURCHASED_AT,
+      this.GITHUB_ID,
+      this.GOOGLE_ID,
+      this.AVATAR_URL,
+      this.PRIMARY_AUTH,
       this.CREATED_AT,
       this.UPDATED_AT,
     ];
@@ -150,6 +165,10 @@ class User extends Entity {
       this.THRESHOLD,
       this.ACODE_PRO,
       this.PRO_PURCHASED_AT,
+      this.GITHUB_ID,
+      this.GOOGLE_ID,
+      this.PRIMARY_AUTH,
+      this.AVATAR_URL,
       this.CREATED_AT,
       this.UPDATED_AT,
     ];
@@ -166,6 +185,10 @@ class User extends Entity {
       this.ACODE_PRO,
       this.PRO_PURCHASE_TOKEN,
       this.PRO_PURCHASED_AT,
+      this.GITHUB_ID,
+      this.GOOGLE_ID,
+      this.PRIMARY_AUTH,
+      this.AVATAR_URL,
       `IFNULL(github, '') as github`,
       `IFNULL(website, '') as website`,
       this.PASSWORD,

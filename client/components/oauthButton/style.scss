@@ -1,0 +1,27 @@
+.oauth-button {
+  display: flex;
+  align-items: center;
+
+  &.github {
+    background-color: #232925;
+    color: white;
+  }
+
+  &.google {
+    background-color: #174EA6;
+    color: white;
+  }
+
+  .icon {
+    margin-right: 10px;
+
+    &::before {
+      color: currentColor;
+      font-size: 1.2rem;
+    }
+  }
+
+  .provider {
+    font-weight: bold;
+  }
+}

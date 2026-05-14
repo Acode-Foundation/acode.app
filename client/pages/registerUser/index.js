@@ -1,11 +1,15 @@
+import './style.scss';
 import AjaxForm from 'components/ajaxForm';
+import alert from 'components/dialogs/alert';
 import Input from 'components/input';
+import OAuthButton from 'components/oauthButton';
 import SendOtp from 'components/sendOtp';
 import Reactive from 'html-tag-js/reactive';
-import { getLoggedInUser, loadingEnd, loadingStart } from 'lib/helpers';
+import { getLoggedInUser, hideLoading, loadingEnd, loadingStart, showLoading } from 'lib/helpers';
 
-export default async function registerUser({ mode, redirect }) {
-  const title = mode === 'edit' ? 'Edit user' : 'Register new user';
+export default async function registerUser({ mode = 'register', redirect }) {
+  const isRegister = mode === 'register';
+  const title = mode === 'edit' ? 'Edit your account' : 'Register new user';
   const buttonText = mode === 'edit' ? 'Update' : 'Register';
   const method = mode === 'edit' ? 'put' : 'post';
   const errorText = Reactive('');
@@ -19,11 +23,16 @@ export default async function registerUser({ mode, redirect }) {
       window.location.href = '/login';
       return null;
     }
+
+    const qp = new URLSearchParams(window.location.search);
+    const linkError = qp.get('error');
+    if (linkError) {
+      alert('Error', linkError);
+    }
   }
 
   return (
     <section id='register-user' className='text-center'>
-      <h1>{title}</h1>
       <AjaxForm
         loading={(form) => loadingStart(form, errorText, successText)}
         loadingEnd={(form) => loadingEnd(form, buttonText)}
@@ -31,13 +40,33 @@ export default async function registerUser({ mode, redirect }) {
         onerror={onerror}
         action='/api/user'
         method={method}
+        autofill={!isRegister}
       >
+        <h1>{title}</h1>
+        {mode === 'edit' && (
+          <div className='oauth-links'>
+            <AuthButton type='github' user={user} />
+            <AuthButton type='google' user={user} />
+          </div>
+        )}
+        {isRegister && (
+          <>
+            <div className='social-login'>
+              <OAuthButton provider='github' redirectUrl={redirect} />
+              <OAuthButton provider='google' redirectUrl={redirect} />
+            </div>
+            <div className='divider'>
+              <span>or register with email</span>
+            </div>
+          </>
+        )}
         <Input value={user?.name} type='text' name='name' label='Name' placeholder='e.g. John Doe' />
 
         <div>
           <fieldset>
             <Input
               value={user.email}
+              autocomplete={isRegister ? 'new-email' : 'email'}
               onchange={(e) => {
                 email = e.target.value;
               }}
@@ -56,7 +85,7 @@ export default async function registerUser({ mode, redirect }) {
         {mode === 'edit' ? (
           <a href='/change-password'>Change password</a>
         ) : (
-          <Input type='password' name='password' label='Password' placeholder='password' />
+          <Input type='password' name='password' label='Password' placeholder='password' autocomplete={isRegister ? 'new-password' : 'password'} />
         )}
 
         <div className='error'>{errorText}</div>
@@ -68,9 +97,11 @@ export default async function registerUser({ mode, redirect }) {
           </a>
         )}
       </AjaxForm>
-      <p>
-        By clicking <strong>Register</strong> button above you agree to our <a href='/policy'>Privacy Policy and Terms and conditions</a>.
-      </p>
+      {isRegister && (
+        <p>
+          By clicking <strong>Register</strong> button above you agree to our <a href='/policy'>Privacy Policy and Terms and conditions</a>.
+        </p>
+      )}
     </section>
   );
 
@@ -94,4 +125,71 @@ export default async function registerUser({ mode, redirect }) {
   function onerror(error) {
     errorText.value = error;
   }
+}
+
+/**
+ * AuthButton
+ * @param {object} props
+ * @param {'github'|'google'} props.type
+ * @param {import('lib/helpers').User} props.user
+ */
+function AuthButton({ type, user }) {
+  const key = `${type}_id`;
+  /** @type {HTMLElement} */
+  let action = null;
+
+  if (user[key]) {
+    if (user.primary_auth === type) {
+      action = <span className='oauth-primary-badge'>Primary</span>;
+    } else {
+      action = (
+        <button
+          type='button'
+          onclick={async () => {
+            showLoading();
+            try {
+              const res = await fetch(`/api/user/link/${type}`, { method: 'DELETE' });
+              const data = await res.json();
+              if (data.error) {
+                throw new Error(data.error.message);
+              }
+              window.location.reload();
+            } catch (error) {
+              alert('ERROR', error.message);
+            }
+
+            hideLoading();
+          }}
+          className='oauth-btn unlink'
+        >
+          Unlink
+        </button>
+      );
+    }
+  } else {
+    action = (
+      <button
+        type='button'
+        className='oauth-btn connect'
+        onclick={(e) => {
+          showLoading();
+          e.target.disabled = true;
+          window.location = `/oauth/${type}?intent=link`;
+        }}
+      >
+        Connect
+      </button>
+    );
+  }
+
+  return (
+    <div className='oauth-link-item'>
+      <span className={`icon ${type} oauth-link-icon`} />
+      <span className='oauth-link-label'>
+        {type === 'github' ? 'Github' : 'Google'}{' '}
+        {user[key] && <span className='icon check_circle oauth-status oauth-status--linked' title='Connected' />}
+      </span>
+      {action}
+    </div>
+  );
 }

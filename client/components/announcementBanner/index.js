@@ -84,34 +84,18 @@ export default function AnnouncementBanner() {
 
   let intervalId;
 
-  const updateHeaderTop = (bannerVisible) => {
-    const header = document.getElementById('main-header');
-    if (header) {
-      if (bannerVisible) {
-        const bannerHeight = $link.offsetHeight;
-        header.style.top = `${bannerHeight}px`;
-      } else {
-        header.style.top = '0';
-      }
-    }
-  };
-
   $closeBtn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
     $link.classList.add('hidden');
     clearInterval(intervalId);
     sessionStorage.setItem('announcement-banner-closed', 'true');
-    updateHeaderTop(false);
     $link.removeAttribute('data-visible');
   });
 
   // Check if banner was closed in this session
   if (sessionStorage.getItem('announcement-banner-closed') === 'true') {
     $link.classList.add('hidden');
-  } else {
-    // Set header top after banner is rendered
-    requestAnimationFrame(() => updateHeaderTop(true));
   }
 
   const $content = $link.querySelector('.announcement-banner__content');
@@ -143,7 +127,6 @@ export default function AnnouncementBanner() {
 
       setTimeout(() => {
         applyContent();
-        // Slide in
         $content.classList.remove('slide-out');
         $content.classList.add('slide-in');
 
@@ -156,10 +139,8 @@ export default function AnnouncementBanner() {
     }
   };
 
-  // Initialize with first banner
   updateBanner(0);
 
-  // Toggle banners periodically
   intervalId = setInterval(() => {
     currentIndex = (currentIndex + 1) % BANNERS.length;
     updateBanner(currentIndex, true);

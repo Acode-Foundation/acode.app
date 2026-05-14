@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'acode';
-  src: url('acode.ttf?g9y2uj') format('truetype');
+  src: url('acode.ttf?zbrl2v') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -48,6 +48,13 @@
 .icon.certificate:before {
   content: '\e90d';
 }
+.icon.github:before {
+  content: '\e918';
+}
+.icon.google:before {
+  content: '\e919';
+  color: #4285f4;
+}
 .icon.googleplay:before {
   content: '\e90f';
   color: #607d8b;
@@ -60,12 +67,18 @@
   content: '\e90c';
   color: #f7931a;
 }
-.icon.github:before {
+.icon.github1:before {
   content: '\e901';
 }
 .icon.paypal:before {
   content: '\e905';
   color: #00457c;
+}
+.icon.dashboard:before {
+  content: '\e91b';
+}
+.icon.login:before {
+  content: '\e91a';
 }
 .icon.attach_money:before {
   content: '\e912';

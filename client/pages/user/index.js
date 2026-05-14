@@ -31,7 +31,7 @@ export default async function User({ userId }) {
   }
 
   if (!user) {
-    Router.loadUrl('/login?redirect=/user');
+    Router.loadUrl('/login?redirect=/profile');
     return 'Redirecting...';
   }
 
@@ -55,6 +55,18 @@ export default async function User({ userId }) {
     renderPaymentMethods();
   }
 
+  const params = new URLSearchParams(window.location.search);
+  const linked = params.get('linked');
+  if (linked) {
+    const label = linked === 'github' ? 'GitHub' : 'Google';
+    alert('Success', `${label} account linked successfully.`);
+  }
+
+  const linkError = params.get('error');
+  if (linkError) {
+    alert('Error', linkError);
+  }
+
   return (
     <section id='user'>
       <div className='profile'>
@@ -62,29 +74,25 @@ export default async function User({ userId }) {
         <div className='profile-info'>
           <h1>
             <div className='user-name'>
+              <VerifyButton />
               {user.name}
               <div className='extra-info'>
                 {isSelf && user.role === 'admin' && <small className='tag'>Admin</small>}
                 {Boolean(user.acode_pro) && <small className='tag pro-tag'>Pro</small>}
-                <VerifyButton />
               </div>
             </div>
           </h1>
-          {shouldShowSensitiveInfo ? (
+          {shouldShowSensitiveInfo && (
             <small className='link earnings' title='Your earnings for this month'>
               <strong className='loading' ref={amount} />|<span>{moment().format('YYYY MMMM')}</span>
             </small>
-          ) : (
-            ''
           )}
           <div onwheel={onwheel} ref={paymentMethods} className='payment-methods'>
-            {isSelf ? (
+            {isSelf && (
               <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
                 <span className='icon add' />
                 <span>Payment method</span>
               </div>
-            ) : (
-              ''
             )}
           </div>
           <div className='socials' onclick={(e) => e.target.dataset.href && Router.loadUrl(e.target.dataset.href)}>
@@ -93,10 +101,8 @@ export default async function User({ userId }) {
               <button type='button' title='go to github account' className='icon github' data-href={`https://github.com/${user.github}`} />
             )}
             {user.website && <button type='button' title='go to website' className='icon earth' data-href={user.website} />}
-            {isSelf && <button type='button' title='edit profile' data-href='/edit-user' className='icon create' />}
-            {isSelf && <button type='button' title='logout' className='icon logout danger' data-href='/logout' />}
           </div>
-          {isSelf ? <a href='/publish'>Publish Plugin</a> : ''}
+          {isSelf && <a href='/publish'>Publish Plugin</a>}
         </div>
       </div>
       <Plugins user={user.id} />
