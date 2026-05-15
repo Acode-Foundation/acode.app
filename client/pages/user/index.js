@@ -12,7 +12,8 @@ import Earnings from 'pages/earnings';
 export default async function User({ userId }) {
   const amount = Ref();
   const loggedInUser = await getLoggedInUser();
-  let user;
+  /** @type {import('lib/helpers').User} */
+  let user = null;
 
   if (userId) {
     try {
@@ -66,7 +67,7 @@ export default async function User({ userId }) {
   return (
     <section id='user'>
       <div className='profile'>
-        <img src={loggedInUser.avatar_url || gravatar(user.github)} alt={loggedInUser.email} className='profile-image' />
+        <img src={user.avatar_url || gravatar(user.github)} alt={user.email} className='profile-image' />
         <div className='profile-info'>
           <h1>
             <div className='user-name'>
