@@ -12,11 +12,11 @@ dotenv.config();
  */
 async function sendEmail(email, name, subject, message) {
   const transporter = nodeMailer.createTransport({
-    host: process.env.ZEPTO_EMAIL_HOST,
-    port: process.env.ZEPTO_EMAIL_PORT,
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
     auth: {
-      user: process.env.ZEPTO_EMAIL_USERNAME,
-      pass: process.env.ZEPTO_EMAIL_PASSWORD,
+      user: process.env.EMAIL_USERNAME,
+      pass: process.env.EMAIL_PASSWORD,
     },
   });
 
