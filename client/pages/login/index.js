@@ -57,6 +57,9 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
         autofill={false}
         method='post'
       >
+        <div className='glass-layer-1' />
+        <div className='glass-layer-2' />
+        <div className='glass-layer-3' />
         <h1>
           <span className='icon login' /> Sign in to Acode
         </h1>

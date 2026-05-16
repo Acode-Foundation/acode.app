@@ -40,6 +40,9 @@ export default async function changePassword({ mode, redirect }) {
         loading={(form) => loadingStart(form, errorText, successText)}
         loadingEnd={(form) => loadingEnd(form, 'Change password')}
       >
+        <div className='glass-layer-1' />
+        <div className='glass-layer-2' />
+        <div className='glass-layer-3' />
         <h1>
           <span className='icon vpn_key'></span> {title}
         </h1>
