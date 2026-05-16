@@ -143,7 +143,7 @@ export default async function Profile({ mode = 'register', redirect }) {
             </div>
             <div className='social-link'>
               <span className='icon linkedin' />
-              <Input value={user.linkedin} type='text' name='linkedin' label='linkedin' placeholder='e.g. /in/johndoe' />
+              <Input value={user.linkedin} type='text' name='linkedin' label='linkedin' placeholder='e.g. johndoe' />
             </div>
           </>
         )}
