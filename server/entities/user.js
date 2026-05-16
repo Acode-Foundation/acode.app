@@ -21,6 +21,8 @@ const table = `create table if not exists user (
   github_id text unique,
   google_id text unique,
   avatar_url text,
+  x text,
+  linkedin text,
   primary_auth text default 'email',
   created_at timestamp default current_timestamp,
   updated_at timestamp default current_timestamp
@@ -52,6 +54,8 @@ class User extends Entity {
   PRO_PURCHASED_AT = 'pro_purchased_at';
   CREATED_AT = 'created_at';
   UPDATED_AT = 'updated_at';
+  X = 'x';
+  LINKEDIN = 'linkedin';
 
   constructor() {
     super(table);
@@ -132,29 +136,32 @@ class User extends Entity {
 
   get columns() {
     return [
+      this.X,
       this.ID,
       this.NAME,
       this.ROLE,
       this.EMAIL,
       this.GITHUB,
       this.WEBSITE,
+      this.LINKEDIN,
       this.PASSWORD,
       this.VERIFIED,
       this.THRESHOLD,
       this.ACODE_PRO,
-      this.PRO_PURCHASE_TOKEN,
-      this.PRO_PURCHASED_AT,
       this.GITHUB_ID,
       this.GOOGLE_ID,
       this.AVATAR_URL,
-      this.PRIMARY_AUTH,
       this.CREATED_AT,
       this.UPDATED_AT,
+      this.PRIMARY_AUTH,
+      this.PRO_PURCHASED_AT,
+      this.PRO_PURCHASE_TOKEN,
     ];
   }
 
   get safeColumns() {
     return [
+      this.X,
       this.ID,
       this.NAME,
       this.ROLE,
@@ -162,25 +169,28 @@ class User extends Entity {
       this.GITHUB,
       this.WEBSITE,
       this.VERIFIED,
+      this.LINKEDIN,
       this.THRESHOLD,
       this.ACODE_PRO,
-      this.PRO_PURCHASED_AT,
       this.GITHUB_ID,
       this.GOOGLE_ID,
-      this.PRIMARY_AUTH,
       this.AVATAR_URL,
       this.CREATED_AT,
       this.UPDATED_AT,
+      this.PRIMARY_AUTH,
+      this.PRO_PURCHASED_AT,
     ];
   }
 
   get initialColumns() {
     return [
+      this.X,
       this.ID,
       this.NAME,
       this.ROLE,
       this.EMAIL,
       this.VERIFIED,
+      this.LINKEDIN,
       this.THRESHOLD,
       this.ACODE_PRO,
       this.PRO_PURCHASE_TOKEN,

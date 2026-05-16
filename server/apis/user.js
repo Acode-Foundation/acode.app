@@ -416,7 +416,7 @@ route.put('/threshold', async (_req, res) => {
 });
 
 route.put('/', async (req, res) => {
-  let { email, name, github, website } = req.body;
+  const { email, name, github, website, x, linkedin } = req.body;
 
   const { otp: sentOtp } = req.body;
 
@@ -428,28 +428,17 @@ route.put('/', async (req, res) => {
       return;
     }
 
-    if (loggedInUser.email === email) {
-      email = undefined;
-    }
-
-    if (loggedInUser.name === name) {
-      name = undefined;
-    }
-
-    if (loggedInUser.github === github) {
-      github = undefined;
-    }
-
-    if (loggedInUser.website === website) {
-      website = undefined;
-    }
-
     if (!(await isValidGithubId(github))) {
       res.status(400).send({ error: 'Invalid Github ID' });
       return;
     }
 
-    if (email) {
+    if (!email) {
+      res.status(400).send({ error: 'Missing email' });
+      return;
+    }
+
+    if (email !== loggedInUser.email) {
       if (!sentOtp) {
         res.status(400).send({ error: 'Missing OTP' });
         return;
@@ -470,10 +459,12 @@ route.put('/', async (req, res) => {
 
     await User.update(
       [
-        [User.EMAIL, email],
+        [User.X, x],
         [User.NAME, name],
+        [User.EMAIL, email],
         [User.GITHUB, github],
         [User.WEBSITE, website],
+        [User.LINKEDIN, linkedin],
       ],
       [User.ID, loggedInUser.id],
     );

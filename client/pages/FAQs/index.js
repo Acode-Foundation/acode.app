@@ -55,7 +55,7 @@ export default async function FAQs({ mode, oldQ, a, qHash }) {
         <summary style={{ margin: '20px 0' }}>{isUpdate ? 'Update' : 'Add'} FAQ</summary>
         <AjaxForm ref={form} onerror={onerror} onloadend={onloadend} action='/api/faqs' method={method}>
           {isUpdate ? <Input name='old_q' required={true} hidden type='hidden' value={oldQ || ''} /> : ''}
-          <Input ref={q} name='q' required={true} label='Question' placeholder='Question' value={oldQ || ''} />
+          <Input inputRef={q} name='q' required={true} label='Question' placeholder='Question' value={oldQ || ''} />
           <Input
             name='a'
             required={true}

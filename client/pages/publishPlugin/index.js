@@ -64,7 +64,9 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
 
   return (
     <section id='publish-plugin'>
-      <h1 style={{ textAlign: 'center' }}>{capitalize(mode)} plugin</h1>
+      <h1 style={{ textAlign: 'center' }}>
+        <span className={`icon ${mode === 'publish' ? 'publish' : 'create'}`} /> {capitalize(mode)} plugin
+      </h1>
 
       {mode === 'update' && (
         <div className='update-banner'>
@@ -94,7 +96,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
       >
         <Input required={true} onchange={onFileChange} type='file' name='plugin' label='Select plugin or drop here.' />
         <Input
-          ref={changelogsInput}
+          inputRef={changelogsInput}
           value={plugin?.changelogs || ''}
           type='textarea'
           name='changelogs'

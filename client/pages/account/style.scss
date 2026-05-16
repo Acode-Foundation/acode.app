@@ -8,6 +8,7 @@
   width: 100%;
   max-width: unset !important;
   padding: 40px 20px;
+  z-index: 0;
 
   .register-card {
     width: 100%;
@@ -18,12 +19,6 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 24px;
     text-align: center;
-
-    h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
 
     .register-subtitle {
       color: rgba(255, 255, 255, 0.6);
@@ -38,30 +33,54 @@
     }
   }
 
-  .social-login {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 24px;
+  .disclaimer {
+    margin-top: 20px;
+
+    a {
+      margin: 0;
+    }
   }
 
-  .divider {
+  .social-link {
     display: flex;
     align-items: center;
-    margin: 24px 0;
 
-    &::before,
-    &::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: rgba(255, 255, 255, 0.15);
+    .custom-input {
+      border-radius: 0 4px 4px 0;
     }
 
-    span {
-      padding: 0 16px;
-      color: rgba(255, 255, 255, 0.5);
-      font-size: 0.85rem;
+    .icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px;
+      width: 40px;
+      background-color: white;
+      font-size: 1.4rem;
+      color: #39f;
+      border-radius: 4px 0 0 4px;
+
+      &.x {
+        color: black;
+      }
+
+      &.github {
+        color: #232925;
+      }
+    }
+  }
+
+  .social-login {
+    gap: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 10px;
+    margin-left: -10px;
+
+    button {
+      margin-left: 10px;
+      margin-right: 0;
     }
   }
 
@@ -118,36 +137,16 @@
       }
     }
 
-    button[type='submit'] {
-      width: 100%;
-      height: 52px;
-      margin-top: 8px;
-      background: linear-gradient(135deg, #3399ff 0%, #2277dd 100%);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-
-      &:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(51, 153, 255, 0.4);
-      }
-
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-    }
-
     .success,
     .error {
       display: block;
       margin: 12px 0;
       font-size: 0.9rem;
       text-align: center;
+
+      &:empty {
+        display: none;
+      }
     }
 
     .success {
@@ -210,27 +209,16 @@
       transition: all 0.2s ease;
       flex-shrink: 0;
       margin: 0 0 0 auto;
+      background-color: transparent;
+      padding: 0;
+      height: fit-content;
 
       &.connect {
-        border: 1px solid rgba(51, 153, 255, 0.25);
-        background: rgba(51, 153, 255, 0.15);
         color: #3399ff;
-
-        &:hover {
-          background: rgba(51, 153, 255, 0.25);
-          border-color: rgba(51, 153, 255, 0.4);
-        }
       }
 
       &.unlink {
-        background: rgba(255, 85, 51, 0.1);
         color: #ff5533;
-        border: 1px solid rgba(255, 85, 51, 0.2);
-
-        &:hover {
-          background: rgba(255, 85, 51, 0.2);
-          border-color: rgba(255, 85, 51, 0.35);
-        }
       }
     }
 
@@ -256,7 +244,7 @@
       color: rgba(255, 255, 255, 0.7);
       font-size: 0.9rem;
 
-      .link {
+      .link:not(.icon) {
         color: #3399ff;
         text-decoration: none;
 

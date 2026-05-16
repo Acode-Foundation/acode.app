@@ -6,11 +6,10 @@ import OAuthButton from 'components/oauthButton';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import background from 'lib/background';
-import { getLoggedInUser, loadingEnd, loadingStart } from 'lib/helpers';
+import { getLoggedInUser, loadingEnd, loadingStart, withRedirect } from 'lib/helpers';
 import Router from 'lib/Router';
-import userImage from 'res/user.svg';
 
-export default async function LoginUser({ redirect = '/' }) {
+export default async function Login({ redirect }) {
   const errorText = Reactive('');
   const successText = Reactive('');
   const button = Ref();
@@ -49,28 +48,28 @@ export default async function LoginUser({ redirect = '/' }) {
     <section id='user-login'>
       <canvas ref={canvas} id='background' />
       <AjaxForm
+        className='glass user-form'
         loading={onloadstart}
         loadingEnd={(form) => loadingEnd(form, 'Login')}
         onloadend={onloadeend}
         onerror={onerror}
         action='/api/login'
+        autofill={false}
         method='post'
       >
-        <picture className='login-profile'>
-          <source srcset={userImage} type='image/svg' />
-          <img src={userImage} alt='Wombat' />
-        </picture>
-        <h1 style={{ textAlign: 'center' }}>Login</h1>
+        <h1>
+          <span className='icon login' /> Sign in to Acode
+        </h1>
         <Input type='email' name='email' label='Email' placeholder='e.g. john@gmail.com' />
         <Input type='password' name='password' label='Password' placeholder='Password' autocomplete='current-password' />
 
         <span className='success'>{successText}</span>
         <span className='error'>{errorText}</span>
-        <button ref={button} type='submit' style={{ width: '120px' }}>
-          Login
+        <button ref={button} type='submit'>
+          Sign in
         </button>
         <div className='oauth-section'>
-          <div className='oauth-divider'>
+          <div className='divider'>
             <span>or continue with</span>
           </div>
           <div className='oauth-buttons'>
@@ -79,11 +78,11 @@ export default async function LoginUser({ redirect = '/' }) {
           </div>
         </div>
         <div style={{ margin: 'auto' }}>
-          <a className='link' href={`/register?redirect=${redirect}`}>
+          <a className='link' href={withRedirect('/register', redirect)}>
             Create Account
           </a>
           &nbsp;|&nbsp;
-          <a className='link' href={`/change-password?redirect=${redirect}&mode=reset`}>
+          <a className='link' href={withRedirect('/change-password?mode=reset', redirect)}>
             Forgot password?
           </a>
         </div>

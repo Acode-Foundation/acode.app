@@ -1,7 +1,9 @@
 import moment from 'moment';
+import userImage from 'res/user.svg';
 
 /**
  * @typedef {object} User
+ * @property {number} [x]
  * @property {number} id
  * @property {string} name
  * @property {string} role
@@ -11,10 +13,11 @@ import moment from 'moment';
  * @property {number} verified
  * @property {number} threshold
  * @property {number} acode_pro
- * @property {string} [pro_purchased_at]
+ * @property {string} [linkedin]
  * @property {string} [github_id]
  * @property {string} [google_id]
  * @property {string} [avatar_url]
+ * @property {string} [pro_purchased_at]
  * @property {'github' | 'google' | 'email'} primary_auth
  * @property {string} created_at
  * @property {string} updated_at
@@ -156,7 +159,7 @@ export function gravatar(github) {
     return `https://avatars.githubusercontent.com/${github}`;
   }
 
-  return '/user.svg';
+  return userImage;
 }
 
 /**
@@ -172,4 +175,21 @@ export function calcRating(votesUp, votesDown) {
 export function since(date) {
   const now = moment().add(new Date().getTimezoneOffset(), 'minutes');
   return moment(date).from(now);
+}
+
+/**
+ * @param {string} url
+ * @param {string} redirect
+ *
+ * @example ```js
+ * withRedirect('/login', '/profile') // '/login?redirect=/profile'
+ * ```
+ */
+export function withRedirect(url, redirect) {
+  if (!redirect) return url;
+  if (url.includes('?')) {
+    return `${url}&redirect=${redirect}`;
+  }
+
+  return `${url}?redirect=${redirect}`;
 }

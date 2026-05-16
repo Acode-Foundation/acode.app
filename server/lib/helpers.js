@@ -1,3 +1,4 @@
+const moment = require('moment');
 const login = require('../entities/login');
 const user = require('../entities/user');
 
@@ -28,7 +29,11 @@ async function getLoggedInUser(req) {
     return null;
   }
 
-  const { user_id: userId } = row[0];
+  const { user_id: userId, expired_at: expiredAt } = row[0];
+
+  if (expiredAt && moment().isAfter(moment(expiredAt))) {
+    return null;
+  }
 
   const userRow = await user.get(user.safeColumns, [user.ID, userId]);
 

@@ -1,6 +1,6 @@
 import './style.scss';
 import Ref from 'html-tag-js/ref';
-import { showLoading } from 'lib/helpers';
+import { showLoading, withRedirect } from 'lib/helpers';
 
 /**
  * @param {object} props
@@ -9,7 +9,7 @@ import { showLoading } from 'lib/helpers';
  */
 export default function OAuthButton({ provider, redirectUrl }) {
   const label = provider === 'github' ? 'GitHub' : 'Google';
-  const authUrl = oauthUrl(provider, redirectUrl);
+  const authUrl = withRedirect(`/oauth/${provider}`, redirectUrl);
   const button = Ref();
 
   return (
@@ -30,9 +30,4 @@ export default function OAuthButton({ provider, redirectUrl }) {
       </p>
     </button>
   );
-}
-
-function oauthUrl(provider, redirectUrl) {
-  const base = `/oauth/${provider}`;
-  return redirectUrl ? `${base}?redirect=${encodeURIComponent(redirectUrl)}` : base;
 }

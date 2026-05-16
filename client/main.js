@@ -75,15 +75,15 @@ window.onload = async () => {
     Router.add('/pro', () => loadModule('pro'));
   }
 
-  Router.add('/login', (_params, query) => loadModule('loginUser', query));
+  Router.add('/login', (_params, query) => loadModule('login', query));
   Router.add('/plugins', (_params, query) => loadModule('plugins', query));
   Router.add('/logout', logout);
-  Router.add('/register', (_params, query) => loadModule('registerUser', query));
+  Router.add('/register', (_params, query) => loadModule('account', query));
   Router.add('/change-password', (_params, query) => loadModule('changePassword', query));
-  Router.add('/edit', () => loadModule('registerUser', { mode: 'edit' }));
   Router.add('/publish', (_params, query) => loadModule('publishPlugin', query));
   Router.add('/plugin/:id/:section?', (params, queries) => loadModule('plugin', { ...params, ...queries }));
   Router.add('/user/:userId?', () => Router.loadUrl(window.location.pathname.replace('/user', '/profile') + window.location.search));
+  Router.add('/profile/edit', () => loadModule('account', { mode: 'edit' }));
   Router.add('/profile/:userId?', (params) => loadModule('user', params));
   Router.add('/earnings', (_params, query) => loadModule('earnings', query));
   Router.add('/update-plugin-editor/:id', (params) => loadModule('updatePluginEditor', params));
@@ -94,7 +94,8 @@ window.onload = async () => {
   Router.add('/:filename(index.html?)?', () => loadModule('home'));
 
   Router.add('*', () => {
-    main.innerHTML = `Cannot get ${window.location.pathname}`;
+    hideLoading();
+    main.content = <div className='error'>Cannot get '{window.location.pathname}'</div>;
   });
 
   Router.listen();

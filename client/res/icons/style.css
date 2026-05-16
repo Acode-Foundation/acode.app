@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'acode';
-  src: url('acode.ttf?zbrl2v') format('truetype');
+  src: url('acode.ttf?prghr') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -48,6 +48,16 @@
 .icon.certificate:before {
   content: '\e90d';
 }
+.icon.x:before {
+  content: '\e91c';
+}
+.icon.twitter:before {
+  content: '\e91c';
+}
+.icon.linkedin:before {
+  content: '\e91d';
+  color: #0077b5;
+}
 .icon.github:before {
   content: '\e918';
 }
@@ -73,6 +83,15 @@
 .icon.paypal:before {
   content: '\e905';
   color: #00457c;
+}
+.icon.link:before {
+  content: '\e91f';
+}
+.icon.insert_link:before {
+  content: '\e91f';
+}
+.icon.vpn_key:before {
+  content: '\e91e';
 }
 .icon.dashboard:before {
   content: '\e91b';

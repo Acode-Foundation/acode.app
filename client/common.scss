@@ -1,7 +1,7 @@
 /** contains common classes */
 
 a,
-.link,
+.link:not(.icon),
 .error:not(:empty),
 .success:not(:empty) {
   font-size: 14px;
@@ -28,13 +28,13 @@ a,
 }
 
 a,
-.link {
+.link:not(.icon) {
   color: var(--button-color);
   text-decoration: underline;
   cursor: pointer;
 }
 
-.link:last-child {
+.link:not(.icon):last-child {
   margin-top: 10px;
 }
 

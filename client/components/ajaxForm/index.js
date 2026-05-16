@@ -5,6 +5,7 @@ import './style.scss';
  * @param {Object} props
  * @param {string} props.method
  * @param {string} props.action
+ * @param {string} [props.className]
  * @param {(any)=>void} props.onloadend
  * @param {(any)=>void} props.onerror
  * @param {()=>void} props.loading
@@ -13,10 +14,13 @@ import './style.scss';
  * @param {boolean} props.autofill
  * @returns
  */
-export default function AjaxForm({ ref, onloadend, onerror, loading, loadingEnd, autofill = true, method, action, encoding, contentType }, children) {
+export default function AjaxForm(
+  { ref, className, onloadend, onerror, loading, loadingEnd, autofill = true, method, action, encoding, contentType },
+  children,
+) {
   const actionUrl = typeof action === 'function' ? '#' : action;
   const form = (
-    <form ref={ref} action={actionUrl} method={method} encoding={encoding} autocomplete={autofill ? 'on' : 'off'}>
+    <form ref={ref} action={actionUrl} method={method} encoding={encoding} autocomplete={autofill ? 'on' : 'off'} className={className}>
       {children}
     </form>
   );

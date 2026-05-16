@@ -5,16 +5,20 @@ import Input from 'components/input';
 import OAuthButton from 'components/oauthButton';
 import SendOtp from 'components/sendOtp';
 import Reactive from 'html-tag-js/reactive';
-import { getLoggedInUser, hideLoading, loadingEnd, loadingStart, showLoading } from 'lib/helpers';
+import Ref from 'html-tag-js/ref';
+import background from 'lib/background';
+import { getLoggedInUser, hideLoading, loadingEnd, loadingStart, showLoading, withRedirect } from 'lib/helpers';
 import Router from 'lib/Router';
 
-export default async function registerUser({ mode = 'register', redirect }) {
+export default async function Profile({ mode = 'register', redirect }) {
   const isRegister = mode === 'register';
-  const title = mode === 'edit' ? 'Edit your account' : 'Register new user';
   const buttonText = mode === 'edit' ? 'Update' : 'Register';
   const method = mode === 'edit' ? 'put' : 'post';
   const errorText = Reactive('');
   const successText = Reactive('');
+  const canvas = Ref();
+  const otpInput = Ref();
+
   let email = '';
   let user = {};
 
@@ -36,9 +40,17 @@ export default async function registerUser({ mode = 'register', redirect }) {
     }
   }
 
+  canvas.onref = () => background(canvas.el);
+
+  if (!isRegister) {
+    otpInput.style.display = 'none';
+  }
+
   return (
-    <section id='register-user' className='text-center'>
+    <section id='register-user'>
+      <canvas ref={canvas} id='background' />
       <AjaxForm
+        className='glass user-form'
         loading={(form) => loadingStart(form, errorText, successText)}
         loadingEnd={(form) => loadingEnd(form, buttonText)}
         onloadend={onloadend}
@@ -47,10 +59,27 @@ export default async function registerUser({ mode = 'register', redirect }) {
         method={method}
         autofill={!isRegister}
       >
-        <h1>{title}</h1>
+        <div className='glass-layer-1' />
+        <div className='glass-layer-2' />
+        <div className='glass-layer-3' />
+        <h1>
+          {isRegister ? (
+            <>
+              <span className='icon person' />
+              Signup for Acode
+            </>
+          ) : (
+            <>
+              <span className='icon create' />
+              Edit your Profile
+            </>
+          )}
+        </h1>
         {mode === 'edit' && (
           <div className='oauth-links'>
-            <h3>Link Accounts</h3>
+            <h3>
+              <span className='icon link' /> Link Accounts
+            </h3>
             <AuthButton type='github' user={user} />
             <AuthButton type='google' user={user} />
           </div>
@@ -76,18 +105,49 @@ export default async function registerUser({ mode = 'register', redirect }) {
               onchange={(e) => {
                 email = e.target.value;
               }}
+              oninput={(e) => {
+                if (isRegister) return;
+
+                if (e.target.value !== user?.email) {
+                  otpInput.style.removeProperty('display');
+                } else {
+                  otpInput.style.display = 'none';
+                }
+              }}
               type='email'
               name='email'
               label='Email'
               placeholder='e.g. john@gmail.com'
             />
-            <Input style={{ width: '140px' }} type='number' name='otp' label='OTP' placeholder='e.g. 1234' />
+            <Input ref={otpInput} style={{ width: '140px' }} type='number' name='otp' label='OTP' placeholder='e.g. 1234' />
           </fieldset>
           <SendOtp errorText={errorText} getEmail={() => email} />
         </div>
 
-        <Input value={user.github} type='text' name='github' label='Github' placeholder='e.g. johndoe' />
-        <Input value={user.website} type='url' name='website' label='Website' placeholder='e.g. https://john.dev' />
+        {mode === 'edit' && (
+          <>
+            <h3>
+              <span className='icon share' /> Social Links
+            </h3>
+            <div className='social-link'>
+              <span className='icon earth' />
+              <Input value={user.website} type='url' name='website' label='Website' placeholder='e.g. https://john.dev' />
+            </div>
+            <div className='social-link'>
+              <span className='icon github' />
+              <Input value={user.github} type='text' name='github' label='Github' placeholder='e.g. johndoe' />
+            </div>
+            <div className='social-link'>
+              <span className='icon x' />
+              <Input value={user.x} type='text' name='x' label='x' placeholder='e.g. johndoe' />
+            </div>
+            <div className='social-link'>
+              <span className='icon linkedin' />
+              <Input value={user.linkedin} type='text' name='linkedin' label='linkedin' placeholder='e.g. /in/johndoe' />
+            </div>
+          </>
+        )}
+
         {mode === 'edit' ? (
           <a href='/change-password'>Change password</a>
         ) : (
@@ -97,17 +157,21 @@ export default async function registerUser({ mode = 'register', redirect }) {
         <div className='error'>{errorText}</div>
         <div className='success'>{successText}</div>
         <button type='submit'>{buttonText}</button>
+        {isRegister && (
+          <small className='disclaimer'>
+            By clicking <strong>Register</strong> button above you agree to our <a href='/policy'>Privacy Policy</a> and{' '}
+            <a href='/terms'>Terms and conditions</a>.
+          </small>
+        )}
         {mode !== 'edit' && (
-          <a className='link' href='/login'>
-            Login to existing account.
-          </a>
+          <p>
+            <a className='link' href={withRedirect('/login', redirect)}>
+              Sign in
+            </a>{' '}
+            to existing account.
+          </p>
         )}
       </AjaxForm>
-      {isRegister && (
-        <p>
-          By clicking <strong>Register</strong> button above you agree to our <a href='/policy'>Privacy Policy and Terms and conditions</a>.
-        </p>
-      )}
     </section>
   );
 
@@ -120,7 +184,7 @@ export default async function registerUser({ mode = 'register', redirect }) {
     if (mode !== 'edit') {
       successText.value = 'User registered successfully. Redirecting...';
       setTimeout(() => {
-        window.location.href = `/login?redirect=${redirect}`;
+        window.location.href = withRedirect('/login', redirect);
       }, 2000);
       return;
     }

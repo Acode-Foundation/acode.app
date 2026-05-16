@@ -10,6 +10,8 @@ const queries = [
   'CREATE UNIQUE INDEX IF NOT EXISTS idx_user_google_id ON user(google_id);',
   'ALTER TABLE user ADD COLUMN avatar_url TEXT;',
   "ALTER TABLE user ADD COLUMN primary_auth TEXT DEFAULT 'email';",
+  'ALTER TABLE user ADD COLUMN x TEXT',
+  'ALTER TABLE user ADD COLUMN linkedin TEXT',
 ];
 
 (async () => {

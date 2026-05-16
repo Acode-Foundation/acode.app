@@ -119,7 +119,7 @@ export default ({ routes }) => (
         <span className='icon person' />
         {userName}
       </a>
-      <a href='/edit'>
+      <a href='/profile/edit'>
         <span className='icon create' />
         Edit Profile
       </a>

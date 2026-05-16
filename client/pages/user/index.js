@@ -36,7 +36,7 @@ export default async function User({ userId }) {
   }
 
   const isSelf = loggedInUser && loggedInUser.id === user.id;
-  const shouldShowSensitiveInfo = isSelf || loggedInUser?.isAdmin;
+  const shouldShowSensitiveInfo = Boolean(isSelf || loggedInUser?.isAdmin);
   const paymentMethods = Ref();
 
   if (shouldShowSensitiveInfo) {
@@ -71,8 +71,8 @@ export default async function User({ userId }) {
         <div className='profile-info'>
           <h1>
             <div className='user-name'>
-              <VerifyButton />
               {user.name}
+              <VerifyButton />
               <div className='extra-info'>
                 {isSelf && user.role === 'admin' && <small className='tag'>Admin</small>}
                 {Boolean(user.acode_pro) && <small className='tag pro-tag'>Pro</small>}
@@ -80,24 +80,45 @@ export default async function User({ userId }) {
             </div>
           </h1>
           {shouldShowSensitiveInfo && (
-            <small className='link earnings' title='Your earnings for this month'>
-              <strong className='loading' ref={amount} />|<span>{moment().format('YYYY MMMM')}</span>
-            </small>
-          )}
-          <div onwheel={onwheel} ref={paymentMethods} className='payment-methods'>
-            {isSelf && (
-              <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
-                <span className='icon add' />
-                <span>Payment method</span>
+            <>
+              <small className='link earnings' title='Your earnings for this month'>
+                <strong className='loading' ref={amount} />|<span>{moment().format('YYYY MMMM')}</span>
+              </small>
+              <div onwheel={onwheel} ref={paymentMethods} className='payment-methods'>
+                {isSelf && (
+                  <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
+                    <span className='icon add' />
+                    <span>Payment method</span>
+                  </div>
+                )}
               </div>
+            </>
+          )}
+          <div className='socials' data-show-sensitive-info={String(shouldShowSensitiveInfo)}>
+            {user.website && (
+              <a href={user.website} target='_blank' rel='noopener'>
+                <span className='icon earth' />
+                <span className='label'>{user.website}</span>
+              </a>
             )}
-          </div>
-          <div className='socials' onclick={(e) => e.target.dataset.href && Router.loadUrl(e.target.dataset.href)}>
-            {shouldShowSensitiveInfo && <button type='button' title='email' className='icon mail' data-href={`mailto:${user.email}`} />}
             {user.github && (
-              <button type='button' title='go to github account' className='icon github' data-href={`https://github.com/${user.github}`} />
+              <a href={`https://github.com/${user.github}`} target='_blank' rel='noopener'>
+                <span className='icon github' />
+                <span className='label'>@{user.github}</span>
+              </a>
             )}
-            {user.website && <button type='button' title='go to website' className='icon earth' data-href={user.website} />}
+            {user.x && (
+              <a href={`https://x.com/@${user.x}`} target='_blank' rel='noopener'>
+                <span className='icon x' />
+                <span className='label'>@{user.x}</span>
+              </a>
+            )}
+            {user.linkedin && (
+              <a href={`https://linkedin.com${user.linkedin}`} target='_blank' rel='noopener'>
+                <span className='icon linkedin' />
+                <span className='label'>{user.linkedin}</span>
+              </a>
+            )}
           </div>
           {isSelf && <a href='/publish'>Publish Plugin</a>}
         </div>
