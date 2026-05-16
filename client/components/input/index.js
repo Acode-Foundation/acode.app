@@ -28,24 +28,26 @@ import Reactive from 'html-tag-js/reactive';
 /**
  *
  * @param {Object} props
- * @param {Ref} props.ref
- * @param {number} props.maxlength
- * @param {string} props.autocomplete
- * @param {boolean} props.autofill
- * @param {Function} props.onkeydown
- * @param {Function} props.oninput
- * @param {boolean} props.checked
- * @param {boolean} props.required
- * @param {Function} props.onchange
- * @param {string|number} props.value
- * @param {string} props.placeholder
+ * @param {Ref} [props.inputRef]
+ * @param {Ref} [props.ref]
+ * @param {number} [props.maxlength]
+ * @param {string} [props.autocomplete]
+ * @param {boolean} [props.autofill]
+ * @param {Function} [props.onkeydown]
+ * @param {Function} [props.oninput]
+ * @param {boolean} [props.checked]
+ * @param {boolean} [props.required]
+ * @param {Function} [props.onchange]
+ * @param {string|number} [props.value]
+ * @param {string} [props.placeholder]
  * @param {string} props.label
- * @param {string} props.name
- * @param {string} props.id
- * @param {InputTypes} props.type
+ * @param {string} [props.name]
+ * @param {string} [props.id]
+ * @param {InputTypes} [props.type]
  */
 export default function Input({
   maxlength,
+  inputRef,
   ref,
   autocomplete = 'on',
   autofill = true,
@@ -70,7 +72,7 @@ export default function Input({
   /** @type {HTMLInputElement | HTMLTextAreaElement} */
   const inputField = type === 'textarea' ? <textarea /> : <input checked={checked} type={type} />;
   const input = (
-    <div className={`custom-input ${type}`} style={style}>
+    <div className={`custom-input ${type}`} style={style} ref={ref}>
       <label
         className={checked ? 'checked' : undefined}
         onfocus={() => {
@@ -84,10 +86,10 @@ export default function Input({
     </div>
   );
 
-  if (ref) ref.el = inputField;
   if (id) inputField.id = id;
   if (name) inputField.name = name;
   if (value) inputField.value = value;
+  if (inputRef) inputRef.el = inputField;
   if (required) inputField.required = true;
   if (oninput) inputField.oninput = oninput;
   if (onchange) inputField.onchange = onchange;

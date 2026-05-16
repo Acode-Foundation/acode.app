@@ -203,6 +203,58 @@ route.get('/receipt/:paymentId', async (req, res) => {
   }
 });
 
+route.delete('/link/github', async (req, res) => {
+  try {
+    const loggedInUser = await getLoggedInUser(req);
+    if (!loggedInUser) {
+      return res.status(401).send({ error: 'Not logged in' });
+    }
+
+    if (!loggedInUser.github_id) {
+      return res.status(400).send({ error: 'GitHub is not linked' });
+    }
+
+    if (loggedInUser.primary_auth === 'github') {
+      return res.status(400).send({ error: 'Cannot unlink your primary login method' });
+    }
+
+    await User.update(
+      [
+        [User.GITHUB_ID, null],
+        [User.GITHUB, null],
+      ],
+      [User.ID, loggedInUser.id],
+    );
+
+    res.send({ message: 'GitHub account unlinked' });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+route.delete('/link/google', async (req, res) => {
+  try {
+    const loggedInUser = await getLoggedInUser(req);
+    if (!loggedInUser) {
+      return res.status(401).send({ error: 'Not logged in' });
+    }
+
+    if (!loggedInUser.google_id) {
+      return res.status(400).send({ error: 'Google is not linked' });
+    }
+
+    if (loggedInUser.primary_auth === 'google') {
+      return res.status(400).send({ error: 'Cannot unlink your primary login method' });
+    }
+
+    await User.update([[User.GOOGLE_ID, null]], [User.ID, loggedInUser.id]);
+
+    res.send({ message: 'Google account unlinked' });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
 route.get('/:idOrEmail', async (req, res) => {
   const { idOrEmail } = req.params;
 
@@ -302,7 +354,7 @@ route.post('/payment-method', async (req, res) => {
 });
 
 route.post('/', async (req, res) => {
-  const { name, email, password, github = null, website = null, otp: sentOtp } = req.body;
+  const { name, email, password, otp: sentOtp } = req.body;
 
   if (!name) {
     res.status(400).send({ error: 'Missing name' });
@@ -324,11 +376,6 @@ route.post('/', async (req, res) => {
     return;
   }
 
-  if (!(await isValidGithubId(github))) {
-    res.status(400).send({ error: 'Invalid Github ID' });
-    return;
-  }
-
   const row = await User.get([User.EMAIL, email]);
 
   if (row.length) {
@@ -344,13 +391,7 @@ route.post('/', async (req, res) => {
       return;
     }
 
-    await User.insert(
-      [User.NAME, name],
-      [User.EMAIL, email],
-      [User.PASSWORD, encryptPassword(password)],
-      [User.WEBSITE, website],
-      [User.GITHUB, github],
-    );
+    await User.insert([User.NAME, name], [User.EMAIL, email], [User.PASSWORD, encryptPassword(password)], [User.PRIMARY_AUTH, 'email']);
 
     res.send({ message: 'User created' });
   } catch (error) {
@@ -363,9 +404,7 @@ route.put('/threshold', async (_req, res) => {
 });
 
 route.put('/', async (req, res) => {
-  let { email, name, github, website } = req.body;
-
-  const { otp: sentOtp } = req.body;
+  const { email, name, github, website, x, linkedin, otp: sentOtp } = req.body;
 
   try {
     const loggedInUser = await getLoggedInUser(req);
@@ -375,28 +414,27 @@ route.put('/', async (req, res) => {
       return;
     }
 
-    if (loggedInUser.email === email) {
-      email = undefined;
-    }
-
-    if (loggedInUser.name === name) {
-      name = undefined;
-    }
-
-    if (loggedInUser.github === github) {
-      github = undefined;
-    }
-
-    if (loggedInUser.website === website) {
-      website = undefined;
-    }
-
-    if (!(await isValidGithubId(github))) {
+    if (!isValidGithubId(github)) {
       res.status(400).send({ error: 'Invalid Github ID' });
       return;
     }
 
-    if (email) {
+    if (!isValidXId(x)) {
+      res.status(400).send({ error: 'Invalid X ID' });
+      return;
+    }
+
+    if (!isValidLinkedInId(linkedin)) {
+      res.status(400).send({ error: 'Invalid LinkedIn ID' });
+      return;
+    }
+
+    if (!email) {
+      res.status(400).send({ error: 'Missing email' });
+      return;
+    }
+
+    if (email !== loggedInUser.email) {
       if (!sentOtp) {
         res.status(400).send({ error: 'Missing OTP' });
         return;
@@ -417,10 +455,12 @@ route.put('/', async (req, res) => {
 
     await User.update(
       [
-        [User.EMAIL, email],
+        [User.X, x],
         [User.NAME, name],
+        [User.EMAIL, email],
         [User.GITHUB, github],
         [User.WEBSITE, website],
+        [User.LINKEDIN, linkedin],
       ],
       [User.ID, loggedInUser.id],
     );
@@ -522,11 +562,28 @@ route.delete('/payment-method/:id', async (req, res) => {
 /**
  * Checks if the github id is valid
  * @param {string} id
- * @returns
  */
-async function isValidGithubId(id) {
+function isValidGithubId(id) {
   if (!id) return true;
   return /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i.test(id);
+}
+
+/**
+ * Checks if the linkedin id is valid
+ * @param {string} id
+ */
+function isValidLinkedInId(id) {
+  if (!id) return true;
+  return /^[a-zA-Z0-9-]{3,100}$/i.test(id);
+}
+
+/**
+ * Checks if the x id is valid
+ * @param {string} id
+ */
+function isValidXId(id) {
+  if (!id) return true;
+  return /^[A-Za-z0-9_]{1,15}$/i.test(id);
 }
 
 /**

@@ -25,7 +25,7 @@ const nameMap = {
 export default function AdSense({ className = '', name = 'plugin', style = {}, ref }) {
   setTimeout(() => {
     window.adsbygoogle.push({});
-  }, 0);
+  }, 100);
 
   return (
     <div className={className} style={{ zIndex: '1', ...style, minHeight: '100px' }} ref={ref}>

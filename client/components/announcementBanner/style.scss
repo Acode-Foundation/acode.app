@@ -21,6 +21,7 @@
   overflow: hidden;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   transition: background 0.5s ease, background-size 0.3s ease;
+  height: 60px;
 
   &[data-visible='true']+header {
     top: 60px;

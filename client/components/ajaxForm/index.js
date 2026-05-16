@@ -2,20 +2,25 @@ import './style.scss';
 
 /**
  *
- * @param {Object} param0
- * @param {string} param0.method
- * @param {string} param0.action
- * @param {(any)=>void} param0.onloadend
- * @param {(any)=>void} param0.onerror
- * @param {()=>void} param0.loading
- * @param {()=>void} param0.loadingEnd
- * @param {string} param0.contentType
+ * @param {Object} props
+ * @param {string} props.method
+ * @param {string} props.action
+ * @param {string} [props.className]
+ * @param {(any)=>void} props.onloadend
+ * @param {(any)=>void} props.onerror
+ * @param {()=>void} props.loading
+ * @param {()=>void} props.loadingEnd
+ * @param {string} props.contentType
+ * @param {boolean} props.autofill
  * @returns
  */
-export default function AjaxForm({ ref, onloadend, onerror, loading, loadingEnd, method, action, encoding, contentType }, children) {
+export default function AjaxForm(
+  { ref, className, onloadend, onerror, loading, loadingEnd, autofill = true, method, action, encoding, contentType },
+  children,
+) {
   const actionUrl = typeof action === 'function' ? '#' : action;
   const form = (
-    <form ref={ref} action={actionUrl} method={method} encoding={encoding}>
+    <form ref={ref} action={actionUrl} method={method} encoding={encoding} autocomplete={autofill ? 'on' : 'off'} className={className}>
       {children}
     </form>
   );

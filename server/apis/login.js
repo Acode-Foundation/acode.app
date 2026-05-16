@@ -48,7 +48,7 @@ route.post('/', async (req, res) => {
 
   // use crypto to generate a random token
   const token = crypto.randomBytes(64).toString('hex');
-  const expiredAt = moment().add(1, 'week').format('YYYY-MM-DD HH:mm:ss.sss');
+  const expiredAt = moment().add(30, 'day').format('YYYY-MM-DD HH:mm:ss.sss');
 
   try {
     // store the token in the login table
@@ -56,7 +56,10 @@ route.post('/', async (req, res) => {
 
     // set the token in the cookie
     res.cookie('token', token, {
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+      secure: true,
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60 * 24 * 30,
     });
 
     res.send({ message: 'Logged in', token });

@@ -1,4 +1,31 @@
 import moment from 'moment';
+import userImage from 'res/user.svg';
+
+/**
+ * @typedef {object} User
+ * @property {number} [x]
+ * @property {number} id
+ * @property {string} name
+ * @property {string} role
+ * @property {string} email
+ * @property {string} [github]
+ * @property {string} [website]
+ * @property {number} verified
+ * @property {number} threshold
+ * @property {number} acode_pro
+ * @property {string} [linkedin]
+ * @property {string} [github_id]
+ * @property {string} [google_id]
+ * @property {string} [avatar_url]
+ * @property {string} [pro_purchased_at]
+ * @property {'github' | 'google' | 'email'} primary_auth
+ * @property {string} created_at
+ * @property {string} updated_at
+ * @property {boolean} isAdmin
+ */
+
+/** @type {User} */
+let loggedInUser = null;
 
 /**
  * Format a currency amount, fixing floating point noise (e.g. 39.199999999 → 39.2).
@@ -50,29 +77,51 @@ export function capitalize(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
+/**
+ * @returns {Promise<User>}
+ */
 export async function getLoggedInUser() {
+  if (loggedInUser) {
+    return loggedInUser;
+  }
+
   const res = await fetch('/api/login');
   const user = await res.json();
   if (user.error) {
     return null;
   }
 
+  loggedInUser = user;
+
+  setTimeout(() => {
+    loggedInUser = null;
+  }, 5 * 1000);
+
   return user;
+}
+
+export function invalidateLoggedInUser() {
+  loggedInUser = null;
 }
 
 /**
  *
  * @param {HTMLElement} el
- * @param {Text} errorText
- * @param {Text} successText
- * @param {Text} buttonText
+ * @param {Text} [errorText]
+ * @param {Text} [successText]
+ * @param {Text} [buttonText]
  */
 export function loadingStart(el, errorText, successText, buttonText) {
   const button = el.get('button[type=submit]');
-  errorText.value = '';
-  successText.value = '';
   button.classList.add('loading');
   button.disabled = true;
+
+  if (errorText) {
+    errorText.value = '';
+  }
+  if (successText) {
+    successText.value = '';
+  }
   if (buttonText) {
     buttonText.value = 'Loading...';
     return;
@@ -114,7 +163,7 @@ export function gravatar(github) {
     return `https://avatars.githubusercontent.com/${github}`;
   }
 
-  return '/user.png';
+  return userImage;
 }
 
 /**
@@ -130,4 +179,21 @@ export function calcRating(votesUp, votesDown) {
 export function since(date) {
   const now = moment().add(new Date().getTimezoneOffset(), 'minutes');
   return moment(date).from(now);
+}
+
+/**
+ * @param {string} url
+ * @param {string} redirect
+ *
+ * @example ```js
+ * withRedirect('/login', '/profile') // '/login?redirect=/profile'
+ * ```
+ */
+export function withRedirect(url, redirect) {
+  if (!redirect) return url;
+  if (url.includes('?')) {
+    return `${url}&redirect=${redirect}`;
+  }
+
+  return `${url}?redirect=${redirect}`;
 }

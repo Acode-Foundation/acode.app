@@ -5,14 +5,14 @@ import './main.scss';
 import './common.scss';
 import 'res/icons/style.css';
 
-import $loginText from 'components/loginText';
-import { getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
+import { getLoggedInUser, hideLoading, invalidateLoggedInUser, showLoading } from 'lib/helpers';
 import Router from 'lib/Router';
 import Theme from 'lib/theme';
 import dark from 'themes/dark';
-import View from './main.view';
+import View, { addProButton, updateAccountButton } from './main.view';
 
-window.onload = async () => {
+document.addEventListener('DOMContentLoaded', () => {
+  showLoading();
   Theme(dark);
   app.content = (
     <View
@@ -38,26 +38,12 @@ window.onload = async () => {
       app.classList.remove('scrolled');
     }
   });
+});
 
+window.onload = async () => {
   const user = await getLoggedInUser();
-  if (user) {
-    $loginText.value = user.name;
-  }
-
-  // Show "Get Pro" button if user is not pro
-  if (!user?.acode_pro && process.env.RAZORPAY_ENABLED) {
-    const header = app.get('#main-header');
-    const navUser = header.get('nav:last-of-type');
-    if (navUser) {
-      const loginLink = navUser.get('a');
-      navUser.insertBefore(
-        <a href='/pro' className='get-pro-btn'>
-          <span className='icon favorite' /> Get Pro
-        </a>,
-        loginLink,
-      );
-    }
-  }
+  updateAccountButton(user);
+  addProButton(user);
 
   const main = app.get('main');
 
@@ -75,29 +61,39 @@ window.onload = async () => {
     Router.add('/pro', () => loadModule('pro'));
   }
 
-  Router.add('/login', (_params, query) => loadModule('loginUser', query));
+  Router.add('/login', (_params, query) => loadModule('login', query));
   Router.add('/plugins', (_params, query) => loadModule('plugins', query));
   Router.add('/logout', logout);
-  Router.add('/register', (_params, query) => loadModule('registerUser', query));
+  Router.add('/register', (_params, query) => loadModule('account', query));
   Router.add('/change-password', (_params, query) => loadModule('changePassword', query));
-  Router.add('/edit-user', () => loadModule('registerUser', { mode: 'edit' }));
   Router.add('/publish', (_params, query) => loadModule('publishPlugin', query));
   Router.add('/plugin/:id/:section?', (params, queries) => loadModule('plugin', { ...params, ...queries }));
-  Router.add('/user/:userId?', (params) => loadModule('user', params));
+  Router.add('/user/:userId?', () => Router.loadUrl(window.location.pathname.replace('/user', '/profile') + window.location.search));
+  Router.add('/profile/edit', () => loadModule('account', { mode: 'edit' }));
+  Router.add('/profile/:userId?', (params) => loadModule('user', params));
   Router.add('/earnings', (_params, query) => loadModule('earnings', query));
   Router.add('/update-plugin-editor/:id', (params) => loadModule('updatePluginEditor', params));
+
+  // Server will redirect to respected provider
+  Router.add('/oauth/*', () => window.location.reload());
+
   Router.add('/:filename(index.html?)?', () => loadModule('home'));
 
   Router.add('*', () => {
-    main.innerHTML = `Cannot get ${window.location.pathname}`;
+    hideLoading();
+    main.content = <div className='error'>Cannot get '{window.location.pathname}'</div>;
   });
 
   Router.listen();
 
   Router.on('navigate', () => {
-    const navToggler = tag.get('#menu-toggler');
-    if (navToggler.checked) {
-      navToggler.checked = false;
+    const navMenuToggler = tag.get('#nav-menu-toggler');
+    const userMenuToggler = tag.get('#user-menu-toggler');
+    if (navMenuToggler.checked) {
+      navMenuToggler.checked = false;
+    }
+    if (userMenuToggler.checked) {
+      userMenuToggler.checked = false;
     }
     main.content = '';
     app.scrollTop = 0;
@@ -117,7 +113,15 @@ window.onload = async () => {
     });
 
     if (res.status === 200) {
-      window.location.replace('/');
+      sessionStorage.clear();
+      invalidateLoggedInUser();
+      updateAccountButton();
+      addProButton();
+      if (window.history.length > 1) {
+        window.history.go(-1);
+      } else {
+        window.location = '/';
+      }
     }
   }
 };

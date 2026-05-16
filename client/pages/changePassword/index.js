@@ -1,13 +1,18 @@
+import './style.scss';
 import AjaxForm from 'components/ajaxForm';
 import Input from 'components/input';
 import SendOtp from 'components/sendOtp';
 import Reactive from 'html-tag-js/reactive';
-import { getLoggedInUser, loadingEnd, loadingStart } from 'lib/helpers';
+import Ref from 'html-tag-js/ref';
+import background from 'lib/background';
+import { getLoggedInUser, loadingEnd, loadingStart, withRedirect } from 'lib/helpers';
 import Router from 'lib/Router';
 
 export default async function changePassword({ mode, redirect }) {
   const errorText = Reactive('');
   const successText = Reactive('');
+  const canvas = Ref();
+
   let title = 'Change password';
   let email = '';
 
@@ -21,10 +26,13 @@ export default async function changePassword({ mode, redirect }) {
     return null;
   }
 
+  canvas.onref = () => background(canvas.el);
+
   return (
     <section id='change-password'>
-      <h1>{title}</h1>
+      <canvas ref={canvas} id='background' />
       <AjaxForm
+        className='glass user-form'
         method='PUT'
         action={action}
         onloadend={onloadend}
@@ -32,6 +40,9 @@ export default async function changePassword({ mode, redirect }) {
         loading={(form) => loadingStart(form, errorText, successText)}
         loadingEnd={(form) => loadingEnd(form, 'Change password')}
       >
+        <h1>
+          <span className='icon vpn_key'></span> {title}
+        </h1>
         {mode === 'reset' ? (
           <div>
             <fieldset>
@@ -51,10 +62,13 @@ export default async function changePassword({ mode, redirect }) {
         ) : (
           <Input type='password' name='oldPassword' label='Old password' placeholder='old password' />
         )}
-        <Input type='password' name='password' label='Password' placeholder='password' />
+        <Input type='password' name='password' label='Password' placeholder='password' autocomplete='new-password' />
         <span className='error'>{errorText}</span>
         <span className='success'>{successText}</span>
         <button type='submit'>Change password</button>
+        <p style={{ margin: 0 }}>
+          Go back <a href='/login'>Signin</a> page.
+        </p>
       </AjaxForm>
     </section>
   );
@@ -68,7 +82,7 @@ export default async function changePassword({ mode, redirect }) {
     errorText.value = '';
     successText.value = 'Password changed successfully.';
     setTimeout(() => {
-      Router.loadUrl(`/login?redirect=${redirect}`);
+      Router.loadUrl(withRedirect('/login', redirect));
     }, 3000);
   }
 

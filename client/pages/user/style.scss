@@ -30,6 +30,10 @@
       }
 
       .extra-info {
+        display: flex;
+        margin-left: 0;
+        gap: 0;
+
         .tag {
           display: inline-flex;
           align-items: center;
@@ -38,9 +42,11 @@
           color: var(--primary-text-color);
           font-size: 0.8rem;
           height: 18px;
-          padding: 0 5px;
           border-radius: 9px;
           margin-left: 5px;
+          padding: 2.5px 10px;
+          background-color: #00d4ff;
+          color: black;
 
           &.pro-tag {
             background-color: #f59e0b;
@@ -139,7 +145,7 @@
       align-items: center;
       justify-content: space-around;
       flex-direction: column;
-      min-height: calc(100% - 20px);
+      height: calc(100% - 20px);
       width: 180px;
       background-color: var(--primary-color);
       color: var(--primary-text-color);
@@ -150,6 +156,8 @@
       user-select: none;
       -webkit-tap-highlight-color: transparent;
       transition: all 0.2s ease-in-out;
+      max-height: 60px;
+      box-sizing: border-box;
 
       &:first-child {
         margin-left: 0;
@@ -193,21 +201,52 @@
 
   h1 {
     display: block;
-    font-size: 2rem;
+    font-size: 1.4rem;
     margin: 10px 0 0 0;
     height: auto;
     width: fit-content;
+
+    .icon.verified {
+      margin-left: 5px;
+    }
   }
 
   .socials {
     display: flex;
     padding-bottom: 5px;
 
-    .icon {
-      &:first-child {
+    &[data-show-sensitive-info="false"] {
+      width: 100%;
+      margin-top: 10px;
+      flex-direction: column;
+      overflow: hidden;
+
+      a {
+        flex: 1;
+        background-color: transparent;
+        color: inherit;
         margin-left: 0;
+        padding: 0;
+        width: fit-content;
+        display: flex;
+        gap: 10px;
+        justify-content: start;
+        height: fit-content;
+        max-width: 100%;
       }
 
+      .label {
+        line-height: 1;
+        display: unset;
+        display: block;
+        width: 100%;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+    }
+
+    a {
       height: 30px;
       width: 30px;
       background-color: white;
@@ -218,7 +257,18 @@
       margin: 5px;
       text-decoration: none;
       border-radius: 4px;
-      font-size: 20px;
+
+      .icon {
+        font-size: 20px;
+      }
+
+      .label {
+        display: none;
+      }
+
+      &:first-child {
+        margin-left: 0;
+      }
     }
   }
 }

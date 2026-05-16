@@ -8,12 +8,12 @@ import { getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers
 import Router from 'lib/Router';
 import moment from 'moment';
 import Earnings from 'pages/earnings';
-import userImage from 'res/user.png';
 
 export default async function User({ userId }) {
   const amount = Ref();
   const loggedInUser = await getLoggedInUser();
-  let user;
+  /** @type {import('lib/helpers').User} */
+  let user = null;
 
   if (userId) {
     try {
@@ -31,72 +31,96 @@ export default async function User({ userId }) {
   }
 
   if (!user) {
-    Router.loadUrl('/login?redirect=/user');
+    Router.loadUrl('/login?redirect=/profile');
     return 'Redirecting...';
   }
 
   const isSelf = loggedInUser && loggedInUser.id === user.id;
-  const shouldShowSensitiveInfo = isSelf || loggedInUser?.isAdmin;
+  const shouldShowSensitiveInfo = Boolean(isSelf || loggedInUser?.isAdmin);
   const paymentMethods = Ref();
-  const img = Ref();
-
-  // get user image from github
-  const ghImage = gravatar(user.github);
-
-  // check if github user has image
-  fetch(ghImage).then((res) => {
-    if (res.status === 200) {
-      img.el.src = ghImage;
-    }
-  });
 
   if (shouldShowSensitiveInfo) {
     renderEarnings();
     renderPaymentMethods();
   }
 
+  const params = new URLSearchParams(window.location.search);
+  const linked = params.get('linked');
+  if (linked) {
+    const label = linked === 'github' ? 'GitHub' : 'Google';
+    alert('Success', `${label} account linked successfully.`, () => {
+      params.delete('linked');
+      const newSearch = params.toString();
+      Router.loadUrl(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`);
+    });
+  }
+
+  const linkError = params.get('error');
+  if (linkError) {
+    alert('Error', linkError, () => {
+      params.delete('error');
+      const newSearch = params.toString();
+      Router.loadUrl(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`);
+    });
+  }
+
   return (
     <section id='user'>
       <div className='profile'>
-        <img ref={img} src={userImage} alt='' className='profile-image' />
+        <img src={user.avatar_url || gravatar(user.github)} alt={user.email} className='profile-image' />
         <div className='profile-info'>
           <h1>
             <div className='user-name'>
               {user.name}
+              <VerifyButton />
               <div className='extra-info'>
                 {isSelf && user.role === 'admin' && <small className='tag'>Admin</small>}
                 {Boolean(user.acode_pro) && <small className='tag pro-tag'>Pro</small>}
-                <VerifyButton />
               </div>
             </div>
           </h1>
-          {shouldShowSensitiveInfo ? (
-            <small className='link earnings' title='Your earnings for this month'>
-              <strong className='loading' ref={amount} />|<span>{moment().format('YYYY MMMM')}</span>
-            </small>
-          ) : (
-            ''
-          )}
-          <div onwheel={onwheel} ref={paymentMethods} className='payment-methods'>
-            {isSelf ? (
-              <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
-                <span className='icon add' />
-                <span>Payment method</span>
+          {shouldShowSensitiveInfo && (
+            <>
+              <small className='link earnings' title='Your earnings for this month'>
+                <strong className='loading' ref={amount} />|<span>{moment().format('YYYY MMMM')}</span>
+              </small>
+              <div onwheel={onwheel} ref={paymentMethods} className='payment-methods'>
+                {isSelf && (
+                  <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
+                    <span className='icon add' />
+                    <span>Payment method</span>
+                  </div>
+                )}
               </div>
-            ) : (
-              ''
+            </>
+          )}
+          <div className='socials' data-show-sensitive-info={String(shouldShowSensitiveInfo)}>
+            {user.website && (
+              <a href={user.website} target='_blank' rel='noopener'>
+                <span className='icon earth' />
+                <span className='label'>{user.website}</span>
+              </a>
             )}
-          </div>
-          <div className='socials' onclick={(e) => e.target.dataset.href && Router.loadUrl(e.target.dataset.href)}>
-            {shouldShowSensitiveInfo && <button type='button' title='email' className='icon mail' data-href={`mailto:${user.email}`} />}
             {user.github && (
-              <button type='button' title='go to github account' className='icon github' data-href={`https://github.com/${user.github}`} />
+              <a href={`https://github.com/${user.github}`} target='_blank' rel='noopener'>
+                <span className='icon github' />
+                <span className='label'>@{user.github}</span>
+              </a>
             )}
-            {user.website && <button type='button' title='go to website' className='icon earth' data-href={user.website} />}
-            {isSelf && <button type='button' title='edit profile' data-href='/edit-user' className='icon create' />}
-            {isSelf && <button type='button' title='logout' className='icon logout danger' data-href='/logout' />}
+            {user.x && (
+              <a href={`https://x.com/@${user.x}`} target='_blank' rel='noopener'>
+                <span className='icon x' />
+                <span className='label'>@{user.x}</span>
+              </a>
+            )}
+            {user.linkedin && (
+              <a href={`https://linkedin.com/in/${user.linkedin}`} target='_blank' rel='noopener'>
+                <span className='icon linkedin' />
+                <span className='label'>{user.linkedin}</span>
+              </a>
+            )}
           </div>
-          {isSelf ? <a href='/publish'>Publish Plugin</a> : ''}
+          {isSelf && <a href='/publish'>Publish Plugin</a>}
         </div>
       </div>
       <Plugins user={user.id} />

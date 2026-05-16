@@ -65,19 +65,7 @@ class Sponsor extends Entity {
   }
 
   get safeColumns() {
-    return [
-      this.ID,
-      this.NAME,
-      this.TIER,
-      this.EMAIL,
-      this.TAGLINE,
-      this.IMAGE,
-      this.AMOUNT,
-      this.STATUS,
-      this.WEBSITE,
-      this.CREATED_AT,
-      this.PACKAGE_NAME,
-    ];
+    return [this.ID, this.NAME, this.TIER, this.TAGLINE, this.IMAGE, this.AMOUNT, this.STATUS, this.WEBSITE, this.CREATED_AT, this.PACKAGE_NAME];
   }
 }
 

@@ -1,14 +1,15 @@
 import './style.scss';
 import AjaxForm from 'components/ajaxForm';
+import alert from 'components/dialogs/alert';
 import Input from 'components/input';
+import OAuthButton from 'components/oauthButton';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import background from 'lib/background';
-import { loadingEnd, loadingStart } from 'lib/helpers';
-import userImage from 'res/user.svg';
-import { getLoggedInUser } from '../../lib/helpers';
+import { getLoggedInUser, loadingEnd, loadingStart, withRedirect } from 'lib/helpers';
+import Router from 'lib/Router';
 
-export default async function LoginUser({ redirect: redirectUlr }) {
+export default async function Login({ redirect = sessionStorage.getItem('redirect') }) {
   const errorText = Reactive('');
   const successText = Reactive('');
   const button = Ref();
@@ -17,7 +18,7 @@ export default async function LoginUser({ redirect: redirectUlr }) {
   try {
     const user = await getLoggedInUser();
     if (user) {
-      redirect(getCookie('token'));
+      redirectAfterDone(getCookie('token'));
       return (
         <section id='user-login'>
           <div className='redirect-message'>
@@ -31,38 +32,57 @@ export default async function LoginUser({ redirect: redirectUlr }) {
     return <div>{error.message}</div>;
   }
 
+  const search = new URLSearchParams(window.location.search);
+  const linkError = search.get('error');
+  if (linkError) {
+    alert('Error', linkError, () => {
+      search.delete('error');
+      const newSearch = search.toString();
+      Router.loadUrl(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`);
+    });
+  }
+
   canvas.onref = () => background(canvas.el);
 
   return (
     <section id='user-login'>
       <canvas ref={canvas} id='background' />
       <AjaxForm
+        className='glass user-form'
         loading={onloadstart}
         loadingEnd={(form) => loadingEnd(form, 'Login')}
         onloadend={onloadeend}
         onerror={onerror}
         action='/api/login'
+        autofill={false}
         method='post'
       >
-        <picture className='login-profile'>
-          <source srcset={userImage} type='image/svg' />
-          <img src={userImage} alt='Wombat' />
-        </picture>
-        <h1 style={{ textAlign: 'center' }}>Login</h1>
+        <h1>
+          <span className='icon login' /> Sign in to Acode
+        </h1>
         <Input type='email' name='email' label='Email' placeholder='e.g. john@gmail.com' />
         <Input type='password' name='password' label='Password' placeholder='Password' autocomplete='current-password' />
 
         <span className='success'>{successText}</span>
         <span className='error'>{errorText}</span>
-        <button ref={button} type='submit' style={{ width: '120px' }}>
-          Login
+        <button ref={button} type='submit'>
+          Sign in
         </button>
+        <div className='oauth-section'>
+          <div className='divider'>
+            <span>or continue with</span>
+          </div>
+          <div className='oauth-buttons'>
+            <OAuthButton provider='github' redirectUrl={redirect} />
+            <OAuthButton provider='google' redirectUrl={redirect} />
+          </div>
+        </div>
         <div style={{ margin: 'auto' }}>
-          <a className='link' href={`/register?redirect=${redirectUlr}`}>
-            New account.
-          </a>{' '}
-          |{' '}
-          <a className='link' href={`/change-password?redirect=${redirectUlr}&mode=reset`}>
+          <a className='link' href={withRedirect('/register', redirect)}>
+            Create Account
+          </a>
+          &nbsp;|&nbsp;
+          <a className='link' href={withRedirect('/change-password?mode=reset', redirect)}>
             Forgot password?
           </a>
         </div>
@@ -80,7 +100,7 @@ export default async function LoginUser({ redirect: redirectUlr }) {
       return;
     }
 
-    redirect(data.token);
+    redirectAfterDone(data.token);
   }
 
   function onerror(error) {
@@ -88,7 +108,7 @@ export default async function LoginUser({ redirect: redirectUlr }) {
     errorText.value = error;
   }
 
-  function redirect(token) {
+  function redirectAfterDone(token) {
     successText.value = 'Login successful. Redirecting...';
 
     if (button.el) {
@@ -96,10 +116,10 @@ export default async function LoginUser({ redirect: redirectUlr }) {
     }
 
     setTimeout(() => {
-      if (redirectUlr === 'app') {
-        redirectUlr = `acode://user/login/${token}`;
+      if (redirect === 'app') {
+        redirect = `acode://user/login/${token}`;
       }
-      window.location.replace(redirectUlr || '/');
+      window.location.replace(redirect || '/');
     }, 1000);
   }
 }

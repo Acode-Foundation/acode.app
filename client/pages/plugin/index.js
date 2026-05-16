@@ -13,15 +13,24 @@ import BuyButton, { checkPluginOwnership } from 'components/razorpayCheckout';
 import YearSelect from 'components/YearSelect';
 import hilightjs from 'highlight.js';
 import Ref from 'html-tag-js/ref';
-import { calcRating, formatPrice, getLoggedInUser, gravatar, since } from 'lib/helpers';
+import { calcRating, formatPrice, getLoggedInUser, gravatar, hideLoading, showLoading, since } from 'lib/helpers';
 import Router from 'lib/Router';
 import { marked } from 'marked';
 import moment from 'moment/moment';
 
 export default async function Plugin({ id: pluginId, section = 'description', callback = '' }) {
-  const plugin = await fetch(`/api/plugin/${pluginId}`).then((res) => res.json());
-  if (plugin.error) {
-    return <div className='error'>{plugin.error}</div>;
+  let plugin = null;
+
+  try {
+    showLoading();
+    plugin = await fetch(`/api/plugin/${pluginId}`).then((res) => res.json());
+    if (plugin.error) {
+      throw new Error(plugin.error);
+    }
+  } catch (error) {
+    return <div className='error'>{error.message}</div>;
+  } finally {
+    hideLoading();
   }
 
   const {
@@ -268,7 +277,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
           </div>
           <div className='info'>
             <span className='chip'>
-              <a href={`/user/${userId}`}>{author}</a>&nbsp;{!!authorVerified && <span className='icon verified' />}
+              <a href={`/profile/${userId}`}>{author}</a>&nbsp;{!!authorVerified && <span className='icon verified' />}
             </span>
             {repository && (
               <a className='chip' href={repository}>

@@ -6,7 +6,7 @@ const Download = require('../entities/download');
 
 const now = moment().format('YYYY-MM-DD');
 const today = moment(now).format('YYYY-MM-DD HH:mm:ss.sss');
-const expiredAt = moment(now).add(1, 'week').format('YYYY-MM-DD HH:mm:ss.sss');
+const currentTimestamp = moment().format('YYYY-MM-DD HH:mm:ss.sss');
 const oneMonthAgo = moment(now).subtract(1, 'month').format('YYYY-MM-DD HH:mm:ss.sss');
 
 async function cleanOtp() {
@@ -15,8 +15,8 @@ async function cleanOtp() {
 }
 
 async function cleanLogin() {
-  await Login.delete([Login.EXPIRED_AT, expiredAt, '<']);
-  console.log('Deleted expired login');
+  await Login.delete([Login.EXPIRED_AT, currentTimestamp, '<']);
+  console.log('Deleted expired logins');
 }
 
 async function cleanDownload() {

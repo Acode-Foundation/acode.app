@@ -12,6 +12,7 @@ const markdownToText = require('markdown-to-txt');
 const defaultOg = require('./defaultOg.json');
 const Plugin = require('./entities/plugin');
 const apis = require('./routes/apis');
+const oauth = require('./apis/oauth');
 const setAuth = require('./lib/gapis');
 
 const app = express();
@@ -105,6 +106,8 @@ async function main() {
   app.use('/api/*path', (_req, res) => {
     res.status(404).send({ error: 'Not found' });
   });
+
+  app.use('/oauth', oauth);
 
   app.get('/.well-known/assetlinks.json', (_req, res) => {
     res.send([

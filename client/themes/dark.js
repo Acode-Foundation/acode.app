@@ -1,7 +1,7 @@
 export default {
-  buttonColor: '#3399ff',
+  buttonColor: '#1d71c5',
   buttonTextColor: '#ffffff',
-  buttonHoverColor: '#2389ef',
+  buttonHoverColor: '#125ba4',
   buttonActiveColor: '#2288ee',
   buttonActiveTextColor: '#ffffff',
   primaryColor: '#35374B',
