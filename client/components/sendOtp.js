@@ -3,12 +3,13 @@
  * @param {object} props
  * @param {'signup'| 'reset'} props.type
  * @param {object} props.errorText
+ * @param {Ref} [props.ref]
  * @param {() => string} props.getEmail
  * @returns
  */
-export default function SendOtp({ errorText, getEmail, type = 'signup' }) {
+export default function SendOtp({ errorText, getEmail, type = 'signup', ref }) {
   return (
-    <span style={{ marginTop: 0 }} className='link' on:click={sendOtp}>
+    <span style={{ marginTop: 0 }} className='link' on:click={sendOtp} ref={ref}>
       Send OTP
     </span>
   );

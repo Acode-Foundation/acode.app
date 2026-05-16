@@ -18,6 +18,7 @@ export default async function Profile({ mode = 'register', redirect }) {
   const successText = Reactive('');
   const canvas = Ref();
   const otpInput = Ref();
+  const sendOtpBtn = Ref();
 
   let email = '';
   let user = {};
@@ -44,6 +45,7 @@ export default async function Profile({ mode = 'register', redirect }) {
 
   if (!isRegister) {
     otpInput.style.display = 'none';
+    sendOtpBtn.style.display = 'none';
   }
 
   return (
@@ -110,8 +112,10 @@ export default async function Profile({ mode = 'register', redirect }) {
 
                 if (e.target.value !== user?.email) {
                   otpInput.style.removeProperty('display');
+                  sendOtpBtn.style.removeProperty('display');
                 } else {
                   otpInput.style.display = 'none';
+                  sendOtpBtn.style.display = 'none';
                 }
               }}
               type='email'
@@ -121,7 +125,7 @@ export default async function Profile({ mode = 'register', redirect }) {
             />
             <Input ref={otpInput} style={{ width: '140px' }} type='number' name='otp' label='OTP' placeholder='e.g. 1234' />
           </fieldset>
-          <SendOtp errorText={errorText} getEmail={() => email} />
+          <SendOtp ref={sendOtpBtn} errorText={errorText} getEmail={() => email} />
         </div>
 
         {mode === 'edit' && (
