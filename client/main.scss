@@ -123,6 +123,7 @@ form {
   &.user-form {
     width: 90%;
     max-width: 400px;
+    box-sizing: border-box;
 
     .divider {
       display: flex;
