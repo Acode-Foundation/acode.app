@@ -120,14 +120,15 @@ async function getGoogleUser(accessToken) {
 
 async function issueTokenAndLogin(userId, res) {
   const token = crypto.randomBytes(64).toString('hex');
-  const expiredAt = moment().add(1, 'week').format('YYYY-MM-DD HH:mm:ss.sss');
+  const expiredAt = moment().add(30, 'day').format('YYYY-MM-DD HH:mm:ss.sss');
 
   await login.insert([login.USER_ID, userId], [login.TOKEN, token], [login.EXPIRED_AT, expiredAt]);
 
   res.cookie('token', token, {
-    maxAge: 1000 * 60 * 60 * 24 * 7,
+    secure: true,
     httpOnly: true,
     sameSite: 'lax',
+    maxAge: 1000 * 60 * 60 * 24 * 30,
   });
 
   return token;

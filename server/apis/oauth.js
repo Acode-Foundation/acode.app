@@ -27,14 +27,14 @@ function validatedRedirect(url) {
 
 route.get('/github', (req, res) => {
   if (req.query.intent === 'link') {
-    res.cookie('oauth_intent', 'link', { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
+    res.cookie('oauth_intent', 'link', { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: true });
   }
   const redirect = validatedRedirect(req.query.redirect);
   if (redirect) {
-    res.cookie('oauth_redirect', redirect, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
+    res.cookie('oauth_redirect', redirect, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: true });
   }
   const state = generateState();
-  res.cookie('oauth_state', state, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
+  res.cookie('oauth_state', state, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: true });
   res.redirect(getGitHubAuthURL(state));
 });
 
@@ -69,20 +69,20 @@ route.get('/github/callback', async (req, res) => {
     }
   } catch (error) {
     console.error('GitHub OAuth error:', error);
-    res.redirect(`/login?error=${encodeURIComponent(error.message || 'OAuth failed')}`);
+    res.redirect(`/login?error=${encodeURIComponent('Error occurred while logging with Github')}`);
   }
 });
 
 route.get('/google', (req, res) => {
   if (req.query.intent === 'link') {
-    res.cookie('oauth_intent', 'link', { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
+    res.cookie('oauth_intent', 'link', { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: true });
   }
   const redirect = validatedRedirect(req.query.redirect);
   if (redirect) {
-    res.cookie('oauth_redirect', redirect, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
+    res.cookie('oauth_redirect', redirect, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: true });
   }
   const state = generateState();
-  res.cookie('oauth_state', state, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
+  res.cookie('oauth_state', state, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: true });
   res.redirect(getGoogleAuthURL(state));
 });
 
@@ -117,7 +117,7 @@ route.get('/google/callback', async (req, res) => {
     }
   } catch (error) {
     console.error('Google OAuth error:', error);
-    res.redirect(`/login?error=${encodeURIComponent(error.message || 'OAuth failed')}`);
+    res.redirect(`/login?error=${encodeURIComponent('Error occurred while logging with Google')}`);
   }
 });
 
@@ -173,7 +173,7 @@ async function handleLogin(provider, oauthUser, req, res) {
     const existingByEmail = await user.for('internal').get([user.EMAIL, oauthUser.email]);
     if (existingByEmail.length) {
       return res.redirect(
-        `/login?error=${encodeURIComponent(`User already exists with email, please login to link to ${provider === 'github' ? 'Github' : 'Google'} account.`)}`,
+        `/login?error=${encodeURIComponent(`User already exists, please login to link to ${provider === 'github' ? 'Github' : 'Google'} account.`)}`,
       );
     } else {
       const insertCols = [
