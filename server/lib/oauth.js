@@ -61,8 +61,10 @@ async function getGitHubUser(accessToken) {
   return {
     id: String(userData.id),
     name: userData.name || userData.login,
-    login: userData.login,
     email: primaryEmail,
+    website: userData.blog,
+    github: userData.login,
+    x: userData.twitter_username,
     avatar_url: userData.avatar_url,
   };
 }

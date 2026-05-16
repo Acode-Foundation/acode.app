@@ -172,13 +172,13 @@ class User extends Entity {
       this.LINKEDIN,
       this.THRESHOLD,
       this.ACODE_PRO,
-      this.GITHUB_ID,
-      this.GOOGLE_ID,
       this.AVATAR_URL,
       this.CREATED_AT,
       this.UPDATED_AT,
       this.PRIMARY_AUTH,
       this.PRO_PURCHASED_AT,
+      'github_id IS NOT NULL AS github_id',
+      'google_id IS NOT NULL AS google_id',
     ];
   }
 
@@ -193,8 +193,6 @@ class User extends Entity {
       this.LINKEDIN,
       this.THRESHOLD,
       this.ACODE_PRO,
-      this.PRO_PURCHASE_TOKEN,
-      this.PRO_PURCHASED_AT,
       this.GITHUB_ID,
       this.GOOGLE_ID,
       this.PRIMARY_AUTH,
@@ -204,6 +202,8 @@ class User extends Entity {
       this.PASSWORD,
       this.CREATED_AT,
       this.UPDATED_AT,
+      this.PRO_PURCHASED_AT,
+      this.PRO_PURCHASE_TOKEN,
     ];
   }
 }

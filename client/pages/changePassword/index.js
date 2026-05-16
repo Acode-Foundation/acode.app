@@ -5,7 +5,7 @@ import SendOtp from 'components/sendOtp';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import background from 'lib/background';
-import { getLoggedInUser, loadingEnd, loadingStart } from 'lib/helpers';
+import { getLoggedInUser, loadingEnd, loadingStart, withRedirect } from 'lib/helpers';
 import Router from 'lib/Router';
 
 export default async function changePassword({ mode, redirect }) {
@@ -82,7 +82,7 @@ export default async function changePassword({ mode, redirect }) {
     errorText.value = '';
     successText.value = 'Password changed successfully.';
     setTimeout(() => {
-      Router.loadUrl(`/login?redirect=${redirect}`);
+      Router.loadUrl(withRedirect('/login', redirect));
     }, 3000);
   }
 

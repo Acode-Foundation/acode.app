@@ -5,11 +5,11 @@ import './main.scss';
 import './common.scss';
 import 'res/icons/style.css';
 
-import { getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
+import { getLoggedInUser, hideLoading, invalidateLoggedInUser, showLoading } from 'lib/helpers';
 import Router from 'lib/Router';
 import Theme from 'lib/theme';
 import dark from 'themes/dark';
-import View, { updateAccountButton } from './main.view';
+import View, { addProButton, updateAccountButton } from './main.view';
 
 document.addEventListener('DOMContentLoaded', () => {
   showLoading();
@@ -43,21 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.onload = async () => {
   const user = await getLoggedInUser();
   updateAccountButton(user);
-
-  // Show "Get Pro" button if user is not pro
-  if (!user?.acode_pro && process.env.RAZORPAY_ENABLED) {
-    const header = app.get('#main-header');
-    const navUser = header.get('nav:last-of-type');
-    if (navUser) {
-      const loginLink = navUser.get('a') || navUser.get('label');
-      navUser.insertBefore(
-        <a href='/pro' className='get-pro-btn'>
-          <span className='icon favorite' /> Get Pro
-        </a>,
-        loginLink,
-      );
-    }
-  }
+  addProButton(user);
 
   const main = app.get('main');
 
@@ -127,7 +113,15 @@ window.onload = async () => {
     });
 
     if (res.status === 200) {
-      window.location.replace('/');
+      sessionStorage.clear();
+      invalidateLoggedInUser();
+      updateAccountButton();
+      addProButton();
+      if (window.history.length > 1) {
+        window.history.go(-1);
+      } else {
+        window.location = '/';
+      }
     }
   }
 };

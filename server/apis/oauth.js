@@ -123,6 +123,7 @@ route.get('/google/callback', async (req, res) => {
 
 async function handleLink(provider, oauthUser, req, res) {
   const loggedInUser = await getLoggedInUser(req);
+
   if (!loggedInUser) {
     return res.redirect(`/login?error=${encodeURIComponent('You must be logged in to link an account')}`);
   }
@@ -131,21 +132,29 @@ async function handleLink(provider, oauthUser, req, res) {
   const existingById = await user.for('internal').get([idCol, oauthUser.id]);
 
   if (existingById.length && existingById[0].id !== loggedInUser.id) {
-    const target = provider === 'github' ? '/edit' : '/profile';
-    return res.redirect(`${target}?error=${encodeURIComponent(`This ${provider} account is already linked to another user.`)}`);
+    return res.redirect(`/profile/edit?error=${encodeURIComponent(`This ${provider} account is already linked to another user.`)}`);
   }
 
   if (existingById.length && existingById[0].id === loggedInUser.id) {
     return res.redirect(`/profile?error=${encodeURIComponent(`${provider} account already linked.`)}`);
   }
 
-  const updates = [
-    [idCol, oauthUser.id],
-    [user.AVATAR_URL, oauthUser.avatar_url],
-  ];
+  const updates = [[idCol, oauthUser.id]];
 
-  if (provider === 'github') {
-    updates.push([user.GITHUB, oauthUser.login]);
+  if (!loggedInUser.avatar_url && oauthUser.avatar_url) {
+    updates.push([user.AVATAR_URL, oauthUser.avatar_url]);
+  }
+
+  if (!loggedInUser.github && oauthUser.github) {
+    updates.push([user.GITHUB, oauthUser.github]);
+  }
+
+  if (!loggedInUser.x && oauthUser.x) {
+    updates.push([user.X, oauthUser.x]);
+  }
+
+  if (!loggedInUser.website && oauthUser.website) {
+    updates.push([user.WEBSITE, oauthUser.website]);
   }
 
   await user.update(updates, [user.ID, loggedInUser.id]);
@@ -168,16 +177,27 @@ async function handleLogin(provider, oauthUser, req, res) {
       );
     } else {
       const insertCols = [
+        [idCol, oauthUser.id],
         [user.NAME, oauthUser.name],
         [user.EMAIL, oauthUser.email],
-        [idCol, oauthUser.id],
-        [user.AVATAR_URL, oauthUser.avatar_url],
         [user.PRIMARY_AUTH, provider],
         [user.PASSWORD, generateRandomPassword()],
       ];
 
-      if (provider === 'github') {
-        insertCols.push([user.GITHUB, oauthUser.login]);
+      if (oauthUser.github) {
+        insertCols.push([user.GITHUB, oauthUser.github]);
+      }
+
+      if (oauthUser.avatar_url) {
+        insertCols.push([user.AVATAR_URL, oauthUser.avatar_url]);
+      }
+
+      if (oauthUser.x) {
+        insertCols.push([user.X, oauthUser.x]);
+      }
+
+      if (oauthUser.website) {
+        insertCols.push([user.WEBSITE, oauthUser.website]);
       }
 
       await user.insert(...insertCols);

@@ -145,7 +145,7 @@
       align-items: center;
       justify-content: space-around;
       flex-direction: column;
-      min-height: calc(100% - 20px);
+      height: calc(100% - 20px);
       width: 180px;
       background-color: var(--primary-color);
       color: var(--primary-text-color);
@@ -156,6 +156,8 @@
       user-select: none;
       -webkit-tap-highlight-color: transparent;
       transition: all 0.2s ease-in-out;
+      max-height: 60px;
+      box-sizing: border-box;
 
       &:first-child {
         margin-left: 0;
@@ -205,7 +207,7 @@
     width: fit-content;
 
     .icon.verified {
-      margin-left: 10px;
+      margin-left: 5px;
     }
   }
 

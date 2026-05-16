@@ -9,7 +9,7 @@ import background from 'lib/background';
 import { getLoggedInUser, loadingEnd, loadingStart, withRedirect } from 'lib/helpers';
 import Router from 'lib/Router';
 
-export default async function Login({ redirect }) {
+export default async function Login({ redirect = sessionStorage.getItem('redirect') }) {
   const errorText = Reactive('');
   const successText = Reactive('');
   const button = Ref();

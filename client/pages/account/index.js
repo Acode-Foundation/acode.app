@@ -209,9 +209,7 @@ function AuthButton({ type, user }) {
   let action = null;
 
   if (user[key]) {
-    if (user.primary_auth === type) {
-      action = <span className='oauth-primary-badge'>Primary</span>;
-    } else {
+    if (user.primary_auth !== type) {
       action = (
         <button
           type='button'
@@ -257,7 +255,7 @@ function AuthButton({ type, user }) {
       <span className={`icon ${type} oauth-link-icon`} />
       <span className='oauth-link-label'>
         {type === 'github' ? 'Github' : 'Google'}{' '}
-        {user[key] && <span className='icon check_circle oauth-status oauth-status--linked' title='Connected' />}
+        {Boolean(user[key]) && <span className='icon check_circle oauth-status oauth-status--linked' title='Connected' />}
       </span>
       {action}
     </div>

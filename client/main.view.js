@@ -142,7 +142,14 @@ export function updateAccountButton(user) {
 
   if (!user) {
     button = (
-      <a href='/login'>
+      <a
+        href='/login'
+        onclick={() => {
+          if (!location.pathname.toLowerCase().startsWith('/logout')) {
+            sessionStorage.setItem('redirect', location.pathname);
+          }
+        }}
+      >
         <span className='icon person' />
         Login
       </a>
@@ -170,4 +177,26 @@ export function updateAccountButton(user) {
 
   accountButtonRef.el.replaceWith(button);
   accountButtonRef.el = button;
+}
+
+export function addProButton(user) {
+  const header = app.get('#main-header');
+
+  if (!header) return;
+
+  const navUser = header.get('nav:last-of-type');
+
+  if (navUser.get('.get-pro-btn')) return;
+
+  if (!user?.acode_pro && process.env.RAZORPAY_ENABLED) {
+    if (navUser) {
+      const loginLink = navUser.get('a') || navUser.get('label');
+      navUser.insertBefore(
+        <a href='/pro' className='get-pro-btn'>
+          <span className='icon favorite' /> Get Pro
+        </a>,
+        loginLink,
+      );
+    }
+  }
 }

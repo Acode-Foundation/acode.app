@@ -100,6 +100,10 @@ export async function getLoggedInUser() {
   return user;
 }
 
+export function invalidateLoggedInUser() {
+  loggedInUser = null;
+}
+
 /**
  *
  * @param {HTMLElement} el
