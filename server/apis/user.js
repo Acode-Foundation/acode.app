@@ -416,9 +416,7 @@ route.put('/threshold', async (_req, res) => {
 });
 
 route.put('/', async (req, res) => {
-  const { email, name, github, website, x, linkedin } = req.body;
-
-  const { otp: sentOtp } = req.body;
+  const { email, name, github, website, x, linkedin, otp: sentOtp } = req.body;
 
   try {
     const loggedInUser = await getLoggedInUser(req);
