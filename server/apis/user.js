@@ -354,7 +354,7 @@ route.post('/payment-method', async (req, res) => {
 });
 
 route.post('/', async (req, res) => {
-  const { name, email, password, github = null, website = null, otp: sentOtp } = req.body;
+  const { name, email, password, otp: sentOtp } = req.body;
 
   if (!name) {
     res.status(400).send({ error: 'Missing name' });
@@ -376,11 +376,6 @@ route.post('/', async (req, res) => {
     return;
   }
 
-  if (!(await isValidGithubId(github))) {
-    res.status(400).send({ error: 'Invalid Github ID' });
-    return;
-  }
-
   const row = await User.get([User.EMAIL, email]);
 
   if (row.length) {
@@ -396,14 +391,7 @@ route.post('/', async (req, res) => {
       return;
     }
 
-    await User.insert(
-      [User.NAME, name],
-      [User.EMAIL, email],
-      [User.PASSWORD, encryptPassword(password)],
-      [User.WEBSITE, website],
-      [User.GITHUB, github],
-      [User.PRIMARY_AUTH, 'email'],
-    );
+    await User.insert([User.NAME, name], [User.EMAIL, email], [User.PASSWORD, encryptPassword(password)], [User.PRIMARY_AUTH, 'email']);
 
     res.send({ message: 'User created' });
   } catch (error) {
@@ -426,8 +414,18 @@ route.put('/', async (req, res) => {
       return;
     }
 
-    if (!(await isValidGithubId(github))) {
+    if (!isValidGithubId(github)) {
       res.status(400).send({ error: 'Invalid Github ID' });
+      return;
+    }
+
+    if (!isValidXId(x)) {
+      res.status(400).send({ error: 'Invalid X ID' });
+      return;
+    }
+
+    if (!isValidLinkedInId(linkedin)) {
+      res.status(400).send({ error: 'Invalid LinkedIn ID' });
       return;
     }
 
@@ -564,11 +562,28 @@ route.delete('/payment-method/:id', async (req, res) => {
 /**
  * Checks if the github id is valid
  * @param {string} id
- * @returns
  */
-async function isValidGithubId(id) {
+function isValidGithubId(id) {
   if (!id) return true;
   return /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i.test(id);
+}
+
+/**
+ * Checks if the linkedin id is valid
+ * @param {string} id
+ */
+function isValidLinkedInId(id) {
+  if (!id) return true;
+  return /^[a-zA-Z0-9-]{3,100}$/i.test(id);
+}
+
+/**
+ * Checks if the x id is valid
+ * @param {string} id
+ */
+function isValidXId(id) {
+  if (!id) return true;
+  return /^[A-Za-z0-9_]{1,15}$/i.test(id);
 }
 
 /**

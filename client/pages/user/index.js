@@ -114,7 +114,7 @@ export default async function User({ userId }) {
               </a>
             )}
             {user.linkedin && (
-              <a href={`https://linkedin.com${user.linkedin}`} target='_blank' rel='noopener'>
+              <a href={`https://linkedin.com/in/${user.linkedin}`} target='_blank' rel='noopener'>
                 <span className='icon linkedin' />
                 <span className='label'>{user.linkedin}</span>
               </a>
