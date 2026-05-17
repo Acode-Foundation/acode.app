@@ -137,6 +137,7 @@
 
   &.hidden {
     display: none;
+    --announcement-height: 0px;
   }
 
   &__close {

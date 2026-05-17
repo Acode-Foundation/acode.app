@@ -42,7 +42,7 @@
         "noForEach": "warn"
       },
       "suspicious": {
-        "noConsole": { "level": "error", "options": { "allow": ["error"] } }
+        "noConsole": { "level": "error", "options": { "allow": ["error", "warn"] } }
       },
       "style": {
         "noParameterAssign": "off",

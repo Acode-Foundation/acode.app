@@ -61,6 +61,11 @@ class Particle {
  * @param {HTMLCanvasElement} canvas
  */
 export default function background(canvas) {
+  if ('deviceMemory' in navigator && navigator.deviceMemory < 4) {
+    console.warn('Animation disabled due to low memory');
+    return;
+  }
+
   canvas.width = window.innerWidth * 2;
   canvas.height = window.innerHeight * 2;
 
