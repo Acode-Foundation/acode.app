@@ -145,7 +145,7 @@ export function updateAccountButton(user) {
       <a
         href='/login'
         onclick={() => {
-          if (!location.pathname.toLowerCase().startsWith('/logout')) {
+          if (!/\/(logout|login|change-password)/i.test(location.pathname)) {
             sessionStorage.setItem('redirect', location.pathname);
           }
         }}

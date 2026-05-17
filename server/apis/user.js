@@ -1,7 +1,8 @@
 const { Router } = require('express');
 const moment = require('moment');
+const crypto = require('node:crypto');
 const { encryptPassword } = require('../password');
-const { getLoggedInUser, areSameUser } = require('../lib/helpers');
+const { getLoggedInUser, areSameUser, getToken } = require('../lib/helpers');
 const Comment = require('../entities/comment');
 const Otp = require('../entities/otp');
 const User = require('../entities/user');
@@ -10,8 +11,60 @@ const PaymentMethod = require('../entities/paymentMethod');
 const UserEarnings = require('../entities/userEarnings');
 const calcEarnings = require('../lib/calcEarnings');
 const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
+const login = require('../entities/login');
 
 const route = Router();
+
+const appTokenRateLimit = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
+
+route.post('/app-token', appTokenRateLimit, async (req, res) => {
+  try {
+    const user = await getLoggedInUser(req);
+    if (!user) {
+      res.status(401).send('User not logged in');
+      return;
+    }
+
+    const userToken = getToken(req);
+
+    if (!userToken) {
+      res.status(401).send('User not logged in');
+      return;
+    }
+
+    const [userLoginRow] = await login.get(login.columns, [login.TOKEN, userToken]);
+
+    if (userLoginRow?.type !== 'web') {
+      res.status(401).send('You are not authorized to generate tokens');
+      return;
+    }
+
+    const [loginRow] = await login.get(login.columns, [
+      [login.USER_ID, user.id],
+      [login.TYPE, 'app'],
+    ]);
+
+    const token = crypto.randomBytes(64).toString('hex');
+    const expiredAt = moment().add(150, 'day').format('YYYY-MM-DD HH:mm:ss.sss');
+
+    if (loginRow) {
+      await login.update(
+        [
+          [login.TOKEN, token],
+          [login.EXPIRED_AT, expiredAt],
+        ],
+        [login.ID, loginRow.id],
+      );
+    } else {
+      await login.insert([login.USER_ID, user.id], [login.TOKEN, token], [login.EXPIRED_AT, expiredAt], [login.TYPE, 'app']);
+    }
+
+    res.send({ token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Failed to get app token');
+  }
+});
 
 route.get('/payment-methods', async (req, res) => {
   try {
@@ -632,7 +685,43 @@ async function getAuthorizedUser(req) {
  * @param {Error} error
  */
 function handleError(res, error) {
+  console.log(error);
   res.status(error.code || 500).send({ error: error.message });
+}
+
+function createRateLimiter({ windowMs, max }) {
+  const store = new Map();
+
+  const cleanup = () => {
+    const now = Date.now();
+    for (const [key, entry] of store) {
+      if (now > entry.resetAt) {
+        store.delete(key);
+      }
+    }
+  };
+
+  setInterval(cleanup, 60 * 1000).unref();
+
+  return (req, res, next) => {
+    const key = req.ip || req.socket?.remoteAddress || 'unknown';
+    const now = Date.now();
+    const entry = store.get(key);
+
+    if (!entry || now > entry.resetAt) {
+      store.set(key, { count: 1, resetAt: now + windowMs });
+      next();
+      return;
+    }
+
+    if (entry.count >= max) {
+      res.status(429).send({ error: 'Too many requests. Please try again later.' });
+      return;
+    }
+
+    entry.count++;
+    next();
+  };
 }
 
 module.exports = route;

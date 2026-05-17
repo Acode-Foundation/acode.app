@@ -4,6 +4,7 @@ const table = `create table if not exists login (
   id integer primary key,
   user_id integer not null,
   token text not null,
+  type text default 'web',
   created_at timestamp default current_timestamp,
   expired_at date,
   foreign key (user_id) references user(id)
@@ -11,11 +12,10 @@ const table = `create table if not exists login (
 
 class Login extends Entity {
   ID = 'id';
-  USER_ID = 'user_id';
+  TYPE = 'type';
   TOKEN = 'token';
-  IP = 'ip';
+  USER_ID = 'user_id';
   CREATED_AT = 'created_at';
-  UPDATED_AT = 'updated_at';
   EXPIRED_AT = 'expired_at';
 
   constructor() {
@@ -23,7 +23,7 @@ class Login extends Entity {
   }
 
   get columns() {
-    return [this.ID, this.USER_ID, this.TOKEN, this.IP, this.CREATED_AT, this.UPDATED_AT, this.EXPIRED_AT];
+    return [this.ID, this.TYPE, this.USER_ID, this.TOKEN, this.CREATED_AT, this.EXPIRED_AT];
   }
 }
 

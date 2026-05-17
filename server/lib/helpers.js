@@ -13,23 +13,21 @@ const user = require('../entities/user');
  * @returns {Promise<LoggedInUser & User>}
  */
 async function getLoggedInUser(req) {
-  let { token } = req.cookies;
-
-  if (!token) {
-    token = req.headers['x-auth-token'];
-
-    if (!token) {
-      return null;
-    }
+  if (req.user) {
+    return req.user;
   }
 
-  const row = await login.get([login.TOKEN, token]);
+  const token = getToken(req);
 
-  if (!row.length) {
+  if (!token) return null;
+
+  const loginRow = await login.get([login.TOKEN, token]);
+
+  if (!loginRow.length) {
     return null;
   }
 
-  const { user_id: userId, expired_at: expiredAt } = row[0];
+  const { user_id: userId, expired_at: expiredAt } = loginRow[0];
 
   if (expiredAt && moment().isAfter(moment(expiredAt))) {
     return null;
@@ -47,7 +45,21 @@ async function getLoggedInUser(req) {
     loggedInUser.isAdmin = true;
   }
 
+  req.user = loggedInUser;
   return loggedInUser;
+}
+
+function getToken(req) {
+  let { token } = req.cookies;
+
+  if (!token) {
+    token = req.headers['x-auth-token'];
+
+    if (!token) {
+      return null;
+    }
+  }
+  return token;
 }
 
 function getPluginSKU(id) {
@@ -99,4 +111,5 @@ module.exports = {
   areSameUser,
   getLoggedInUser,
   getPluginSKU,
+  getToken,
 };

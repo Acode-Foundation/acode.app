@@ -18,7 +18,17 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
   try {
     const user = await getLoggedInUser();
     if (user) {
-      redirectAfterDone(getCookie('token'));
+      const res = await fetch('/api/user/app-token', { method: 'POST' });
+
+      if (!res.ok) {
+        return <div className='error'>Failed to create token, something went wrong.</div>;
+      }
+
+      const data = await res.json();
+      if (!data.token) {
+        return <div className='error'>Failed to create token, something went wrong.</div>;
+      }
+      redirectAfterDone(data.token);
       return (
         <section id='user-login'>
           <div className='redirect-message'>
@@ -125,14 +135,4 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
       window.location.replace(redirect || '/');
     }, 1000);
   }
-}
-
-function getCookie(name) {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-
-  if (parts.length === 2) {
-    return parts.pop().split(';').shift();
-  }
-  return null;
 }
