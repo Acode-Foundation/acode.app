@@ -58,7 +58,7 @@ window.onload = async () => {
   Router.add('/contact', () => loadModule('contactUs'));
 
   if (process.env.RAZORPAY_ENABLED) {
-    Router.add('/pro', () => loadModule('pro'));
+    Router.add('/pro', (_params, query) => loadModule('pro', query));
   }
 
   Router.add('/login', (_params, query) => loadModule('login', query));

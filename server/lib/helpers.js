@@ -1,6 +1,7 @@
 const moment = require('moment');
 const login = require('../entities/login');
 const user = require('../entities/user');
+const db = require('./db');
 
 /**
  * @typedef {object} LoggedInUser
@@ -107,9 +108,35 @@ function getUid(u) {
   }
 }
 
+/**
+ * Get sqlite time
+ * @returns {string}
+ */
+function getDbTime() {
+  const [row] = db.prepare('select current_timestamp as now').all();
+  return row.now;
+}
+
+/**
+ * Parse sqlite db time
+ * @param {string} time
+ * @returns
+ */
+function parseDbTime(time) {
+  time = time.replace(/z+$/i, 'Z');
+
+  if (!time.toLowerCase().endsWith('z')) {
+    time = `${time}Z`;
+  }
+
+  return new Date(time);
+}
+
 module.exports = {
   areSameUser,
   getLoggedInUser,
   getPluginSKU,
   getToken,
+  getDbTime,
+  parseDbTime,
 };

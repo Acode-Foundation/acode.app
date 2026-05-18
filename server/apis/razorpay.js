@@ -4,7 +4,7 @@ const Plugin = require('../entities/plugin');
 const Order = require('../entities/purchaseOrder');
 const User = require('../entities/user');
 const AppConfig = require('../entities/appConfig');
-const { getLoggedInUser } = require('../lib/helpers');
+const { getLoggedInUser, getDbTime, parseDbTime } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
 const { REFUND_WINDOW_MS } = require('../../constants.mjs');
 const getRazorpay = require('../lib/razorpay');
@@ -233,7 +233,7 @@ router.get('/my-purchases', async (req, res) => {
         if (!plugin) return null;
 
         const provider = order.provider || 'google_play';
-        const elapsed = Date.now() - new Date(`${order.created_at}Z`).getTime();
+        const elapsed = Date.now() - parseDbTime(order.created_at).getTime();
         const refundEligible = provider === 'razorpay' && elapsed <= REFUND_WINDOW_MS;
 
         return {
@@ -320,7 +320,7 @@ router.post('/webhook', async (req, res) => {
               [
                 [User.ACODE_PRO, 1],
                 [User.PRO_PURCHASE_TOKEN, paymentId],
-                [User.PRO_PURCHASED_AT, new Date().toISOString()],
+                [User.PRO_PURCHASED_AT, getDbTime()],
               ],
               [User.ID, notes.userId],
             );
@@ -470,7 +470,7 @@ router.get('/pro-status', async (req, res) => {
     let refundEligible = false;
 
     if (isPro && user.pro_purchased_at) {
-      const elapsed = Date.now() - new Date(`${user.pro_purchased_at}Z`).getTime();
+      const elapsed = Date.now() - parseDbTime(user.pro_purchased_at).getTime();
       refundEligible = elapsed <= REFUND_WINDOW_MS;
     }
 

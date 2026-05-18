@@ -5,7 +5,7 @@ import { initiateProCheckout } from 'components/razorpayCheckout';
 import Ref from 'html-tag-js/ref';
 import { getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
 
-export default async function Pro() {
+export default async function Pro({ redirect }) {
   const statusRef = Ref();
   const loggedInUser = await getLoggedInUser();
 
@@ -126,6 +126,20 @@ export default async function Pro() {
     );
   }
 
+  /**
+   * On success
+   * @param {'buy'|'refund'} action
+   * @returns
+   */
+  function onSuccess(action) {
+    if (redirect === 'app') {
+      window.location = `acode://pro/${action}/`;
+      return;
+    }
+
+    window.location.reload();
+  }
+
   async function handleBuy() {
     const btn = statusRef.el.get('.btn-buy');
     if (btn) btn.disabled = true;
@@ -133,9 +147,7 @@ export default async function Pro() {
     const userInfo = { email: loggedInUser.email, name: loggedInUser.name };
     await initiateProCheckout(
       userInfo,
-      () => {
-        window.location.reload();
-      },
+      () => onSuccess('buy'),
       () => {
         if (btn) btn.disabled = false;
       },
@@ -155,7 +167,7 @@ export default async function Pro() {
       const data = await res.json();
 
       if (data.success) {
-        window.location.reload();
+        onSuccess('refund');
       } else {
         alert('Error', data.error || 'Failed to process refund');
       }
