@@ -20,6 +20,7 @@ const ID_COL = {
 };
 
 function validatedRedirect(url) {
+  if (url === 'app') return '/login?redirect=app';
   if (!url || typeof url !== 'string') return null;
   if (!/^\/[^/]/.test(url)) return null;
   return url;
@@ -55,17 +56,13 @@ route.get('/github/callback', async (req, res) => {
     const oauthRedirect = req.cookies.oauth_redirect;
     res.clearCookie('oauth_redirect');
 
-    if (oauthRedirect) {
-      req.query.redirect = oauthRedirect;
-    }
-
     const accessToken = await getGitHubToken(code);
     const ghUser = await getGitHubUser(accessToken);
 
     if (intent === 'link') {
       await handleLink('github', ghUser, req, res);
     } else {
-      await handleLogin('github', ghUser, req, res);
+      await handleLogin('github', ghUser, res, oauthRedirect);
     }
   } catch (error) {
     console.error('GitHub OAuth error:', error);
@@ -103,17 +100,13 @@ route.get('/google/callback', async (req, res) => {
     const oauthRedirect = req.cookies.oauth_redirect;
     res.clearCookie('oauth_redirect');
 
-    if (oauthRedirect) {
-      req.query.redirect = oauthRedirect;
-    }
-
     const accessToken = await getGoogleToken(code);
     const googleUser = await getGoogleUser(accessToken);
 
     if (intent === 'link') {
       await handleLink('google', googleUser, req, res);
     } else {
-      await handleLogin('google', googleUser, req, res);
+      await handleLogin('google', googleUser, res, oauthRedirect);
     }
   } catch (error) {
     console.error('Google OAuth error:', error);
@@ -162,7 +155,7 @@ async function handleLink(provider, oauthUser, req, res) {
   return res.redirect(`/profile?linked=${provider}`);
 }
 
-async function handleLogin(provider, oauthUser, req, res) {
+async function handleLogin(provider, oauthUser, res, redirect) {
   const idCol = ID_COL[provider];
   let userRow;
 
@@ -207,7 +200,7 @@ async function handleLogin(provider, oauthUser, req, res) {
   }
 
   await issueTokenAndLogin(userRow.id, res);
-  res.redirect(validatedRedirect(req.query.redirect) || '/');
+  res.redirect(validatedRedirect(redirect) || '/');
 }
 
 module.exports = route;
