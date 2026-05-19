@@ -101,7 +101,7 @@ export default async function home() {
 
       <div className='from-the-creator'>
         <div className='section-header'>
-          <h2>Announcements</h2>
+          <h2>Learn</h2>
         </div>
         <ProjectCard
           logo='https://academy.acode.app/icon.png'

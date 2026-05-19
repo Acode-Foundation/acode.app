@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { href: '/faqs', text: 'FAQs' },
         { href: 'https://docs.acode.app', text: 'Plugin Docs' },
         { href: '/plugins', text: 'Plugins' },
+        { href: 'https://academy.acode.app', text: 'Learn' },
       ]}
     />
   );
