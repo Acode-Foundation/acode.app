@@ -172,7 +172,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
               </div>
             )}
           </div>
-          {purchaseInfo?.refundEligible && (
+          {Boolean(purchaseInfo?.refundEligible) && (
             <button type='button' className='refund-button' onclick={refundHandler}>
               <span className='icon replay' />
               <span>Request Refund</span>
@@ -295,7 +295,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
           </div>
         </div>
       </div>
-      {process.env.RAZORPAY_ENABLED && price && (
+      {Boolean(process.env.RAZORPAY_ENABLED && price) && (
         <div className='plugin-head'>
           <PurchaseSection />
           <div className='website-purchase-info'>
@@ -431,7 +431,10 @@ async function renderOrders(ref, pluginId, year, month) {
         <td className='date'>{date}</td>
         <td className='date'>{packageName}</td>
         <td>{provider}</td>
-        <td className='amount'>&#8377; {order.amount.toFixed(2)}</td>
+        <td className='amount' style={{ whiteSpace: 'nowrap' }}>
+          {order.currency}
+          {order.amount.toFixed(2)}
+        </td>
         <td className={`order-status ${statusClass}`}>{statusLabel}</td>
       </tr>,
     );
