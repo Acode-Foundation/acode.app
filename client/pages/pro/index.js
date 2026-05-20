@@ -1,4 +1,5 @@
 import './style.scss';
+import CurrencySelector from 'components/currencySelector';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import { initiateProCheckout } from 'components/razorpayCheckout';
@@ -12,14 +13,14 @@ export default async function Pro({ redirect }) {
   showLoading();
   let proStatus;
   try {
-    const res = await fetch('/api/razorpay/pro-status');
-    proStatus = await res.json();
+    proStatus = await fetch('/api/razorpay/pro-status').then((res) => res.json());
   } catch {
-    proStatus = { isPro: false, price: 370, refundEligible: false };
+    return <div className='error'>Something went wrong!</div>;
+  } finally {
+    hideLoading();
   }
-  hideLoading();
 
-  const { isPro, price, refundEligible, purchasedAt } = proStatus;
+  const { isPro, refundEligible, purchasedAt } = proStatus;
 
   return (
     <section id='pro-page'>
@@ -78,10 +79,10 @@ export default async function Pro({ redirect }) {
     if (!loggedInUser) {
       return (
         <div className='login-prompt'>
-          <div className='price-tag'>
-            <span className='currency'>&#8377;</span>
-            <span className='amount'>{price}</span>
-          </div>
+          <CurrencySelector className='price-tag'>
+            <span className='currency'>{proStatus.symbol}</span>
+            <span className='amount'>{proStatus.price}</span>
+          </CurrencySelector>
           <a href={`/login?redirect=/pro`} className='btn primary'>
             Login to Purchase
           </a>
@@ -113,10 +114,10 @@ export default async function Pro({ redirect }) {
 
     return (
       <div className='buy-section'>
-        <div className='price-tag'>
-          <span className='currency'>&#8377;</span>
-          <span className='amount'>{price}</span>
-        </div>
+        <CurrencySelector className='price-tag'>
+          <span className='currency'>{proStatus.symbol}</span>
+          <span className='amount'>{proStatus.price}</span>
+        </CurrencySelector>
         <button type='button' className='btn-buy' onclick={handleBuy}>
           <span className='icon favorite' />
           <span>Get Acode Pro</span>

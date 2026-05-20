@@ -9,9 +9,10 @@ const User = require('../entities/user');
 const Order = require('../entities/purchaseOrder');
 const Download = require('../entities/download');
 const badWords = require('../badWords.json');
-const { getLoggedInUser, getPluginSKU } = require('../lib/helpers');
+const { getLoggedInUser, getPluginSKU, detectUserCurrency, formatAmount } = require('../lib/helpers');
 const getRazorpay = require('../lib/razorpay');
 const sendEmail = require('../lib/sendEmail');
+const { convertPrice } = require('../lib/exchangeRates');
 
 const androidpublisher = google.androidpublisher('v3');
 
@@ -327,38 +328,11 @@ router.get('{/:pluginId}', async (req, res) => {
     }
 
     const rows = await Plugin.get(columns, where, options);
-
-    if (pluginId) {
-      const row = rows[0];
-      if (!row) {
-        res.status(404).send({ error: 'Not found' });
-        return;
-      }
-
-      if (loggedInUser) {
-        if (row.price) {
-          const [userOrder] = await Order.for('internal').get(
-            [Order.PLUGIN_ID],
-            [
-              [Order.USER_ID, loggedInUser.id],
-              [Order.PLUGIN_ID, row.id],
-              [Order.STATE, Order.STATE_PURCHASED],
-            ],
-          );
-          row.owned = !!userOrder;
-        } else {
-          row.owned = true;
-        }
-      }
-
-      res.send(row);
-      return;
-    }
+    const currency = detectUserCurrency(req);
+    const paidPluginIds = rows.filter((r) => r.price).map((r) => r.id);
+    let ownedIds = new Set();
 
     if (loggedInUser) {
-      const paidPluginIds = rows.filter((r) => r.price).map((r) => r.id);
-      let ownedIds = new Set();
-
       if (paidPluginIds.length) {
         const ownedOrders = await Order.for('internal').get(
           [Order.PLUGIN_ID],
@@ -370,10 +344,28 @@ router.get('{/:pluginId}', async (req, res) => {
         );
         ownedIds = new Set(ownedOrders.map((o) => String(o.plugin_id)));
       }
+    }
 
-      for (const row of rows) {
-        row.owned = !row.price || ownedIds.has(String(row.id));
+    for (const row of rows) {
+      if (row.price) {
+        const converted = await convertPrice(row.price, currency.code);
+        row.price = formatAmount(converted.amount, currency.code);
+        row.currency = currency.code;
+        row.currencySymbol = currency.symbol;
       }
+
+      row.owned = !row.price || ownedIds.has(String(row.id));
+    }
+
+    if (pluginId) {
+      const row = rows[0];
+      if (!row) {
+        res.status(404).send({ error: 'Not found' });
+        return;
+      }
+
+      res.send(row);
+      return;
     }
 
     res.send(rows);
@@ -488,7 +480,7 @@ router.post('/', async (req, res) => {
     if (price) {
       if (price < MIN_PRICE || price > MAX_PRICE) {
         res.status(400).send({
-          error: `Price should be between INR ${MIN_PRICE} and INR ${MAX_PRICE}`,
+          error: `Price should be between ₹${MIN_PRICE} and ₹${MAX_PRICE}`,
         });
         return;
       }

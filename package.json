@@ -48,6 +48,7 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "express-fileupload": "^1.5.2",
+    "geoip-lite": "^2.0.2",
     "github-buttons": "^2.29.1",
     "googleapis": "^171.4.0",
     "handlebars": "^4.7.9",

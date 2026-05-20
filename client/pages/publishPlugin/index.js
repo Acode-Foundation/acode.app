@@ -26,7 +26,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
   const pluginName = Reactive(plugin?.name);
   const license = Reactive(plugin?.license);
   const pluginVersion = Reactive(plugin?.version);
-  const pluginPrice = Reactive(+plugin?.price ? `INR ${plugin.price}` : 'Free');
+  const pluginPrice = Reactive(+plugin?.price ? `₹${plugin.price}` : 'Free');
   const keywords = Reactive(plugin?.keywords && json(plugin.keywords)?.join(', '));
   const contributors = Reactive(
     plugin?.contributors &&
@@ -277,7 +277,7 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
         }
 
         if (+manifest.price) {
-          pluginPrice.value = `INR ${manifest.price || 0}`;
+          pluginPrice.value = `₹${manifest.price || 0}`;
         } else {
           pluginPrice.value = 'Free';
         }

@@ -4,6 +4,7 @@ const table = `CREATE TABLE IF NOT EXISTS purchase_order (
   id INTEGER PRIMARY KEY,
   package TEXT NOT NULL,
   amount INTEGER NOT NULL,
+  currency TEXT DEFAULT "INR",
   plugin_id INTEGER NOT NULL,
   order_id VARCHAR(255),
   token TEXT NOT NULL UNIQUE,
@@ -32,6 +33,7 @@ class PurchaseOrder extends Entity {
   UPDATED_AT = 'updated_at';
   ORDER_ID = 'order_id';
   AMOUNT = 'amount';
+  CURRENCY = 'currency';
   STATE = 'state';
   USER_ID = 'user_id';
   PROVIDER = 'provider';
@@ -48,7 +50,7 @@ class PurchaseOrder extends Entity {
   }
 
   get minColumns() {
-    return [this.PACKAGE, this.AMOUNT, this.STATE, this.CREATED_AT, this.ORDER_ID, this.PROVIDER];
+    return [this.PACKAGE, this.AMOUNT, this.CURRENCY, this.STATE, this.CREATED_AT, this.ORDER_ID, this.PROVIDER];
   }
 }
 

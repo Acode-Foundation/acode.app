@@ -5,7 +5,6 @@
 
 import alert from 'components/dialogs/alert';
 import Ref from 'html-tag-js/ref';
-import { formatPrice } from 'lib/helpers';
 
 // Load Razorpay script dynamically
 let razorpayLoaded = false;
@@ -116,14 +115,13 @@ export async function initiateCheckout(pluginId, userInfo = {}, onSuccess, onCan
           const verifyData = await verifyRes.json();
 
           if (verifyData.success) {
-            alert('SUCCESS', 'Payment successful! You can now download this plugin.');
-            if (onSuccess) onSuccess();
+            alert('SUCCESS', 'Payment successful! You can now download this plugin.', onSuccess);
           } else {
-            alert('ERROR', verifyData.error || 'Payment verification failed');
+            alert('ERROR', verifyData.error || 'Payment verification failed', onCancel);
           }
         } catch (error) {
           console.error('Verification error:', error);
-          alert('ERROR', 'Payment may have succeeded but verification failed. Please contact support if charged.');
+          alert('ERROR', 'Payment may have succeeded but verification failed. Please contact support if charged.', onCancel);
         }
       },
       // Prefill user information (email preferred over contact for web)
@@ -160,6 +158,7 @@ export async function initiateCheckout(pluginId, userInfo = {}, onSuccess, onCan
     });
     rzp.open();
   } catch (error) {
+    if (onCancel) onCancel();
     console.error('Checkout error:', error);
     alert('ERROR', error.message || 'Failed to initiate checkout');
   }
@@ -217,14 +216,13 @@ export async function initiateProCheckout(userInfo = {}, onSuccess, onCancel) {
           const verifyData = await verifyRes.json();
 
           if (verifyData.success) {
-            alert('SUCCESS', 'Thank you for supporting Acode! Pro features are now active.');
-            if (onSuccess) onSuccess();
+            alert('SUCCESS', 'Thank you for supporting Acode! Pro features are now active.', onSuccess);
           } else {
-            alert('ERROR', verifyData.error || 'Payment verification failed');
+            alert('ERROR', verifyData.error || 'Payment verification failed', onCancel);
           }
         } catch (error) {
           console.error('Verification error:', error);
-          alert('ERROR', 'Payment may have succeeded but verification failed. Please contact support if charged.');
+          alert('ERROR', 'Payment may have succeeded but verification failed. Please contact support if charged.', onCancel);
         }
       },
       prefill: {
@@ -264,12 +262,13 @@ export async function initiateProCheckout(userInfo = {}, onSuccess, onCancel) {
  * Buy Button Component for paid plugins
  * @param {Object} props
  * @param {string} props.pluginId - Plugin ID
- * @param {number} props.price - Plugin price in INR
+ * @param {number} props.price - Plugin price
+ * @param {number} props.currency - Plugin price currency
  * @param {Object} [props.user] - Logged in user object
  * @param {Function} [props.onPurchaseComplete] - Callback after successful purchase
  * @returns {HTMLElement}
  */
-export default function BuyButton({ pluginId, price, user, onPurchaseComplete }) {
+export default async function BuyButton({ pluginId, user, onPurchaseComplete }) {
   const buttonRef = Ref();
   const buttonTextRef = Ref();
 
@@ -284,7 +283,7 @@ export default function BuyButton({ pluginId, price, user, onPurchaseComplete })
     };
 
     const handleCancel = () => {
-      buttonTextRef.el.textContent = `Buy ₹${formatPrice(price)}`;
+      buttonTextRef.el.textContent = 'Buy';
       buttonRef.el.disabled = false;
     };
 
@@ -295,7 +294,7 @@ export default function BuyButton({ pluginId, price, user, onPurchaseComplete })
   return (
     <button ref={buttonRef} type='button' className='buy-button' onclick={handleClick}>
       <span className='icon shopping_cart' />
-      <span ref={buttonTextRef}>Buy ₹{formatPrice(price)}</span>
+      <span ref={buttonTextRef}>Buy</span>
     </button>
   );
 }

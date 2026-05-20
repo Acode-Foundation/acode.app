@@ -88,7 +88,7 @@
       "type": "string"
     },
     "price": {
-      "description": "Price of the plugin in INR (Indian Rupees). If set to 0 or omitted, the plugin is free. This attribute allows for monetization of plugins with a defined price range.",
+      "description": "Base price of the plugin in INR (Indian Rupees). Displayed in user's local currency during checkout.",
       "maximum": 10000,
       "minimum": 0,
       "type": "integer"

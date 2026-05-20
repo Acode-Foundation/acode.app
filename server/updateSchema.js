@@ -13,6 +13,8 @@ const queries = [
   'ALTER TABLE user ADD COLUMN x TEXT',
   'ALTER TABLE user ADD COLUMN linkedin TEXT',
   "ALTER TABLE login ADD COLUMN type TEXT DEFAULT 'web'",
+  "ALTER TABLE purchase_order ADD COLUMN currency TEXT default 'INR'",
+  "UPDATE purchase_order SET currency = 'INR' WHERE currency IS NULL",
 ];
 
 (async () => {
