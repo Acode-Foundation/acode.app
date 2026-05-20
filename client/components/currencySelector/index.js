@@ -83,8 +83,8 @@ export default async function CurrencySelector({ className }, children) {
     dorpDown.style.removeProperty('width');
     dorpDown.style.removeProperty('bottom');
     dorpDown.style.removeProperty('left');
-    dorpDown.style.top = targetRect.bottom;
-    dorpDown.style.right = window.innerWidth - targetRect.right;
+    dorpDown.style.top = `${targetRect.bottom}px`;
+    dorpDown.style.right = `${window.innerWidth - targetRect.right}px`;
 
     app.append(mask, dorpDown);
     Router.on('navigate', hide);
