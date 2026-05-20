@@ -57,12 +57,12 @@ router.post('/create-order', async (req, res) => {
 
     const currency = detectUserCurrency(req);
     const converted = await convertPrice(plugin.price, currency.code);
-    const subunitMultiplier = 10 ** getSubunitDigits(currency.code);
+    const subunitMultiplier = 10 ** getSubunitDigits(converted.currency);
     const receipt = `p_${plugin.id}_${user.id}`.slice(0, 40);
     const finalAmount = Math.round(converted.amount * subunitMultiplier);
     const order = await getRazorpay().orders.create({
       amount: finalAmount,
-      currency: currency.code,
+      currency: converted.currency,
       receipt,
       notes: {
         userId: user.id,
@@ -71,7 +71,7 @@ router.post('/create-order', async (req, res) => {
         userEmail: user.email,
         original_amount_inr: plugin.price,
         original_currency: 'INR',
-        target_currency: currency.code,
+        target_currency: converted.currency,
         exchange_rate: converted.rate,
       },
     });
@@ -85,7 +85,7 @@ router.post('/create-order', async (req, res) => {
       pluginId: plugin.id,
       userEmail: user.email,
       originalPrice: plugin.price,
-      displayCurrency: currency.code,
+      displayCurrency: converted.currency,
     });
   } catch (error) {
     console.error('Razorpay create order error:', error);
@@ -505,9 +505,9 @@ router.get('/pro-status', async (req, res) => {
     if (!user) {
       res.send({
         isPro: false,
-        price: formatAmount(converted.amount, currency.code),
-        currency: currency.code,
-        symbol: currency.symbol,
+        price: formatAmount(converted.amount, converted.currency),
+        currency: converted.currency,
+        symbol: converted.symbol,
         refundEligible: false,
       });
       return;
@@ -524,9 +524,9 @@ router.get('/pro-status', async (req, res) => {
     res.send({
       isPro,
       refundEligible,
-      currency: currency.code,
-      symbol: currency.symbol,
-      price: formatAmount(converted.amount, currency.code),
+      currency: converted.currency,
+      symbol: converted.symbol,
+      price: formatAmount(converted.amount, converted.currency),
       purchasedAt: user.pro_purchased_at || null,
     });
   } catch (error) {
@@ -555,11 +555,11 @@ router.post('/create-pro-order', async (req, res) => {
     const price = Number(await AppConfig.getValue('acode_pro_price'));
     const currency = detectUserCurrency(req);
     const converted = await convertPrice(price, currency.code);
-    const subunitMultiplier = 10 ** getSubunitDigits(currency.code);
+    const subunitMultiplier = 10 ** getSubunitDigits(converted.currency);
     const receipt = `pro_${user.id}`.slice(0, 40);
     const order = await getRazorpay().orders.create({
       amount: Math.round(converted.amount * subunitMultiplier),
-      currency: currency.code,
+      currency: converted.currency,
       receipt,
       notes: {
         type: 'acode_pro',
@@ -567,7 +567,7 @@ router.post('/create-pro-order', async (req, res) => {
         userEmail: user.email,
         original_amount_inr: price,
         original_currency: 'INR',
-        target_currency: currency.code,
+        target_currency: converted.currency,
         exchange_rate: converted.rate,
       },
     });
@@ -579,7 +579,7 @@ router.post('/create-pro-order', async (req, res) => {
       keyId: process.env.PG_KEY_ID,
       userEmail: user.email,
       originalPrice: price,
-      displayCurrency: currency.code,
+      displayCurrency: converted.currency,
     });
   } catch (error) {
     console.error('Razorpay create pro order error:', error);

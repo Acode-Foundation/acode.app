@@ -349,9 +349,9 @@ router.get('{/:pluginId}', async (req, res) => {
     for (const row of rows) {
       if (row.price) {
         const converted = await convertPrice(row.price, currency.code);
-        row.price = formatAmount(converted.amount, currency.code);
-        row.currency = currency.code;
-        row.currencySymbol = currency.symbol;
+        row.price = formatAmount(converted.amount, converted.currency);
+        row.currency = converted.currency;
+        row.currencySymbol = converted.symbol;
       }
 
       row.owned = !row.price || ownedIds.has(String(row.id));

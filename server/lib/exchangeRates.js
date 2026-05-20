@@ -1,8 +1,12 @@
 const { FALLBACK_CURRENCY } = require('./currencyMap');
-const { getSubunitDigits } = require('./currencyMap');
+const { getSubunitDigits, getCurrencySymbol } = require('./currencyMap');
 
 const CACHE_TTL = 3600000;
 const API_URL = `https://v6.exchangerate-api.com/v6/${process.env.EXCHANGERATE_API}/latest/INR`;
+
+if (!process.env.EXCHANGERATE_API) {
+  console.error('EXCHANGERATE_API environment variable is not set. Currency conversion will be unavailable.');
+}
 
 let cache = {
   rates: null,
@@ -79,12 +83,21 @@ async function convertPrice(amountInINR, targetCurrency) {
       amount,
       cached: true,
       currency: 'INR',
+      symbol: '₹',
     };
   }
 
   const result = await getRates();
   if (!result) {
-    throw new Error('Error fetching exchange rates');
+    console.warn(`Exchange rates unavailable, returning INR price for ${target}`);
+    return {
+      rate: 1,
+      amount,
+      currency: 'INR',
+      symbol: '₹',
+      cached: false,
+      fallback: true,
+    };
   }
 
   const rate = result.rates[target];
@@ -105,6 +118,7 @@ async function convertPrice(amountInINR, targetCurrency) {
     rate: Number(rate),
     cached: result.cached,
     amount: convertedAmount,
+    symbol: getCurrencySymbol(target),
   };
 }
 
