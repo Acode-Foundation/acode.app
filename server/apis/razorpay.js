@@ -258,7 +258,7 @@ router.get('/my-purchases/:pluginId', async (req, res) => {
         const provider = order.provider || 'google_play';
         const elapsed = Date.now() - parseDbTime(order.created_at).getTime();
         const refundEligible = provider === 'razorpay' && elapsed <= REFUND_WINDOW_MS;
-        const currency = CURRENCIES[order.currency.toUpperCase()];
+        const currency = order.currency ? CURRENCIES[order.currency.toUpperCase()] : null;
 
         return {
           ...plugin,
@@ -266,7 +266,7 @@ router.get('/my-purchases/:pluginId', async (req, res) => {
           purchasedAt: order.created_at,
           purchaseAmount: formatAmount(order.amount, order.currency),
           purchaseAmountCurrency: order.currency,
-          purchaseAmountCurrencySymbol: currency.symbol,
+          purchaseAmountCurrencySymbol: currency?.symbol,
           purchaseProvider: provider,
           purchaseOrderId: order.id,
           refundEligible,
