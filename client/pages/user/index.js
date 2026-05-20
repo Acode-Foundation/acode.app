@@ -74,8 +74,16 @@ export default async function User({ userId }) {
               {user.name}
               <VerifyButton />
               <div className='extra-info'>
-                {isSelf && user.role === 'admin' && <small className='tag'>Admin</small>}
-                {Boolean(user.acode_pro) && <small className='tag pro-tag'>Pro</small>}
+                {isSelf && user.role === 'admin' && (
+                  <a className='tag' href='/admin'>
+                    Admin
+                  </a>
+                )}
+                {Boolean(user.acode_pro) && (
+                  <a className='tag pro-tag' href='/pro'>
+                    Pro
+                  </a>
+                )}
               </div>
             </div>
           </h1>

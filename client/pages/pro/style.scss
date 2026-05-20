@@ -130,10 +130,11 @@
 
     .price-tag {
       margin-bottom: 20px;
+      width: fit-content;
+      margin: auto;
 
       .currency {
         font-size: 2.5rem;
-        // font-weight: 600;
         color: rgba(255, 255, 255, 0.5);
       }
 

@@ -47,6 +47,7 @@
           padding: 2.5px 10px;
           background-color: #00d4ff;
           color: black;
+          text-decoration: none;
 
           &.pro-tag {
             background-color: #f59e0b;
@@ -158,6 +159,7 @@
       transition: all 0.2s ease-in-out;
       max-height: 60px;
       box-sizing: border-box;
+      min-height: 50px;
 
       &:first-child {
         margin-left: 0;

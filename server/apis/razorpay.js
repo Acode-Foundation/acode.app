@@ -863,7 +863,7 @@ router.get('/currency-config', async (req, res) => {
 
     if (preferred) {
       res.cookie('preferred_currency', preferred, {
-        secure: false,
+        secure: true,
         httpOnly: false,
         expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365 * 10),
       });
