@@ -172,7 +172,7 @@ router.post('/verify', async (req, res) => {
       [Order.TOKEN, razorpay_payment_id],
       [Order.ORDER_ID, razorpay_order_id],
       [Order.PACKAGE, 'web'],
-      [Order.AMOUNT, rzpOrder.amount],
+      [Order.AMOUNT, rzpOrder.amount / 10 ** (getSubunitDigits(rzpOrder.currency) ?? 2)],
       [Order.CURRENCY, rzpOrder.currency],
       [Order.STATE, Order.STATE_PURCHASED],
       [Order.USER_ID, user.id],
@@ -264,7 +264,7 @@ router.get('/my-purchases/:pluginId', async (req, res) => {
           ...plugin,
           currency: order.currency,
           purchasedAt: order.created_at,
-          purchaseAmount: formatAmount(order.amount / 10 ** (getSubunitDigits(order.currency) ?? 2), order.currency),
+          purchaseAmount: formatAmount(order.amount, order.currency),
           purchaseAmountCurrency: order.currency,
           purchaseAmountCurrencySymbol: currency.symbol,
           purchaseProvider: provider,
@@ -275,6 +275,13 @@ router.get('/my-purchases/:pluginId', async (req, res) => {
     );
 
     if (pluginId) {
+      const [plugin] = purchasedPlugins;
+
+      if (!plugin) {
+        res.status(404).send({ error: 'Purchase not found' });
+        return;
+      }
+
       res.send(purchasedPlugins[0]);
       return;
     }
@@ -391,7 +398,7 @@ router.post('/webhook', async (req, res) => {
                 [Order.TOKEN, paymentId],
                 [Order.ORDER_ID, orderId],
                 [Order.PACKAGE, 'web'],
-                [Order.AMOUNT, payment.amount],
+                [Order.AMOUNT, payment.amount / 10 ** (getSubunitDigits(payment.currency) ?? 2)],
                 [Order.CURRENCY, payment.currency || 'INR'],
                 [Order.STATE, Order.STATE_PURCHASED],
                 [Order.USER_ID, userId],
