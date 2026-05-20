@@ -862,6 +862,11 @@ router.get('/currency-config', async (req, res) => {
     const { preferred } = req.query;
 
     if (preferred) {
+      if (!CURRENCIES[preferred.toUpperCase()]) {
+        res.status(400).send({ error: `Unsupported currency: ${preferred}` });
+        return;
+      }
+
       res.cookie('preferred_currency', preferred, {
         secure: true,
         httpOnly: false,
