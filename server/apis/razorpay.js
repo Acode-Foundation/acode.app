@@ -8,7 +8,7 @@ const { getLoggedInUser, getDbTime, parseDbTime, detectUserCurrency, formatAmoun
 const sendEmail = require('../lib/sendEmail');
 const { REFUND_WINDOW_MS } = require('../../constants.mjs');
 const getRazorpay = require('../lib/razorpay');
-const { CURRENCIES, getAllCurrencies, getSubunitDigits } = require('../lib/currencyMap');
+const { CURRENCIES, getAllCurrencies, getSubunitDigits, getCurrencySymbol } = require('../lib/currencyMap');
 const { convertPrice } = require('../lib/exchangeRates');
 
 const router = Router();
@@ -179,11 +179,15 @@ router.post('/verify', async (req, res) => {
       [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
     );
 
+    const paidAmount = rzpOrder.amount / 10 ** (getSubunitDigits(rzpOrder.currency) ?? 2);
+    const paidSymbol = getCurrencySymbol(rzpOrder.currency) || '';
+    const paidCurrency = rzpOrder.currency;
+
     sendEmail(
       user.email,
       user.name,
       'Thank you for your purchase!',
-      `You've successfully purchased <strong>${plugin.name}</strong> for &#8377;${plugin.price}.<br><br>You can now download and use the plugin right away. If you run into any issues or have questions, feel free to reach out at <a href="https://acode.app/contact">acode.app/contact</a>.<br><br>Thank you for supporting the Acode ecosystem and the developer behind this plugin!`,
+      `You've successfully purchased <strong>${plugin.name}</strong> for ${paidSymbol}${formatAmount(paidAmount, paidCurrency)}.<br><br>You can now download and use the plugin right away. If you run into any issues or have questions, feel free to reach out at <a href="https://acode.app/contact">acode.app/contact</a>.<br><br>Thank you for supporting the Acode ecosystem and the developer behind this plugin!`,
     ).catch((err) => console.error('Failed to send plugin purchase email:', err));
 
     res.send({ success: true, message: 'Payment verified and purchase recorded' });
@@ -482,7 +486,7 @@ router.get('/payment-status/:paymentId', async (req, res) => {
     res.send({
       status: payment.status,
       captured: payment.status === 'captured',
-      amount: payment.amount / 100,
+      amount: payment.amount / 10 ** (getSubunitDigits(payment.currency) ?? 2),
       orderId: payment.order_id,
     });
   } catch (error) {
