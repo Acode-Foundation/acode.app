@@ -552,7 +552,7 @@ router.post('/create-pro-order', async (req, res) => {
       return;
     }
 
-    const price = Number(await AppConfig.getValue('acode_pro_price')) || 370;
+    const price = Number(await AppConfig.getValue('acode_pro_price'));
     const currency = detectUserCurrency(req);
     const converted = await convertPrice(price, currency.code);
     const subunitMultiplier = 10 ** getSubunitDigits(currency.code);
