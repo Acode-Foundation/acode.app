@@ -2,6 +2,7 @@ import './style.scss';
 import 'highlight.js/styles/github-dark.css';
 import AdSense from 'components/adsense';
 import AjaxForm from 'components/ajaxForm';
+import CurrencySelector from 'components/currencySelector';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import prompt from 'components/dialogs/prompt';
@@ -13,7 +14,7 @@ import BuyButton, { checkPluginOwnership } from 'components/razorpayCheckout';
 import YearSelect from 'components/YearSelect';
 import hilightjs from 'highlight.js';
 import Ref from 'html-tag-js/ref';
-import { calcRating, formatPrice, getLoggedInUser, gravatar, hideLoading, showLoading, since } from 'lib/helpers';
+import { calcRating, getLoggedInUser, gravatar, hideLoading, showLoading, since } from 'lib/helpers';
 import Router from 'lib/Router';
 import { marked } from 'marked';
 import moment from 'moment/moment';
@@ -44,6 +45,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     downloads,
     repository,
     description,
+    currencySymbol,
     user_id: userId,
     votes_up: votesUp,
     votes_down: votesDown,
@@ -82,12 +84,11 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   let purchaseInfo = null;
 
   // Check if logged-in user owns this paid plugin (for web purchases)
-  if (user && price > 0) {
+  if (user && price) {
     userOwnsPlugin = await checkPluginOwnership(id);
     if (userOwnsPlugin) {
       try {
-        const purchases = await fetch('/api/razorpay/my-purchases').then((r) => r.json());
-        purchaseInfo = purchases.find((p) => p.id === id);
+        purchaseInfo = await fetch(`/api/razorpay/my-purchases/${id}`).then((r) => r.json());
       } catch (err) {
         console.error('Failed to fetch purchase info:', err);
       }
@@ -138,13 +139,13 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
               window.location.reload();
             }
           } else {
-            await alert('ERROR', data.error || 'Refund failed');
+            alert('ERROR', data.error || 'Refund failed');
             btn.disabled = false;
             btn.querySelector('span:last-child').textContent = 'Request Refund';
           }
         } catch (err) {
           console.error('Plugin refund error:', err);
-          await alert('ERROR', 'Failed to process refund. Please try again.');
+          alert('ERROR', 'Failed to process refund. Please try again.');
           btn.disabled = false;
           btn.querySelector('span:last-child').textContent = 'Request Refund';
         }
@@ -159,7 +160,11 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
             </div>
             {purchaseInfo && (
               <div className='purchase-card-details'>
-                <span>Paid &#8377;{formatPrice(purchaseInfo.purchaseAmount)}</span>
+                Paid
+                <span style={{ fontWeight: 'bold' }}>
+                  {purchaseInfo.purchaseAmountCurrencySymbol}
+                  {purchaseInfo.purchaseAmount}
+                </span>
                 <span className='dot'>·</span>
                 <span>{moment(purchaseInfo.purchasedAt).format('DD MMM YYYY')}</span>
                 <span className='dot'>·</span>
@@ -167,7 +172,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
               </div>
             )}
           </div>
-          {purchaseInfo?.refundEligible && (
+          {Boolean(purchaseInfo?.refundEligible) && (
             <button type='button' className='refund-button' onclick={refundHandler}>
               <span className='icon replay' />
               <span>Request Refund</span>
@@ -182,8 +187,10 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
         <div className='purchase-card'>
           <div className='purchase-card-main'>
             <div className='purchase-card-price'>
-              <span className='currency'>&#8377;</span>
-              <span className='amount'>{formatPrice(price)}</span>
+              <CurrencySelector>
+                <span className='currency'>{currencySymbol}</span>
+                <span className='amount'>{price}</span>
+              </CurrencySelector>
             </div>
             <div className='purchase-card-details'>
               <span>One-time purchase</span>
@@ -192,9 +199,8 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
             </div>
           </div>
           <BuyButton
-            pluginId={id}
-            price={price}
             user={user}
+            pluginId={id}
             onPurchaseComplete={() => {
               if (callback === 'app') {
                 window.location = `acode://plugin/purchased/${id}`;
@@ -211,8 +217,10 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
       <div className='purchase-card'>
         <div className='purchase-card-main'>
           <div className='purchase-card-price'>
-            <span className='currency'>&#8377;</span>
-            <span className='amount'>{price}</span>
+            <CurrencySelector>
+              <span className='currency'>{currencySymbol}</span>
+              <span className='amount'>{price}</span>
+            </CurrencySelector>
           </div>
           <div className='purchase-card-details'>
             <span>One-time purchase</span>
@@ -287,7 +295,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
           </div>
         </div>
       </div>
-      {process.env.RAZORPAY_ENABLED && price > 0 && (
+      {Boolean(process.env.RAZORPAY_ENABLED && price) && (
         <div className='plugin-head'>
           <PurchaseSection />
           <div className='website-purchase-info'>
@@ -423,7 +431,10 @@ async function renderOrders(ref, pluginId, year, month) {
         <td className='date'>{date}</td>
         <td className='date'>{packageName}</td>
         <td>{provider}</td>
-        <td className='amount'>&#8377; {order.amount.toFixed(2)}</td>
+        <td className='amount' style={{ whiteSpace: 'nowrap' }}>
+          {order.currency}
+          {order.amount.toFixed(2)}
+        </td>
         <td className={`order-status ${statusClass}`}>{statusLabel}</td>
       </tr>,
     );

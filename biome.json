@@ -12,7 +12,8 @@
       "!**/.vscode/**/*",
       "!**/jsconfig.json",
       "!**/.babelrc",
-      "!**/.hintrc"
+      "!**/.hintrc",
+      "!**/*/selection.json"
     ]
   },
   "formatter": {

@@ -4,10 +4,12 @@ const Plugin = require('../entities/plugin');
 const Order = require('../entities/purchaseOrder');
 const User = require('../entities/user');
 const AppConfig = require('../entities/appConfig');
-const { getLoggedInUser, getDbTime, parseDbTime } = require('../lib/helpers');
+const { getLoggedInUser, getDbTime, parseDbTime, detectUserCurrency, formatAmount } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
 const { REFUND_WINDOW_MS } = require('../../constants.mjs');
 const getRazorpay = require('../lib/razorpay');
+const { CURRENCIES, getAllCurrencies, getSubunitDigits, getCurrencySymbol } = require('../lib/currencyMap');
+const { convertPrice } = require('../lib/exchangeRates');
 
 const router = Router();
 
@@ -53,16 +55,24 @@ router.post('/create-order', async (req, res) => {
       return;
     }
 
+    const currency = detectUserCurrency(req);
+    const converted = await convertPrice(plugin.price, currency.code);
+    const subunitMultiplier = 10 ** getSubunitDigits(converted.currency);
     const receipt = `p_${plugin.id}_${user.id}`.slice(0, 40);
+    const finalAmount = Math.round(converted.amount * subunitMultiplier);
     const order = await getRazorpay().orders.create({
-      amount: Math.round(plugin.price * 100),
-      currency: 'INR',
+      amount: finalAmount,
+      currency: converted.currency,
       receipt,
       notes: {
         userId: user.id,
         pluginId: plugin.id,
         pluginName: plugin.name.replace(/[\u{10000}-\u{10FFFF}]/gu, ''),
         userEmail: user.email,
+        original_amount_inr: plugin.price,
+        original_currency: 'INR',
+        target_currency: converted.currency,
+        exchange_rate: converted.rate,
       },
     });
 
@@ -74,6 +84,8 @@ router.post('/create-order', async (req, res) => {
       pluginName: plugin.name,
       pluginId: plugin.id,
       userEmail: user.email,
+      originalPrice: plugin.price,
+      displayCurrency: converted.currency,
     });
   } catch (error) {
     console.error('Razorpay create order error:', error);
@@ -134,10 +146,16 @@ router.post('/verify', async (req, res) => {
       return;
     }
 
-    // Verify the payment amount matches the plugin price
-    const expectedAmount = Math.round(plugin.price * 100);
-    if (rzpOrder.amount !== expectedAmount) {
-      res.status(400).send({ error: 'Payment amount mismatch' });
+    // Verify INR price from server-set notes (rzpOrder.amount may be in foreign currency).
+    // Falls back to plugin.price for old orders that predate original_amount_inr in notes.
+    const orderInrPrice = Number(rzpOrder.notes?.original_amount_inr ?? plugin.price);
+    const orderTargetCurrency = rzpOrder.notes?.target_currency;
+    if (orderInrPrice !== plugin.price) {
+      res.status(400).send({ error: 'Payment amount does not match plugin price' });
+      return;
+    }
+    if (orderTargetCurrency && !CURRENCIES[orderTargetCurrency]) {
+      res.status(400).send({ error: 'Invalid currency in order' });
       return;
     }
 
@@ -154,17 +172,22 @@ router.post('/verify', async (req, res) => {
       [Order.TOKEN, razorpay_payment_id],
       [Order.ORDER_ID, razorpay_order_id],
       [Order.PACKAGE, 'web'],
-      [Order.AMOUNT, plugin.price],
+      [Order.AMOUNT, rzpOrder.amount / 10 ** (getSubunitDigits(rzpOrder.currency) ?? 2)],
+      [Order.CURRENCY, rzpOrder.currency],
       [Order.STATE, Order.STATE_PURCHASED],
       [Order.USER_ID, user.id],
       [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
     );
 
+    const paidAmount = rzpOrder.amount / 10 ** (getSubunitDigits(rzpOrder.currency) ?? 2);
+    const paidSymbol = getCurrencySymbol(rzpOrder.currency) || '';
+    const paidCurrency = rzpOrder.currency;
+
     sendEmail(
       user.email,
       user.name,
       'Thank you for your purchase!',
-      `You've successfully purchased <strong>${plugin.name}</strong> for &#8377;${plugin.price}.<br><br>You can now download and use the plugin right away. If you run into any issues or have questions, feel free to reach out at <a href="https://acode.app/contact">acode.app/contact</a>.<br><br>Thank you for supporting the Acode ecosystem and the developer behind this plugin!`,
+      `You've successfully purchased <strong>${plugin.name}</strong> for ${paidSymbol}${formatAmount(paidAmount, paidCurrency)}.<br><br>You can now download and use the plugin right away. If you run into any issues or have questions, feel free to reach out at <a href="https://acode.app/contact">acode.app/contact</a>.<br><br>Thank you for supporting the Acode ecosystem and the developer behind this plugin!`,
     ).catch((err) => console.error('Failed to send plugin purchase email:', err));
 
     res.send({ success: true, message: 'Payment verified and purchase recorded' });
@@ -209,24 +232,27 @@ router.get('/check-ownership/:pluginId', async (req, res) => {
  *
  * Returns array of purchased plugins with full plugin info
  */
-router.get('/my-purchases', async (req, res) => {
+router.get('/my-purchases{/:pluginId}', async (req, res) => {
   try {
+    const { pluginId } = req.params;
     const user = await getLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
     }
 
-    // Get all purchased orders for user
-    const orders = await Order.get(
-      [Order.ID, Order.PLUGIN_ID, Order.AMOUNT, Order.CREATED_AT, Order.PROVIDER],
-      [
-        [Order.USER_ID, user.id],
-        [Order.STATE, Order.STATE_PURCHASED],
-      ],
-    );
+    const where = [
+      [Order.USER_ID, user.id],
+      [Order.STATE, Order.STATE_PURCHASED],
+    ];
 
-    // Get full plugin details for each purchase
+    if (pluginId) {
+      where.push([Order.PLUGIN_ID, pluginId]);
+    }
+
+    // Get all purchased orders for user
+    const orders = await Order.get([Order.ID, Order.PLUGIN_ID, Order.AMOUNT, Order.CURRENCY, Order.CREATED_AT, Order.PROVIDER], where);
+
     const purchasedPlugins = await Promise.all(
       orders.map(async (order) => {
         const [plugin] = await Plugin.get([Plugin.ID, order.plugin_id]);
@@ -235,17 +261,33 @@ router.get('/my-purchases', async (req, res) => {
         const provider = order.provider || 'google_play';
         const elapsed = Date.now() - parseDbTime(order.created_at).getTime();
         const refundEligible = provider === 'razorpay' && elapsed <= REFUND_WINDOW_MS;
+        const currency = order.currency ? CURRENCIES[order.currency.toUpperCase()] : null;
 
         return {
           ...plugin,
+          currency: order.currency,
           purchasedAt: order.created_at,
-          purchaseAmount: order.amount,
+          purchaseAmount: formatAmount(order.amount, order.currency),
+          purchaseAmountCurrency: order.currency,
+          purchaseAmountCurrencySymbol: currency?.symbol,
           purchaseProvider: provider,
           purchaseOrderId: order.id,
           refundEligible,
         };
       }),
     );
+
+    if (pluginId) {
+      const [plugin] = purchasedPlugins;
+
+      if (!plugin) {
+        res.status(404).send({ error: 'Purchase not found' });
+        return;
+      }
+
+      res.send(purchasedPlugins[0]);
+      return;
+    }
 
     // Filter out nulls (deleted plugins)
     res.send(purchasedPlugins.filter(Boolean));
@@ -309,7 +351,6 @@ router.post('/webhook', async (req, res) => {
         const payment = payload.payment.entity;
         const orderId = payment.order_id;
         const paymentId = payment.id;
-        const amount = Math.round(payment.amount) / 100;
         const notes = payment.notes || {};
 
         // Handle Acode Pro purchase via webhook (fallback if client verify missed)
@@ -360,7 +401,8 @@ router.post('/webhook', async (req, res) => {
                 [Order.TOKEN, paymentId],
                 [Order.ORDER_ID, orderId],
                 [Order.PACKAGE, 'web'],
-                [Order.AMOUNT, amount],
+                [Order.AMOUNT, payment.amount / 10 ** (getSubunitDigits(payment.currency) ?? 2)],
+                [Order.CURRENCY, payment.currency || 'INR'],
                 [Order.STATE, Order.STATE_PURCHASED],
                 [Order.USER_ID, userId],
                 [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
@@ -443,7 +485,7 @@ router.get('/payment-status/:paymentId', async (req, res) => {
     res.send({
       status: payment.status,
       captured: payment.status === 'captured',
-      amount: payment.amount / 100,
+      amount: payment.amount / 10 ** (getSubunitDigits(payment.currency) ?? 2),
       orderId: payment.order_id,
     });
   } catch (error) {
@@ -458,11 +500,25 @@ router.get('/payment-status/:paymentId', async (req, res) => {
  */
 router.get('/pro-status', async (req, res) => {
   try {
-    const price = Number(await AppConfig.getValue('acode_pro_price')) || 370;
+    const price = Number(await AppConfig.getValue('acode_pro_price'));
     const user = await getLoggedInUser(req);
 
+    if (!price || price <= 0) {
+      res.status(503).send({ error: 'Acode Pro is not available for purchase right now. Please try again later.' });
+      return;
+    }
+
+    const currency = detectUserCurrency(req);
+    const converted = await convertPrice(price, currency.code);
+
     if (!user) {
-      res.send({ isPro: false, price, refundEligible: false });
+      res.send({
+        isPro: false,
+        price: formatAmount(converted.amount, converted.currency),
+        currency: converted.currency,
+        symbol: converted.symbol,
+        refundEligible: false,
+      });
       return;
     }
 
@@ -476,9 +532,11 @@ router.get('/pro-status', async (req, res) => {
 
     res.send({
       isPro,
-      purchasedAt: user.pro_purchased_at || null,
       refundEligible,
-      price,
+      currency: converted.currency,
+      symbol: converted.symbol,
+      price: formatAmount(converted.amount, converted.currency),
+      purchasedAt: user.pro_purchased_at || null,
     });
   } catch (error) {
     console.error('Pro status error:', error);
@@ -503,17 +561,28 @@ router.post('/create-pro-order', async (req, res) => {
       return;
     }
 
-    const price = Number(await AppConfig.getValue('acode_pro_price')) || 370;
+    const price = Number(await AppConfig.getValue('acode_pro_price'));
+    if (!price || price <= 0) {
+      res.status(503).send({ error: 'Acode Pro is not available for purchase right now. Please try again later.' });
+      return;
+    }
 
+    const currency = detectUserCurrency(req);
+    const converted = await convertPrice(price, currency.code);
+    const subunitMultiplier = 10 ** getSubunitDigits(converted.currency);
     const receipt = `pro_${user.id}`.slice(0, 40);
     const order = await getRazorpay().orders.create({
-      amount: Math.round(price * 100),
-      currency: 'INR',
+      amount: Math.round(converted.amount * subunitMultiplier),
+      currency: converted.currency,
       receipt,
       notes: {
         type: 'acode_pro',
         userId: user.id,
         userEmail: user.email,
+        original_amount_inr: price,
+        original_currency: 'INR',
+        target_currency: converted.currency,
+        exchange_rate: converted.rate,
       },
     });
 
@@ -523,6 +592,8 @@ router.post('/create-pro-order', async (req, res) => {
       currency: order.currency,
       keyId: process.env.PG_KEY_ID,
       userEmail: user.email,
+      originalPrice: price,
+      displayCurrency: converted.currency,
     });
   } catch (error) {
     console.error('Razorpay create pro order error:', error);
@@ -588,15 +659,18 @@ router.post('/verify-pro', async (req, res) => {
       return;
     }
 
-    // Verify against the amount set at order creation (not current config price,
-    // which may have changed between order creation and payment verification)
-    const createdAmount = Math.round(rzpOrder.amount);
-    const expectedPrice = Number(await AppConfig.getValue('acode_pro_price')) || 370;
-    const expectedAmount = Math.round(expectedPrice * 100);
-    if (createdAmount !== expectedAmount) {
-      // Price changed after order was created — accept the payment since
-      // the server set the correct amount at creation time
-      console.warn(`Pro price changed: order amount ${createdAmount} vs current config ${expectedAmount}. Accepting payment.`);
+    // Verify INR price from server-set notes (rzpOrder.amount may be in foreign currency).
+    // The price may have changed between order creation and payment verification,
+    // so we warn rather than reject on mismatch — the server set the correct amount at creation.
+    const expectedPrice = Number(await AppConfig.getValue('acode_pro_price'));
+    const orderInrPrice = Number(rzpOrder.notes?.original_amount_inr);
+    if (orderInrPrice && orderInrPrice !== expectedPrice) {
+      console.warn(`Pro price changed: notes INR ${orderInrPrice} vs config ${expectedPrice}. Accepting payment.`);
+    }
+    const orderTargetCurrency = rzpOrder.notes?.target_currency;
+    if (orderTargetCurrency && !CURRENCIES[orderTargetCurrency]) {
+      res.status(400).send({ error: 'Invalid currency in order' });
+      return;
     }
 
     // Re-check Pro status right before activation to close TOCTOU race
@@ -796,6 +870,49 @@ router.post('/refund-plugin', async (req, res) => {
   } catch (error) {
     console.error('Razorpay refund plugin error:', error);
     res.status(500).send({ error: 'Failed to process refund' });
+  }
+});
+
+/**
+ * Get user's currency configuration based on IP geolocation.
+ * Used by the client to configure currency display globally without per-plugin calls.
+ * GET /api/razorpay/currency-config
+ */
+router.get('/currency-config', async (req, res) => {
+  try {
+    const { preferred } = req.query;
+
+    if (preferred) {
+      const upper = preferred.toUpperCase();
+
+      if (!CURRENCIES[upper]) {
+        res.status(400).send({ error: `Unsupported currency: ${preferred}` });
+        return;
+      }
+
+      res.cookie('preferred_currency', upper, {
+        secure: true,
+        httpOnly: false,
+        expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365 * 10),
+      });
+
+      res.send(CURRENCIES[upper]);
+      return;
+    }
+
+    res.send(detectUserCurrency(req));
+  } catch (error) {
+    console.error('Currency config error:', error);
+    res.status(500).send({ error: 'Failed to fetch currency config' });
+  }
+});
+
+router.get('/currencies', (_req, res) => {
+  try {
+    res.send(getAllCurrencies());
+  } catch (error) {
+    console.error('Currencies list error:', error);
+    res.status(500).send({ error: 'Failed to fetch currencies' });
   }
 });
 

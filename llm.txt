@@ -1,0 +1,136 @@
+# Acode App - Project Overview
+
+## Tech Stack
+- **Frontend**: Custom JSX framework (html-tag-js v2.4.16), SCSS/CSS Modules, Webpack 5, JSX transpiled via custom Babel plugins
+- **Backend**: Node.js >=20.16.1, Express 5, Handlebars (server-side templating)
+- **Database**: SQLite via better-sqlite3 (file: data/db.sqlite3)
+- **Payments**: Razorpay (orders, webhooks, refunds)
+- **Auth**: Cookie/token-based sessions, GitHub OAuth, Google OAuth, SHA-256 password hashing
+- **Email**: Nodemailer via ZeptoMail SMTP
+- **Scheduling**: cron v4.3.3
+- **Reactivity**: html-tag-js/reactive and html-tag-js/ref (similar to signals)
+- **Routing**: Custom SPA router (history API, no hash) at client/lib/Router.js
+- **Linting**: Biome (single quotes, semicolons, no forEach)
+
+## File Structure
+```
+/                           # Project root
+├── llm.txt                 # This file
+├── package.json            # Scripts & dependencies
+├── webpack.config.js       # Webpack 5 config (entries: main.js, assets.js)
+├── biome.json              # Linter/formatter config
+├── .env                    # Environment variables
+├── constants.mjs           # Shared constants
+├── client/                 # Frontend source
+│   ├── main.js             # Entry: Router setup, view render, scroll listener
+│   ├── main.view.js        # Main layout (header, nav, footer)
+│   ├── main.scss           # Global styles
+│   ├── common.scss         # Shared styles
+│   ├── mixins.scss         # SCSS mixins
+│   ├── assets.js           # Static asset imports
+│   ├── components/         # Reusable UI components (15 entries)
+│   ├── pages/              # Page modules (19 entries, each has index.js + style.scss)
+│   ├── lib/                # Client utilities (Router, helpers, theme, background)
+│   ├── res/                # Static resources (images, fonts, icons, favicons)
+│   └── themes/             # Theme definitions
+├── server/                 # Backend source
+│   ├── main.js             # Express server entry, middleware, route mounting
+│   ├── index.hbs           # Handlebars SPA shell template (OG meta tags)
+│   ├── password.js         # SHA-256 password hashing
+│   ├── updateSchema.js     # DB schema migrations
+│   ├── defaultOg.json      # Default Open Graph tags
+│   ├── apis/               # API route handlers (12 files: user, plugin, login, etc.)
+│   ├── entities/           # Data access layer (Entity base class + table-specific classes)
+│   ├── lib/                # Server utilities (db, helpers, razorpay, oauth, email, currencyMap, exchangeRates, etc.)
+│   ├── crons/              # Cron jobs (daily + monthly)
+│   └── schemas/            # JSON schemas (plugin.v0.1.0.json)
+├── data/                   # Persistent data (SQLite DB at data/db.sqlite3, plugin ZIPs, icons)
+├── public/                 # Webpack build output
+├── dev/                    # Development scripts
+├── errors/                 # Error HTML pages
+└── .github/workflows/      # CI/CD deploy on push to main
+```
+
+## Client-Side Routing (client/main.js)
+All routes defined in client/main.js using custom Router from client/lib/Router.js:
+- `/` → home
+- `/plugins` → plugins listing
+- `/plugin/:id/:section?` → plugin detail
+- `/plugin/:id/:section?` → plugin detail
+- `/pro` → Acode Pro
+- `/login` → login
+- `/logout` → logout handler
+- `/register` → account (register)
+- `/profile/edit` → account (edit profile)
+- `/profile/:userId?` → user profile
+- `/user/:userId?` → redirects to /profile/:userId?
+- `/change-password` → change password
+- `/publish` → publish plugin
+- `/earnings` → earnings
+- `/payments` → payment history
+- `/admin` → admin dashboard
+- `/admin/sponsors` → sponsor management
+- `/add-payment-method/:mode` → add payment method
+- `/faqs/:qHash?` → FAQs
+- `/policy` → privacy policy
+- `/terms` → terms of service
+- `/refund` → refund policy
+- `/contact` → contact us
+- `/update-plugin-editor/:id` → update plugin editor
+- `/oauth/*` → server handles OAuth
+- `*` → 404
+
+## Server API Routes (server/apis/)
+All under /api prefix:
+- /api/user — user CRUD, profile, earnings, payment methods
+- /api/login — auth (login/logout/session)
+- /api/plugin(s) — plugin CRUD, download, search, count
+- /api/password — password reset/change
+- /api/otp — OTP verification
+- /api/comments — plugin comments
+- /api/faqs — FAQs
+- /api/admin — admin dashboard, reports
+- /api/sponsor(s) — sponsor management
+- /api/razorpay — payment processing
+
+Other routes: /oauth/* (OAuth callbacks), /schema/:type/v:version.json (JSON schemas), /plugin/:id (server-rendered plugin page), /plugin-icon/:id (plugin icon PNG)
+
+## Database Tables (SQLite)
+user, plugin, comment, login, otp, payment, payment_method, purchase_order, download, sponsor, user_earnings, app_config
+All entities extend Entity base class (server/entities/entity.js) for generic SQL CRUD operations.
+
+## Key Features
+- Plugin marketplace (336+ plugins stored as ZIPs in data/plugins/)
+- Plugin publish/update workflow with review system
+- Plugin download tracking, voting (up/down)
+- Paid plugins via Razorpay + Google Play licensing integration
+- International pricing: currency detection via Accept-Language, real-time INR conversion (ExchangeRate-API), 146 Razorpay-supported currencies
+- Acode Pro subscription
+- Multi-auth (email/password, GitHub OAuth, Google OAuth)
+- OTP email verification
+- Admin dashboard with sales reports
+- Payout system for plugin authors
+- SEO: Server-rendered OG meta tags, sitemap, PWA manifest
+
+## Environment Variables (.env)
+PORT, HOST, NODE_ENV, SALT, admin credentials, email SMTP, Razorpay keys (PG_KEY_ID, PG_KEY_SECRET), GitHub/Google OAuth credentials, earnings percentages, withdrawal minimums.
+
+## Available Scripts
+- `npm run dev` — Development (webpack watch + nodemon)
+- `npm run build` — Production webpack build
+- `npm start` — Start production server (node ./server/main)
+- `npm run update-schema` — Run DB migrations
+- `npm run sitemap` — Generate sitemap
+- `npm run reports` — Download sales reports
+
+## Coding Conventions
+- SCSS with BEM-like naming, CSS Modules (.module.scss) for component-scoped styles
+- Custom JSX: html-tag-js with <>...</> fragments, functional components returning JSX
+- Reactive values: html-tag-js/reactive
+- DOM references: html-tag-js/ref
+- Biome linting: no unused vars, no forEach, single quotes, semicolons always
+- Each page in its own folder (client/pages/<name>/ with index.js + style.scss)
+- API handlers: one Express Router per resource file in server/apis/
+- Database: one Entity class per table in server/entities/
+
+**NOTE**: Update the llm.txt with your changes to keep it up to date.

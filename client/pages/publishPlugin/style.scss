@@ -113,7 +113,6 @@
       }
     }
 
-    // Badge for "mandatory" or "new"
     .badge {
       display: inline-flex;
       align-items: center;
@@ -123,7 +122,7 @@
       background: rgba(255, 255, 255, 0.95);
       color: #764ba2;
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 600;
       text-transform: uppercase;
       border-radius: 20px;
       letter-spacing: 0.5px;

@@ -1,0 +1,136 @@
+.currency-selector {
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+
+  .icon.keyboard_arrow_down {
+    font-size: 1.1em;
+    opacity: 0.5;
+  }
+}
+
+.currency-selector-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+}
+
+.currency-dropdown {
+  position: fixed;
+  top: 0;
+  left: 0;
+  margin: auto;
+  margin-top: 4px;
+  width: 280px;
+  max-height: 380px;
+  display: flex;
+  flex-direction: column;
+  background: var(--primary-color);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  opacity: 0;
+  transform-origin: top right;
+
+  &.show {
+    opacity: 1;
+    animation: currency-selector-pop 100ms ease;
+
+    @keyframes currency-selector-pop {
+      0% {
+        opacity: 0;
+        transform: scale(0.5);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+  }
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+
+  &[data-position='left'] {
+    right: auto;
+  }
+
+  &[data-position='right'] {
+    left: auto;
+  }
+
+  .currency-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--primary-text-color);
+    text-align: left;
+    flex-shrink: 0;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    &.active {
+      background: var(--secondary-color);
+      color: var(--secondary-text-color);
+    }
+
+    .currency-symbol {
+      width: 40px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .currency-code {
+      width: 40px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .currency-name {
+      flex: 1;
+      opacity: 0.55;
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .currency-label {
+      font-size: 13px;
+    }
+
+    .currency-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      margin: 4px 0;
+      flex-shrink: 0;
+    }
+  }
+}

@@ -80,7 +80,7 @@ function AppSettings() {
       const res = await fetch('/api/admin/config');
       const config = await res.json();
       if (priceRef.el) {
-        priceRef.el.value = config.acode_pro_price || '370';
+        priceRef.el.value = config.acode_pro_price;
       }
     } catch {
       if (statusRef.el) {

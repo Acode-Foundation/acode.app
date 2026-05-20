@@ -2,6 +2,8 @@ const moment = require('moment');
 const login = require('../entities/login');
 const user = require('../entities/user');
 const db = require('./db');
+const { CURRENCIES, getCurrencyForCountry, FALLBACK_CURRENCY } = require('./currencyMap');
+const geoip = require('geoip-lite');
 
 /**
  * @typedef {object} LoggedInUser
@@ -132,6 +134,48 @@ function parseDbTime(time) {
   return new Date(time);
 }
 
+function detectUserCurrency(req) {
+  const preferredCurrency = req.cookies.preferred_currency;
+
+  if (preferredCurrency && CURRENCIES[preferredCurrency]) {
+    return CURRENCIES[preferredCurrency];
+  }
+  const countryCode = getCountryFromIp(req.ip);
+  const currency = countryCode ? getCurrencyForCountry(countryCode) : null;
+  return currency || CURRENCIES[FALLBACK_CURRENCY];
+}
+
+function getCountryFromIp(ip) {
+  if (!ip) return null;
+
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return null;
+  if (ip.startsWith('10.') || ip.startsWith('192.168.') || /^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return null;
+
+  const geo = geoip.lookup(ip);
+  return geo?.country || null;
+}
+
+function formatAmount(amount, currency) {
+  if (amount == null || Number.isNaN(amount)) return '';
+
+  let currencyConfig;
+
+  if (typeof currency === 'string') {
+    currencyConfig = CURRENCIES[currency.toUpperCase()];
+  } else if (currency && typeof currency === 'object') {
+    currencyConfig = currency;
+  }
+
+  if (!currencyConfig) return String(amount);
+
+  const { subunitDigits } = currencyConfig;
+
+  return Number(amount).toLocaleString('en-US', {
+    minimumFractionDigits: subunitDigits,
+    maximumFractionDigits: subunitDigits,
+  });
+}
+
 module.exports = {
   areSameUser,
   getLoggedInUser,
@@ -139,4 +183,7 @@ module.exports = {
   getToken,
   getDbTime,
   parseDbTime,
+  detectUserCurrency,
+  getCountryFromIp,
+  formatAmount,
 };

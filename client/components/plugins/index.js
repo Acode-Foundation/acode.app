@@ -4,7 +4,7 @@ import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import select from 'components/dialogs/select';
 import PluginStatus from 'components/pluginStatus';
-import { calcRating, formatPrice, getLoggedInUser, hideLoading, showLoading, since } from 'lib/helpers';
+import { calcRating, getLoggedInUser, hideLoading, showLoading, since } from 'lib/helpers';
 import Router from 'lib/Router';
 import EditorType from '../editorType';
 
@@ -74,6 +74,7 @@ function Plugin({
   version,
   isAdmin,
   downloads,
+  currencySymbol,
   votes_up: upVotes,
   user_id: pluginUser,
   votes_down: downVotes,
@@ -84,14 +85,17 @@ function Plugin({
   return (
     <a href={`/plugin/${id}`} className='plugin'>
       <EditorType type={editorType} />
-      {price > 0 &&
+      {Boolean(price) &&
         (owned ? (
           <span className='badge owned'>
             <span className='icon check_circle' />
             Owned
           </span>
         ) : (
-          <span className='badge price'>&#8377;{formatPrice(price)}</span>
+          <span className='badge price'>
+            {currencySymbol}
+            {price}
+          </span>
         ))}
       <div className='plugin-icon' style={{ backgroundImage: `url(/plugin-icon/${id})` }} />
       <div className='plugin-info'>
