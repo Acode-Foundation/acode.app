@@ -96,33 +96,33 @@ export default async function CurrencySelector({ className }, children) {
 
       if (width > window.innerWidth - 20) {
         width = window.innerWidth - 20;
-        dorpDown.style.width = width;
+        dorpDown.style.width = `${width}px`;
       }
 
       if (height > window.innerHeight - 20) {
         height = window.innerHeight - 20;
-        dorpDown.style.height = height;
+        dorpDown.style.height = `${height}px`;
       }
 
       if (left < 10) {
         left = 10;
-        dorpDown.style.left = left;
+        dorpDown.style.left = `${left}px`;
       }
 
       if (right > MAX_RIGHT) {
         right = MAX_RIGHT;
-        dorpDown.style.right = 10;
+        dorpDown.style.right = '10px';
       }
 
       if (top < 10) {
         top = 10;
-        dorpDown.style.top = top;
+        dorpDown.style.top = `${top}px`;
       }
 
       if (bottom > MAX_BOTTOM) {
         bottom = MAX_BOTTOM;
-        dorpDown.style.bottom = 10;
-        dorpDown.style.top = window.innerHeight - height;
+        dorpDown.style.bottom = '10px';
+        dorpDown.style.top = `${window.innerHeight - height}px`;
       }
 
       dorpDown.classList.add('show');
