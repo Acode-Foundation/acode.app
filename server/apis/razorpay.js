@@ -232,7 +232,7 @@ router.get('/check-ownership/:pluginId', async (req, res) => {
  *
  * Returns array of purchased plugins with full plugin info
  */
-router.get('/my-purchases/:pluginId', async (req, res) => {
+router.get('/my-purchases{/:pluginId}', async (req, res) => {
   try {
     const { pluginId } = req.params;
     const user = await getLoggedInUser(req);
@@ -253,7 +253,6 @@ router.get('/my-purchases/:pluginId', async (req, res) => {
     // Get all purchased orders for user
     const orders = await Order.get([Order.ID, Order.PLUGIN_ID, Order.AMOUNT, Order.CURRENCY, Order.CREATED_AT, Order.PROVIDER], where);
 
-    // Get full plugin details for each purchase
     const purchasedPlugins = await Promise.all(
       orders.map(async (order) => {
         const [plugin] = await Plugin.get([Plugin.ID, order.plugin_id]);
@@ -502,8 +501,14 @@ router.get('/payment-status/:paymentId', async (req, res) => {
 router.get('/pro-status', async (req, res) => {
   try {
     const price = Number(await AppConfig.getValue('acode_pro_price'));
-    const currency = detectUserCurrency(req);
     const user = await getLoggedInUser(req);
+
+    if (!price || price <= 0) {
+      res.status(503).send({ error: 'Acode Pro is not available for purchase right now. Please try again later.' });
+      return;
+    }
+
+    const currency = detectUserCurrency(req);
     const converted = await convertPrice(price, currency.code);
 
     if (!user) {
@@ -557,6 +562,11 @@ router.post('/create-pro-order', async (req, res) => {
     }
 
     const price = Number(await AppConfig.getValue('acode_pro_price'));
+    if (!price || price <= 0) {
+      res.status(503).send({ error: 'Acode Pro is not available for purchase right now. Please try again later.' });
+      return;
+    }
+
     const currency = detectUserCurrency(req);
     const converted = await convertPrice(price, currency.code);
     const subunitMultiplier = 10 ** getSubunitDigits(converted.currency);
