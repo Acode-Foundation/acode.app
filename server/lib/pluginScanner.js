@@ -245,6 +245,15 @@ const RULES = [
     }
   },
   {
+    id: 'M004', severity: SEV.MEDIUM, description: 'document.cookie access',
+    nodeTypes: ['MemberExpression'], detail: 'Reads or modifies browser cookies.',
+    visitor(path, addFinding) {
+      if (identifierMatches(path.node.object, 'document') && path.node.property.name === 'cookie') {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'document.cookie' });
+      }
+    }
+  },
+  {
     id: 'M009', severity: SEV.MEDIUM, description: 'Sensitive Path Constants',
     nodeTypes: ['Identifier'], detail: 'Accesses root-level storage or plugin directories.',
     visitor(path, addFinding) {
@@ -333,7 +342,15 @@ const RULES = [
         addFinding({ line: path.node.loc?.start.line || 0, snippet: 'atob(...)' });
       }
       if (path.isArrayExpression() && path.node.elements.length > 20) {
-        const totalHex = path.node.elements.filter(el => el && el.type === 'StringLiteral' && /^0x[0-9a-f]+$/i.test(el.value)).length;
+        const totalHex = path.node.elements.filter(el => {
+          if (!el) return false;
+          // Obfuscated hex arrays often parse as NumericLiterals in Babel.
+          // Checking el.extra.raw reveals if the source used '0x' notation.
+          if (el.type === 'NumericLiteral' && el.extra && /^0x/i.test(el.extra.raw)) return true;
+          if (el.type === 'StringLiteral' && /^0x[0-9a-f]+$/i.test(el.value)) return true;
+          return false;
+        }).length;
+        
         if (totalHex / path.node.elements.length > 0.7) {
           addFinding({ line: path.node.loc?.start.line || 0, snippet: '[Hex Obfuscated Array Mapping]' });
         }
@@ -355,8 +372,17 @@ const RULES = [
     nodeTypes: ['CallExpression'], detail: 'Listens directly to inputs or keystrokes globally',
     visitor(path, addFinding) {
       const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && callee.property.name === 'addEventListener' && /^(input|keyup|keydown|keypress)$/.test(getStringValue(args[0]))) {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: `addEventListener("${getStringValue(args[0])}", ...)` });
+      
+      const isGlobalAddEvent = 
+        (callee.type === 'Identifier' && callee.name === 'addEventListener') ||
+        (callee.type === 'MemberExpression' && callee.property.name === 'addEventListener' && 
+          (identifierMatches(callee.object, 'window') || identifierMatches(callee.object, 'document')));
+          
+      if (isGlobalAddEvent && args.length > 0) {
+        const eventVal = getStringValue(args[0]);
+        if (/^(input|keyup|keydown|keypress)$/.test(eventVal)) {
+          addFinding({ line: path.node.loc?.start.line || 0, snippet: `addEventListener("${eventVal}", ...)` });
+        }
       }
     }
   }
@@ -497,6 +523,7 @@ const CAPABILITY_MAP = {
   M001: { group: 'storage',  label: 'localStorage access' },
   M002: { group: 'storage',  label: 'sessionStorage access' },
   M003: { group: 'storage',  label: 'IndexedDB access' },
+  M004: { group: 'storage',  label: 'document.cookie access' },
   M005: { group: 'system',   label: 'editorManager API access' },
   M007: { group: 'system',   label: 'Plugin API access' },
   M008: { group: 'native',   label: 'Android Intent API accessed' },
