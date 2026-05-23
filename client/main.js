@@ -9,7 +9,7 @@ import { getLoggedInUser, hideLoading, invalidateLoggedInUser, showLoading } fro
 import Router from 'lib/Router';
 import Theme from 'lib/theme';
 import dark from 'themes/dark';
-import View, { addProButton, updateAccountButton } from './main.view';
+import View, { addProButton, updateAccountButton, updateOrdersBadge } from './main.view';
 
 document.addEventListener('DOMContentLoaded', () => {
   showLoading();
@@ -45,6 +45,7 @@ window.onload = async () => {
   const user = await getLoggedInUser();
   updateAccountButton(user);
   addProButton(user);
+  updateOrdersBadge();
 
   const main = app.get('main');
 
@@ -74,6 +75,7 @@ window.onload = async () => {
   Router.add('/profile/:userId?', (params) => loadModule('user', params));
   Router.add('/earnings', (_params, query) => loadModule('earnings', query));
   Router.add('/update-plugin-editor/:id', (params) => loadModule('updatePluginEditor', params));
+  Router.add('/orders', () => loadModule('orders'));
 
   // Server will redirect to respected provider
   Router.add('/oauth/*', () => window.location.reload());
@@ -118,6 +120,8 @@ window.onload = async () => {
       invalidateLoggedInUser();
       updateAccountButton();
       addProButton();
+      const badge = tag.get('#orders-badge');
+      if (badge) badge.style.display = 'none';
       if (window.history.length > 1) {
         window.history.go(-1);
       } else {

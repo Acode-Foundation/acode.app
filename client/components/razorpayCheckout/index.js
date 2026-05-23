@@ -5,6 +5,7 @@
 
 import alert from 'components/dialogs/alert';
 import Ref from 'html-tag-js/ref';
+import Router from 'lib/Router';
 
 // Load Razorpay script dynamically
 let razorpayLoaded = false;
@@ -116,6 +117,14 @@ export async function initiateCheckout(pluginId, userInfo = {}, onSuccess, onCan
 
           if (verifyData.success) {
             alert('SUCCESS', 'Payment successful! You can now download this plugin.', onSuccess);
+          } else if (verifyData.error?.includes('still processing')) {
+            alert(
+              'PAYMENT PENDING',
+              'Your payment is being processed. You will be notified once it is confirmed. You can check your order status on the Orders page.',
+              () => {
+                Router.loadUrl('/orders');
+              },
+            );
           } else {
             alert('ERROR', verifyData.error || 'Payment verification failed', onCancel);
           }
@@ -217,6 +226,14 @@ export async function initiateProCheckout(userInfo = {}, onSuccess, onCancel) {
 
           if (verifyData.success) {
             alert('SUCCESS', 'Thank you for supporting Acode! Pro features are now active.', onSuccess);
+          } else if (verifyData.error?.includes('still processing')) {
+            alert(
+              'PAYMENT PENDING',
+              'Your payment is being processed. You will be notified once it is confirmed. You can check your order status on the Orders page.',
+              () => {
+                Router.loadUrl('/orders');
+              },
+            );
           } else {
             alert('ERROR', verifyData.error || 'Payment verification failed', onCancel);
           }

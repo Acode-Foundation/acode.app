@@ -1,0 +1,280 @@
+@use '../../mixins';
+
+#orders {
+  padding: 2rem 1rem;
+  max-width: 900px;
+  margin: 0 auto;
+
+  .orders-header {
+    margin-bottom: 2rem;
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0 0 0.25rem;
+    }
+
+    p {
+      opacity: 0.7;
+      margin: 0;
+    }
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 1rem;
+
+    h2 {
+      font-size: 1.25rem;
+      margin: 1rem 0 0.5rem;
+    }
+
+    p {
+      opacity: 0.7;
+      margin: 0 0 1.5rem;
+    }
+
+    .login-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--primary-color, #2563eb);
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+
+      &:hover {
+        opacity: 0.9;
+      }
+    }
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    margin-bottom: 2rem;
+  }
+
+  .orders-table {
+    width: 100%;
+    margin: 0;
+    max-width: unset;
+    border-collapse: collapse;
+
+    th {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.6;
+      border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
+      font-size: 0.9rem;
+      box-sizing: border-box;
+      width: 10%;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .order-row {
+      cursor: pointer;
+      transition: background 0.15s;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+    }
+
+    .order-plugin {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 150px;
+      width: 60%;
+
+      .icon {
+        opacity: 0.5;
+        font-size: 1rem;
+      }
+    }
+
+    .order-amount {
+      font-weight: 600;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .order-date {
+      white-space: nowrap;
+      opacity: 0.7;
+      font-size: 0.85rem;
+    }
+
+    .order-actions {
+      white-space: nowrap;
+
+      .cancel-btn,
+      .retry-btn {
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+
+        display: inline;
+        padding: 0;
+        border: none;
+        background: transparent;
+        height: fit-content;
+        margin: 0;
+      }
+
+      .cancel-btn {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        border-color: rgba(239, 68, 68, 0.3);
+
+        &:hover {
+          background: rgba(239, 68, 68, 0.2);
+        }
+      }
+
+      .retry-btn {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        border-color: rgba(59, 130, 246, 0.3);
+
+        &:hover {
+          background: rgba(59, 130, 246, 0.2);
+        }
+      }
+    }
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &.status-paid {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+    }
+
+    &.status-pending {
+      background: rgba(251, 191, 36, 0.15);
+      color: #f59e0b;
+    }
+
+    &.status-failed {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    &.status-refunded {
+      background: rgba(148, 163, 184, 0.15);
+      color: #94a3b8;
+    }
+  }
+
+  .orders-info {
+    background: var(--secondary-color, rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    border-radius: 12px;
+    padding: 1.5rem;
+
+    h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1rem;
+    }
+
+    p {
+      margin: 0;
+      opacity: 0.7;
+      font-size: 0.9rem;
+      line-height: 1.5;
+
+      a {
+        color: var(--button-color, #2563eb);
+      }
+    }
+  }
+}
+
+// Order detail dialog
+.order-detail-body {
+  .order-detail-item {
+    margin-bottom: 0.75rem;
+
+    strong {
+      font-size: 1.1rem;
+    }
+  }
+
+  .order-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+
+    &:last-of-type {
+      border-bottom: none;
+    }
+  }
+
+  .order-detail-label {
+    opacity: 0.6;
+    font-size: 0.85rem;
+  }
+
+  .order-detail-value {
+    font-weight: 500;
+    text-align: right;
+  }
+
+  .refund-button {
+    margin-top: 0.75rem;
+    width: 100%;
+    padding: 0.5rem;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 640px) {
+  #orders .orders-table {
+
+    th:nth-child(4),
+    td.order-date {
+      display: none;
+    }
+
+    th:nth-child(5),
+    td.order-actions {
+      display: none;
+    }
+  }
+}

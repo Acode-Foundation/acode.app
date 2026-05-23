@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'acode';
-  src: url('acode.ttf?3uxh6n') format('truetype');
+  src: url('acode.ttf?2jhwzu') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -83,6 +83,9 @@
 .icon.paypal:before {
   content: '\e905';
   color: #00457c;
+}
+.icon.extension:before {
+  content: '\e923';
 }
 .icon.local_grocery_store:before {
   content: '\e922';

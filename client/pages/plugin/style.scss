@@ -114,6 +114,27 @@
       border-color: rgba(16, 185, 129, 0.2);
     }
 
+    &.pending {
+      border-color: rgba(251, 191, 36, 0.3);
+      background: rgba(251, 191, 36, 0.05);
+
+      .purchase-card-badge.pending {
+        color: #f59e0b;
+      }
+
+      .view-orders-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+        padding: 0.5rem 1rem;
+        color: var(--primary-color, #2563eb);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+    }
+
     .purchase-card-main {
       display: flex;
       flex-direction: column;

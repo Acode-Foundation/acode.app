@@ -95,6 +95,16 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     }
   }
 
+  let hasPendingOrder = false;
+  if (user && price && !userOwnsPlugin) {
+    try {
+      const orders = await fetch('/api/razorpay/orders?status=created&productType=plugin').then((r) => r.json());
+      hasPendingOrder = orders.some((o) => String(o.pluginId) === id);
+    } catch {
+      // Ignore
+    }
+  }
+
   if (user?.isAdmin && plugin.status !== 'approved') {
     canInstall = false;
   }
@@ -178,6 +188,28 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
               <span>Request Refund</span>
             </button>
           )}
+        </div>
+      );
+    }
+
+    if (hasPendingOrder) {
+      return (
+        <div className='purchase-card pending'>
+          <div className='purchase-card-main'>
+            <div className='purchase-card-badge pending'>
+              <span className='icon hourglass_empty' />
+              <span>Payment Pending</span>
+            </div>
+            <div className='purchase-card-details'>
+              <span>Your payment is being processed</span>
+              <span className='dot'>·</span>
+              <span>We'll notify you once confirmed</span>
+            </div>
+          </div>
+          <a href='/orders' className='view-orders-link'>
+            <span>View Orders</span>
+            <span className='icon chevron_right' />
+          </a>
         </div>
       );
     }
