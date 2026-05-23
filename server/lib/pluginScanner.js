@@ -677,8 +677,12 @@ async function buildScanSummary(scanResult, zipLength) {
   const safeId = scanResult.pluginId.replace(/[^a-zA-Z0-9._-]/g, '_');
   const reportPath = join(process.cwd(), 'data', 'plugins', `${safeId}.scan-report.md`);
   
-  await fs.mkdir(join(process.cwd(), 'data', 'plugins'), { recursive: true });
-  await fs.writeFile(reportPath, markdown, 'utf-8');
+  try {
+    await fs.mkdir(join(process.cwd(), 'data', 'plugins'), { recursive: true });
+    await fs.writeFile(reportPath, markdown, 'utf-8');
+  } catch (err) {
+    console.error(`Failed to write scan report to disk for plugin ID: ${scanResult.pluginId}`, err);
+  }
 
   return markdown;
 }
