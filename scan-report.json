@@ -1,0 +1,97 @@
+{
+  "zipName": "dist.zip",
+  "pluginId": "bajrangcoder.acodex",
+  "pluginName": "AcodeX - Terminal",
+  "pluginVersion": "3.2.0",
+  "scannedFiles": [
+    {
+      "file": "main.js",
+      "findings": 6
+    }
+  ],
+  "findings": [
+    {
+      "ruleId": "S004",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Input monitoring hook",
+      "detail": "Listens directly to inputs or keystrokes globally",
+      "file": "main.js",
+      "line": 1,
+      "snippet": "addEventListener(\"keydown\", ...)"
+    },
+    {
+      "ruleId": "S004",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Input monitoring hook",
+      "detail": "Listens directly to inputs or keystrokes globally",
+      "file": "main.js",
+      "line": 1,
+      "snippet": "addEventListener(\"keyup\", ...)"
+    },
+    {
+      "ruleId": "S002",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Suspicious string decoding or obfuscation pattern",
+      "detail": "Uses standard obfuscation markers like atob() decoding or massive hex arrays.",
+      "file": "main.js",
+      "line": 75,
+      "snippet": "atob(...)"
+    },
+    {
+      "ruleId": "A001",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "Acode system module import",
+      "detail": "Plugin requested Acode platform module: \"confirm\"",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require(...)"
+    },
+    {
+      "ruleId": "H001",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File-system module imported",
+      "detail": "The fs/fsOperation module gives full read/write/delete access to system paths.",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require('fsOperation')"
+    },
+    {
+      "ruleId": "S004",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Input monitoring hook",
+      "detail": "Listens directly to inputs or keystrokes globally",
+      "file": "main.js",
+      "line": 87,
+      "snippet": "addEventListener(\"input\", ...)"
+    }
+  ],
+  "urls": [
+    "http://${this.settings.serverHost",
+    "http://127.0.0.1${e",
+    "http://127.0.0.1:${Xo",
+    "http://localhost:11434",
+    "http://www.w3.org/2000/svg",
+    "https://api.deepseek.com/v1/chat/completions",
+    "https://api.openai.com/v1/chat/completions",
+    "https://cdn.jsdelivr.net/gh/bajrangCoder/acode-plugin-acodex@main/fonts/",
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${this.apiKey",
+    "https://github.com/bajrangCoder/acode-plugin-acodex",
+    "https://github.com/facebook/regenerator/blob/main/LICENSE",
+    "https://raw.githubusercontent.com/deepseek-ai/DeepSeek-Coder/main/pictures/home.png",
+    "https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg",
+    "https://upload.wikimedia.org/wikipedia/commons/4/45/Gemini_language_model_logo.png"
+  ],
+  "severityCounts": [
+    0,
+    5,
+    0,
+    0,
+    1
+  ]
+}
