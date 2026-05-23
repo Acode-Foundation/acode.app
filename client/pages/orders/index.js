@@ -275,7 +275,15 @@ export default async function Orders() {
 
 async function fetchOrders() {
   try {
-    return await fetch('/api/razorpay/orders').then((r) => r.json());
+    const res = await fetch('/api/razorpay/orders');
+    if (!res.ok) {
+      throw new Error(`Server returned ${res.status}`);
+    }
+    const data = await res.json();
+    if (!Array.isArray(data)) {
+      throw new Error('Unexpected response format');
+    }
+    return data;
   } catch (error) {
     console.error('Failed to fetch orders:', error);
     return [];
