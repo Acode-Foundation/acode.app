@@ -31,6 +31,15 @@ function getStringValue(node) {
   return null;
 }
 
+function getPropertyName(node) {
+  if (!node) return null;
+  if (node.type === 'Identifier') return node.name;
+  if (node.type === 'StringLiteral' || node.type === 'Literal') {
+    return typeof node.value === 'string' ? node.value : null;
+  }
+  return null;
+}
+
 function getFullMemberPath(node) {
   const parts = [];
   let current = node;
@@ -57,8 +66,12 @@ const RULES = [
     nodeTypes: ['CallExpression'], detail: 'Modules loaded via internal acode.require injection layer.',
     visitor(path, addFinding) {
       const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && callee.property.name === 'require') {
-        const moduleName = args.length > 0 ? (getStringValue(args[0]) || '[Dynamic Name]') : 'None';
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && getPropertyName(callee.property) === 'require') {
+        const arg = getStringValue(args[0]);
+        // Skip reporting here if a high-severity rule is going to catch it anyway
+        if (arg && /^(fs|fsOperation|terminal|intent|plugin)$/.test(arg)) return;
+        
+        const moduleName = arg || '[Dynamic Name]';
         addFinding({
           line: path.node.loc?.start.line || 0,
           snippet: `acode.require('${moduleName}')`,
@@ -86,7 +99,7 @@ const RULES = [
     nodeTypes: ['CallExpression'], detail: 'cordova.exec() calls native code directly.',
     visitor(path, addFinding) {
       const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'cordova') && callee.property.name === 'exec') {
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'cordova') && getPropertyName(callee.property) === 'exec') {
         const service = args[2] ? (getStringValue(args[2]) || '[Dynamic]') : 'Unknown';
         addFinding({ line: path.node.loc?.start.line || 0, snippet: `cordova.exec(..., "${service}", ...)` });
       }
@@ -96,7 +109,7 @@ const RULES = [
     id: 'C003', severity: SEV.CRITICAL, description: 'Cordova native plugin access',
     nodeTypes: ['MemberExpression'], detail: 'Access to cordova.plugins.*',
     visitor(path, addFinding) {
-      if (path.node.property.name === 'plugins' && identifierMatches(path.node.object, 'cordova')) {
+      if (getPropertyName(path.node.property) === 'plugins' && identifierMatches(path.node.object, 'cordova')) {
         addFinding({ line: path.node.loc?.start.line || 0, snippet: 'cordova.plugins' });
       }
     }
@@ -105,7 +118,7 @@ const RULES = [
     id: 'C004', severity: SEV.CRITICAL, description: 'window.cordova detected',
     nodeTypes: ['MemberExpression'], detail: 'Direct reference to Cordova on the window object.',
     visitor(path, addFinding) {
-      if (identifierMatches(path.node.object, 'window') && (path.node.property.name === 'cordova' || getStringValue(path.node.property) === 'cordova')) {
+      if (identifierMatches(path.node.object, 'window') && getPropertyName(path.node.property) === 'cordova') {
         addFinding({ line: path.node.loc?.start.line || 0, snippet: 'window.cordova' });
       }
     }
@@ -117,7 +130,7 @@ const RULES = [
     nodeTypes: ['CallExpression'], detail: 'fs/fsOperation module gives full read/write access.',
     visitor(path, addFinding) {
       const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && callee.property.name === 'require') {
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && getPropertyName(callee.property) === 'require') {
         const arg = getStringValue(args[0]);
         if (arg && /^(fs|fsOperation)$/.test(arg)) {
           addFinding({ line: path.node.loc?.start.line || 0, snippet: `acode.require('${arg}')` });
@@ -129,8 +142,9 @@ const RULES = [
     id: 'H002', severity: SEV.HIGH, description: 'File read operation',
     nodeTypes: ['MemberExpression'], detail: 'Reads from the file system.',
     visitor(path, addFinding) {
-      if (path.node.property.type === 'Identifier' && /^(readFile|readFileSync|read)$/.test(path.node.property.name)) {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
+      const prop = getPropertyName(path.node.property);
+      if (prop && /^(readFile|readFileSync)$/.test(prop)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${prop}(...)` });
       }
     }
   },
@@ -138,8 +152,9 @@ const RULES = [
     id: 'H003', severity: SEV.HIGH, description: 'File write operation',
     nodeTypes: ['MemberExpression'], detail: 'Writes data to the file system.',
     visitor(path, addFinding) {
-      if (path.node.property.type === 'Identifier' && /^(writeFile|writeFileSync|write)$/.test(path.node.property.name)) {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
+      const prop = getPropertyName(path.node.property);
+      if (prop && /^(writeFile|writeFileSync)$/.test(prop)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${prop}(...)` });
       }
     }
   },
@@ -147,8 +162,9 @@ const RULES = [
     id: 'H004', severity: SEV.MEDIUM, description: 'Directory listing',
     nodeTypes: ['MemberExpression'], detail: 'Reads directory contents locally.',
     visitor(path, addFinding) {
-      if (path.node.property.type === 'Identifier' && /^(lsDir|readDir|readdir)$/.test(path.node.property.name)) {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
+      const prop = getPropertyName(path.node.property);
+      if (prop && /^(lsDir|readDir|readdir)$/.test(prop)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${prop}(...)` });
       }
     }
   },
@@ -156,8 +172,9 @@ const RULES = [
     id: 'H010', severity: SEV.HIGH, description: 'File deletion',
     nodeTypes: ['MemberExpression'], detail: 'Deletes local files.',
     visitor(path, addFinding) {
-      if (path.node.property.type === 'Identifier' && /^(deleteFile|unlink|rm|remove)$/.test(path.node.property.name)) {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
+      const prop = getPropertyName(path.node.property);
+      if (prop && /^(deleteFile|unlink|rm)$/.test(prop)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${prop}(...)` });
       }
     }
   },
@@ -165,8 +182,9 @@ const RULES = [
     id: 'H011', severity: SEV.MEDIUM, description: 'File move or copy',
     nodeTypes: ['MemberExpression'], detail: 'Moves or copies files across the system.',
     visitor(path, addFinding) {
-      if (path.node.property.type === 'Identifier' && /^(copyTo|moveTo|renameFile|rename)$/.test(path.node.property.name)) {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
+      const prop = getPropertyName(path.node.property);
+      if (prop && /^(copyTo|moveTo|renameFile)$/.test(prop)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${prop}(...)` });
       }
     }
   },
@@ -177,7 +195,7 @@ const RULES = [
     nodeTypes: ['CallExpression'], detail: 'Grants access to run terminal commands.',
     visitor(path, addFinding) {
       const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && callee.property.name === 'require' && getStringValue(args[0]) === 'terminal') {
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && getPropertyName(callee.property) === 'require' && getStringValue(args[0]) === 'terminal') {
         addFinding({ line: path.node.loc?.start.line || 0, snippet: "acode.require('terminal')" });
       }
     }
@@ -187,7 +205,7 @@ const RULES = [
     nodeTypes: ['CallExpression'], detail: 'Grants access to fire Android intents.',
     visitor(path, addFinding) {
       const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && callee.property.name === 'require' && getStringValue(args[0]) === 'intent') {
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && getPropertyName(callee.property) === 'require' && getStringValue(args[0]) === 'intent') {
         addFinding({ line: path.node.loc?.start.line || 0, snippet: "acode.require('intent')" });
       }
     }
@@ -248,7 +266,7 @@ const RULES = [
     id: 'M004', severity: SEV.MEDIUM, description: 'document.cookie access',
     nodeTypes: ['MemberExpression'], detail: 'Reads or modifies browser cookies.',
     visitor(path, addFinding) {
-      if (identifierMatches(path.node.object, 'document') && path.node.property.name === 'cookie') {
+      if (identifierMatches(path.node.object, 'document') && getPropertyName(path.node.property) === 'cookie') {
         addFinding({ line: path.node.loc?.start.line || 0, snippet: 'document.cookie' });
       }
     }
@@ -307,8 +325,22 @@ const RULES = [
     id: 'M005', severity: SEV.INFO, description: 'editorManager read',
     nodeTypes: ['MemberExpression'], detail: 'Accesses the current editor or active file content.',
     visitor(path, addFinding) {
-      if (identifierMatches(path.node.object, 'editorManager') && path.node.property.type === 'Identifier') {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: `editorManager.${path.node.property.name}` });
+      if (identifierMatches(path.node.object, 'editorManager')) {
+        const prop = getPropertyName(path.node.property);
+        if (prop && prop !== 'activeFile') {
+          addFinding({ line: path.node.loc?.start.line || 0, snippet: `editorManager.${prop}` });
+        }
+      }
+    }
+  },
+  {
+    id: 'M006', severity: SEV.MEDIUM, description: 'activeFile or editor manipulation',
+    nodeTypes: ['MemberExpression', 'Identifier'], detail: 'Accesses or modifies the currently active file in the editor.',
+    visitor(path, addFinding) {
+      const isMember = path.isMemberExpression() && getPropertyName(path.node.property) === 'activeFile';
+      const isIdent = path.isIdentifier() && path.node.name === 'activeFile' && !path.scope.hasBinding('activeFile');
+      if (isMember || isIdent) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: '.activeFile' });
       }
     }
   },
@@ -317,7 +349,7 @@ const RULES = [
     nodeTypes: ['CallExpression'], detail: 'Accesses Acode plugin API directly, potentially to install/remove plugins.',
     visitor(path, addFinding) {
       const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && callee.property.name === 'require' && getStringValue(args[0]) === 'plugin') {
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && getPropertyName(callee.property) === 'require' && getStringValue(args[0]) === 'plugin') {
         addFinding({ line: path.node.loc?.start.line || 0, snippet: "acode.require('plugin')" });
       }
     }
@@ -344,8 +376,6 @@ const RULES = [
       if (path.isArrayExpression() && path.node.elements.length > 20) {
         const totalHex = path.node.elements.filter(el => {
           if (!el) return false;
-          // Obfuscated hex arrays often parse as NumericLiterals in Babel.
-          // Checking el.extra.raw reveals if the source used '0x' notation.
           if (el.type === 'NumericLiteral' && el.extra && /^0x/i.test(el.extra.raw)) return true;
           if (el.type === 'StringLiteral' && /^0x[0-9a-f]+$/i.test(el.value)) return true;
           return false;
@@ -362,7 +392,7 @@ const RULES = [
     nodeTypes: ['CallExpression'], detail: 'Dynamically injects a <script> tag to pull remote code.',
     visitor(path, addFinding) {
       const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'document') && callee.property.name === 'createElement' && getStringValue(args[0])?.toLowerCase() === 'script') {
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'document') && getPropertyName(callee.property) === 'createElement' && getStringValue(args[0])?.toLowerCase() === 'script') {
         addFinding({ line: path.node.loc?.start.line || 0, snippet: 'document.createElement("script")' });
       }
     }
@@ -375,7 +405,7 @@ const RULES = [
       
       const isGlobalAddEvent = 
         (callee.type === 'Identifier' && callee.name === 'addEventListener') ||
-        (callee.type === 'MemberExpression' && callee.property.name === 'addEventListener' && 
+        (callee.type === 'MemberExpression' && getPropertyName(callee.property) === 'addEventListener' && 
           (identifierMatches(callee.object, 'window') || identifierMatches(callee.object, 'document')));
           
       if (isGlobalAddEvent && args.length > 0) {
@@ -416,6 +446,16 @@ function scanSource(filename, source) {
       plugins: BABEL_PARSER_PLUGINS,
     });
   } catch (err) {
+    findings.push({
+      ruleId: 'P001',
+      severity: SEV.HIGH,
+      severityLabel: SEV_LABEL[SEV.HIGH],
+      description: 'AST Parse Failure',
+      detail: `Static analysis failed due to a syntax error or unsupported experimental syntax. This can indicate intentional obfuscation. Error: ${err.message}`,
+      file: filename,
+      line: err.loc?.line || 0,
+      snippet: '[Parse Error]'
+    });
     return { findings, urls: [...urlSet] };
   }
 
@@ -506,6 +546,7 @@ async function scanPlugin(zipBuffer, zipName) {
 }
 
 const CAPABILITY_MAP = {
+  P001: { group: 'sketchy',  label: 'File Parsing Error' },
   C001: { group: 'shell',    label: 'Executor reference or shell execution detected' },
   C002: { group: 'native',   label: 'Direct Cordova native bridge call' },
   C003: { group: 'native',   label: 'Cordova native plugin access' },
@@ -525,6 +566,7 @@ const CAPABILITY_MAP = {
   M003: { group: 'storage',  label: 'IndexedDB access' },
   M004: { group: 'storage',  label: 'document.cookie access' },
   M005: { group: 'system',   label: 'editorManager API access' },
+  M006: { group: 'system',   label: 'activeFile or editor manipulation' },
   M007: { group: 'system',   label: 'Plugin API access' },
   M008: { group: 'native',   label: 'Android Intent API accessed' },
   M009: { group: 'storage',  label: 'Sensitive Path Constants accessed' },
@@ -553,12 +595,16 @@ const GROUP_HEADING = {
 const GROUP_ORDER = ['shell', 'native', 'fs', 'network', 'storage', 'dynamic', 'sketchy', 'system'];
 
 async function buildScanSummary(scanResult, zipLength) {
+  const sizeStr = zipLength < 1048576 
+    ? `${(zipLength / 1024).toFixed(2)} KB` 
+    : `${(zipLength / 1048576).toFixed(2)} MB`;
+
   const lines = [
     `## ${scanResult.pluginName}`,
     '',
     `- **Plugin ID:** \`${scanResult.pluginId}\``,
     `- **Version:** ${scanResult.pluginVersion}`,
-    `- **Plugin size:** ${(zipLength / 1048576).toFixed(2)} MB`,
+    `- **Plugin size:** ${sizeStr}`,
     `- **Scan date:** ${new Date().toISOString()}`,
     `- **Files scanned:** ${scanResult.scannedFiles.length}`,
     '',
