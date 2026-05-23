@@ -645,3 +645,46 @@ module.exports = async function buildScanSummary(zipBuffer, zipName) {
 
   return markdown;
 };
+
+
+if (require.main === module) {
+  (async () => {
+    const args = process.argv.slice(2);
+
+    const json = args.includes('--json');
+    const md = args.includes('--md');
+
+    const files = args.filter((a) => !a.startsWith('--'));
+
+    if (!files.length) {
+      console.error('Usage: node pluginScanner.js <plugin.zip> [--json] [--md]');
+      process.exit(1);
+    }
+
+    for (const file of files) {
+      try {
+        const buffer = await fs.readFile(file);
+
+        const markdown = await module.exports(buffer, file);
+
+        if (md) {
+          console.log(markdown);
+        }
+
+        if (json) {
+          const result = await scanPlugin(buffer, file);
+
+          console.log(JSON.stringify(result, null, 2));
+
+          await fs.writeFile(
+            join(process.cwd(), 'scan-report.json'),
+            JSON.stringify(result, null, 2),
+            'utf8'
+          );
+        }
+      } catch (err) {
+        console.error(`Failed to scan ${file}:`, err);
+      }
+    }
+  })();
+}
