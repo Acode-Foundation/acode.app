@@ -18,8 +18,6 @@ function identifierMatches(node, name) {
   if (!node) return false;
   if (node.type === 'Identifier') return node.name === name;
   if (node.type === 'MemberExpression') {
-    // FIX: Only check the object chain to ensure 'name' is the root object.
-    // This prevents false positives like `foo.window.cordova` matching 'window'.
     return identifierMatches(node.object, name);
   }
   return false;
@@ -200,7 +198,7 @@ const RULES = [
     id: 'H007', severity: SEV.HIGH, description: 'Network fetch() call',
     nodeTypes: ['Identifier'], detail: 'Makes external HTTP requests.',
     visitor(path, addFinding) {
-      if (path.node.name === 'fetch' && !path.scope.hasBinding('fetch')) {
+      if (path.node.name === 'fetch' && path.isReferencedIdentifier() && !path.scope.hasBinding('fetch')) {
         addFinding({ line: path.node.loc?.start.line || 0, snippet: 'fetch(...)' });
       }
     }
@@ -347,7 +345,7 @@ const RULES = [
     nodeTypes: ['CallExpression'], detail: 'Dynamically injects a <script> tag to pull remote code.',
     visitor(path, addFinding) {
       const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && callee.property.name === 'createElement' && getStringValue(args[0])?.toLowerCase() === 'script') {
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'document') && callee.property.name === 'createElement' && getStringValue(args[0])?.toLowerCase() === 'script') {
         addFinding({ line: path.node.loc?.start.line || 0, snippet: 'document.createElement("script")' });
       }
     }
