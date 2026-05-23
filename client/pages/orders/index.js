@@ -82,7 +82,9 @@ export default async function Orders() {
           return;
         }
 
-        const detail = await fetch(`/api/razorpay/orders/${order.razorpayOrderId}`).then((r) => r.json());
+        const detailRes = await fetch(`/api/razorpay/orders/${order.razorpayOrderId}`);
+        if (!detailRes.ok) throw new Error(`Server returned ${detailRes.status}`);
+        const detail = await detailRes.json();
         hideLoading();
 
         const body = <div className='order-detail-body' />;
