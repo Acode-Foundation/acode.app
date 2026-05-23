@@ -66,9 +66,9 @@ export default async function Orders() {
     const statusConfig = {
       paid: { label: 'Paid', className: 'status-paid' },
       created: { label: 'Pending', className: 'status-pending' },
-      failed: { label: 'Failed/Cancelled', className: 'status-failed' },
+      failed: { label: 'Failed', className: 'status-failed' },
       refunded: { label: 'Refunded', className: 'status-refunded' },
-      cancelled: { label: 'Cancelled', className: 'status-refunded' },
+      cancelled: { label: 'Cancelled', className: 'status-cancelled' },
     };
 
     const config = statusConfig[order.status] || { label: order.status, className: '' };

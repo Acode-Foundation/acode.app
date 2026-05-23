@@ -117,7 +117,7 @@ export async function initiateCheckout(pluginId, userInfo = {}, onSuccess, onCan
 
           if (verifyData.success) {
             alert('SUCCESS', 'Payment successful! You can now download this plugin.', onSuccess);
-          } else if (verifyData.error?.includes('still processing')) {
+          } else if (verifyData.code === 'PAYMENT_PROCESSING') {
             alert(
               'PAYMENT PENDING',
               'Your payment is being processed. You will be notified once it is confirmed. You can check your order status on the Orders page.',
@@ -226,7 +226,7 @@ export async function initiateProCheckout(userInfo = {}, onSuccess, onCancel) {
 
           if (verifyData.success) {
             alert('SUCCESS', 'Thank you for supporting Acode! Pro features are now active.', onSuccess);
-          } else if (verifyData.error?.includes('still processing')) {
+          } else if (verifyData.code === 'PAYMENT_PROCESSING') {
             alert(
               'PAYMENT PENDING',
               'Your payment is being processed. You will be notified once it is confirmed. You can check your order status on the Orders page.',

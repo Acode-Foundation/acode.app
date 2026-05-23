@@ -298,7 +298,10 @@ router.post('/verify', async (req, res) => {
     // Fetch the Razorpay order to verify amount and pluginId from server-side notes
     const rzpOrder = await getRazorpay().orders.fetch(razorpay_order_id);
     if (!rzpOrder || rzpOrder.status !== 'paid') {
-      res.status(400).send({ error: 'Payment is still processing. Your purchase will be activated automatically once payment is confirmed.' });
+      res.status(400).send({
+        code: 'PAYMENT_PROCESSING',
+        error: 'Payment is still processing. Your purchase will be activated automatically once payment is confirmed.',
+      });
       return;
     }
 
@@ -599,6 +602,18 @@ router.get('/orders', async (req, res) => {
         });
       }
     }
+
+    // Apply status/productType filters to legacy results so callers
+    // like updateOrdersBadge(?status=created) or the plugin page
+    // (?status=created&productType=plugin) aren't polluted with
+    // unrelated legacy records.
+    const filteredLegacy = legacyResult.filter((entry) => {
+      if (status && entry.status !== status) return false;
+      if (productType && entry.productType !== productType) return false;
+      return true;
+    });
+    legacyResult.length = 0;
+    legacyResult.push(...filteredLegacy);
 
     const combined = [...result, ...legacyResult].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -1105,7 +1120,10 @@ router.post('/verify-pro', async (req, res) => {
     // Fetch the Razorpay order to verify it's paid and amount matches expected pro price
     const rzpOrder = await getRazorpay().orders.fetch(razorpay_order_id);
     if (!rzpOrder || rzpOrder.status !== 'paid') {
-      res.status(400).send({ error: 'Payment is still processing. Your purchase will be activated automatically once payment is confirmed.' });
+      res.status(400).send({
+        code: 'PAYMENT_PROCESSING',
+        error: 'Payment is still processing. Your purchase will be activated automatically once payment is confirmed.',
+      });
       return;
     }
 
@@ -1427,11 +1445,11 @@ router.post('/cancel-order', async (req, res) => {
       return;
     }
 
-    await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_FAILED]], [RazorpayOrder.RAZORPAY_ORDER_ID, razorpayOrderId]);
+    await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_CANCELLED]], [RazorpayOrder.RAZORPAY_ORDER_ID, razorpayOrderId]);
 
     const [verify] = await RazorpayOrder.get([RazorpayOrder.STATUS], [RazorpayOrder.RAZORPAY_ORDER_ID, razorpayOrderId]);
 
-    if (!verify || verify.status !== RazorpayOrder.STATUS_FAILED) {
+    if (!verify || verify.status !== RazorpayOrder.STATUS_CANCELLED) {
       console.error(`Cancel-order update failed for ${razorpayOrderId}: read-back status=${verify?.status}`, { razorpayOrderId });
       res.status(500).send({ error: 'Failed to cancel order. Please try again.' });
       return;

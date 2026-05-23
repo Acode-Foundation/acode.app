@@ -10,7 +10,7 @@ const table = `CREATE TABLE IF NOT EXISTS razorpay_order (
   amount INTEGER NOT NULL,
   currency TEXT NOT NULL DEFAULT 'INR',
   amount_inr INTEGER NOT NULL,
-  status TEXT NOT NULL DEFAULT 'created' CHECK (status IN ('created', 'paid', 'failed', 'refunded')),
+  status TEXT NOT NULL DEFAULT 'created' CHECK (status IN ('created', 'paid', 'failed', 'refunded', 'cancelled')),
   receipt TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -44,6 +44,7 @@ class RazorpayOrder extends Entity {
   STATUS_PAID = 'paid';
   STATUS_FAILED = 'failed';
   STATUS_REFUNDED = 'refunded';
+  STATUS_CANCELLED = 'cancelled';
 
   PRODUCT_PLUGIN = 'plugin';
   PRODUCT_PRO = 'acode_pro';
