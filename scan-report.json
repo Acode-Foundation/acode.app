@@ -1,0 +1,537 @@
+{
+  "zipName": "dist.zip",
+  "pluginId": "bajrangcoder.acodex",
+  "pluginName": "AcodeX - Terminal",
+  "pluginVersion": "3.2.0",
+  "scannedFiles": [
+    {
+      "file": "main.js",
+      "findings": 50
+    }
+  ],
+  "findings": [
+    {
+      "ruleId": "S004",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Input monitoring hook",
+      "detail": "Listens directly to inputs or keystrokes globally",
+      "file": "main.js",
+      "line": 1,
+      "snippet": "addEventListener(\"keydown\", ...)"
+    },
+    {
+      "ruleId": "S004",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Input monitoring hook",
+      "detail": "Listens directly to inputs or keystrokes globally",
+      "file": "main.js",
+      "line": 1,
+      "snippet": "addEventListener(\"keyup\", ...)"
+    },
+    {
+      "ruleId": "H009",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "WebSocket communication",
+      "detail": "Opens a persistent two-way network connection.",
+      "file": "main.js",
+      "line": 2,
+      "snippet": "new WebSocket(...)"
+    },
+    {
+      "ruleId": "H010",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File deletion",
+      "detail": "Deletes local files.",
+      "file": "main.js",
+      "line": 11,
+      "snippet": ".remove(...)"
+    },
+    {
+      "ruleId": "H010",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File deletion",
+      "detail": "Deletes local files.",
+      "file": "main.js",
+      "line": 12,
+      "snippet": ".remove(...)"
+    },
+    {
+      "ruleId": "H010",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File deletion",
+      "detail": "Deletes local files.",
+      "file": "main.js",
+      "line": 14,
+      "snippet": ".remove(...)"
+    },
+    {
+      "ruleId": "H003",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File write operation",
+      "detail": "Writes data to the file system.",
+      "file": "main.js",
+      "line": 16,
+      "snippet": ".write(...)"
+    },
+    {
+      "ruleId": "H003",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File write operation",
+      "detail": "Writes data to the file system.",
+      "file": "main.js",
+      "line": 17,
+      "snippet": ".write(...)"
+    },
+    {
+      "ruleId": "H010",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File deletion",
+      "detail": "Deletes local files.",
+      "file": "main.js",
+      "line": 75,
+      "snippet": ".remove(...)"
+    },
+    {
+      "ruleId": "H011",
+      "severity": 2,
+      "severityLabel": "MEDIUM",
+      "description": "File move or copy",
+      "detail": "Moves or copies files across the system.",
+      "file": "main.js",
+      "line": 75,
+      "snippet": ".moveTo(...)"
+    },
+    {
+      "ruleId": "H003",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File write operation",
+      "detail": "Writes data to the file system.",
+      "file": "main.js",
+      "line": 75,
+      "snippet": ".write(...)"
+    },
+    {
+      "ruleId": "S002",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Suspicious obfuscation",
+      "detail": "Uses standard obfuscation markers like atob() or hex arrays.",
+      "file": "main.js",
+      "line": 75,
+      "snippet": "atob(...)"
+    },
+    {
+      "ruleId": "H008",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "XMLHttpRequest used",
+      "detail": "Legacy network request method.",
+      "file": "main.js",
+      "line": 76,
+      "snippet": "new XMLHttpRequest()"
+    },
+    {
+      "ruleId": "H007",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Network fetch() call",
+      "detail": "Makes external HTTP requests.",
+      "file": "main.js",
+      "line": 76,
+      "snippet": "fetch(...)"
+    },
+    {
+      "ruleId": "H002",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File read operation",
+      "detail": "Reads from the file system.",
+      "file": "main.js",
+      "line": 76,
+      "snippet": ".read(...)"
+    },
+    {
+      "ruleId": "H007",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Network fetch() call",
+      "detail": "Makes external HTTP requests.",
+      "file": "main.js",
+      "line": 78,
+      "snippet": "fetch(...)"
+    },
+    {
+      "ruleId": "L006",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "URL Encoding used",
+      "detail": "Often used to format exfiltrated data or parse remote strings.",
+      "file": "main.js",
+      "line": 78,
+      "snippet": "btoa"
+    },
+    {
+      "ruleId": "M001",
+      "severity": 2,
+      "severityLabel": "MEDIUM",
+      "description": "localStorage access",
+      "detail": "Accesses browser local storage.",
+      "file": "main.js",
+      "line": 78,
+      "snippet": "localStorage"
+    },
+    {
+      "ruleId": "H007",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Network fetch() call",
+      "detail": "Makes external HTTP requests.",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "fetch(...)"
+    },
+    {
+      "ruleId": "C003",
+      "severity": 0,
+      "severityLabel": "CRITICAL",
+      "description": "Cordova native plugin access",
+      "detail": "Access to cordova.plugins.*",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "cordova.plugins"
+    },
+    {
+      "ruleId": "L005",
+      "severity": 2,
+      "severityLabel": "MEDIUM",
+      "description": "Dynamic window property access",
+      "detail": "Accesses the window object dynamically (e.g., window[variable]).",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "window[...]"
+    },
+    {
+      "ruleId": "A001",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "Acode system module import",
+      "detail": "Plugin requested Acode platform module: \"confirm\"",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require('confirm')"
+    },
+    {
+      "ruleId": "A001",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "Acode system module import",
+      "detail": "Plugin requested Acode platform module: \"settings\"",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require('settings')"
+    },
+    {
+      "ruleId": "A001",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "Acode system module import",
+      "detail": "Plugin requested Acode platform module: \"fsOperation\"",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require('fsOperation')"
+    },
+    {
+      "ruleId": "H001",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File-system module imported",
+      "detail": "fs/fsOperation module gives full read/write access.",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require('fsOperation')"
+    },
+    {
+      "ruleId": "A001",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "Acode system module import",
+      "detail": "Plugin requested Acode platform module: \"toInternalUrl\"",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require('toInternalUrl')"
+    },
+    {
+      "ruleId": "A001",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "Acode system module import",
+      "detail": "Plugin requested Acode platform module: \"select\"",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require('select')"
+    },
+    {
+      "ruleId": "A001",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "Acode system module import",
+      "detail": "Plugin requested Acode platform module: \"loader\"",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require('loader')"
+    },
+    {
+      "ruleId": "A001",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "Acode system module import",
+      "detail": "Plugin requested Acode platform module: \"dialogBox\"",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require('dialogBox')"
+    },
+    {
+      "ruleId": "A001",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "Acode system module import",
+      "detail": "Plugin requested Acode platform module: \"page\"",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require('page')"
+    },
+    {
+      "ruleId": "A001",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "Acode system module import",
+      "detail": "Plugin requested Acode platform module: \"actionStack\"",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require('actionStack')"
+    },
+    {
+      "ruleId": "A001",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "Acode system module import",
+      "detail": "Plugin requested Acode platform module: \"fonts\"",
+      "file": "main.js",
+      "line": 82,
+      "snippet": "acode.require('fonts')"
+    },
+    {
+      "ruleId": "M005",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "editorManager read",
+      "detail": "Accesses the current editor or active file content.",
+      "file": "main.js",
+      "line": 87,
+      "snippet": "editorManager.addCommand"
+    },
+    {
+      "ruleId": "M005",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "editorManager read",
+      "detail": "Accesses the current editor or active file content.",
+      "file": "main.js",
+      "line": 87,
+      "snippet": "editorManager.commands"
+    },
+    {
+      "ruleId": "M005",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "editorManager read",
+      "detail": "Accesses the current editor or active file content.",
+      "file": "main.js",
+      "line": 87,
+      "snippet": "editorManager.editor"
+    },
+    {
+      "ruleId": "H002",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File read operation",
+      "detail": "Reads from the file system.",
+      "file": "main.js",
+      "line": 87,
+      "snippet": ".readFile(...)"
+    },
+    {
+      "ruleId": "M001",
+      "severity": 2,
+      "severityLabel": "MEDIUM",
+      "description": "localStorage access",
+      "detail": "Accesses browser local storage.",
+      "file": "main.js",
+      "line": 87,
+      "snippet": "localStorage"
+    },
+    {
+      "ruleId": "S004",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Input monitoring hook",
+      "detail": "Listens directly to inputs or keystrokes globally",
+      "file": "main.js",
+      "line": 87,
+      "snippet": "addEventListener(\"input\", ...)"
+    },
+    {
+      "ruleId": "H007",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Network fetch() call",
+      "detail": "Makes external HTTP requests.",
+      "file": "main.js",
+      "line": 87,
+      "snippet": "fetch(...)"
+    },
+    {
+      "ruleId": "H010",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File deletion",
+      "detail": "Deletes local files.",
+      "file": "main.js",
+      "line": 87,
+      "snippet": ".remove(...)"
+    },
+    {
+      "ruleId": "H009",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "WebSocket communication",
+      "detail": "Opens a persistent two-way network connection.",
+      "file": "main.js",
+      "line": 87,
+      "snippet": "new WebSocket(...)"
+    },
+    {
+      "ruleId": "H002",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File read operation",
+      "detail": "Reads from the file system.",
+      "file": "main.js",
+      "line": 94,
+      "snippet": ".readFile(...)"
+    },
+    {
+      "ruleId": "H003",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File write operation",
+      "detail": "Writes data to the file system.",
+      "file": "main.js",
+      "line": 94,
+      "snippet": ".writeFile(...)"
+    },
+    {
+      "ruleId": "M001",
+      "severity": 2,
+      "severityLabel": "MEDIUM",
+      "description": "localStorage access",
+      "detail": "Accesses browser local storage.",
+      "file": "main.js",
+      "line": 94,
+      "snippet": "localStorage"
+    },
+    {
+      "ruleId": "H007",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "Network fetch() call",
+      "detail": "Makes external HTTP requests.",
+      "file": "main.js",
+      "line": 94,
+      "snippet": "fetch(...)"
+    },
+    {
+      "ruleId": "H010",
+      "severity": 1,
+      "severityLabel": "HIGH",
+      "description": "File deletion",
+      "detail": "Deletes local files.",
+      "file": "main.js",
+      "line": 94,
+      "snippet": ".remove(...)"
+    },
+    {
+      "ruleId": "M009",
+      "severity": 2,
+      "severityLabel": "MEDIUM",
+      "description": "Sensitive Path Constants",
+      "detail": "Accesses root-level storage or plugin directories.",
+      "file": "main.js",
+      "line": 94,
+      "snippet": "DATA_STORAGE"
+    },
+    {
+      "ruleId": "M005",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "editorManager read",
+      "detail": "Accesses the current editor or active file content.",
+      "file": "main.js",
+      "line": 94,
+      "snippet": "editorManager.removeCommand"
+    },
+    {
+      "ruleId": "M005",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "editorManager read",
+      "detail": "Accesses the current editor or active file content.",
+      "file": "main.js",
+      "line": 94,
+      "snippet": "editorManager.commands"
+    },
+    {
+      "ruleId": "M005",
+      "severity": 4,
+      "severityLabel": "INFO",
+      "description": "editorManager read",
+      "detail": "Accesses the current editor or active file content.",
+      "file": "main.js",
+      "line": 94,
+      "snippet": "editorManager.editor"
+    }
+  ],
+  "urls": [
+    "http://${this.settings.serverHost",
+    "http://127.0.0.1${e",
+    "http://127.0.0.1:${Xo",
+    "http://localhost:11434",
+    "http://www.w3.org/2000/svg",
+    "https://api.deepseek.com/v1/chat/completions",
+    "https://api.openai.com/v1/chat/completions",
+    "https://cdn.jsdelivr.net/gh/bajrangCoder/acode-plugin-acodex@main/fonts/",
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${this.apiKey",
+    "https://github.com/bajrangCoder/acode-plugin-acodex",
+    "https://github.com/facebook/regenerator/blob/main/LICENSE",
+    "https://raw.githubusercontent.com/deepseek-ai/DeepSeek-Coder/main/pictures/home.png",
+    "https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg",
+    "https://upload.wikimedia.org/wikipedia/commons/4/45/Gemini_language_model_logo.png"
+  ],
+  "severityCounts": [
+    1,
+    26,
+    6,
+    0,
+    17
+  ]
+}

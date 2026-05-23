@@ -18,7 +18,9 @@ function identifierMatches(node, name) {
   if (!node) return false;
   if (node.type === 'Identifier') return node.name === name;
   if (node.type === 'MemberExpression') {
-    return identifierMatches(node.property, name) || identifierMatches(node.object, name);
+    // FIX: Only check the object chain to ensure 'name' is the root object.
+    // This prevents false positives like `foo.window.cordova` matching 'window'.
+    return identifierMatches(node.object, name);
   }
   return false;
 }
@@ -51,42 +53,273 @@ function getFullMemberPath(node) {
 }
 
 const RULES = [
+  // --- SYSTEM & ACODE API ---
   {
-    id: 'A001',
-    severity: SEV.INFO,
-    description: 'Acode system module import',
-    detail: 'Modules loaded via internal acode.require injection layer.',
-    nodeTypes: ['CallExpression'],
+    id: 'A001', severity: SEV.INFO, description: 'Acode system module import',
+    nodeTypes: ['CallExpression'], detail: 'Modules loaded via internal acode.require injection layer.',
     visitor(path, addFinding) {
       const { callee, arguments: args } = path.node;
       if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && callee.property.name === 'require') {
         const moduleName = args.length > 0 ? (getStringValue(args[0]) || '[Dynamic Name]') : 'None';
         addFinding({
           line: path.node.loc?.start.line || 0,
-          snippet: `acode.require(${args.length > 0 ? '...' : ''})`,
+          snippet: `acode.require('${moduleName}')`,
           dynamicDetail: `Plugin requested Acode platform module: "${moduleName}"`
         });
       }
     }
   },
+  
+  // --- NATIVE & SHELL (CRITICAL) ---
   {
-    id: 'A002',
-    severity: SEV.INFO,
-    description: 'editorManager API access',
-    detail: 'Accesses the Acode editorManager to manipulate the editor state.',
-    nodeTypes: ['Identifier'],
+    id: 'C001', severity: SEV.CRITICAL, description: 'Executor reference or shell execution detected',
+    nodeTypes: ['Identifier'], detail: 'Any access via the Executor global can run arbitrary shell commands.',
     visitor(path, addFinding) {
-      if (path.node.name === 'editorManager' && !path.scope.hasBinding('editorManager')) {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'editorManager' });
+      if (path.node.name === 'Executor' && !path.scope.hasBinding('Executor')) {
+        if (path.parent.type === 'VariableDeclarator' && path.parent.id === path.node) return;
+        if (path.parent.type === 'FunctionDeclaration' && path.parent.id === path.node) return;
+        if ((path.parent.type === 'ObjectProperty' || path.parent.type === 'Property') && path.parent.key === path.node) return;
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'Executor' });
       }
     }
   },
   {
-    id: 'S001',
-    severity: SEV.CRITICAL,
-    description: 'Data exfiltration or telemetry endpoint detected',
-    nodeTypes: ['StringLiteral', 'Literal'],
-    detail: 'Known Discord webhook, Pastebin, or public IP logging service used for potential data harvesting.',
+    id: 'C002', severity: SEV.CRITICAL, description: 'Direct Cordova native bridge call',
+    nodeTypes: ['CallExpression'], detail: 'cordova.exec() calls native code directly.',
+    visitor(path, addFinding) {
+      const { callee, arguments: args } = path.node;
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'cordova') && callee.property.name === 'exec') {
+        const service = args[2] ? (getStringValue(args[2]) || '[Dynamic]') : 'Unknown';
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `cordova.exec(..., "${service}", ...)` });
+      }
+    }
+  },
+  {
+    id: 'C003', severity: SEV.CRITICAL, description: 'Cordova native plugin access',
+    nodeTypes: ['MemberExpression'], detail: 'Access to cordova.plugins.*',
+    visitor(path, addFinding) {
+      if (path.node.property.name === 'plugins' && identifierMatches(path.node.object, 'cordova')) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'cordova.plugins' });
+      }
+    }
+  },
+  {
+    id: 'C004', severity: SEV.CRITICAL, description: 'window.cordova detected',
+    nodeTypes: ['MemberExpression'], detail: 'Direct reference to Cordova on the window object.',
+    visitor(path, addFinding) {
+      if (identifierMatches(path.node.object, 'window') && (path.node.property.name === 'cordova' || getStringValue(path.node.property) === 'cordova')) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'window.cordova' });
+      }
+    }
+  },
+
+  // --- FILE SYSTEM (HIGH) ---
+  {
+    id: 'H001', severity: SEV.HIGH, description: 'File-system module imported',
+    nodeTypes: ['CallExpression'], detail: 'fs/fsOperation module gives full read/write access.',
+    visitor(path, addFinding) {
+      const { callee, arguments: args } = path.node;
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && callee.property.name === 'require') {
+        const arg = getStringValue(args[0]);
+        if (arg && /^(fs|fsOperation)$/.test(arg)) {
+          addFinding({ line: path.node.loc?.start.line || 0, snippet: `acode.require('${arg}')` });
+        }
+      }
+    }
+  },
+  {
+    id: 'H002', severity: SEV.HIGH, description: 'File read operation',
+    nodeTypes: ['MemberExpression'], detail: 'Reads from the file system.',
+    visitor(path, addFinding) {
+      if (path.node.property.type === 'Identifier' && /^(readFile|readFileSync|read)$/.test(path.node.property.name)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
+      }
+    }
+  },
+  {
+    id: 'H003', severity: SEV.HIGH, description: 'File write operation',
+    nodeTypes: ['MemberExpression'], detail: 'Writes data to the file system.',
+    visitor(path, addFinding) {
+      if (path.node.property.type === 'Identifier' && /^(writeFile|writeFileSync|write)$/.test(path.node.property.name)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
+      }
+    }
+  },
+  {
+    id: 'H004', severity: SEV.MEDIUM, description: 'Directory listing',
+    nodeTypes: ['MemberExpression'], detail: 'Reads directory contents locally.',
+    visitor(path, addFinding) {
+      if (path.node.property.type === 'Identifier' && /^(lsDir|readDir|readdir)$/.test(path.node.property.name)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
+      }
+    }
+  },
+  {
+    id: 'H010', severity: SEV.HIGH, description: 'File deletion',
+    nodeTypes: ['MemberExpression'], detail: 'Deletes local files.',
+    visitor(path, addFinding) {
+      if (path.node.property.type === 'Identifier' && /^(deleteFile|unlink|rm|remove)$/.test(path.node.property.name)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
+      }
+    }
+  },
+  {
+    id: 'H011', severity: SEV.MEDIUM, description: 'File move or copy',
+    nodeTypes: ['MemberExpression'], detail: 'Moves or copies files across the system.',
+    visitor(path, addFinding) {
+      if (path.node.property.type === 'Identifier' && /^(copyTo|moveTo|renameFile|rename)$/.test(path.node.property.name)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
+      }
+    }
+  },
+
+  // --- TERMINAL & INTENT ---
+  {
+    id: 'H005', severity: SEV.CRITICAL, description: 'Terminal module imported',
+    nodeTypes: ['CallExpression'], detail: 'Grants access to run terminal commands.',
+    visitor(path, addFinding) {
+      const { callee, arguments: args } = path.node;
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && callee.property.name === 'require' && getStringValue(args[0]) === 'terminal') {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: "acode.require('terminal')" });
+      }
+    }
+  },
+  {
+    id: 'M008', severity: SEV.HIGH, description: 'Intent API accessed',
+    nodeTypes: ['CallExpression'], detail: 'Grants access to fire Android intents.',
+    visitor(path, addFinding) {
+      const { callee, arguments: args } = path.node;
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && callee.property.name === 'require' && getStringValue(args[0]) === 'intent') {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: "acode.require('intent')" });
+      }
+    }
+  },
+
+  // --- NETWORK ---
+  {
+    id: 'H007', severity: SEV.HIGH, description: 'Network fetch() call',
+    nodeTypes: ['Identifier'], detail: 'Makes external HTTP requests.',
+    visitor(path, addFinding) {
+      if (path.node.name === 'fetch' && !path.scope.hasBinding('fetch')) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'fetch(...)' });
+      }
+    }
+  },
+  {
+    id: 'H008', severity: SEV.HIGH, description: 'XMLHttpRequest used',
+    nodeTypes: ['NewExpression'], detail: 'Legacy network request method.',
+    visitor(path, addFinding) {
+      if (path.node.callee.name === 'XMLHttpRequest' && !path.scope.hasBinding('XMLHttpRequest')) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'new XMLHttpRequest()' });
+      }
+    }
+  },
+  {
+    id: 'H009', severity: SEV.HIGH, description: 'WebSocket communication',
+    nodeTypes: ['NewExpression'], detail: 'Opens a persistent two-way network connection.',
+    visitor(path, addFinding) {
+      if (path.node.callee.name === 'WebSocket' && !path.scope.hasBinding('WebSocket')) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'new WebSocket(...)' });
+      }
+    }
+  },
+
+  // --- STORAGE & CONSTANTS ---
+  {
+    id: 'M001', severity: SEV.MEDIUM, description: 'localStorage access',
+    nodeTypes: ['Identifier'], detail: 'Accesses browser local storage.',
+    visitor(path, addFinding) {
+      if (path.node.name === 'localStorage' && !path.scope.hasBinding('localStorage')) addFinding({ line: path.node.loc?.start.line || 0, snippet: 'localStorage' });
+    }
+  },
+  {
+    id: 'M002', severity: SEV.MEDIUM, description: 'sessionStorage access',
+    nodeTypes: ['Identifier'], detail: 'Accesses session storage.',
+    visitor(path, addFinding) {
+      if (path.node.name === 'sessionStorage' && !path.scope.hasBinding('sessionStorage')) addFinding({ line: path.node.loc?.start.line || 0, snippet: 'sessionStorage' });
+    }
+  },
+  {
+    id: 'M003', severity: SEV.MEDIUM, description: 'IndexedDB access',
+    nodeTypes: ['Identifier'], detail: 'Accesses local IndexedDB.',
+    visitor(path, addFinding) {
+      if (path.node.name === 'indexedDB' && !path.scope.hasBinding('indexedDB')) addFinding({ line: path.node.loc?.start.line || 0, snippet: 'indexedDB' });
+    }
+  },
+  {
+    id: 'M009', severity: SEV.MEDIUM, description: 'Sensitive Path Constants',
+    nodeTypes: ['Identifier'], detail: 'Accesses root-level storage or plugin directories.',
+    visitor(path, addFinding) {
+      if (/^(DATA_STORAGE|CACHE_STORAGE|PLUGIN_DIR)$/.test(path.node.name) && !path.scope.hasBinding(path.node.name)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: path.node.name });
+      }
+    }
+  },
+
+  // --- DYNAMIC CODE ---
+  {
+    id: 'L001', severity: SEV.HIGH, description: 'eval() call detected',
+    nodeTypes: ['CallExpression'], detail: 'Executes strings dynamically as JavaScript code.',
+    visitor(path, addFinding) {
+      if (path.node.callee.type === 'Identifier' && path.node.callee.name === 'eval' && !path.scope.hasBinding('eval')) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'eval(...)' });
+      }
+    }
+  },
+  {
+    id: 'L002', severity: SEV.HIGH, description: 'new Function() call',
+    nodeTypes: ['NewExpression'], detail: 'Compiles dynamic strings into executable functions.',
+    visitor(path, addFinding) {
+      if (path.node.callee.name === 'Function' && !path.scope.hasBinding('Function')) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'new Function(...)' });
+      }
+    }
+  },
+  {
+    id: 'L005', severity: SEV.MEDIUM, description: 'Dynamic window property access',
+    nodeTypes: ['MemberExpression'], detail: 'Accesses the window object dynamically (e.g., window[variable]).',
+    visitor(path, addFinding) {
+      if (identifierMatches(path.node.object, 'window') && path.node.computed && path.node.property.type !== 'StringLiteral' && path.node.property.type !== 'Literal') {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'window[...]' });
+      }
+    }
+  },
+  {
+    id: 'L006', severity: SEV.INFO, description: 'URL Encoding used',
+    nodeTypes: ['Identifier'], detail: 'Often used to format exfiltrated data or parse remote strings.',
+    visitor(path, addFinding) {
+      if (/^(encodeURIComponent|escape|unescape|btoa|atob)$/.test(path.node.name) && !path.scope.hasBinding(path.node.name)) {
+        if (path.node.name === 'atob') return; // Handled by S002
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: path.node.name });
+      }
+    }
+  },
+
+  // --- EDITOR & PLUGINS ---
+  {
+    id: 'M005', severity: SEV.INFO, description: 'editorManager read',
+    nodeTypes: ['MemberExpression'], detail: 'Accesses the current editor or active file content.',
+    visitor(path, addFinding) {
+      if (identifierMatches(path.node.object, 'editorManager') && path.node.property.type === 'Identifier') {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `editorManager.${path.node.property.name}` });
+      }
+    }
+  },
+  {
+    id: 'M007', severity: SEV.HIGH, description: 'plugin API accessed',
+    nodeTypes: ['CallExpression'], detail: 'Accesses Acode plugin API directly, potentially to install/remove plugins.',
+    visitor(path, addFinding) {
+      const { callee, arguments: args } = path.node;
+      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && callee.property.name === 'require' && getStringValue(args[0]) === 'plugin') {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: "acode.require('plugin')" });
+      }
+    }
+  },
+
+  // --- SUSPICIOUS / MALICIOUS ---
+  {
+    id: 'S001', severity: SEV.CRITICAL, description: 'Data exfiltration endpoint',
+    nodeTypes: ['StringLiteral', 'Literal'], detail: 'Known Discord webhook or public logging service.',
     visitor(path, addFinding) {
       const val = path.node.value;
       if (typeof val === 'string' && /(discord\.com\/api\/webhooks|pastebin\.com|webhook\.site|api\.ipify\.org)/i.test(val)) {
@@ -95,11 +328,8 @@ const RULES = [
     }
   },
   {
-    id: 'S002',
-    severity: SEV.HIGH,
-    description: 'Suspicious string decoding or obfuscation pattern',
-    nodeTypes: ['CallExpression', 'ArrayExpression'],
-    detail: 'Uses standard obfuscation markers like atob() decoding or massive hex arrays.',
+    id: 'S002', severity: SEV.HIGH, description: 'Suspicious obfuscation',
+    nodeTypes: ['CallExpression', 'ArrayExpression'], detail: 'Uses standard obfuscation markers like atob() or hex arrays.',
     visitor(path, addFinding) {
       if (path.isCallExpression() && path.node.callee.name === 'atob' && !path.scope.hasBinding('atob')) {
         addFinding({ line: path.node.loc?.start.line || 0, snippet: 'atob(...)' });
@@ -113,217 +343,22 @@ const RULES = [
     }
   },
   {
-    id: 'S003',
-    severity: SEV.HIGH,
-    description: 'Dynamic script execution container creation',
-    nodeTypes: ['CallExpression'],
-    detail: 'Dynamically injects a <script> tag into the document context to pull remote code.',
+    id: 'S003', severity: SEV.HIGH, description: 'Dynamic script container creation',
+    nodeTypes: ['CallExpression'], detail: 'Dynamically injects a <script> tag to pull remote code.',
     visitor(path, addFinding) {
       const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && callee.property.name === 'createElement' && args.length > 0) {
-        const argVal = getStringValue(args[0]);
-        if (argVal && argVal.toLowerCase() === 'script') {
-          addFinding({ line: path.node.loc?.start.line || 0, snippet: 'document.createElement("script")' });
-        }
+      if (callee.type === 'MemberExpression' && callee.property.name === 'createElement' && getStringValue(args[0])?.toLowerCase() === 'script') {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'document.createElement("script")' });
       }
     }
   },
   {
-    id: 'S004',
-    severity: SEV.HIGH,
-    description: 'Input monitoring hook',
-    nodeTypes: ['CallExpression'],
-    detail: 'Listens directly to inputs or keystrokes globally',
+    id: 'S004', severity: SEV.HIGH, description: 'Input monitoring hook',
+    nodeTypes: ['CallExpression'], detail: 'Listens directly to inputs or keystrokes globally',
     visitor(path, addFinding) {
       const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && callee.property.name === 'addEventListener' && args.length > 0) {
-        const eventVal = getStringValue(args[0]);
-        if (eventVal && /^(input|keyup|keydown|keypress)$/.test(eventVal)) {
-          addFinding({ line: path.node.loc?.start.line || 0, snippet: `addEventListener("${eventVal}", ...)` });
-        }
-      }
-    }
-  },
-  {
-    id: 'C001',
-    severity: SEV.CRITICAL,
-    description: 'Executor reference or shell execution detected',
-    nodeTypes: ['Identifier'],
-    detail: 'Any access or execution via the Executor global can run arbitrary shell commands without user confirmation.',
-    visitor(path, addFinding) {
-      if (path.node.name === 'Executor') {
-        if (path.parent.type === 'VariableDeclarator' && path.parent.id === path.node) return;
-        if (path.parent.type === 'FunctionDeclaration' && path.parent.id === path.node) return;
-        if (
-          (path.parent.type === 'ObjectProperty' ||
-          path.parent.type === 'Property') &&
-          path.parent.key === path.node
-        ){
-          return
-        }
-        
-        let snippet = 'Executor';
-        if (path.parent.type === 'MemberExpression' && path.parent.object === path.node) {
-          const fullPath = getFullMemberPath(path.parent);
-          snippet = fullPath.length > 0 ? fullPath.join('.') : 'Executor.*';
-        }
-
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: snippet });
-      }
-    }
-  },
-  {
-    id: 'C002',
-    severity: SEV.CRITICAL,
-    description: 'Direct Cordova native bridge call',
-    nodeTypes: ['CallExpression'],
-    detail: 'cordova.exec() calls native Android/iOS code directly, bypassing web-layer restrictions.',
-    visitor(path, addFinding) {
-      const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'cordova') && callee.property.name === 'exec') {
-        const service = args[2] ? (getStringValue(args[2]) || '[Dynamic]') : 'Unknown';
-        const action = args[3] ? (getStringValue(args[3]) || '[Dynamic]') : 'Unknown';
-        
-        addFinding({ 
-          line: path.node.loc?.start.line || 0, 
-          snippet: `cordova.exec(..., "${service}", "${action}", ...)`,
-          dynamicDetail: `Direct native bridge call targeting Cordova service: "${service}" (Action: "${action}").`
-        });
-      }
-    }
-  },
-  {
-    id: 'C003',
-    severity: SEV.CRITICAL,
-    description: 'Cordova native plugin access',
-    nodeTypes: ['MemberExpression'],
-    detail: 'Access to cordova.plugins.* grants direct use of native device plugins.',
-    visitor(path, addFinding) {
-      const { object, property } = path.node;
-      if (object.type === 'MemberExpression' && object.property.name === 'plugins' && identifierMatches(object.object, 'cordova')) {
-        const fullPath = getFullMemberPath(path.node);
-        const targetPlugin = property.type === 'Identifier' && !path.node.computed ? property.name : 'Unknown';
-        const displayPath = fullPath.length > 0 ? fullPath.join('.') : `cordova.plugins.${targetPlugin}`;
-
-        if (path.parent.type === 'MemberExpression' && path.parent.object === path.node) return;
-
-        addFinding({ 
-          line: path.node.loc?.start.line || 0, 
-          snippet: displayPath,
-          dynamicDetail: `Accesses native plugin surface via: ${displayPath}`
-        });
-      }
-    }
-  },
-  {
-    id: 'C004',
-    severity: SEV.CRITICAL,
-    description: 'window.cordova detected',
-    nodeTypes: ['MemberExpression'],
-    detail: 'Direct reference to the Cordova global on the window object.',
-    visitor(path, addFinding) {
-      if (!path.scope.hasBinding('window')) {
-        const isDotNotation =
-          !path.node.computed &&
-          identifierMatches(path.node.object, 'window') &&
-          path.node.property.type === 'Identifier' &&
-          path.node.property.name === 'cordova';
-        const isBracketNotation = identifierMatches(path.node.object, 'window') && path.node.computed && getStringValue(path.node.property) === 'cordova';
-        
-        if (isDotNotation || isBracketNotation) {
-          addFinding({ line: path.node.loc?.start.line || 0, snippet: isDotNotation ? 'window.cordova' : "window['cordova']" });
-        }
-      }
-    }
-  },
-  {
-    id: 'H001',
-    severity: SEV.HIGH,
-    description: 'File-system module imported',
-    nodeTypes: ['CallExpression'],
-    detail: 'The fs/fsOperation module gives full read/write/delete access to system paths.',
-    visitor(path, addFinding) {
-      const { callee, arguments: args } = path.node;
-      if (callee.type === 'MemberExpression' && identifierMatches(callee.object, 'acode') && callee.property.name === 'require' && args.length > 0) {
-        const arg = getStringValue(args[0]);
-        if (arg && /^(fs|fsOperation)$/.test(arg)) {
-          addFinding({ line: path.node.loc?.start.line || 0, snippet: `acode.require('${arg}')` });
-        }
-      }
-    }
-  },
-  {
-    id: 'H002',
-    severity: SEV.HIGH,
-    description: 'File read operation',
-    nodeTypes: ['MemberExpression'],
-    detail: 'Reads from the file system locally.',
-    visitor(path, addFinding) {
-      if (path.node.property.type === 'Identifier' && /^(readFile|readFileSync|read)$/.test(path.node.property.name)) {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
-      }
-    }
-  },
-  {
-    id: 'H003',
-    severity: SEV.HIGH,
-    description: 'File write operation',
-    nodeTypes: ['MemberExpression'],
-    detail: 'Writes or modifies data on the file system.',
-    visitor(path, addFinding) {
-      if (path.node.property.type === 'Identifier' && /^(writeFile|writeFileSync|write)$/.test(path.node.property.name)) {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
-      }
-    }
-  },
-  {
-    id: 'H007',
-    severity: SEV.HIGH,
-    description: 'Network communication',
-    nodeTypes: ['CallExpression', 'NewExpression'],
-    detail: 'Makes external network requests via fetch, XHR, or WebSocket.',
-    visitor(path, addFinding) {
-      const callee = path.node.callee;
-      if (callee.type === 'Identifier') {
-        if (callee.name === 'fetch') addFinding({ line: path.node.loc?.start.line || 0, snippet: 'fetch(...)' });
-        if (callee.name === 'XMLHttpRequest' && path.isNewExpression()) addFinding({ line: path.node.loc?.start.line || 0, snippet: 'new XMLHttpRequest()' });
-        if (callee.name === 'WebSocket' && path.isNewExpression()) addFinding({ line: path.node.loc?.start.line || 0, snippet: 'new WebSocket(...)' });
-      }
-    }
-  },
-  {
-    id: 'M001',
-    severity: SEV.MEDIUM,
-    description: 'localStorage access',
-    nodeTypes: ['Identifier'],
-    detail: 'Accesses browser local storage.',
-    visitor(path, addFinding) {
-      if (path.node.name === 'localStorage' && !path.scope.hasBinding('localStorage')) {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'localStorage' });
-      }
-    }
-  },
-  {
-    id: 'L001',
-    severity: SEV.HIGH,
-    description: 'eval() call detected',
-    nodeTypes: ['CallExpression'],
-    detail: 'Executes strings dynamically as JavaScript code.',
-    visitor(path, addFinding) {
-      if (path.node.callee.type === 'Identifier' && path.node.callee.name === 'eval' && !path.scope.hasBinding('eval')) {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'eval(...)' });
-      }
-    }
-  },
-  {
-    id: 'L005',
-    severity: SEV.MEDIUM,
-    description: 'Dynamic window property access',
-    nodeTypes: ['MemberExpression'],
-    detail: 'Accesses the window object dynamically (e.g., window[variable]).',
-    visitor(path, addFinding) {
-      if (identifierMatches(path.node.object, 'window') && path.node.computed && path.node.property.type !== 'StringLiteral' && path.node.property.type !== 'Literal') {
-        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'window[...]' });
+      if (callee.type === 'MemberExpression' && callee.property.name === 'addEventListener' && /^(input|keyup|keydown|keypress)$/.test(getStringValue(args[0]))) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `addEventListener("${getStringValue(args[0])}", ...)` });
       }
     }
   }
@@ -454,16 +489,29 @@ const CAPABILITY_MAP = {
   H001: { group: 'fs',       label: 'File-system module imported' },
   H002: { group: 'fs',       label: 'File read operation' },
   H003: { group: 'fs',       label: 'File write operation' },
+  H004: { group: 'fs',       label: 'Directory listing' },
+  H005: { group: 'shell',    label: 'Terminal module imported' },
+  H010: { group: 'fs',       label: 'File deletion' },
+  H011: { group: 'fs',       label: 'File move or copy' },
   H007: { group: 'network',  label: 'HTTP fetch() call' },
+  H008: { group: 'network',  label: 'XMLHttpRequest used' },
+  H009: { group: 'network',  label: 'WebSocket communication' },
   M001: { group: 'storage',  label: 'localStorage access' },
+  M002: { group: 'storage',  label: 'sessionStorage access' },
+  M003: { group: 'storage',  label: 'IndexedDB access' },
+  M005: { group: 'system',   label: 'editorManager API access' },
+  M007: { group: 'system',   label: 'Plugin API access' },
+  M008: { group: 'native',   label: 'Android Intent API accessed' },
+  M009: { group: 'storage',  label: 'Sensitive Path Constants accessed' },
   L001: { group: 'dynamic',  label: 'eval() call detected' },
+  L002: { group: 'dynamic',  label: 'new Function() call' },
   L005: { group: 'dynamic',  label: 'Dynamic window property access' },
+  L006: { group: 'dynamic',  label: 'URL Encoding used' },
   S001: { group: 'sketchy',  label: 'Data exfiltration endpoint' },
   S002: { group: 'sketchy',  label: 'Suspicious string encoding/obfuscation' },
   S003: { group: 'sketchy',  label: 'Dynamic script execution container creation' },
   S004: { group: 'sketchy',  label: 'Input monitoring' },
-  A001: { group: 'system',   label: 'Acode core module request' },
-  A002: { group: 'system',   label: 'editorManager API access' }
+  A001: { group: 'system',   label: 'Acode core module request' }
 };
 
 const GROUP_HEADING = {
@@ -564,18 +612,12 @@ async function buildScanSummary(scanResult, zipLength) {
   return markdown;
 }
 
-/**
- * Backward Compatibility Wrapper
- * Allows server/apis/plugin.js to call this as a normal async function (zipBuffer, zipName)
- * while still attaching the methods for the CLI to use.
- */
 async function legacyScanner(zipBuffer, zipName) {
   const scanResult = await scanPlugin(zipBuffer, zipName);
   const zipLength = zipBuffer.length || zipBuffer.byteLength || 0;
   return buildScanSummary(scanResult, zipLength);
 }
 
-// Attach the specific methods to the default export so the new CLI approach still works
 legacyScanner.scanPlugin = scanPlugin;
 legacyScanner.buildScanSummary = buildScanSummary;
 
