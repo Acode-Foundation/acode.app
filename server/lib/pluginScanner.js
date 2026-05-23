@@ -70,6 +70,18 @@ const RULES = [
     }
   },
   {
+    id: 'A002',
+    severity: SEV.INFO,
+    description: 'editorManager API access',
+    detail: 'Accesses the Acode editorManager to manipulate the editor state.',
+    nodeTypes: ['Identifier'],
+    visitor(path, addFinding) {
+      if (path.node.name === 'editorManager' && !path.scope.hasBinding('editorManager')) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'editorManager' });
+      }
+    }
+  },
+  {
     id: 'S001',
     severity: SEV.CRITICAL,
     description: 'Data exfiltration or telemetry endpoint detected',
@@ -239,6 +251,81 @@ const RULES = [
         }
       }
     }
+  },
+  {
+    id: 'H002',
+    severity: SEV.HIGH,
+    description: 'File read operation',
+    nodeTypes: ['MemberExpression'],
+    detail: 'Reads from the file system locally.',
+    visitor(path, addFinding) {
+      if (path.node.property.type === 'Identifier' && /^(readFile|readFileSync|read)$/.test(path.node.property.name)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
+      }
+    }
+  },
+  {
+    id: 'H003',
+    severity: SEV.HIGH,
+    description: 'File write operation',
+    nodeTypes: ['MemberExpression'],
+    detail: 'Writes or modifies data on the file system.',
+    visitor(path, addFinding) {
+      if (path.node.property.type === 'Identifier' && /^(writeFile|writeFileSync|write)$/.test(path.node.property.name)) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: `.${path.node.property.name}(...)` });
+      }
+    }
+  },
+  {
+    id: 'H007',
+    severity: SEV.HIGH,
+    description: 'Network communication',
+    nodeTypes: ['CallExpression', 'NewExpression'],
+    detail: 'Makes external network requests via fetch, XHR, or WebSocket.',
+    visitor(path, addFinding) {
+      const callee = path.node.callee;
+      if (callee.type === 'Identifier') {
+        if (callee.name === 'fetch') addFinding({ line: path.node.loc?.start.line || 0, snippet: 'fetch(...)' });
+        if (callee.name === 'XMLHttpRequest' && path.isNewExpression()) addFinding({ line: path.node.loc?.start.line || 0, snippet: 'new XMLHttpRequest()' });
+        if (callee.name === 'WebSocket' && path.isNewExpression()) addFinding({ line: path.node.loc?.start.line || 0, snippet: 'new WebSocket(...)' });
+      }
+    }
+  },
+  {
+    id: 'M001',
+    severity: SEV.MEDIUM,
+    description: 'localStorage access',
+    nodeTypes: ['Identifier'],
+    detail: 'Accesses browser local storage.',
+    visitor(path, addFinding) {
+      if (path.node.name === 'localStorage' && !path.scope.hasBinding('localStorage')) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'localStorage' });
+      }
+    }
+  },
+  {
+    id: 'L001',
+    severity: SEV.HIGH,
+    description: 'eval() call detected',
+    nodeTypes: ['CallExpression'],
+    detail: 'Executes strings dynamically as JavaScript code.',
+    visitor(path, addFinding) {
+      if (path.node.callee.type === 'Identifier' && path.node.callee.name === 'eval' && !path.scope.hasBinding('eval')) {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'eval(...)' });
+      }
+    }
+  },
+  {
+    id: 'L005',
+    severity: SEV.MEDIUM,
+    description: 'Dynamic window property access',
+    nodeTypes: ['MemberExpression'],
+    detail: 'Accesses the window object dynamically (e.g., window[variable]).',
+    visitor(path, addFinding) {
+      if (identifierMatches(path.node.object, 'window') && path.node.computed && path.node.property.type !== 'StringLiteral' && path.node.property.type !== 'Literal') {
+        addFinding({ line: path.node.loc?.start.line || 0, snippet: 'window[...]' });
+      }
+    }
   }
 ];
 
@@ -276,7 +363,6 @@ function scanSource(filename, source) {
   const lineSeen = new Map();
   const targetVisitor = {};
 
-  // Build high-performance Babel structural lookups
   for (const rule of RULES) {
     for (const type of rule.nodeTypes) {
       if (!targetVisitor[type]) {
@@ -291,8 +377,7 @@ function scanSource(filename, source) {
     normalizedVisitor[nodeType] = function(path) {
       for (const rule of rulesArray) {
         rule.visitor(path, (findingData) => {
-          const lookupKey =
-  `${rule.id}-${findingData.line}-${findingData.snippet}`;
+          const lookupKey = `${rule.id}-${findingData.line}-${findingData.snippet}`;
           if (lineSeen.has(lookupKey)) return;
           lineSeen.set(lookupKey, true);
 
@@ -315,9 +400,6 @@ function scanSource(filename, source) {
   return { findings, urls: [...urlSet] };
 }
 
-/**
- * Main execution scan pass processing zip structure
- */
 async function scanPlugin(zipBuffer, zipName) {
   const zip = new JSZip();
   await zip.loadAsync(zipBuffer);
@@ -380,7 +462,8 @@ const CAPABILITY_MAP = {
   S002: { group: 'sketchy',  label: 'Suspicious string encoding/obfuscation' },
   S003: { group: 'sketchy',  label: 'Dynamic script execution container creation' },
   S004: { group: 'sketchy',  label: 'Input monitoring' },
-  A001: { group: 'system', label: 'Acode core module request' }
+  A001: { group: 'system',   label: 'Acode core module request' },
+  A002: { group: 'system',   label: 'editorManager API access' }
 };
 
 const GROUP_HEADING = {
@@ -396,9 +479,6 @@ const GROUP_HEADING = {
 
 const GROUP_ORDER = ['shell', 'native', 'fs', 'network', 'storage', 'dynamic', 'sketchy', 'system'];
 
-/**
- * Builds user friendly summary data utilizing precise rule definition details and file context
- */
 async function buildScanSummary(scanResult, zipLength) {
   const lines = [
     `## ${scanResult.pluginName}`,
@@ -484,7 +564,22 @@ async function buildScanSummary(scanResult, zipLength) {
   return markdown;
 }
 
-module.exports = { scanPlugin, buildScanSummary };
+/**
+ * Backward Compatibility Wrapper
+ * Allows server/apis/plugin.js to call this as a normal async function (zipBuffer, zipName)
+ * while still attaching the methods for the CLI to use.
+ */
+async function legacyScanner(zipBuffer, zipName) {
+  const scanResult = await scanPlugin(zipBuffer, zipName);
+  const zipLength = zipBuffer.length || zipBuffer.byteLength || 0;
+  return buildScanSummary(scanResult, zipLength);
+}
+
+// Attach the specific methods to the default export so the new CLI approach still works
+legacyScanner.scanPlugin = scanPlugin;
+legacyScanner.buildScanSummary = buildScanSummary;
+
+module.exports = legacyScanner;
 
 // ─── CLI entry point ──────────────────────────────────────────────────────────
 if (require.main === module) {
