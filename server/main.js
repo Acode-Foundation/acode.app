@@ -243,10 +243,10 @@ async function main() {
 async function start() {
   await migrationRunner.run();
   require('./crons');
+  await main();
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
-  await main();
 }
 
 start();
