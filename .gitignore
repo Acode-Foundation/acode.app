@@ -3,3 +3,4 @@ node_modules
 public
 data
 .DS_Store
+change_phase*.md

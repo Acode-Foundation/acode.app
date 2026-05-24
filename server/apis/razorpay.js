@@ -3,6 +3,7 @@ const { Router } = require('express');
 const Plugin = require('../entities/plugin');
 const Order = require('../entities/purchaseOrder');
 const User = require('../entities/user');
+const RazorpayOrder = require('../entities/razorpayOrder');
 const AppConfig = require('../entities/appConfig');
 const { getLoggedInUser, getDbTime, parseDbTime, detectUserCurrency, formatAmount } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
@@ -12,6 +13,104 @@ const { CURRENCIES, getAllCurrencies, getSubunitDigits, getCurrencySymbol } = re
 const { convertPrice } = require('../lib/exchangeRates');
 
 const router = Router();
+
+/**
+ * Ensure a purchase_order record exists with STATE_PURCHASED for a paid Razorpay order.
+ * Fetches the Razorpay order for server-authoritative notes instead of relying on payment.notes.
+ */
+async function ensurePurchaseOwnership(orderId, paymentId) {
+  const [existingOrder] = await Order.get([Order.ORDER_ID, orderId]);
+  if (existingOrder) {
+    if (Number(existingOrder.state) !== Order.STATE_PURCHASED) {
+      const updateCols = [[Order.STATE, Order.STATE_PURCHASED]];
+      if (paymentId) {
+        updateCols.push([Order.TOKEN, paymentId]);
+      }
+      await Order.update(updateCols, [Order.ORDER_ID, orderId]);
+    }
+    return;
+  }
+
+  const rzpOrder = await getRazorpay().orders.fetch(orderId);
+  const notes = rzpOrder.notes || {};
+  const userId = notes.userId ? String(notes.userId) : null;
+  const pluginId = notes.pluginId ? String(notes.pluginId) : null;
+  const type = notes.type;
+
+  if (type === 'acode_pro' && userId) {
+    const expectedPrice = Number(await AppConfig.getValue('acode_pro_price'));
+    const orderInrPrice = Number(notes.original_amount_inr);
+    if (orderInrPrice && orderInrPrice !== expectedPrice) {
+      console.warn(`Pro price mismatch in webhook: notes ${orderInrPrice} vs config ${expectedPrice}. Accepting.`);
+    }
+
+    const [existingUser] = await User.get(User.safeColumns, [User.ID, userId]);
+    if (existingUser && existingUser.acode_pro !== 1 && existingUser.acode_pro !== true) {
+      await User.update(
+        [
+          [User.ACODE_PRO, 1],
+          [User.PRO_PURCHASE_TOKEN, paymentId],
+          [User.PRO_PURCHASED_AT, getDbTime()],
+        ],
+        [User.ID, userId],
+      );
+      console.log(`Activated Acode Pro for user ${userId} via webhook`);
+    }
+    return;
+  }
+
+  if (pluginId && userId) {
+    const [plugin] = await Plugin.get([Plugin.ID, pluginId]);
+    if (!plugin) {
+      console.warn(`Plugin ${pluginId} not found for webhook order ${orderId}`);
+      return;
+    }
+
+    const orderInrPrice = Number(notes.original_amount_inr ?? plugin.price);
+    if (orderInrPrice !== plugin.price) {
+      console.warn(`Plugin price changed: notes ${orderInrPrice} vs current ${plugin.price}. Accepting.`);
+    }
+
+    const subunitDigits = getSubunitDigits(rzpOrder.currency) ?? 2;
+    const paidAmount = rzpOrder.amount / 10 ** subunitDigits;
+
+    await Order.insert(
+      [Order.PLUGIN_ID, pluginId],
+      [Order.TOKEN, paymentId],
+      [Order.ORDER_ID, orderId],
+      [Order.PACKAGE, 'web'],
+      [Order.AMOUNT, paidAmount],
+      [Order.CURRENCY, rzpOrder.currency],
+      [Order.STATE, Order.STATE_PURCHASED],
+      [Order.USER_ID, userId],
+      [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
+    );
+
+    const [user] = await User.get([User.EMAIL, User.NAME], [User.ID, userId]);
+    if (user) {
+      const paidSymbol = getCurrencySymbol(rzpOrder.currency) || '';
+      sendEmail(
+        user.email,
+        user.name,
+        'Thank you for your purchase!',
+        `You've successfully purchased <strong>${plugin.name}</strong> for ${paidSymbol}${formatAmount(paidAmount, rzpOrder.currency)}.<br><br>You can now download and use the plugin right away. If you run into any issues or have questions, feel free to reach out at <a href="https://acode.app/contact">acode.app/contact</a>.<br><br>Thank you for supporting the Acode ecosystem and the developer behind this plugin!`,
+      ).catch((err) => console.error('Failed to send purchase email via webhook:', err));
+    }
+
+    console.log(`Created purchase_order for plugin ${pluginId} (user ${userId}) via webhook`);
+  }
+}
+
+function purchaseStateToStatus(state) {
+  switch (Number(state)) {
+    case Order.STATE_PURCHASED:
+      return 'paid';
+    case Order.STATE_CANCELED:
+      return 'cancelled';
+    default:
+      return 'created';
+  }
+}
 
 /**
  * Create a Razorpay order for a plugin purchase
@@ -55,6 +154,32 @@ router.post('/create-order', async (req, res) => {
       return;
     }
 
+    const [pendingOrder] = await RazorpayOrder.get(
+      [RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
+      [
+        [RazorpayOrder.USER_ID, user.id],
+        [RazorpayOrder.PLUGIN_ID, plugin.id],
+        [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PLUGIN],
+        [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+      ],
+    );
+
+    if (pendingOrder) {
+      res.send({
+        orderId: pendingOrder.razorpay_order_id,
+        amount: pendingOrder.amount,
+        currency: pendingOrder.currency,
+        keyId: process.env.PG_KEY_ID,
+        pluginName: plugin.name,
+        pluginId: plugin.id,
+        userEmail: user.email,
+        originalPrice: plugin.price,
+        displayCurrency: pendingOrder.currency,
+        existingOrder: true,
+      });
+      return;
+    }
+
     const currency = detectUserCurrency(req);
     const converted = await convertPrice(plugin.price, currency.code);
     const subunitMultiplier = 10 ** getSubunitDigits(converted.currency);
@@ -75,6 +200,49 @@ router.post('/create-order', async (req, res) => {
         exchange_rate: converted.rate,
       },
     });
+
+    try {
+      await RazorpayOrder.insert(
+        [RazorpayOrder.RAZORPAY_ORDER_ID, order.id],
+        [RazorpayOrder.USER_ID, user.id],
+        [RazorpayOrder.PLUGIN_ID, plugin.id],
+        [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PLUGIN],
+        [RazorpayOrder.AMOUNT, finalAmount],
+        [RazorpayOrder.CURRENCY, converted.currency],
+        [RazorpayOrder.AMOUNT_INR, plugin.price],
+        [RazorpayOrder.RECEIPT, receipt],
+      );
+    } catch (err) {
+      console.error('Failed to insert razorpay_order:', err);
+
+      const [raceRec] = await RazorpayOrder.get(
+        [RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
+        [
+          [RazorpayOrder.USER_ID, user.id],
+          [RazorpayOrder.PLUGIN_ID, plugin.id],
+          [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PLUGIN],
+          [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+        ],
+      );
+
+      if (raceRec) {
+        res.send({
+          orderId: raceRec.razorpay_order_id,
+          amount: raceRec.amount,
+          currency: raceRec.currency,
+          keyId: process.env.PG_KEY_ID,
+          pluginName: plugin.name,
+          pluginId: plugin.id,
+          userEmail: user.email,
+          originalPrice: plugin.price,
+          displayCurrency: raceRec.currency,
+          existingOrder: true,
+        });
+        return;
+      }
+
+      // Insert failed but no existing record — return the fresh Razorpay order anyway
+    }
 
     res.send({
       orderId: order.id,
@@ -130,7 +298,10 @@ router.post('/verify', async (req, res) => {
     // Fetch the Razorpay order to verify amount and pluginId from server-side notes
     const rzpOrder = await getRazorpay().orders.fetch(razorpay_order_id);
     if (!rzpOrder || rzpOrder.status !== 'paid') {
-      res.status(400).send({ error: 'Order not paid' });
+      res.status(400).send({
+        code: 'PAYMENT_PROCESSING',
+        error: 'Payment is still processing. Your purchase will be activated automatically once payment is confirmed.',
+      });
       return;
     }
 
@@ -178,6 +349,14 @@ router.post('/verify', async (req, res) => {
       [Order.USER_ID, user.id],
       [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
     );
+
+    RazorpayOrder.update(
+      [
+        [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PAID],
+        [RazorpayOrder.RAZORPAY_PAYMENT_ID, razorpay_payment_id],
+      ],
+      [RazorpayOrder.RAZORPAY_ORDER_ID, razorpay_order_id],
+    ).catch((err) => console.error('Failed to update razorpay_order status:', err));
 
     const paidAmount = rzpOrder.amount / 10 ** (getSubunitDigits(rzpOrder.currency) ?? 2);
     const paidSymbol = getCurrencySymbol(rzpOrder.currency) || '';
@@ -298,6 +477,265 @@ router.get('/my-purchases{/:pluginId}', async (req, res) => {
 });
 
 /**
+ * List all Razorpay orders for the logged-in user
+ * GET /api/razorpay/orders
+ *
+ * Optional query params:
+ *   status      - Filter by order status (created, paid, failed, refunded)
+ *   productType - Filter by product type (plugin, acode_pro)
+ */
+router.get('/orders', async (req, res) => {
+  try {
+    const user = await getLoggedInUser(req);
+    if (!user) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { status, productType } = req.query;
+    const where = [[RazorpayOrder.USER_ID, user.id]];
+    if (status) {
+      where.push([RazorpayOrder.STATUS, status]);
+    }
+    if (productType) {
+      where.push([RazorpayOrder.PRODUCT_TYPE, productType]);
+    }
+
+    const orders = await RazorpayOrder.for('internal').get(
+      [
+        RazorpayOrder.ID,
+        RazorpayOrder.RAZORPAY_ORDER_ID,
+        RazorpayOrder.RAZORPAY_PAYMENT_ID,
+        RazorpayOrder.PRODUCT_TYPE,
+        RazorpayOrder.PLUGIN_ID,
+        RazorpayOrder.AMOUNT,
+        RazorpayOrder.CURRENCY,
+        RazorpayOrder.STATUS,
+        RazorpayOrder.CREATED_AT,
+      ],
+      where,
+      { orderBy: `${RazorpayOrder.CREATED_AT} DESC` },
+    );
+
+    const pluginIds = [...new Set(orders.map((o) => o.plugin_id).filter(Boolean))];
+    const pluginMap = new Map();
+    if (pluginIds.length) {
+      const plugins = await Plugin.get([Plugin.ID, Plugin.NAME], [Plugin.ID, pluginIds, 'IN']);
+      for (const p of plugins) {
+        pluginMap.set(String(p.id), p.name);
+      }
+    }
+
+    const result = orders.map((order) => {
+      const subunit = getSubunitDigits(order.currency) ?? 2;
+      const baseUnits = order.amount / 10 ** subunit;
+
+      return {
+        id: order.id,
+        razorpayOrderId: order.razorpay_order_id,
+        razorpayPaymentId: order.razorpay_payment_id,
+        productType: order.product_type,
+        pluginId: order.plugin_id,
+        pluginName: order.product_type === 'acode_pro' ? 'Acode Pro' : pluginMap.get(String(order.plugin_id)) || 'Deleted Plugin',
+        status: order.status,
+        amount: formatAmount(baseUnits, order.currency),
+        currency: order.currency,
+        currencySymbol: CURRENCIES[order.currency?.toUpperCase()]?.symbol || '',
+        createdAt: order.created_at,
+      };
+    });
+
+    const rzpOrderIds = new Set(orders.map((o) => o.razorpay_order_id).filter(Boolean));
+    const rzpPaymentIds = new Set(orders.map((o) => o.razorpay_payment_id).filter(Boolean));
+
+    const legacyOrders = await Order.for('internal').get(
+      [Order.ID, Order.ORDER_ID, Order.TOKEN, Order.PLUGIN_ID, Order.AMOUNT, Order.CURRENCY, Order.STATE, Order.CREATED_AT],
+      [
+        [Order.USER_ID, user.id],
+        [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
+      ],
+    );
+
+    const unmatchedLegacy = legacyOrders.filter((o) => !rzpOrderIds.has(o.order_id));
+
+    const legacyPluginIds = [...new Set(unmatchedLegacy.map((o) => o.plugin_id).filter(Boolean))];
+    if (legacyPluginIds.length) {
+      const legacyPlugins = await Plugin.get([Plugin.ID, Plugin.NAME], [Plugin.ID, legacyPluginIds, 'IN']);
+      for (const p of legacyPlugins) {
+        if (!pluginMap.has(String(p.id))) {
+          pluginMap.set(String(p.id), p.name);
+        }
+      }
+    }
+
+    const legacyResult = unmatchedLegacy.map((o) => ({
+      id: `legacy_${o.id}`,
+      razorpayOrderId: o.order_id,
+      razorpayPaymentId: o.token,
+      productType: 'plugin',
+      pluginId: o.plugin_id,
+      pluginName: pluginMap.get(String(o.plugin_id)) || 'Deleted Plugin',
+      status: purchaseStateToStatus(o.state),
+      amount: formatAmount(o.amount, o.currency),
+      currency: o.currency,
+      currencySymbol: CURRENCIES[o.currency?.toUpperCase()]?.symbol || '',
+      createdAt: o.created_at,
+    }));
+
+    if (user.acode_pro === 1 || user.acode_pro === true) {
+      const [fullUser] = await User.get([User.PRO_PURCHASE_TOKEN, User.PRO_PURCHASED_AT], [User.ID, user.id]);
+      if (fullUser?.pro_purchase_token && !rzpPaymentIds.has(fullUser.pro_purchase_token)) {
+        const proPrice = Number(await AppConfig.getValue('acode_pro_price'));
+        const proCurrency = 'INR';
+        legacyResult.push({
+          id: 'legacy_pro',
+          razorpayOrderId: null,
+          razorpayPaymentId: fullUser.pro_purchase_token,
+          productType: 'acode_pro',
+          pluginId: null,
+          pluginName: 'Acode Pro',
+          status: 'paid',
+          amount: formatAmount(proPrice, proCurrency),
+          currency: proCurrency,
+          currencySymbol: CURRENCIES[proCurrency]?.symbol || '',
+          createdAt: fullUser.pro_purchased_at,
+        });
+      }
+    }
+
+    // Apply status/productType filters to legacy results so callers
+    // like updateOrdersBadge(?status=created) or the plugin page
+    // (?status=created&productType=plugin) aren't polluted with
+    // unrelated legacy records.
+    const filteredLegacy = legacyResult.filter((entry) => {
+      if (status && entry.status !== status) return false;
+      if (productType && entry.productType !== productType) return false;
+      return true;
+    });
+    legacyResult.length = 0;
+    legacyResult.push(...filteredLegacy);
+
+    const combined = [...result, ...legacyResult].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.send(combined);
+  } catch (error) {
+    console.error('Orders list error:', error);
+    res.status(500).send({ error: 'Failed to fetch orders' });
+  }
+});
+
+/**
+ * Get a single Razorpay order detail
+ * GET /api/razorpay/orders/:orderId
+ */
+router.get('/orders/:orderId', async (req, res) => {
+  try {
+    const user = await getLoggedInUser(req);
+    if (!user) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { orderId } = req.params;
+
+    const [order] = await RazorpayOrder.get(
+      ['*'],
+      [
+        [RazorpayOrder.RAZORPAY_ORDER_ID, orderId],
+        [RazorpayOrder.USER_ID, user.id],
+      ],
+    );
+
+    if (!order) {
+      const [legacy] = await Order.get(
+        ['*'],
+        [
+          [Order.ORDER_ID, orderId],
+          [Order.USER_ID, user.id],
+          [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
+        ],
+      );
+
+      if (legacy) {
+        let pluginName = 'Deleted Plugin';
+        if (legacy.plugin_id) {
+          const [plugin] = await Plugin.get([Plugin.ID, Plugin.NAME], [Plugin.ID, legacy.plugin_id]);
+          pluginName = plugin?.name || 'Deleted Plugin';
+        }
+
+        let refundEligible = false;
+        if (Number(legacy.state) === Order.STATE_PURCHASED) {
+          const elapsed = Date.now() - parseDbTime(legacy.created_at).getTime();
+          refundEligible = elapsed <= REFUND_WINDOW_MS;
+        }
+
+        res.send({
+          id: `legacy_${legacy.id}`,
+          razorpayOrderId: legacy.order_id,
+          razorpayPaymentId: legacy.token,
+          productType: 'plugin',
+          pluginId: legacy.plugin_id,
+          pluginName,
+          status: purchaseStateToStatus(legacy.state),
+          amount: formatAmount(legacy.amount, legacy.currency),
+          currency: legacy.currency,
+          currencySymbol: CURRENCIES[legacy.currency?.toUpperCase()]?.symbol || '',
+          amountInr: null,
+          receipt: null,
+          createdAt: legacy.created_at,
+          updatedAt: legacy.updated_at || legacy.created_at,
+          purchaseOrderId: legacy.id,
+          refundEligible,
+        });
+        return;
+      }
+
+      res.status(404).send({ error: 'Order not found' });
+      return;
+    }
+
+    let pluginName = 'Acode Pro';
+    if (order.product_type === 'plugin' && order.plugin_id) {
+      const [plugin] = await Plugin.get([Plugin.ID, Plugin.NAME], [Plugin.ID, order.plugin_id]);
+      pluginName = plugin?.name || 'Deleted Plugin';
+    }
+
+    const [purchaseOrder] = await Order.get([Order.ID, Order.STATE, Order.CREATED_AT, Order.PROVIDER], [Order.ORDER_ID, order.razorpay_order_id]);
+
+    let refundEligible = false;
+    if (purchaseOrder && Number(purchaseOrder.state) === Order.STATE_PURCHASED && purchaseOrder.provider === 'razorpay') {
+      const elapsed = Date.now() - parseDbTime(purchaseOrder.created_at).getTime();
+      refundEligible = elapsed <= REFUND_WINDOW_MS;
+    }
+
+    const subunit = getSubunitDigits(order.currency) ?? 2;
+    const baseUnits = order.amount / 10 ** subunit;
+
+    res.send({
+      id: order.id,
+      razorpayOrderId: order.razorpay_order_id,
+      razorpayPaymentId: order.razorpay_payment_id,
+      productType: order.product_type,
+      pluginId: order.plugin_id,
+      pluginName,
+      status: order.status,
+      amount: formatAmount(baseUnits, order.currency),
+      currency: order.currency,
+      currencySymbol: CURRENCIES[order.currency?.toUpperCase()]?.symbol || '',
+      amountInr: order.amount_inr,
+      receipt: order.receipt,
+      createdAt: order.created_at,
+      updatedAt: order.updated_at,
+      purchaseOrderId: purchaseOrder?.id || null,
+      refundEligible,
+    });
+  } catch (error) {
+    console.error('Order detail error:', error);
+    res.status(500).send({ error: 'Failed to fetch order' });
+  }
+});
+
+/**
  * Razorpay Webhook Handler
  * POST /api/razorpay/webhook
  *
@@ -347,98 +785,75 @@ router.post('/webhook', async (req, res) => {
 
     switch (event) {
       case 'payment.captured': {
-        // Payment was successfully captured
         const payment = payload.payment.entity;
         const orderId = payment.order_id;
         const paymentId = payment.id;
-        const notes = payment.notes || {};
 
-        // Handle Acode Pro purchase via webhook (fallback if client verify missed)
-        if (notes.type === 'acode_pro' && notes.userId) {
-          const [existingUser] = await User.get(User.safeColumns, [User.ID, notes.userId]);
-          if (existingUser && existingUser.acode_pro !== 1 && existingUser.acode_pro !== true) {
-            await User.update(
-              [
-                [User.ACODE_PRO, 1],
-                [User.PRO_PURCHASE_TOKEN, paymentId],
-                [User.PRO_PURCHASED_AT, getDbTime()],
-              ],
-              [User.ID, notes.userId],
-            );
-            console.log(`Activated Acode Pro for user ${notes.userId} via webhook`);
-          }
-          break;
+        const [rzpRecord] = await RazorpayOrder.get([RazorpayOrder.ID, RazorpayOrder.STATUS], [RazorpayOrder.RAZORPAY_ORDER_ID, orderId]);
+        if (rzpRecord) {
+          await RazorpayOrder.update(
+            [
+              [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PAID],
+              [RazorpayOrder.RAZORPAY_PAYMENT_ID, paymentId],
+            ],
+            [RazorpayOrder.RAZORPAY_ORDER_ID, orderId],
+          );
         }
 
-        // Handle plugin purchase
-        // Check if order already exists
-        const [existingOrder] = await Order.get([Order.ORDER_ID, orderId]);
-
-        if (existingOrder) {
-          // Update existing order state if not already purchased
-          if (Number(existingOrder.state) !== Order.STATE_PURCHASED) {
-            await Order.update(
-              [
-                [Order.STATE, Order.STATE_PURCHASED],
-                [Order.TOKEN, paymentId],
-              ],
-              [Order.ORDER_ID, orderId],
-            );
-            console.log(`Updated order ${orderId} to PURCHASED via webhook`);
-          }
-        } else {
-          // Order doesn't exist - this can happen if callback failed
-          // We need notes from the order to get pluginId and userId
-          const notes = payment.notes || {};
-          const pluginId = notes.pluginId;
-          const userId = notes.userId;
-
-          if (pluginId && userId) {
-            const [plugin] = await Plugin.get([Plugin.ID, pluginId]);
-            if (plugin) {
-              await Order.insert(
-                [Order.PLUGIN_ID, pluginId],
-                [Order.TOKEN, paymentId],
-                [Order.ORDER_ID, orderId],
-                [Order.PACKAGE, 'web'],
-                [Order.AMOUNT, payment.amount / 10 ** (getSubunitDigits(payment.currency) ?? 2)],
-                [Order.CURRENCY, payment.currency || 'INR'],
-                [Order.STATE, Order.STATE_PURCHASED],
-                [Order.USER_ID, userId],
-                [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
-              );
-              console.log(`Created order for ${pluginId} via webhook (callback missed)`);
-            }
-          }
-        }
+        await ensurePurchaseOwnership(orderId, paymentId);
         break;
       }
 
       case 'payment.failed': {
-        // Payment failed
         const payment = payload.payment.entity;
         const orderId = payment.order_id;
 
-        console.log(`Payment failed for order ${orderId}: ${payment.error_description}`);
+        RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_FAILED]], [RazorpayOrder.RAZORPAY_ORDER_ID, orderId]).catch((err) =>
+          console.error('Failed to update razorpay_order failed status:', err),
+        );
 
-        // Update order state to cancelled if it exists
         const [existingOrder] = await Order.get([Order.ORDER_ID, orderId]);
         if (existingOrder) {
           await Order.update([[Order.STATE, Order.STATE_CANCELED]], [Order.ORDER_ID, orderId]);
+        }
+
+        const [failedRzpOrder] = await RazorpayOrder.get(
+          [RazorpayOrder.USER_ID, RazorpayOrder.PLUGIN_ID, RazorpayOrder.PRODUCT_TYPE],
+          [RazorpayOrder.RAZORPAY_ORDER_ID, orderId],
+        );
+
+        if (failedRzpOrder) {
+          const [failedUser] = await User.get([User.EMAIL, User.NAME], [User.ID, failedRzpOrder.user_id]);
+          if (failedUser) {
+            let itemName = 'your purchase';
+            if (failedRzpOrder.product_type === 'acode_pro') {
+              itemName = 'Acode Pro';
+            } else if (failedRzpOrder.plugin_id) {
+              const [failedPlugin] = await Plugin.get([Plugin.ID, Plugin.NAME], [Plugin.ID, failedRzpOrder.plugin_id]);
+              itemName = failedPlugin?.name || 'your plugin';
+            }
+            sendEmail(
+              failedUser.email,
+              failedUser.name,
+              'Your payment was not completed',
+              `Your payment for <strong>${itemName}</strong> could not be completed. No charges were made. You can try again anytime from the <a href="https://acode.app/orders">Orders page</a>.<br><br>If you need help, reach out at <a href="https://acode.app/contact">acode.app/contact</a>.`,
+            ).catch((err) => console.error('Failed to send payment failure email:', err));
+          }
         }
         break;
       }
 
       case 'order.paid': {
-        // Order is fully paid - similar handling to payment.captured
         const order = payload.order.entity;
         const orderId = order.id;
 
-        const [existingOrder] = await Order.get([Order.ORDER_ID, orderId]);
-        if (existingOrder && Number(existingOrder.state) !== Order.STATE_PURCHASED) {
-          await Order.update([[Order.STATE, Order.STATE_PURCHASED]], [Order.ORDER_ID, orderId]);
-          console.log(`Order ${orderId} marked as paid via webhook`);
+        const [rzpRecord] = await RazorpayOrder.get([RazorpayOrder.ID, RazorpayOrder.STATUS], [RazorpayOrder.RAZORPAY_ORDER_ID, orderId]);
+        if (rzpRecord) {
+          await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_PAID]], [RazorpayOrder.RAZORPAY_ORDER_ID, orderId]);
         }
+
+        // Ensure ownership — order.paid events may not have a payment_id
+        await ensurePurchaseOwnership(orderId, null);
         break;
       }
 
@@ -561,6 +976,29 @@ router.post('/create-pro-order', async (req, res) => {
       return;
     }
 
+    const [pendingProOrder] = await RazorpayOrder.get(
+      [RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
+      [
+        [RazorpayOrder.USER_ID, user.id],
+        [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PRO],
+        [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+      ],
+    );
+
+    if (pendingProOrder) {
+      res.send({
+        orderId: pendingProOrder.razorpay_order_id,
+        amount: pendingProOrder.amount,
+        currency: pendingProOrder.currency,
+        keyId: process.env.PG_KEY_ID,
+        userEmail: user.email,
+        originalPrice: Number(await AppConfig.getValue('acode_pro_price')),
+        displayCurrency: pendingProOrder.currency,
+        existingOrder: true,
+      });
+      return;
+    }
+
     const price = Number(await AppConfig.getValue('acode_pro_price'));
     if (!price || price <= 0) {
       res.status(503).send({ error: 'Acode Pro is not available for purchase right now. Please try again later.' });
@@ -585,6 +1023,44 @@ router.post('/create-pro-order', async (req, res) => {
         exchange_rate: converted.rate,
       },
     });
+
+    try {
+      await RazorpayOrder.insert(
+        [RazorpayOrder.RAZORPAY_ORDER_ID, order.id],
+        [RazorpayOrder.USER_ID, user.id],
+        [RazorpayOrder.PLUGIN_ID, null],
+        [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PRO],
+        [RazorpayOrder.AMOUNT, Math.round(converted.amount * subunitMultiplier)],
+        [RazorpayOrder.CURRENCY, converted.currency],
+        [RazorpayOrder.AMOUNT_INR, price],
+        [RazorpayOrder.RECEIPT, receipt],
+      );
+    } catch (err) {
+      console.error('Failed to insert razorpay_order (pro):', err);
+
+      const [raceRec] = await RazorpayOrder.get(
+        [RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
+        [
+          [RazorpayOrder.USER_ID, user.id],
+          [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PRO],
+          [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+        ],
+      );
+
+      if (raceRec) {
+        res.send({
+          orderId: raceRec.razorpay_order_id,
+          amount: raceRec.amount,
+          currency: raceRec.currency,
+          keyId: process.env.PG_KEY_ID,
+          userEmail: user.email,
+          originalPrice: Number(await AppConfig.getValue('acode_pro_price')),
+          displayCurrency: raceRec.currency,
+          existingOrder: true,
+        });
+        return;
+      }
+    }
 
     res.send({
       orderId: order.id,
@@ -644,7 +1120,10 @@ router.post('/verify-pro', async (req, res) => {
     // Fetch the Razorpay order to verify it's paid and amount matches expected pro price
     const rzpOrder = await getRazorpay().orders.fetch(razorpay_order_id);
     if (!rzpOrder || rzpOrder.status !== 'paid') {
-      res.status(400).send({ error: 'Order not paid' });
+      res.status(400).send({
+        code: 'PAYMENT_PROCESSING',
+        error: 'Payment is still processing. Your purchase will be activated automatically once payment is confirmed.',
+      });
       return;
     }
 
@@ -690,6 +1169,14 @@ router.post('/verify-pro', async (req, res) => {
       ],
       [User.ID, user.id],
     );
+
+    RazorpayOrder.update(
+      [
+        [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PAID],
+        [RazorpayOrder.RAZORPAY_PAYMENT_ID, razorpay_payment_id],
+      ],
+      [RazorpayOrder.RAZORPAY_ORDER_ID, razorpay_order_id],
+    ).catch((err) => console.error('Failed to update razorpay_order status:', err));
 
     sendEmail(
       user.email,
@@ -773,6 +1260,10 @@ router.post('/refund-pro', async (req, res) => {
       return;
     }
 
+    RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_REFUNDED]], [RazorpayOrder.RAZORPAY_PAYMENT_ID, purchaseToken]).catch((err) =>
+      console.error('Failed to update razorpay_order refund status:', err),
+    );
+
     sendEmail(
       user.email,
       user.name,
@@ -855,6 +1346,10 @@ router.post('/refund-plugin', async (req, res) => {
       [Order.ID, order.id],
     );
 
+    RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_REFUNDED]], [RazorpayOrder.RAZORPAY_ORDER_ID, order.order_id]).catch((err) =>
+      console.error('Failed to update razorpay_order refund status:', err),
+    );
+
     // Get plugin name for email
     const [plugin] = await Plugin.get([Plugin.ID, order.plugin_id]);
     const pluginName = plugin?.name || 'a plugin';
@@ -913,6 +1408,58 @@ router.get('/currencies', (_req, res) => {
   } catch (error) {
     console.error('Currencies list error:', error);
     res.status(500).send({ error: 'Failed to fetch currencies' });
+  }
+});
+
+router.post('/cancel-order', async (req, res) => {
+  try {
+    const user = await getLoggedInUser(req);
+    if (!user) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { razorpayOrderId } = req.body;
+    if (!razorpayOrderId) {
+      res.status(400).send({ error: 'Order ID is required' });
+      return;
+    }
+
+    const [order] = await RazorpayOrder.get(
+      [RazorpayOrder.ID, RazorpayOrder.STATUS, RazorpayOrder.USER_ID],
+      [RazorpayOrder.RAZORPAY_ORDER_ID, razorpayOrderId],
+    );
+
+    if (!order) {
+      res.status(404).send({ error: 'Order not found' });
+      return;
+    }
+
+    if (String(order.user_id) !== String(user.id)) {
+      res.status(403).send({ error: 'Forbidden' });
+      return;
+    }
+
+    if (order.status !== RazorpayOrder.STATUS_CREATED) {
+      res.status(400).send({ error: 'Only pending orders can be cancelled' });
+      return;
+    }
+
+    await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_CANCELLED]], [RazorpayOrder.RAZORPAY_ORDER_ID, razorpayOrderId]);
+
+    const [verify] = await RazorpayOrder.get([RazorpayOrder.STATUS], [RazorpayOrder.RAZORPAY_ORDER_ID, razorpayOrderId]);
+
+    if (!verify || verify.status !== RazorpayOrder.STATUS_CANCELLED) {
+      console.error(`Cancel-order update failed for ${razorpayOrderId}: read-back status=${verify?.status}`, { razorpayOrderId });
+      res.status(500).send({ error: 'Failed to cancel order. Please try again.' });
+      return;
+    }
+
+    console.log(`Order ${razorpayOrderId} cancelled by user ${user.id}`);
+    res.send({ success: true, message: 'Order cancelled', status: verify.status });
+  } catch (error) {
+    console.error('Cancel order error:', error);
+    res.status(500).send({ error: 'Failed to cancel order' });
   }
 });
 
