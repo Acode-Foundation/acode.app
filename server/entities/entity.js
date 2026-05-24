@@ -62,6 +62,14 @@ class Entity {
       columns = ['*'];
     }
 
+    if (!columns) {
+      columns = ['*'];
+    }
+
+    if (!Array.isArray(columns)) {
+      columns = [columns];
+    }
+
     let limit = Entity.default_limit;
     let page = Entity.default_page;
     let orderBy = Entity.default_order_by;

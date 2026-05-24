@@ -18,8 +18,8 @@ export default async function PluginList({ filter, orderBy }) {
   return (
     <section style={{ padding: '20px 0' }} id='plugins'>
       <div className='header'>
-        <h1 style={{ textAlign: 'center' }} ref={title}>
-          Plugins
+        <h1 style={{ textAlign: 'center' }}>
+          <span className='icon extension' /> <span ref={title}>Plugins</span>
         </h1>
 
         <div className='controls-wrapper'>

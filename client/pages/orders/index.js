@@ -67,6 +67,7 @@ export default async function Orders() {
       paid: { label: 'Paid', className: 'status-paid' },
       created: { label: 'Pending', className: 'status-pending' },
       failed: { label: 'Failed', className: 'status-failed' },
+      refunding: { label: 'Refunding', className: 'status-refunding' },
       refunded: { label: 'Refunded', className: 'status-refunded' },
       cancelled: { label: 'Cancelled', className: 'status-cancelled' },
     };
@@ -228,7 +229,9 @@ export default async function Orders() {
   return (
     <section id='orders'>
       <div className='orders-header'>
-        <h1>My Orders</h1>
+        <h1>
+          <span className='icon shopping_cart' /> My Orders
+        </h1>
         <p>Your purchase history and pending orders</p>
       </div>
 

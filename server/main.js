@@ -1,7 +1,6 @@
 /* eslint-disable no-console */
 require('dotenv').config();
-require('./crons');
-require('./updateSchema');
+
 const fs = require('node:fs');
 const path = require('node:path');
 const express = require('express');
@@ -14,17 +13,13 @@ const Plugin = require('./entities/plugin');
 const apis = require('./routes/apis');
 const oauth = require('./apis/oauth');
 const setAuth = require('./lib/gapis');
+const migrationRunner = require('./lib/migrationRunner');
 
 const app = express();
 
 app.set('trust proxy', 1);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-main();
 
 const ALLOWED_ORIGINS = new Set(['https://localhost', 'https://acode.app']);
 
@@ -93,11 +88,11 @@ async function main() {
   // Must come before express.json() to preserve raw body for Razorpay signature verification
   app.use('/api/razorpay/webhook', express.raw({ type: 'application/json' }));
 
-  app.use(
-    express.json({
-      limit: '50mb',
-    }),
-  );
+  // Skip json parsing for webhook — raw parser already consumed the body
+  app.use((req, res, next) => {
+    if (req.path === '/api/razorpay/webhook') return next();
+    express.json({ limit: '50mb' })(req, res, next);
+  });
 
   app.get('/sitemap.xml', (_req, res) => {
     res.setHeader('Content-Type', 'application/xml');
@@ -244,3 +239,14 @@ async function main() {
     res.status(500).send({ error: 'Internal server error' });
   });
 }
+
+async function start() {
+  await migrationRunner.run();
+  require('./crons');
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+  await main();
+}
+
+start();

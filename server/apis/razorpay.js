@@ -5,101 +5,17 @@ const Order = require('../entities/purchaseOrder');
 const User = require('../entities/user');
 const RazorpayOrder = require('../entities/razorpayOrder');
 const AppConfig = require('../entities/appConfig');
-const { getLoggedInUser, getDbTime, parseDbTime, detectUserCurrency, formatAmount } = require('../lib/helpers');
+const { getLoggedInUser, parseDbTime, detectUserCurrency, formatAmount } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
 const { REFUND_WINDOW_MS } = require('../../constants.mjs');
 const getRazorpay = require('../lib/razorpay');
-const { CURRENCIES, getAllCurrencies, getSubunitDigits, getCurrencySymbol } = require('../lib/currencyMap');
+const { CURRENCIES, getAllCurrencies, getSubunitDigits } = require('../lib/currencyMap');
 const { convertPrice } = require('../lib/exchangeRates');
+const ensurePurchaseOwnership = require('../lib/ensurePurchaseOwnership');
+const notifyRefund = require('../lib/notifyRefund');
+const notifyPurchase = require('../lib/notifyPurchase');
 
 const router = Router();
-
-/**
- * Ensure a purchase_order record exists with STATE_PURCHASED for a paid Razorpay order.
- * Fetches the Razorpay order for server-authoritative notes instead of relying on payment.notes.
- */
-async function ensurePurchaseOwnership(orderId, paymentId) {
-  const [existingOrder] = await Order.get([Order.ORDER_ID, orderId]);
-  if (existingOrder) {
-    if (Number(existingOrder.state) !== Order.STATE_PURCHASED) {
-      const updateCols = [[Order.STATE, Order.STATE_PURCHASED]];
-      if (paymentId) {
-        updateCols.push([Order.TOKEN, paymentId]);
-      }
-      await Order.update(updateCols, [Order.ORDER_ID, orderId]);
-    }
-    return;
-  }
-
-  const rzpOrder = await getRazorpay().orders.fetch(orderId);
-  const notes = rzpOrder.notes || {};
-  const userId = notes.userId ? String(notes.userId) : null;
-  const pluginId = notes.pluginId ? String(notes.pluginId) : null;
-  const type = notes.type;
-
-  if (type === 'acode_pro' && userId) {
-    const expectedPrice = Number(await AppConfig.getValue('acode_pro_price'));
-    const orderInrPrice = Number(notes.original_amount_inr);
-    if (orderInrPrice && orderInrPrice !== expectedPrice) {
-      console.warn(`Pro price mismatch in webhook: notes ${orderInrPrice} vs config ${expectedPrice}. Accepting.`);
-    }
-
-    const [existingUser] = await User.get(User.safeColumns, [User.ID, userId]);
-    if (existingUser && existingUser.acode_pro !== 1 && existingUser.acode_pro !== true) {
-      await User.update(
-        [
-          [User.ACODE_PRO, 1],
-          [User.PRO_PURCHASE_TOKEN, paymentId],
-          [User.PRO_PURCHASED_AT, getDbTime()],
-        ],
-        [User.ID, userId],
-      );
-      console.log(`Activated Acode Pro for user ${userId} via webhook`);
-    }
-    return;
-  }
-
-  if (pluginId && userId) {
-    const [plugin] = await Plugin.get([Plugin.ID, pluginId]);
-    if (!plugin) {
-      console.warn(`Plugin ${pluginId} not found for webhook order ${orderId}`);
-      return;
-    }
-
-    const orderInrPrice = Number(notes.original_amount_inr ?? plugin.price);
-    if (orderInrPrice !== plugin.price) {
-      console.warn(`Plugin price changed: notes ${orderInrPrice} vs current ${plugin.price}. Accepting.`);
-    }
-
-    const subunitDigits = getSubunitDigits(rzpOrder.currency) ?? 2;
-    const paidAmount = rzpOrder.amount / 10 ** subunitDigits;
-
-    await Order.insert(
-      [Order.PLUGIN_ID, pluginId],
-      [Order.TOKEN, paymentId],
-      [Order.ORDER_ID, orderId],
-      [Order.PACKAGE, 'web'],
-      [Order.AMOUNT, paidAmount],
-      [Order.CURRENCY, rzpOrder.currency],
-      [Order.STATE, Order.STATE_PURCHASED],
-      [Order.USER_ID, userId],
-      [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
-    );
-
-    const [user] = await User.get([User.EMAIL, User.NAME], [User.ID, userId]);
-    if (user) {
-      const paidSymbol = getCurrencySymbol(rzpOrder.currency) || '';
-      sendEmail(
-        user.email,
-        user.name,
-        'Thank you for your purchase!',
-        `You've successfully purchased <strong>${plugin.name}</strong> for ${paidSymbol}${formatAmount(paidAmount, rzpOrder.currency)}.<br><br>You can now download and use the plugin right away. If you run into any issues or have questions, feel free to reach out at <a href="https://acode.app/contact">acode.app/contact</a>.<br><br>Thank you for supporting the Acode ecosystem and the developer behind this plugin!`,
-      ).catch((err) => console.error('Failed to send purchase email via webhook:', err));
-    }
-
-    console.log(`Created purchase_order for plugin ${pluginId} (user ${userId}) via webhook`);
-  }
-}
 
 function purchaseStateToStatus(state) {
   switch (Number(state)) {
@@ -330,6 +246,14 @@ router.post('/verify', async (req, res) => {
       return;
     }
 
+    await RazorpayOrder.update(
+      [
+        [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PAID],
+        [RazorpayOrder.RAZORPAY_PAYMENT_ID, razorpay_payment_id],
+      ],
+      [RazorpayOrder.RAZORPAY_ORDER_ID, razorpay_order_id],
+    );
+
     // Check if order already exists (avoid duplicates)
     const [existingOrder] = await Order.get([Order.ORDER_ID, razorpay_order_id]);
     if (existingOrder) {
@@ -350,24 +274,7 @@ router.post('/verify', async (req, res) => {
       [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
     );
 
-    RazorpayOrder.update(
-      [
-        [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PAID],
-        [RazorpayOrder.RAZORPAY_PAYMENT_ID, razorpay_payment_id],
-      ],
-      [RazorpayOrder.RAZORPAY_ORDER_ID, razorpay_order_id],
-    ).catch((err) => console.error('Failed to update razorpay_order status:', err));
-
-    const paidAmount = rzpOrder.amount / 10 ** (getSubunitDigits(rzpOrder.currency) ?? 2);
-    const paidSymbol = getCurrencySymbol(rzpOrder.currency) || '';
-    const paidCurrency = rzpOrder.currency;
-
-    sendEmail(
-      user.email,
-      user.name,
-      'Thank you for your purchase!',
-      `You've successfully purchased <strong>${plugin.name}</strong> for ${paidSymbol}${formatAmount(paidAmount, paidCurrency)}.<br><br>You can now download and use the plugin right away. If you run into any issues or have questions, feel free to reach out at <a href="https://acode.app/contact">acode.app/contact</a>.<br><br>Thank you for supporting the Acode ecosystem and the developer behind this plugin!`,
-    ).catch((err) => console.error('Failed to send plugin purchase email:', err));
+    notifyPurchase(razorpay_payment_id, { email: user.email, name: user.name });
 
     res.send({ success: true, message: 'Payment verified and purchase recorded' });
   } catch (error) {
@@ -743,14 +650,16 @@ router.get('/orders/:orderId', async (req, res) => {
  * - payment.captured: Payment successfully captured
  * - payment.failed: Payment failed
  * - order.paid: Order fully paid
+ * - refund.created, refund.processed: Refund issued or processed (e.g., from Razorpay Dashboard)
  *
  * Configure this webhook URL in Razorpay Dashboard:
  * Settings → Webhooks → Add New Webhook
  * URL: https://yourdomain.com/api/razorpay/webhook
- * Events: payment.captured, payment.failed, order.paid
+ * Events: payment.captured, payment.failed, order.paid, refund.created, refund.processed
  */
 router.post('/webhook', async (req, res) => {
   try {
+    console.log(`[Razorpay webhook] received`);
     const webhookSecret = process.env.PG_WEBHOOK_SECRET;
     const isProduction = process.env.NODE_ENV === 'production';
 
@@ -854,6 +763,55 @@ router.post('/webhook', async (req, res) => {
 
         // Ensure ownership — order.paid events may not have a payment_id
         await ensurePurchaseOwnership(orderId, null);
+        break;
+      }
+
+      case 'refund.created': {
+        const paymentId = payload.refund.entity.payment_id;
+        console.log(`refund.created webhook for payment ${paymentId} (awaiting refund.processed)`);
+        if (paymentId) {
+          const [order] = await RazorpayOrder.get([RazorpayOrder.STATUS], [RazorpayOrder.RAZORPAY_PAYMENT_ID, paymentId]);
+          if (order && order.status !== RazorpayOrder.STATUS_REFUNDED && order.status !== RazorpayOrder.STATUS_REFUNDING) {
+            RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_REFUNDING]], [RazorpayOrder.RAZORPAY_PAYMENT_ID, paymentId]).catch(
+              (err) => console.error('Failed to set refunding status via webhook:', err),
+            );
+          }
+        }
+        break;
+      }
+
+      case 'refund.processed': {
+        const paymentId = payload.refund.entity.payment_id;
+        if (!paymentId) {
+          console.warn('refund.processed webhook: no payment_id found');
+          break;
+        }
+
+        console.log(`Processing refund.processed webhook for payment ${paymentId}`);
+
+        RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_REFUNDED]], [RazorpayOrder.RAZORPAY_PAYMENT_ID, paymentId]).catch((err) =>
+          console.error('Failed to update razorpay_order refund status via webhook:', err),
+        );
+
+        Order.update(
+          [
+            [Order.STATE, Order.STATE_CANCELED],
+            [Order.AMOUNT, 0],
+          ],
+          [Order.TOKEN, paymentId],
+        ).catch((err) => console.error('Failed to cancel purchase_order via refund webhook:', err));
+
+        User.update(
+          [
+            [User.ACODE_PRO, 0],
+            [User.PRO_PURCHASE_TOKEN, null],
+            [User.PRO_PURCHASED_AT, null],
+          ],
+          [User.PRO_PURCHASE_TOKEN, paymentId],
+        ).catch((err) => console.error('Failed to deactivate Pro via refund webhook:', err));
+
+        notifyRefund(paymentId).catch((err) => console.error('Failed to send refund email via webhook:', err));
+
         break;
       }
 
@@ -1092,7 +1050,7 @@ router.post('/verify-pro', async (req, res) => {
 
     // Reject if user is already Pro (prevents token overwrite and refund window reset)
     if (user.acode_pro === 1 || user.acode_pro === true) {
-      res.status(400).send({ error: 'You already have Acode Pro' });
+      res.send({ success: true, message: 'Acode Pro already activated' });
       return;
     }
 
@@ -1170,20 +1128,15 @@ router.post('/verify-pro', async (req, res) => {
       [User.ID, user.id],
     );
 
-    RazorpayOrder.update(
+    await RazorpayOrder.update(
       [
         [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PAID],
         [RazorpayOrder.RAZORPAY_PAYMENT_ID, razorpay_payment_id],
       ],
       [RazorpayOrder.RAZORPAY_ORDER_ID, razorpay_order_id],
-    ).catch((err) => console.error('Failed to update razorpay_order status:', err));
+    );
 
-    sendEmail(
-      user.email,
-      user.name,
-      'You are awesome! Welcome to Acode Pro',
-      'You just made our day!<br><br>By getting <strong>Acode Pro</strong>, you\'re not just unlocking an ad-free experience and exclusive themes \u2014 you\'re directly supporting a small team of developers who pour their hearts into keeping Acode free and open-source for everyone.<br><br>Every Pro purchase means we can spend more time building features, fixing bugs, and making Acode the best mobile code editor out there. Seriously, thank you. It means the world to us.<br><br>If for any reason you need a refund, no hard feelings \u2014 you can request one within 2 hours from the <a href="https://acode.app/pro">Pro page</a>.<br><br>Happy coding!',
-    ).catch((err) => console.error('Failed to send pro activation email:', err));
+    notifyPurchase(razorpay_payment_id, { email: user.email, name: user.name });
 
     res.send({ success: true, message: 'Acode Pro activated' });
   } catch (error) {
@@ -1224,7 +1177,7 @@ router.post('/refund-pro', async (req, res) => {
       return;
     }
 
-    const elapsed = Date.now() - new Date(`${purchasedAt}Z`).getTime();
+    const elapsed = Date.now() - parseDbTime(purchasedAt).getTime();
     if (elapsed > REFUND_WINDOW_MS) {
       res.status(400).send({ error: 'Refund window has expired. Refunds are only available within 2 hours of purchase.' });
       return;
@@ -1246,6 +1199,18 @@ router.post('/refund-pro', async (req, res) => {
         speed: 'normal',
       });
     } catch (refundErr) {
+      const isAlreadyRefunded =
+        refundErr?.error?.code === 'BAD_REQUEST_ERROR' && refundErr?.error?.description === 'The payment has been fully refunded already';
+
+      if (isAlreadyRefunded) {
+        console.log(`Pro refund: payment ${purchaseToken} was already refunded`);
+        RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_REFUNDED]], [RazorpayOrder.RAZORPAY_PAYMENT_ID, purchaseToken]).catch(
+          (err) => console.error('Failed to update razorpay_order refund status:', err),
+        );
+        res.send({ success: true, message: 'This payment was already refunded.' });
+        return;
+      }
+
       // Razorpay refund failed — restore Pro status so user isn't left in limbo
       console.error('Razorpay refund API failed, restoring Pro status:', refundErr);
       await User.update(
@@ -1263,13 +1228,6 @@ router.post('/refund-pro', async (req, res) => {
     RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_REFUNDED]], [RazorpayOrder.RAZORPAY_PAYMENT_ID, purchaseToken]).catch((err) =>
       console.error('Failed to update razorpay_order refund status:', err),
     );
-
-    sendEmail(
-      user.email,
-      user.name,
-      "We're sorry to see you go",
-      'Your <strong>Acode Pro</strong> refund has been initiated and should reflect in your account within 5-7 business days.<br><br>We\'re sad to see you go, and we\'d honestly love to know what made you change your mind. Was it something we could do better? A missing feature? Or just not the right time?<br><br>If you have a moment, please drop us a note at <a href="https://acode.app/contact">acode.app/contact</a> \u2014 your feedback genuinely helps us improve Acode for everyone.<br><br>The door is always open if you ever want to come back.',
-    ).catch((err) => console.error('Failed to send pro refund email:', err));
 
     res.send({ success: true, message: 'Refund initiated. It may take 5-7 business days to reflect.' });
   } catch (error) {
@@ -1326,16 +1284,24 @@ router.post('/refund-plugin', async (req, res) => {
       return;
     }
 
-    const elapsed = Date.now() - new Date(`${order.created_at}Z`).getTime();
+    const elapsed = Date.now() - parseDbTime(order.created_at).getTime();
     if (elapsed > REFUND_WINDOW_MS) {
       res.status(400).send({ error: 'Refund window has expired. Refunds are only available within 2 hours of purchase.' });
       return;
     }
 
     // Issue full refund via Razorpay
-    await getRazorpay().payments.refund(order.token, {
-      speed: 'normal',
-    });
+    try {
+      await getRazorpay().payments.refund(order.token, {
+        speed: 'normal',
+      });
+    } catch (refundErr) {
+      const isAlreadyRefunded =
+        refundErr?.error?.code === 'BAD_REQUEST_ERROR' && refundErr?.error?.description === 'The payment has been fully refunded already';
+      if (!isAlreadyRefunded) throw refundErr;
+
+      console.log(`Plugin refund: payment ${order.token} was already refunded`);
+    }
 
     // Update order state to canceled and zero out amount
     await Order.update(
@@ -1349,17 +1315,6 @@ router.post('/refund-plugin', async (req, res) => {
     RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_REFUNDED]], [RazorpayOrder.RAZORPAY_ORDER_ID, order.order_id]).catch((err) =>
       console.error('Failed to update razorpay_order refund status:', err),
     );
-
-    // Get plugin name for email
-    const [plugin] = await Plugin.get([Plugin.ID, order.plugin_id]);
-    const pluginName = plugin?.name || 'a plugin';
-
-    sendEmail(
-      user.email,
-      user.name,
-      "We're sorry to see you go",
-      `Your refund for <strong>${pluginName}</strong> has been initiated and should reflect in your account within 5-7 business days.<br><br>We'd honestly love to know what made you change your mind. Was it something we could do better? A missing feature? Or just not the right fit?<br><br>If you have a moment, please drop us a note at <a href="https://acode.app/contact">acode.app/contact</a> \u2014 your feedback genuinely helps us improve Acode for everyone.<br><br>The door is always open if you ever want to come back.`,
-    ).catch((err) => console.error('Failed to send plugin refund email:', err));
 
     res.send({ success: true, message: 'Refund initiated. It may take 5-7 business days to reflect.' });
   } catch (error) {
