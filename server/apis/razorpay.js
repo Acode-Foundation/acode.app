@@ -789,26 +789,24 @@ router.post('/webhook', async (req, res) => {
 
         console.log(`Processing refund.processed webhook for payment ${paymentId}`);
 
-        RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_REFUNDED]], [RazorpayOrder.RAZORPAY_PAYMENT_ID, paymentId]).catch((err) =>
-          console.error('Failed to update razorpay_order refund status via webhook:', err),
-        );
+        await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_REFUNDED]], [RazorpayOrder.RAZORPAY_PAYMENT_ID, paymentId]);
 
-        Order.update(
+        await Order.update(
           [
             [Order.STATE, Order.STATE_CANCELED],
             [Order.AMOUNT, 0],
           ],
           [Order.TOKEN, paymentId],
-        ).catch((err) => console.error('Failed to cancel purchase_order via refund webhook:', err));
+        );
 
-        User.update(
+        await User.update(
           [
             [User.ACODE_PRO, 0],
             [User.PRO_PURCHASE_TOKEN, null],
             [User.PRO_PURCHASED_AT, null],
           ],
           [User.PRO_PURCHASE_TOKEN, paymentId],
-        ).catch((err) => console.error('Failed to deactivate Pro via refund webhook:', err));
+        );
 
         notifyRefund(paymentId).catch((err) => console.error('Failed to send refund email via webhook:', err));
 
