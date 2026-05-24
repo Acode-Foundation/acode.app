@@ -49,17 +49,17 @@ async function syncPendingOrders() {
 async function syncRefundsOnPaidOrders() {
   const ninetyDaysAgo = moment().subtract(90, 'days').format('YYYY-MM-DD HH:mm:ss');
 
-  const paidOrders = await RazorpayOrder.for('internal').get('*', [
-    [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PAID],
+  const ordersToCheck = await RazorpayOrder.for('internal').get('*', [
+    [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_PAID, RazorpayOrder.STATUS_REFUNDING], 'IN'],
     'AND',
     [RazorpayOrder.RAZORPAY_PAYMENT_ID, null, 'IS NOT'],
     'AND',
     [RazorpayOrder.CREATED_AT, ninetyDaysAgo, '>'],
   ]);
 
-  console.log(`Checking ${paidOrders.length} paid razorpay orders for refunds`);
+  console.log(`Checking ${ordersToCheck.length} paid/refunding razorpay orders for refunds`);
 
-  for (const order of paidOrders) {
+  for (const order of ordersToCheck) {
     try {
       const payment = await getRazorpay().payments.fetch(order.razorpay_payment_id);
 
