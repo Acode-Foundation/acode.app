@@ -274,7 +274,7 @@ router.post('/verify', async (req, res) => {
       [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
     );
 
-    notifyPurchase(razorpay_payment_id, { email: user.email, name: user.name });
+    notifyPurchase(razorpay_payment_id, { email: user.email, name: user.name }).catch((err) => console.error('Failed to send purchase email:', err));
 
     res.send({ success: true, message: 'Payment verified and purchase recorded' });
   } catch (error) {
