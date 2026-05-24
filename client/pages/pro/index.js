@@ -78,13 +78,13 @@ export default async function Pro({ redirect }) {
   function renderAction() {
     if (!loggedInUser) {
       return (
-        <div className='login-prompt'>
+        <div className='buy-section'>
           <CurrencySelector className='price-tag'>
             <span className='currency'>{proStatus.symbol}</span>
             <span className='amount'>{proStatus.price}</span>
           </CurrencySelector>
           <a href={`/login?redirect=/pro`} className='btn primary'>
-            Login to Purchase
+            <span className='icon login' /> Login to Purchase
           </a>
         </div>
       );
