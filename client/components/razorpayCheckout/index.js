@@ -111,13 +111,11 @@ export async function initiateCheckout(pluginId, userInfo = {}, onSuccess, onCan
             }),
           });
 
-          if (!verifyRes.ok) throw new Error('Verification request failed');
-
-          const verifyData = await verifyRes.json();
+          const verifyData = await verifyRes.json().catch(() => ({}));
 
           if (verifyData.success) {
             alert('SUCCESS', 'Payment successful! You can now download this plugin.', onSuccess);
-          } else if (verifyData.code === 'PAYMENT_PROCESSING') {
+          } else if (!verifyRes.ok && verifyData.code === 'PAYMENT_PROCESSING') {
             alert(
               'PAYMENT PENDING',
               'Your payment is being processed. You will be notified once it is confirmed. You can check your order status on the Orders page.',
@@ -220,13 +218,11 @@ export async function initiateProCheckout(userInfo = {}, onSuccess, onCancel) {
             }),
           });
 
-          if (!verifyRes.ok) throw new Error('Verification request failed');
-
-          const verifyData = await verifyRes.json();
+          const verifyData = await verifyRes.json().catch(() => ({}));
 
           if (verifyData.success) {
             alert('SUCCESS', 'Thank you for supporting Acode! Pro features are now active.', onSuccess);
-          } else if (verifyData.code === 'PAYMENT_PROCESSING') {
+          } else if (!verifyRes.ok && verifyData.code === 'PAYMENT_PROCESSING') {
             alert(
               'PAYMENT PENDING',
               'Your payment is being processed. You will be notified once it is confirmed. You can check your order status on the Orders page.',

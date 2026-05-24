@@ -67,7 +67,6 @@
     "config-build": "node ./dev/config",
     "build": "npm run config-build p && webpack --mode production",
     "dev": "node ./dev/start-dev",
-    "update-schema": "node ./updateSchema",
     "start": "node ./server/main",
     "sitemap": "node dev/generateSitemap.js",
     "reports": "node ./server/reportsCli"

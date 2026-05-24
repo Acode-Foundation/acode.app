@@ -190,6 +190,11 @@
       color: #94a3b8;
     }
 
+    &.status-refunding {
+      background: rgba(59, 130, 246, 0.15);
+      color: #3b82f6;
+    }
+
     &.status-cancelled {
       background: rgba(251, 146, 60, 0.15);
       color: #fb923c;
