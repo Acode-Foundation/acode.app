@@ -35,13 +35,14 @@ export default async function Orders() {
 
   const orders = await fetchOrders();
 
-  const hasPending = orders.some((o) => o.status === 'created');
+  const hasPending = orders.some((o) => o.status === 'pending');
   if (hasPending) {
     const pollInterval = setInterval(async () => {
       try {
         const fresh = await fetchOrders();
-        const stillPending = fresh.filter((o) => o.status === 'created');
-        if (stillPending.length !== orders.filter((o) => o.status === 'created').length) {
+        const freshPending = fresh.filter((o) => o.status === 'pending');
+        const currentPending = orders.filter((o) => o.status === 'pending');
+        if (freshPending.length !== currentPending.length) {
           window.location.reload();
         }
       } catch {
@@ -64,8 +65,9 @@ export default async function Orders() {
    */
   function OrderRow(order) {
     const statusConfig = {
+      created: { label: 'Created', className: 'status-created' },
+      pending: { label: 'Pending', className: 'status-pending' },
       paid: { label: 'Paid', className: 'status-paid' },
-      created: { label: 'Pending', className: 'status-pending' },
       failed: { label: 'Failed', className: 'status-failed' },
       refunding: { label: 'Refunding', className: 'status-refunding' },
       refunded: { label: 'Refunded', className: 'status-refunded' },
@@ -165,37 +167,6 @@ export default async function Orders() {
       }
     };
 
-    const handleCancel = async (e) => {
-      e.stopPropagation();
-      const ok = await confirm('CANCEL', 'Cancel this pending order?');
-      if (!ok) return;
-      try {
-        const res = await fetch('/api/razorpay/cancel-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ razorpayOrderId: order.razorpayOrderId }),
-        }).then((r) => r.json());
-        if (res.success) {
-          alert('INFO', `Order ${res.status || 'cancelled'} successfully.`);
-          setTimeout(() => window.location.reload(), 800);
-        } else {
-          alert('ERROR', res.error);
-        }
-      } catch (err) {
-        console.error(err);
-        alert('ERROR', 'Failed to cancel order');
-      }
-    };
-
-    const handleRetry = (e) => {
-      e.stopPropagation();
-      if (order.productType === 'acode_pro') {
-        Router.loadUrl('/pro');
-      } else if (order.pluginId) {
-        Router.loadUrl(`/plugin/${order.pluginId}`);
-      }
-    };
-
     return (
       <tr className='order-row' onclick={handleView}>
         <td className='order-plugin'>
@@ -210,18 +181,6 @@ export default async function Orders() {
           <span className={`status-badge ${config.className}`}>{config.label}</span>
         </td>
         <td className='order-date'>{moment(order.createdAt).format('DD MMM YYYY')}</td>
-        <td className='order-actions'>
-          {order.status === 'created' && (
-            <button type='button' onclick={handleCancel} className='cancel-btn'>
-              Cancel
-            </button>
-          )}
-          {order.status === 'failed' && (
-            <button type='button' onclick={handleRetry} className='retry-btn'>
-              Retry
-            </button>
-          )}
-        </td>
       </tr>
     );
   }
@@ -254,7 +213,6 @@ export default async function Orders() {
                 <th>Amount</th>
                 <th>Status</th>
                 <th>Date</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -269,9 +227,9 @@ export default async function Orders() {
       <div className='orders-info'>
         <h3>Need help?</h3>
         <p>
-          If your payment is stuck in <strong>Pending</strong> for more than a few hours, payments are usually confirmed automatically. If you see a{' '}
-          <strong>Failed</strong> status, no money was deducted and you can try again. For other issues, contact us at{' '}
-          <a href='/contact'>acode.app/contact</a>.
+          Orders show <strong>Pending</strong> while your bank is processing the payment. Payments are usually confirmed automatically — this can take
+          up to a few hours depending on your bank. If you see <strong>Failed</strong>, no money was deducted and you can try again. For other issues,
+          contact us at <a href='/contact'>acode.app/contact</a>.
         </p>
       </div>
     </section>

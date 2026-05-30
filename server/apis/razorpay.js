@@ -76,7 +76,7 @@ router.post('/create-order', async (req, res) => {
         [RazorpayOrder.USER_ID, user.id],
         [RazorpayOrder.PLUGIN_ID, plugin.id],
         [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PLUGIN],
-        [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+        [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING], 'IN'],
       ],
     );
 
@@ -137,7 +137,7 @@ router.post('/create-order', async (req, res) => {
           [RazorpayOrder.USER_ID, user.id],
           [RazorpayOrder.PLUGIN_ID, plugin.id],
           [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PLUGIN],
-          [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+          [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING], 'IN'],
         ],
       );
 
@@ -214,6 +214,18 @@ router.post('/verify', async (req, res) => {
     // Fetch the Razorpay order to verify amount and pluginId from server-side notes
     const rzpOrder = await getRazorpay().orders.fetch(razorpay_order_id);
     if (!rzpOrder || rzpOrder.status !== 'paid') {
+      // If payment was attempted (valid signature) but not yet captured,
+      // transition from 'created' to 'pending' so the user sees their order as processing.
+      if (rzpOrder && rzpOrder.status !== 'attempted') {
+        await RazorpayOrder.update(
+          [[RazorpayOrder.STATUS, RazorpayOrder.STATUS_PENDING]],
+          [
+            [RazorpayOrder.RAZORPAY_ORDER_ID, razorpay_order_id],
+            [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+          ],
+        ).catch((err) => console.error('Failed to set pending status in verify:', err));
+      }
+
       res.status(400).send({
         code: 'PAYMENT_PROCESSING',
         error: 'Payment is still processing. Your purchase will be activated automatically once payment is confirmed.',
@@ -388,7 +400,7 @@ router.get('/my-purchases{/:pluginId}', async (req, res) => {
  * GET /api/razorpay/orders
  *
  * Optional query params:
- *   status      - Filter by order status (created, paid, failed, refunded)
+ *   status      - Filter by order status (created, pending, paid, failed, refunded, cancelled)
  *   productType - Filter by product type (plugin, acode_pro)
  */
 router.get('/orders', async (req, res) => {
@@ -403,6 +415,8 @@ router.get('/orders', async (req, res) => {
     const where = [[RazorpayOrder.USER_ID, user.id]];
     if (status) {
       where.push([RazorpayOrder.STATUS, status]);
+    } else {
+      where.push([RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED, '<>']);
     }
     if (productType) {
       where.push([RazorpayOrder.PRODUCT_TYPE, productType]);
@@ -766,6 +780,28 @@ router.post('/webhook', async (req, res) => {
         break;
       }
 
+      case 'payment.authorized':
+      case 'payment.pending': {
+        const payment = payload.payment.entity;
+        const orderId = payment.order_id;
+        const paymentId = payment.id;
+
+        console.log(`[Razorpay webhook] ${event} for order ${orderId}, payment ${paymentId}`);
+
+        // Transition from 'created' to 'pending' — payment was attempted, bank is processing.
+        await RazorpayOrder.update(
+          [
+            [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PENDING],
+            [RazorpayOrder.RAZORPAY_PAYMENT_ID, paymentId],
+          ],
+          [
+            [RazorpayOrder.RAZORPAY_ORDER_ID, orderId],
+            [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+          ],
+        ).catch((err) => console.error(`Failed to set pending status via ${event} webhook:`, err));
+        break;
+      }
+
       case 'refund.created': {
         const paymentId = payload.refund.entity.payment_id;
         console.log(`refund.created webhook for payment ${paymentId} (awaiting refund.processed)`);
@@ -937,7 +973,7 @@ router.post('/create-pro-order', async (req, res) => {
       [
         [RazorpayOrder.USER_ID, user.id],
         [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PRO],
-        [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+        [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING], 'IN'],
       ],
     );
 
@@ -999,7 +1035,7 @@ router.post('/create-pro-order', async (req, res) => {
         [
           [RazorpayOrder.USER_ID, user.id],
           [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PRO],
-          [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+          [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING], 'IN'],
         ],
       );
 
@@ -1076,6 +1112,17 @@ router.post('/verify-pro', async (req, res) => {
     // Fetch the Razorpay order to verify it's paid and amount matches expected pro price
     const rzpOrder = await getRazorpay().orders.fetch(razorpay_order_id);
     if (!rzpOrder || rzpOrder.status !== 'paid') {
+      // Transition from 'created' to 'pending' when payment was attempted but not yet captured.
+      if (rzpOrder && rzpOrder.status !== 'attempted') {
+        await RazorpayOrder.update(
+          [[RazorpayOrder.STATUS, RazorpayOrder.STATUS_PENDING]],
+          [
+            [RazorpayOrder.RAZORPAY_ORDER_ID, razorpay_order_id],
+            [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+          ],
+        ).catch((err) => console.error('Failed to set pending status in verify-pro:', err));
+      }
+
       res.status(400).send({
         code: 'PAYMENT_PROCESSING',
         error: 'Payment is still processing. Your purchase will be activated automatically once payment is confirmed.',
@@ -1393,7 +1440,7 @@ router.post('/cancel-order', async (req, res) => {
       return;
     }
 
-    if (order.status !== RazorpayOrder.STATUS_CREATED) {
+    if (order.status !== RazorpayOrder.STATUS_CREATED && order.status !== RazorpayOrder.STATUS_PENDING) {
       res.status(400).send({ error: 'Only pending orders can be cancelled' });
       return;
     }

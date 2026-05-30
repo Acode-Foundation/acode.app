@@ -98,8 +98,11 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   let hasPendingOrder = false;
   if (user && price && !userOwnsPlugin) {
     try {
-      const orders = await fetch('/api/razorpay/orders?status=created&productType=plugin').then((r) => r.json());
-      hasPendingOrder = orders.some((o) => String(o.pluginId) === String(id));
+      const [createdOrders, pendingOrders] = await Promise.all([
+        fetch('/api/razorpay/orders?status=created&productType=plugin').then((r) => r.json()),
+        fetch('/api/razorpay/orders?status=pending&productType=plugin').then((r) => r.json()),
+      ]);
+      hasPendingOrder = [...createdOrders, ...pendingOrders].some((o) => String(o.pluginId) === String(id));
     } catch {
       // Ignore
     }

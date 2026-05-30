@@ -2,7 +2,7 @@ import './main.scss';
 import AnnouncementBanner from 'components/announcementBanner';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
-import { getLoggedInUser, gravatar } from 'lib/helpers';
+import { gravatar } from 'lib/helpers';
 import digitalOceanLogo from 'res/digitalocean-icon.svg';
 import logo from 'res/logo.svg';
 
@@ -126,7 +126,6 @@ export default ({ routes }) => (
       <a href='/orders'>
         <span className='icon shopping_cart' />
         My Orders
-        <span id='orders-badge' style={{ display: 'none' }} />
       </a>
       <span className='divider' />
       <a href='/logout' className='danger-text'>
@@ -203,22 +202,5 @@ export function addProButton(user) {
         loginLink,
       );
     }
-  }
-}
-
-export async function updateOrdersBadge() {
-  const user = await getLoggedInUser();
-  if (!user) return;
-
-  try {
-    const orders = await fetch('/api/razorpay/orders?status=created').then((r) => r.json());
-    const count = orders.length;
-    const badge = tag.get('#orders-badge');
-    if (badge) {
-      badge.textContent = count;
-      badge.style.display = count > 0 ? 'inline' : 'none';
-    }
-  } catch {
-    // Ignore
   }
 }

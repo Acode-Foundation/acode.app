@@ -10,7 +10,7 @@ async function syncPendingOrders() {
   const fifteenMinAgo = moment().subtract(15, 'minutes').format('YYYY-MM-DD HH:mm:ss');
 
   const pendingOrders = await RazorpayOrder.for('internal').get('*', [
-    [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+    [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING], 'IN'],
     'AND',
     [RazorpayOrder.CREATED_AT, fifteenMinAgo, '<'],
   ]);
@@ -39,6 +39,33 @@ async function syncPendingOrders() {
       } else if (rzpOrder.status === 'attempted') {
         await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_FAILED]], [RazorpayOrder.ID, order.id]);
         console.log(`Synced failed razorpay order ${order.razorpay_order_id}`);
+      } else if (rzpOrder.status === 'created') {
+        const payments = await getRazorpay().orders.fetchPayments(order.razorpay_order_id);
+        const failedPayment = payments.items?.find((p) => p.status === 'failed');
+        if (failedPayment) {
+          await RazorpayOrder.update(
+            [
+              [RazorpayOrder.STATUS, RazorpayOrder.STATUS_FAILED],
+              [RazorpayOrder.RAZORPAY_PAYMENT_ID, failedPayment.id],
+            ],
+            [RazorpayOrder.ID, order.id],
+          );
+          console.log(`Synced failed razorpay order ${order.razorpay_order_id} (payment ${failedPayment.id} failed)`);
+        } else {
+          const inProgress = payments.items?.find((p) => p.status === 'authorized' || p.status === 'created');
+          if (inProgress) {
+            if (order.status !== RazorpayOrder.STATUS_PENDING) {
+              await RazorpayOrder.update(
+                [
+                  [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PENDING],
+                  [RazorpayOrder.RAZORPAY_PAYMENT_ID, inProgress.id],
+                ],
+                [RazorpayOrder.ID, order.id],
+              );
+              console.log(`Transitioned order ${order.razorpay_order_id} to pending (payment ${inProgress.id} in progress)`);
+            }
+          }
+        }
       }
     } catch (error) {
       console.error(`Error syncing pending razorpay order ${order.razorpay_order_id}:`, error.message);
