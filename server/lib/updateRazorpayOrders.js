@@ -38,30 +38,32 @@ async function syncPendingOrders() {
         console.log(`Synced paid razorpay order ${order.razorpay_order_id}`);
       } else {
         // rzpOrder is 'attempted' or still 'created' — check individual payment statuses.
+        // Prioritise in-progress payments: a retry after a failed first attempt
+        // creates a second payment while the first remains 'failed' in items[].
         const payments = await getRazorpay().orders.fetchPayments(order.razorpay_order_id);
-        const failedPayment = payments.items?.find((p) => p.status === 'failed');
-        if (failedPayment) {
-          await RazorpayOrder.update(
-            [
-              [RazorpayOrder.STATUS, RazorpayOrder.STATUS_FAILED],
-              [RazorpayOrder.RAZORPAY_PAYMENT_ID, failedPayment.id],
-            ],
-            [RazorpayOrder.ID, order.id],
-          );
-          console.log(`Synced failed razorpay order ${order.razorpay_order_id} (payment ${failedPayment.id} failed)`);
+        const inProgress = payments.items?.find((p) => p.status === 'authorized' || p.status === 'created');
+        if (inProgress) {
+          if (order.status !== RazorpayOrder.STATUS_PENDING) {
+            await RazorpayOrder.update(
+              [
+                [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PENDING],
+                [RazorpayOrder.RAZORPAY_PAYMENT_ID, inProgress.id],
+              ],
+              [RazorpayOrder.ID, order.id],
+            );
+            console.log(`Transitioned order ${order.razorpay_order_id} to pending (payment ${inProgress.id} in progress)`);
+          }
         } else {
-          const inProgress = payments.items?.find((p) => p.status === 'authorized' || p.status === 'created');
-          if (inProgress) {
-            if (order.status !== RazorpayOrder.STATUS_PENDING) {
-              await RazorpayOrder.update(
-                [
-                  [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PENDING],
-                  [RazorpayOrder.RAZORPAY_PAYMENT_ID, inProgress.id],
-                ],
-                [RazorpayOrder.ID, order.id],
-              );
-              console.log(`Transitioned order ${order.razorpay_order_id} to pending (payment ${inProgress.id} in progress)`);
-            }
+          const failedPayment = payments.items?.find((p) => p.status === 'failed');
+          if (failedPayment) {
+            await RazorpayOrder.update(
+              [
+                [RazorpayOrder.STATUS, RazorpayOrder.STATUS_FAILED],
+                [RazorpayOrder.RAZORPAY_PAYMENT_ID, failedPayment.id],
+              ],
+              [RazorpayOrder.ID, order.id],
+            );
+            console.log(`Synced failed razorpay order ${order.razorpay_order_id} (payment ${failedPayment.id} failed)`);
           }
         }
       }
