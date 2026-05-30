@@ -36,10 +36,8 @@ async function syncPendingOrders() {
 
         await ensurePurchaseOwnership(order.razorpay_order_id, paymentId);
         console.log(`Synced paid razorpay order ${order.razorpay_order_id}`);
-      } else if (rzpOrder.status === 'attempted') {
-        await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_FAILED]], [RazorpayOrder.ID, order.id]);
-        console.log(`Synced failed razorpay order ${order.razorpay_order_id}`);
-      } else if (rzpOrder.status === 'created') {
+      } else {
+        // rzpOrder is 'attempted' or still 'created' — check individual payment statuses.
         const payments = await getRazorpay().orders.fetchPayments(order.razorpay_order_id);
         const failedPayment = payments.items?.find((p) => p.status === 'failed');
         if (failedPayment) {
