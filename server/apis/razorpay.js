@@ -714,6 +714,10 @@ router.post('/webhook', async (req, res) => {
 
         const [rzpRecord] = await RazorpayOrder.get([RazorpayOrder.ID, RazorpayOrder.STATUS], [RazorpayOrder.RAZORPAY_ORDER_ID, orderId]);
         if (rzpRecord) {
+          if (rzpRecord.status === RazorpayOrder.STATUS_CANCELLED) {
+            console.log(`Ignoring payment.captured for cancelled order ${orderId}`);
+            break;
+          }
           await RazorpayOrder.update(
             [
               [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PAID],
@@ -772,6 +776,10 @@ router.post('/webhook', async (req, res) => {
 
         const [rzpRecord] = await RazorpayOrder.get([RazorpayOrder.ID, RazorpayOrder.STATUS], [RazorpayOrder.RAZORPAY_ORDER_ID, orderId]);
         if (rzpRecord) {
+          if (rzpRecord.status === RazorpayOrder.STATUS_CANCELLED) {
+            console.log(`Ignoring order.paid for cancelled order ${orderId}`);
+            break;
+          }
           await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_PAID]], [RazorpayOrder.RAZORPAY_ORDER_ID, orderId]);
         }
 
