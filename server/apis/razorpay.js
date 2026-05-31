@@ -53,6 +53,11 @@ router.post('/create-order', async (req, res) => {
       return;
     }
 
+    if (plugin[Plugin.STATUS] !== Plugin.STATUS_APPROVED) {
+      res.status(400).send({ error: 'You can not buy this plugin, please try again later' });
+      return;
+    }
+
     if (!plugin.price || plugin.price <= 0) {
       res.status(400).send({ error: 'This plugin is free' });
       return;
