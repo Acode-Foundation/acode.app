@@ -21,7 +21,7 @@ async function syncPendingOrders() {
     try {
       const rzpOrder = await getRazorpay().orders.fetch(order.razorpay_order_id);
 
-      if (rzpOrder.status === 'paid') {
+      if (rzpOrder.status === RazorpayOrder.STATUS_PAID) {
         const payments = await getRazorpay().orders.fetchPayments(order.razorpay_order_id);
         const capturedPayment = payments.items?.find((p) => p.status === 'captured');
         const paymentId = capturedPayment?.id;
