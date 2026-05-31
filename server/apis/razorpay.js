@@ -1641,6 +1641,7 @@ router.post('/create-sponsor-order', async (req, res) => {
         );
 
         if (raceRec) {
+          await Sponsor.delete([Sponsor.ORDER_ID, order.id]).catch(() => {});
           res.send({
             orderId: raceRec.razorpay_order_id,
             amount: raceRec.amount,
@@ -1654,6 +1655,10 @@ router.post('/create-sponsor-order', async (req, res) => {
           });
           return;
         }
+
+        await Sponsor.delete([Sponsor.ORDER_ID, order.id]).catch(() => {});
+        res.status(500).send({ error: 'Failed to create order' });
+        return;
       }
     }
 

@@ -31,6 +31,11 @@ router.get('/{:top}', async (req, res) => {
   const rows = await Sponsor.get(Sponsor.safeColumns, whereClause, { page, limit });
 
   if (isTop) {
+    if (!rows.length) {
+      res.send(null);
+      return;
+    }
+
     const randomTop = Math.floor(Math.random() * rows.length);
     res.send(rows[randomTop]);
     return;
@@ -128,6 +133,10 @@ router.post('/', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   const loggedInUser = await getLoggedInUser(req);
+
+  if (!loggedInUser) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
   if (loggedInUser.role !== 'admin') {
     return res.status(403).json({ error: 'Forbidden' });
