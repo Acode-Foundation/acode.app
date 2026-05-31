@@ -1,5 +1,8 @@
 import DialogBox from './dialogBox';
 
+/** @type {import('./dialogBox').DialogBox} */
+let currentDialog;
+
 /**
  * Alert dialog
  * @param {string} title
@@ -8,5 +11,7 @@ import DialogBox from './dialogBox';
  * @param {boolean} [keep]
  */
 export default function alert(title, message, onok, keep) {
-  document.body.append(<DialogBox onhide={onok} title={title} message={message} onok={(hide) => hide()} keep={keep} />);
+  currentDialog?.hide();
+  currentDialog = <DialogBox onhide={onok} title={title} message={message} onok={(hide) => hide()} keep={keep} />;
+  document.body.append(currentDialog);
 }

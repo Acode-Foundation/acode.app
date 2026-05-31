@@ -6,7 +6,7 @@ const table = `CREATE TABLE IF NOT EXISTS purchase_order (
   amount INTEGER NOT NULL,
   currency TEXT DEFAULT "INR",
   plugin_id INTEGER NOT NULL,
-  order_id VARCHAR(255),
+  order_id VARCHAR(255) UNIQUE,
   token TEXT NOT NULL UNIQUE,
   state TEXT DEFAULT 2,
   user_id INTEGER,

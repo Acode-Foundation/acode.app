@@ -98,11 +98,8 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   let hasPendingOrder = false;
   if (user && price && !userOwnsPlugin) {
     try {
-      const [createdOrders, pendingOrders] = await Promise.all([
-        fetch('/api/razorpay/orders?status=created&productType=plugin').then((r) => r.json()),
-        fetch('/api/razorpay/orders?status=pending&productType=plugin').then((r) => r.json()),
-      ]);
-      hasPendingOrder = [...createdOrders, ...pendingOrders].some((o) => String(o.pluginId) === String(id));
+      const pendingOrders = await fetch('/api/razorpay/orders?status=pending&productType=plugin').then((r) => r.json());
+      hasPendingOrder = pendingOrders.some((o) => String(o.pluginId) === String(id));
     } catch {
       // Ignore
     }
@@ -200,7 +197,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
         <div className='purchase-card pending'>
           <div className='purchase-card-main'>
             <div className='purchase-card-badge pending'>
-              <span className='icon hourglass_empty' />
+              <span className='icon hourglass_top' />
               <span>Payment Pending</span>
             </div>
             <div className='purchase-card-details'>

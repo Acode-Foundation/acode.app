@@ -13,6 +13,11 @@ const notifyPurchase = require('./notifyPurchase');
 async function ensurePurchaseOwnership(orderId, paymentId) {
   const [existingOrder] = await Order.get([Order.ORDER_ID, orderId]);
   if (existingOrder) {
+    if (Number(existingOrder.state) === Order.STATE_CANCELED) {
+      console.log(`Ignoring webhook for cancelled order ${orderId}`);
+      return;
+    }
+
     const updateCols = [];
     if (Number(existingOrder.state) !== Order.STATE_PURCHASED) {
       updateCols.push([Order.STATE, Order.STATE_PURCHASED]);
@@ -67,24 +72,72 @@ async function ensurePurchaseOwnership(orderId, paymentId) {
       console.warn(`Plugin price changed: notes ${orderInrPrice} vs current ${plugin.price}. Accepting.`);
     }
 
+    // order.paid webhooks may not include a payment_id — resolve one from the order's payments.
+    let resolvedPaymentId = paymentId ?? null;
+    if (!resolvedPaymentId) {
+      try {
+        const payments = await getRazorpay().orders.fetchPayments(orderId);
+        const captured = payments.items?.find((p) => p.status === 'captured');
+        if (captured) resolvedPaymentId = captured.id;
+      } catch (err) {
+        console.error(`Failed to resolve paymentId for order ${orderId}:`, err.message);
+      }
+    }
+
+    if (!resolvedPaymentId) {
+      console.error(`Cannot create purchase_order for ${orderId}: no payment_id available`);
+      return;
+    }
+
     const subunitDigits = getSubunitDigits(rzpOrder.currency) ?? 2;
     const paidAmount = rzpOrder.amount / 10 ** subunitDigits;
 
-    await Order.insert(
-      [Order.PLUGIN_ID, pluginId],
-      [Order.TOKEN, paymentId],
-      [Order.ORDER_ID, orderId],
-      [Order.PACKAGE, 'web'],
-      [Order.AMOUNT, paidAmount],
-      [Order.CURRENCY, rzpOrder.currency],
-      [Order.STATE, Order.STATE_PURCHASED],
-      [Order.USER_ID, userId],
-      [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
-    );
+    // Re-check for a race: another webhook may have inserted a row for this order_id
+    // while we were resolving the payment.  Defend with a double-checked insert.
+    const [raceRow] = await Order.get([Order.ORDER_ID, orderId]);
+    if (raceRow) {
+      if (Number(raceRow.state) !== Order.STATE_CANCELED) {
+        await Order.update(
+          [
+            [Order.AMOUNT, paidAmount],
+            [Order.CURRENCY, rzpOrder.currency],
+            [Order.STATE, Order.STATE_PURCHASED],
+            [Order.TOKEN, resolvedPaymentId],
+          ],
+          [Order.ORDER_ID, orderId],
+        );
+        if (resolvedPaymentId) notifyPurchase(resolvedPaymentId).catch((err) => console.error('Failed to send purchase email via webhook:', err));
+      }
+    } else {
+      await Order.insertOrIgnore(
+        [Order.PLUGIN_ID, pluginId],
+        [Order.TOKEN, resolvedPaymentId],
+        [Order.ORDER_ID, orderId],
+        [Order.PACKAGE, 'web'],
+        [Order.AMOUNT, paidAmount],
+        [Order.CURRENCY, rzpOrder.currency],
+        [Order.STATE, Order.STATE_PURCHASED],
+        [Order.USER_ID, userId],
+        [Order.PROVIDER, Order.PROVIDER_RAZORPAY],
+      );
 
-    if (paymentId) notifyPurchase(paymentId).catch((err) => console.error('Failed to send purchase email via webhook:', err));
+      await Order.update(
+        [
+          [Order.AMOUNT, paidAmount],
+          [Order.CURRENCY, rzpOrder.currency],
+          [Order.STATE, Order.STATE_PURCHASED],
+          [Order.TOKEN, resolvedPaymentId],
+        ],
+        [
+          [Order.ORDER_ID, orderId],
+          [Order.STATE, Order.STATE_CANCELED, '<>'],
+        ],
+      );
 
-    console.log(`Created purchase_order for plugin ${pluginId} (user ${userId}) via webhook`);
+      if (resolvedPaymentId) notifyPurchase(resolvedPaymentId).catch((err) => console.error('Failed to send purchase email via webhook:', err));
+    }
+
+    console.log(`Processed purchase_order for plugin ${pluginId} (user ${userId}) via webhook`);
   }
 }
 

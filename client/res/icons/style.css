@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'acode';
-  src: url('acode.ttf?2jhwzu') format('truetype');
+  src: url('acode.ttf?y9nnio') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -83,6 +83,21 @@
 .icon.paypal:before {
   content: '\e905';
   color: #00457c;
+}
+.icon.hourglass_top:before {
+  content: '\e924';
+}
+.icon.hourglass_disabled:before {
+  content: '\e925';
+}
+.icon.hourglass_bottom:before {
+  content: '\e926';
+}
+.icon.hourglass_full:before {
+  content: '\e927';
+}
+.icon.hourglass_empty:before {
+  content: '\e928';
 }
 .icon.extension:before {
   content: '\e923';

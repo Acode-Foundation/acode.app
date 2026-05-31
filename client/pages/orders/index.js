@@ -43,7 +43,7 @@ export default async function Orders() {
         const freshPending = fresh.filter((o) => o.status === 'pending');
         const currentPending = orders.filter((o) => o.status === 'pending');
         if (freshPending.length !== currentPending.length) {
-          window.location.reload();
+          Router.reload();
         }
       } catch {
         // Ignore polling errors

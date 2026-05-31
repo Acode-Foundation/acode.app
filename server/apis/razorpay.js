@@ -58,45 +58,79 @@ router.post('/create-order', async (req, res) => {
       return;
     }
 
-    // Check if user already owns this plugin
-    const [existingOrder] = await Order.get([
+    const [ownedOrder] = await Order.get([
       [Order.USER_ID, user.id],
       [Order.PLUGIN_ID, plugin.id],
       [Order.STATE, Order.STATE_PURCHASED],
     ]);
 
-    if (existingOrder) {
+    if (ownedOrder) {
       res.status(400).send({ error: 'You already own this plugin' });
       return;
     }
 
-    const [pendingOrder] = await RazorpayOrder.get(
-      [RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
+    const existingOrderStatuses = [
+      RazorpayOrder.STATUS_CREATED,
+      RazorpayOrder.STATUS_PENDING,
+      RazorpayOrder.STATUS_PAID,
+      RazorpayOrder.STATUS_FAILED,
+      RazorpayOrder.STATUS_CANCELLED,
+      RazorpayOrder.STATUS_REFUNDED,
+      RazorpayOrder.STATUS_REFUNDING,
+    ];
+
+    const [existingOrder] = await RazorpayOrder.get(
+      [RazorpayOrder.ID, RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
       [
         [RazorpayOrder.USER_ID, user.id],
         [RazorpayOrder.PLUGIN_ID, plugin.id],
         [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PLUGIN],
-        [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING], 'IN'],
+        [RazorpayOrder.STATUS, existingOrderStatuses, 'IN'],
       ],
     );
 
-    if (pendingOrder) {
-      res.send({
-        orderId: pendingOrder.razorpay_order_id,
-        amount: pendingOrder.amount,
-        currency: pendingOrder.currency,
-        keyId: process.env.PG_KEY_ID,
-        pluginName: plugin.name,
-        pluginId: plugin.id,
-        userEmail: user.email,
-        originalPrice: plugin.price,
-        displayCurrency: pendingOrder.currency,
-        existingOrder: true,
-      });
-      return;
-    }
+    let reuseOrderId = null;
 
     const currency = detectUserCurrency(req);
+
+    if (existingOrder) {
+      if (existingOrder.status === RazorpayOrder.STATUS_PENDING) {
+        res.status(409).send({ error: 'A payment is already being processed for this plugin. Please wait for it to complete.' });
+        return;
+      }
+
+      if (existingOrder.status === RazorpayOrder.STATUS_PAID) {
+        await ensurePurchaseOwnership(existingOrder.razorpay_order_id, null);
+        res.status(400).send({ error: 'You already own this plugin' });
+        return;
+      }
+
+      if (existingOrder.status === RazorpayOrder.STATUS_CREATED && existingOrder.currency === currency.code) {
+        res.send({
+          orderId: existingOrder.razorpay_order_id,
+          amount: existingOrder.amount,
+          currency: existingOrder.currency,
+          keyId: process.env.PG_KEY_ID,
+          pluginName: plugin.name,
+          pluginId: plugin.id,
+          userEmail: user.email,
+          originalPrice: plugin.price,
+          displayCurrency: existingOrder.currency,
+          existingOrder: true,
+        });
+        return;
+      }
+
+      // REFUNDED/REFUNDING → create a fresh record (no reuse)
+      if (existingOrder.status !== RazorpayOrder.STATUS_REFUNDED && existingOrder.status !== RazorpayOrder.STATUS_REFUNDING) {
+        if (existingOrder.status !== RazorpayOrder.STATUS_CANCELLED && existingOrder.status !== RazorpayOrder.STATUS_FAILED) {
+          await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_CANCELLED]], [RazorpayOrder.ID, existingOrder.id]);
+        }
+
+        reuseOrderId = existingOrder.id;
+      }
+    }
+
     const converted = await convertPrice(plugin.price, currency.code);
     const subunitMultiplier = 10 ** getSubunitDigits(converted.currency);
     const receipt = `p_${plugin.id}_${user.id}`.slice(0, 40);
@@ -117,47 +151,66 @@ router.post('/create-order', async (req, res) => {
       },
     });
 
-    try {
-      await RazorpayOrder.insert(
-        [RazorpayOrder.RAZORPAY_ORDER_ID, order.id],
-        [RazorpayOrder.USER_ID, user.id],
-        [RazorpayOrder.PLUGIN_ID, plugin.id],
-        [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PLUGIN],
-        [RazorpayOrder.AMOUNT, finalAmount],
-        [RazorpayOrder.CURRENCY, converted.currency],
-        [RazorpayOrder.AMOUNT_INR, plugin.price],
-        [RazorpayOrder.RECEIPT, receipt],
-      );
-    } catch (err) {
-      console.error('Failed to insert razorpay_order:', err);
-
-      const [raceRec] = await RazorpayOrder.get(
-        [RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
-        [
+    if (reuseOrderId) {
+      try {
+        await RazorpayOrder.update(
+          [
+            [RazorpayOrder.RAZORPAY_ORDER_ID, order.id],
+            [RazorpayOrder.AMOUNT, finalAmount],
+            [RazorpayOrder.CURRENCY, converted.currency],
+            [RazorpayOrder.AMOUNT_INR, plugin.price],
+            [RazorpayOrder.RECEIPT, receipt],
+            [RazorpayOrder.RAZORPAY_PAYMENT_ID, null],
+            [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+          ],
+          [RazorpayOrder.ID, reuseOrderId],
+        );
+      } catch (err) {
+        console.error('Failed to update razorpay_order:', err);
+        res.status(500).send({ error: 'Failed to update order' });
+        return;
+      }
+    } else {
+      try {
+        await RazorpayOrder.insert(
+          [RazorpayOrder.RAZORPAY_ORDER_ID, order.id],
           [RazorpayOrder.USER_ID, user.id],
           [RazorpayOrder.PLUGIN_ID, plugin.id],
           [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PLUGIN],
-          [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING], 'IN'],
-        ],
-      );
+          [RazorpayOrder.AMOUNT, finalAmount],
+          [RazorpayOrder.CURRENCY, converted.currency],
+          [RazorpayOrder.AMOUNT_INR, plugin.price],
+          [RazorpayOrder.RECEIPT, receipt],
+        );
+      } catch (err) {
+        console.error('Failed to insert razorpay_order:', err);
 
-      if (raceRec) {
-        res.send({
-          orderId: raceRec.razorpay_order_id,
-          amount: raceRec.amount,
-          currency: raceRec.currency,
-          keyId: process.env.PG_KEY_ID,
-          pluginName: plugin.name,
-          pluginId: plugin.id,
-          userEmail: user.email,
-          originalPrice: plugin.price,
-          displayCurrency: raceRec.currency,
-          existingOrder: true,
-        });
-        return;
+        const [raceRec] = await RazorpayOrder.get(
+          [RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
+          [
+            [RazorpayOrder.USER_ID, user.id],
+            [RazorpayOrder.PLUGIN_ID, plugin.id],
+            [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PLUGIN],
+            [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING], 'IN'],
+          ],
+        );
+
+        if (raceRec) {
+          res.send({
+            orderId: raceRec.razorpay_order_id,
+            amount: raceRec.amount,
+            currency: raceRec.currency,
+            keyId: process.env.PG_KEY_ID,
+            pluginName: plugin.name,
+            pluginId: plugin.id,
+            userEmail: user.email,
+            originalPrice: plugin.price,
+            displayCurrency: raceRec.currency,
+            existingOrder: true,
+          });
+          return;
+        }
       }
-
-      // Insert failed but no existing record — return the fresh Razorpay order anyway
     }
 
     res.send({
@@ -780,10 +833,13 @@ router.post('/webhook', async (req, res) => {
             console.log(`Ignoring order.paid for cancelled order ${orderId}`);
             break;
           }
+          if (rzpRecord.status === RazorpayOrder.STATUS_PAID) {
+            console.log(`Ignoring duplicate order.paid for already-paid order ${orderId}`);
+            break;
+          }
           await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_PAID]], [RazorpayOrder.RAZORPAY_ORDER_ID, orderId]);
         }
 
-        // Ensure ownership — order.paid events may not have a payment_id
         await ensurePurchaseOwnership(orderId, null);
         break;
       }
@@ -976,27 +1032,65 @@ router.post('/create-pro-order', async (req, res) => {
       return;
     }
 
-    const [pendingProOrder] = await RazorpayOrder.get(
-      [RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
+    const [existingProOrder] = await RazorpayOrder.get(
+      [RazorpayOrder.ID, RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
       [
         [RazorpayOrder.USER_ID, user.id],
         [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PRO],
-        [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING], 'IN'],
+        [
+          RazorpayOrder.STATUS,
+          [
+            RazorpayOrder.STATUS_CREATED,
+            RazorpayOrder.STATUS_PENDING,
+            RazorpayOrder.STATUS_PAID,
+            RazorpayOrder.STATUS_FAILED,
+            RazorpayOrder.STATUS_CANCELLED,
+            RazorpayOrder.STATUS_REFUNDED,
+            RazorpayOrder.STATUS_REFUNDING,
+          ],
+          'IN',
+        ],
       ],
     );
 
-    if (pendingProOrder) {
-      res.send({
-        orderId: pendingProOrder.razorpay_order_id,
-        amount: pendingProOrder.amount,
-        currency: pendingProOrder.currency,
-        keyId: process.env.PG_KEY_ID,
-        userEmail: user.email,
-        originalPrice: Number(await AppConfig.getValue('acode_pro_price')),
-        displayCurrency: pendingProOrder.currency,
-        existingOrder: true,
-      });
-      return;
+    let reuseOrderId = null;
+
+    const currency = detectUserCurrency(req);
+
+    if (existingProOrder) {
+      if (existingProOrder.status === RazorpayOrder.STATUS_PENDING) {
+        res.status(409).send({ error: 'A payment is already being processed for Acode Pro. Please wait for it to complete.' });
+        return;
+      }
+
+      if (existingProOrder.status === RazorpayOrder.STATUS_PAID) {
+        await ensurePurchaseOwnership(existingProOrder.razorpay_order_id, null);
+        res.status(400).send({ error: 'You already have Acode Pro' });
+        return;
+      }
+
+      if (existingProOrder.status === RazorpayOrder.STATUS_CREATED && existingProOrder.currency === currency.code) {
+        res.send({
+          orderId: existingProOrder.razorpay_order_id,
+          amount: existingProOrder.amount,
+          currency: existingProOrder.currency,
+          keyId: process.env.PG_KEY_ID,
+          userEmail: user.email,
+          originalPrice: Number(await AppConfig.getValue('acode_pro_price')),
+          displayCurrency: existingProOrder.currency,
+          existingOrder: true,
+        });
+        return;
+      }
+
+      // REFUNDED/REFUNDING → create a fresh record (no reuse)
+      if (existingProOrder.status !== RazorpayOrder.STATUS_REFUNDED && existingProOrder.status !== RazorpayOrder.STATUS_REFUNDING) {
+        if (existingProOrder.status !== RazorpayOrder.STATUS_CANCELLED && existingProOrder.status !== RazorpayOrder.STATUS_FAILED) {
+          await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_CANCELLED]], [RazorpayOrder.ID, existingProOrder.id]);
+        }
+
+        reuseOrderId = existingProOrder.id;
+      }
     }
 
     const price = Number(await AppConfig.getValue('acode_pro_price'));
@@ -1005,7 +1099,6 @@ router.post('/create-pro-order', async (req, res) => {
       return;
     }
 
-    const currency = detectUserCurrency(req);
     const converted = await convertPrice(price, currency.code);
     const subunitMultiplier = 10 ** getSubunitDigits(converted.currency);
     const receipt = `pro_${user.id}`.slice(0, 40);
@@ -1024,41 +1117,62 @@ router.post('/create-pro-order', async (req, res) => {
       },
     });
 
-    try {
-      await RazorpayOrder.insert(
-        [RazorpayOrder.RAZORPAY_ORDER_ID, order.id],
-        [RazorpayOrder.USER_ID, user.id],
-        [RazorpayOrder.PLUGIN_ID, null],
-        [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PRO],
-        [RazorpayOrder.AMOUNT, Math.round(converted.amount * subunitMultiplier)],
-        [RazorpayOrder.CURRENCY, converted.currency],
-        [RazorpayOrder.AMOUNT_INR, price],
-        [RazorpayOrder.RECEIPT, receipt],
-      );
-    } catch (err) {
-      console.error('Failed to insert razorpay_order (pro):', err);
-
-      const [raceRec] = await RazorpayOrder.get(
-        [RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
-        [
-          [RazorpayOrder.USER_ID, user.id],
-          [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PRO],
-          [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING], 'IN'],
-        ],
-      );
-
-      if (raceRec) {
-        res.send({
-          orderId: raceRec.razorpay_order_id,
-          amount: raceRec.amount,
-          currency: raceRec.currency,
-          keyId: process.env.PG_KEY_ID,
-          userEmail: user.email,
-          originalPrice: Number(await AppConfig.getValue('acode_pro_price')),
-          displayCurrency: raceRec.currency,
-          existingOrder: true,
-        });
+    if (reuseOrderId) {
+      try {
+        await RazorpayOrder.update(
+          [
+            [RazorpayOrder.RAZORPAY_ORDER_ID, order.id],
+            [RazorpayOrder.AMOUNT, Math.round(converted.amount * subunitMultiplier)],
+            [RazorpayOrder.CURRENCY, converted.currency],
+            [RazorpayOrder.AMOUNT_INR, price],
+            [RazorpayOrder.RECEIPT, receipt],
+            [RazorpayOrder.RAZORPAY_PAYMENT_ID, null],
+            [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+          ],
+          [RazorpayOrder.ID, reuseOrderId],
+        );
+      } catch (err) {
+        console.error('Failed to update razorpay_order (pro):', err);
+        res.status(500).send({ error: 'Failed to update order' });
         return;
+      }
+    } else {
+      try {
+        await RazorpayOrder.insert(
+          [RazorpayOrder.RAZORPAY_ORDER_ID, order.id],
+          [RazorpayOrder.USER_ID, user.id],
+          [RazorpayOrder.PLUGIN_ID, null],
+          [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PRO],
+          [RazorpayOrder.AMOUNT, Math.round(converted.amount * subunitMultiplier)],
+          [RazorpayOrder.CURRENCY, converted.currency],
+          [RazorpayOrder.AMOUNT_INR, price],
+          [RazorpayOrder.RECEIPT, receipt],
+        );
+      } catch (err) {
+        console.error('Failed to insert razorpay_order (pro):', err);
+
+        const [raceRec] = await RazorpayOrder.get(
+          [RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
+          [
+            [RazorpayOrder.USER_ID, user.id],
+            [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_PRO],
+            [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING], 'IN'],
+          ],
+        );
+
+        if (raceRec) {
+          res.send({
+            orderId: raceRec.razorpay_order_id,
+            amount: raceRec.amount,
+            currency: raceRec.currency,
+            keyId: process.env.PG_KEY_ID,
+            userEmail: user.email,
+            originalPrice: Number(await AppConfig.getValue('acode_pro_price')),
+            displayCurrency: raceRec.currency,
+            existingOrder: true,
+          });
+          return;
+        }
       }
     }
 
