@@ -4,6 +4,7 @@ import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import background from 'lib/background';
 import { hideLoading, showLoading } from 'lib/helpers';
+import getSponsorTiers, { TIER_ORDER } from 'lib/sponsorTiers';
 import phoneImageJpg from 'res/phone.jpg';
 import phoneImageWebp from 'res/phone.webp';
 import tabletImageJpg from 'res/tablet.jpg';
@@ -36,6 +37,16 @@ export default async function home() {
 
     pluginCount.value = count.toLocaleString();
     plugins = await Promise.all(pluginIds.map(async (plugin) => <Plugin data={plugin} />));
+  } catch (_error) {
+    // ignore
+  }
+
+  let sponsors = [];
+  let tiers = {};
+  try {
+    sponsors = await (await fetch('/api/sponsors')).json();
+    const sponsorTiers = await getSponsorTiers();
+    tiers = sponsorTiers.tiers;
   } catch (_error) {
     // ignore
   }
@@ -99,18 +110,36 @@ export default async function home() {
         <ul className='featured-plugins__list'>{plugins}</ul>
       </div>
 
-      <div className='from-the-creator'>
+      <div className='sponsors-section'>
         <div className='section-header'>
-          <h2>Learn</h2>
+          <h2>Our Sponsors</h2>
+          <a href='/sponsors' className='see-all'>
+            View all <span className='icon chevron-right' />
+          </a>
         </div>
-        <ProjectCard
-          logo='https://academy.acode.app/icon.png'
-          alt='Acode Academy'
-          title='Acode Academy'
-          subtitle='Best-crafted courses, hands-on exercises, and progress tracking — right inside Acode. Earn a certificate when you finish.'
-          url='https://academy.acode.app'
-          cta='Explore Courses'
-        />
+        {sponsors.length === 0 ? (
+          <p className='sponsors-empty'>
+            No sponsors yet. <a href='/become-sponsor'>Be the first!</a>
+          </p>
+        ) : (
+          TIER_ORDER.map((tier) => {
+            const tierSponsors = sponsors.filter((s) => s.tier === tier);
+            const tierInfo = tiers[tier];
+            if (!tierInfo) return null;
+            return (
+              <div className='sponsor-tier-group' key={tier}>
+                <h3 className={`tier-label tier-label-${tier}`}>{tierInfo.label}</h3>
+                {tierSponsors.length === 0 ? (
+                  <p className='sponsors-tier-empty'>
+                    Be the first <a href={`/become-sponsor?tier=${tier}`}>{tierInfo.label}</a> Sponsor!
+                  </p>
+                ) : (
+                  <div className='sponsors-grid'>{tierSponsors.map(renderSponsorCard)}</div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
     </section>
   );
@@ -137,15 +166,37 @@ async function GhButton({ url, title, count, icon = 'github' }) {
   );
 }
 
-function ProjectCard({ logo, alt, title, subtitle, url, cta }) {
+function renderSponsorCard(sponsor) {
+  const { id, name, tier, tagline, website, image } = sponsor;
+  const initials = name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  const hasImage = ['gold', 'platinum', 'titanium'].includes(tier);
+
   return (
-    <a href={url} target='_blank' rel='noopener noreferrer' className='project-card'>
-      <img src={logo} alt={alt} className='project-card__logo' />
-      <div className='project-card__body'>
-        <h3 className='project-card__title'>{title}</h3>
-        <p className='project-card__subtitle'>{subtitle}</p>
+    <a
+      key={id}
+      href={website || '#'}
+      target={website ? '_blank' : undefined}
+      rel={website ? 'noopener' : undefined}
+      className={`sponsor-card sponsor-card-${tier}`}
+      onclick={(e) => {
+        if (!website) e.preventDefault();
+      }}
+    >
+      {hasImage && (
+        <div className='sponsor-avatar'>
+          {image ? <img src={`/sponsor/image/${image}`} alt={name} loading='lazy' /> : <span className='avatar-fallback'>{initials}</span>}
+        </div>
+      )}
+      <div className='sponsor-info'>
+        <span className='sponsor-name'>{name}</span>
+        {tagline && ['platinum', 'titanium'].includes(tier) && <p className='sponsor-tagline'>{tagline}</p>}
       </div>
-      <span className='project-card__cta'>{cta} →</span>
     </a>
   );
 }

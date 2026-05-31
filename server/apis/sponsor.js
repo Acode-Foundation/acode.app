@@ -4,7 +4,6 @@ const Sponsor = require('../entities/sponsor');
 const { resolve } = require('node:path');
 const { existsSync } = require('node:fs');
 const { google } = require('googleapis');
-const moment = require('moment');
 const { getLoggedInUser } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
 
@@ -19,7 +18,7 @@ router.get('/{:top}', async (req, res) => {
   const whereClause = [
     [Sponsor.STATUS, Sponsor.STATE_PURCHASED],
     [Sponsor.PUBLIC, 1],
-    [Sponsor.CREATED_AT, moment().add(-30, 'days').toISOString(), '>'],
+    [Sponsor.EXPIRES_AT, new Date().toISOString(), '>'],
   ];
 
   if (isTop) {
@@ -38,6 +37,15 @@ router.get('/{:top}', async (req, res) => {
   }
 
   res.send(rows);
+});
+
+router.get('/:id', async (req, res) => {
+  const { id } = req.params;
+  const [sponsor] = await Sponsor.get(Sponsor.safeColumns, [[Sponsor.ID, id]]);
+  if (!sponsor) {
+    return res.status(404).json({ error: 'Sponsor not found' });
+  }
+  res.json(sponsor);
 });
 
 router.post('/', async (req, res) => {
@@ -87,7 +95,7 @@ router.post('/', async (req, res) => {
       await writeFile(path, image.split(';base64,')[1], { encoding: 'base64' });
     }
 
-    await Sponsor.insert(
+    const insertValues = [
       [Sponsor.NAME, name],
       [Sponsor.TIER, tier],
       [Sponsor.EMAIL, email],
@@ -99,7 +107,13 @@ router.post('/', async (req, res) => {
       [Sponsor.PACKAGE_NAME, packageName],
       [Sponsor.ORDER_ID, purchase.orderId],
       [Sponsor.STATUS, purchase.purchaseState],
-    );
+    ];
+
+    if (purchase.purchaseState === Sponsor.STATE_PURCHASED) {
+      insertValues.push([Sponsor.EXPIRES_AT, new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()]);
+    }
+
+    await Sponsor.insert(...insertValues);
 
     if (email) {
       sendEmail(email, name, 'Thank you for sponsoring Acode', 'Acode team appreciate your support. Thank you for being a valued sponsor!');

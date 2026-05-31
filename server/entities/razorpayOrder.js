@@ -6,7 +6,7 @@ const table = `CREATE TABLE IF NOT EXISTS razorpay_order (
   razorpay_payment_id VARCHAR(255),
   user_id INTEGER NOT NULL,
   plugin_id INTEGER,
-  product_type TEXT NOT NULL CHECK (product_type IN ('plugin', 'acode_pro')),
+  product_type TEXT NOT NULL CHECK (product_type IN ('plugin', 'acode_pro', 'sponsor')),
   amount INTEGER NOT NULL,
   currency TEXT NOT NULL DEFAULT 'INR',
   amount_inr INTEGER NOT NULL,
@@ -50,6 +50,7 @@ class RazorpayOrder extends Entity {
 
   PRODUCT_PLUGIN = 'plugin';
   PRODUCT_PRO = 'acode_pro';
+  PRODUCT_SPONSOR = 'sponsor';
 
   constructor() {
     super(table);

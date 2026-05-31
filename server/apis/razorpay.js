@@ -1,10 +1,13 @@
 const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
 const { Router } = require('express');
 const Plugin = require('../entities/plugin');
 const Order = require('../entities/purchaseOrder');
 const User = require('../entities/user');
 const RazorpayOrder = require('../entities/razorpayOrder');
 const AppConfig = require('../entities/appConfig');
+const Sponsor = require('../entities/sponsor');
 const { getLoggedInUser, parseDbTime, detectUserCurrency, formatAmount } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
 const { REFUND_WINDOW_MS } = require('../../constants.mjs');
@@ -16,6 +19,12 @@ const notifyRefund = require('../lib/notifyRefund');
 const notifyPurchase = require('../lib/notifyPurchase');
 
 const router = Router();
+
+function getProductDisplayName(productType, pluginId, pluginMap) {
+  if (productType === 'acode_pro') return 'Acode Pro';
+  if (productType === 'sponsor') return 'Sponsor';
+  return pluginMap.get(String(pluginId)) || 'Deleted Plugin';
+}
 
 function purchaseStateToStatus(state) {
   switch (Number(state)) {
@@ -505,9 +514,19 @@ router.get('/orders', async (req, res) => {
       }
     }
 
+    const sponsorOrderIds = orders.filter((o) => o.product_type === 'sponsor').map((o) => o.razorpay_order_id);
+    const sponsorMap = new Map();
+    if (sponsorOrderIds.length) {
+      const sponsors = await Sponsor.get([Sponsor.TIER, Sponsor.ORDER_ID], [Sponsor.ORDER_ID, sponsorOrderIds, 'IN']);
+      for (const s of sponsors) {
+        sponsorMap.set(s.order_id, s.tier);
+      }
+    }
+
     const result = orders.map((order) => {
       const subunit = getSubunitDigits(order.currency) ?? 2;
       const baseUnits = order.amount / 10 ** subunit;
+      const tier = order.product_type === 'sponsor' ? sponsorMap.get(order.razorpay_order_id) : null;
 
       return {
         id: order.id,
@@ -515,7 +534,8 @@ router.get('/orders', async (req, res) => {
         razorpayPaymentId: order.razorpay_payment_id,
         productType: order.product_type,
         pluginId: order.plugin_id,
-        pluginName: order.product_type === 'acode_pro' ? 'Acode Pro' : pluginMap.get(String(order.plugin_id)) || 'Deleted Plugin',
+        pluginName: getProductDisplayName(order.product_type, order.plugin_id, pluginMap),
+        sponsorTier: tier,
         status: order.status,
         amount: formatAmount(baseUnits, order.currency),
         currency: order.currency,
@@ -673,7 +693,7 @@ router.get('/orders/:orderId', async (req, res) => {
       return;
     }
 
-    let pluginName = 'Acode Pro';
+    let pluginName = getProductDisplayName(order.product_type, null, null);
     if (order.product_type === 'plugin' && order.plugin_id) {
       const [plugin] = await Plugin.get([Plugin.ID, Plugin.NAME], [Plugin.ID, order.plugin_id]);
       pluginName = plugin?.name || 'Deleted Plugin';
@@ -896,22 +916,31 @@ router.post('/webhook', async (req, res) => {
 
         await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_REFUNDED]], [RazorpayOrder.RAZORPAY_PAYMENT_ID, paymentId]);
 
-        await Order.update(
-          [
-            [Order.STATE, Order.STATE_CANCELED],
-            [Order.AMOUNT, 0],
-          ],
-          [Order.TOKEN, paymentId],
-        );
+        const [refundOrder] = await RazorpayOrder.get([RazorpayOrder.PRODUCT_TYPE], [RazorpayOrder.RAZORPAY_PAYMENT_ID, paymentId]);
 
-        await User.update(
-          [
-            [User.ACODE_PRO, 0],
-            [User.PRO_PURCHASE_TOKEN, null],
-            [User.PRO_PURCHASED_AT, null],
-          ],
-          [User.PRO_PURCHASE_TOKEN, paymentId],
-        );
+        if (refundOrder?.product_type === RazorpayOrder.PRODUCT_SPONSOR) {
+          await Sponsor.update([[Sponsor.STATUS, Sponsor.STATE_CANCELED]], [Sponsor.TOKEN, paymentId]);
+        } else {
+          await Order.update(
+            [
+              [Order.STATE, Order.STATE_CANCELED],
+              [Order.AMOUNT, 0],
+            ],
+            [Order.TOKEN, paymentId],
+          );
+
+          await User.update(
+            [
+              [User.ACODE_PRO, 0],
+              [User.PRO_PURCHASE_TOKEN, null],
+              [User.PRO_PURCHASED_AT, null],
+            ],
+            [
+              [User.PRO_PURCHASE_TOKEN, paymentId],
+              [User.ACODE_PRO, 1],
+            ],
+          );
+        }
 
         notifyRefund(paymentId).catch((err) => console.error('Failed to send refund email via webhook:', err));
 
@@ -1017,6 +1046,33 @@ router.get('/pro-status', async (req, res) => {
   } catch (error) {
     console.error('Pro status error:', error);
     res.status(500).send({ error: 'Failed to fetch pro status' });
+  }
+});
+
+/**
+ * Get sponsor tier prices converted to user's currency
+ * GET /api/razorpay/sponsor-prices
+ */
+router.get('/sponsor-prices', async (req, res) => {
+  try {
+    const currency = detectUserCurrency(req);
+    const result = { currency: currency.code, symbol: currency.symbol, tiers: {} };
+    const tiers = Sponsor.SPONSOR_TIERS;
+
+    for (const [key, tier] of Object.entries(tiers)) {
+      const converted = await convertPrice(tier.price, currency.code);
+      result.tiers[key] = {
+        label: tier.label,
+        price: formatAmount(converted.amount, converted.currency),
+        description: tier.description,
+        key,
+      };
+    }
+
+    res.send(result);
+  } catch (error) {
+    console.error('Sponsor prices error:', error);
+    res.status(500).send({ error: 'Failed to fetch sponsor prices' });
   }
 });
 
@@ -1309,11 +1365,415 @@ router.post('/verify-pro', async (req, res) => {
       [RazorpayOrder.RAZORPAY_ORDER_ID, razorpay_order_id],
     );
 
-    notifyPurchase(razorpay_payment_id, { email: user.email, name: user.name });
+    notifyPurchase(razorpay_payment_id, { email: user.email, name: user.name }).catch((err) =>
+      console.error('Failed to send pro purchase email:', err),
+    );
 
     res.send({ success: true, message: 'Acode Pro activated' });
   } catch (error) {
     console.error('Razorpay verify pro error:', error);
+    res.status(500).send({ error: 'Failed to verify payment' });
+  }
+});
+
+/**
+ * Create a Razorpay order for Sponsor purchase
+ * POST /api/razorpay/create-sponsor-order
+ */
+router.post('/create-sponsor-order', async (req, res) => {
+  try {
+    const user = await getLoggedInUser(req);
+    if (!user) {
+      res.status(401).send({ error: 'Please log in to sponsor Acode' });
+      return;
+    }
+
+    const { tier, name, email, website, tagline, image } = req.body;
+
+    if (!tier || !name || !email) {
+      res.status(400).send({ error: 'Tier, name, and email are required' });
+      return;
+    }
+
+    if (website && !/^https?:\/\/.+/i.test(website)) {
+      res.status(400).send({ error: 'Website must start with http:// or https://' });
+      return;
+    }
+
+    const tierInfo = Sponsor.SPONSOR_TIERS[tier];
+    if (!tierInfo) {
+      res.status(400).send({ error: 'Invalid tier' });
+      return;
+    }
+
+    const price = tierInfo.price;
+
+    const existingOrderStatuses = [
+      RazorpayOrder.STATUS_CREATED,
+      RazorpayOrder.STATUS_PENDING,
+      RazorpayOrder.STATUS_PAID,
+      RazorpayOrder.STATUS_FAILED,
+      RazorpayOrder.STATUS_CANCELLED,
+      RazorpayOrder.STATUS_REFUNDED,
+      RazorpayOrder.STATUS_REFUNDING,
+    ];
+
+    const [existingOrder] = await RazorpayOrder.get(
+      [RazorpayOrder.ID, RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
+      [
+        [RazorpayOrder.USER_ID, user.id],
+        [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_SPONSOR],
+        [RazorpayOrder.STATUS, existingOrderStatuses, 'IN'],
+      ],
+    );
+
+    let reuseOrderId = null;
+
+    const currency = detectUserCurrency(req);
+
+    if (existingOrder) {
+      if (existingOrder.status === RazorpayOrder.STATUS_PENDING) {
+        res.status(409).send({ error: 'A payment is already being processed for your sponsorship. Please wait for it to complete.' });
+        return;
+      }
+
+      if (existingOrder.status === RazorpayOrder.STATUS_PAID) {
+        await ensurePurchaseOwnership(existingOrder.razorpay_order_id, null);
+        res.status(400).send({ error: 'Your sponsorship is already active' });
+        return;
+      }
+
+      if (existingOrder.status === RazorpayOrder.STATUS_CREATED && existingOrder.currency === currency.code) {
+        res.send({
+          orderId: existingOrder.razorpay_order_id,
+          amount: existingOrder.amount,
+          currency: existingOrder.currency,
+          keyId: process.env.PG_KEY_ID,
+          userEmail: user.email,
+          tier,
+          originalPrice: price,
+          displayCurrency: existingOrder.currency,
+          existingOrder: true,
+        });
+        return;
+      }
+
+      if (existingOrder.status !== RazorpayOrder.STATUS_REFUNDED && existingOrder.status !== RazorpayOrder.STATUS_REFUNDING) {
+        if (existingOrder.status !== RazorpayOrder.STATUS_CANCELLED && existingOrder.status !== RazorpayOrder.STATUS_FAILED) {
+          await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_CANCELLED]], [RazorpayOrder.ID, existingOrder.id]);
+        }
+
+        reuseOrderId = existingOrder.id;
+      }
+    }
+
+    let imageFilename = null;
+    let imageBase64 = null;
+    if (image) {
+      const match = image.match(/^data:image\/(\w+);base64,/);
+      if (!match) {
+        res.status(400).send({ error: 'Invalid image format' });
+        return;
+      }
+      const ext = match[1];
+      imageFilename = `s_${crypto.randomUUID()}.${ext}`;
+      imageBase64 = image.replace(/^data:image\/\w+;base64,/, '');
+    }
+
+    const converted = await convertPrice(price, currency.code);
+    const subunitMultiplier = 10 ** getSubunitDigits(converted.currency);
+    const receipt = `sponsor_${user.id}_${Date.now()}`.slice(0, 40);
+    const order = await getRazorpay().orders.create({
+      amount: Math.round(converted.amount * subunitMultiplier),
+      currency: converted.currency,
+      receipt,
+      notes: {
+        type: 'sponsor',
+        userId: user.id,
+        userEmail: user.email,
+        tier,
+        sponsorName: name,
+        original_amount_inr: price,
+        original_currency: 'INR',
+        target_currency: converted.currency,
+        exchange_rate: converted.rate,
+      },
+    });
+
+    function writeImageFile(filename, data) {
+      const sponsorsDir = path.resolve(__dirname, '../../data/sponsors');
+      if (!fs.existsSync(sponsorsDir)) {
+        fs.mkdirSync(sponsorsDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(sponsorsDir, filename), data, 'base64');
+    }
+
+    function removeImageFile(filename) {
+      if (!filename) return;
+      try {
+        const filePath = path.resolve(__dirname, '../../data/sponsors', filename);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (_) {
+        // ignore cleanup errors
+      }
+    }
+
+    if (reuseOrderId) {
+      try {
+        const oldSponsorCols = [Sponsor.IMAGE];
+        const [oldSponsor] = await Sponsor.get(oldSponsorCols, [Sponsor.ORDER_ID, existingOrder.razorpay_order_id]);
+        const oldImage = oldSponsor?.image;
+
+        await RazorpayOrder.update(
+          [
+            [RazorpayOrder.RAZORPAY_ORDER_ID, order.id],
+            [RazorpayOrder.AMOUNT, Math.round(converted.amount * subunitMultiplier)],
+            [RazorpayOrder.CURRENCY, converted.currency],
+            [RazorpayOrder.AMOUNT_INR, price],
+            [RazorpayOrder.RECEIPT, receipt],
+            [RazorpayOrder.RAZORPAY_PAYMENT_ID, null],
+            [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+          ],
+          [RazorpayOrder.ID, reuseOrderId],
+        );
+
+        const sponsorUpdateCols = [
+          [Sponsor.ORDER_ID, order.id],
+          [Sponsor.NAME, name],
+          [Sponsor.EMAIL, email],
+          [Sponsor.WEBSITE, website || ''],
+          [Sponsor.TAGLINE, tagline || ''],
+          [Sponsor.TIER, tier],
+          [Sponsor.AMOUNT, price],
+          [Sponsor.STATUS, Sponsor.STATE_PENDING],
+          [Sponsor.TOKEN, order.id],
+        ];
+
+        if (imageFilename) {
+          sponsorUpdateCols.push([Sponsor.IMAGE, imageFilename]);
+        }
+
+        await Sponsor.update(sponsorUpdateCols, [Sponsor.ORDER_ID, existingOrder.razorpay_order_id]);
+
+        if (imageBase64) writeImageFile(imageFilename, imageBase64);
+        if (oldImage && imageFilename) removeImageFile(oldImage);
+      } catch (err) {
+        removeImageFile(imageFilename);
+        console.error('Failed to update razorpay_order (sponsor):', err);
+        res.status(500).send({ error: 'Failed to update order' });
+        return;
+      }
+    } else {
+      try {
+        await Sponsor.insert(
+          [Sponsor.NAME, name],
+          [Sponsor.EMAIL, email],
+          [Sponsor.WEBSITE, website || ''],
+          [Sponsor.TAGLINE, tagline || ''],
+          [Sponsor.TIER, tier],
+          [Sponsor.IMAGE, imageFilename || ''],
+          [Sponsor.ORDER_ID, order.id],
+          [Sponsor.TOKEN, order.id],
+          [Sponsor.STATUS, Sponsor.STATE_PENDING],
+          [Sponsor.PUBLIC, 1],
+          [Sponsor.AMOUNT, price],
+          [Sponsor.USER_ID, user.id],
+          [Sponsor.PACKAGE_NAME, 'web'],
+        );
+
+        if (imageBase64) writeImageFile(imageFilename, imageBase64);
+      } catch (err) {
+        removeImageFile(imageFilename);
+        console.error('Failed to insert sponsor record:', err);
+
+        const [raceSponsor] = await Sponsor.get(
+          [Sponsor.ORDER_ID, Sponsor.STATUS],
+          [
+            [Sponsor.USER_ID, user.id],
+            [Sponsor.STATUS, [Sponsor.STATE_PENDING, Sponsor.STATE_PURCHASED], 'IN'],
+          ],
+        );
+
+        if (raceSponsor) {
+          if (raceSponsor.status === Sponsor.STATE_PURCHASED) {
+            res.status(400).send({ error: 'Your sponsorship is already active' });
+            return;
+          }
+
+          res.send({
+            orderId: raceSponsor.order_id,
+            amount: Math.round(converted.amount * subunitMultiplier),
+            currency: converted.currency,
+            keyId: process.env.PG_KEY_ID,
+            userEmail: user.email,
+            tier,
+            originalPrice: price,
+            displayCurrency: converted.currency,
+            existingOrder: true,
+          });
+          return;
+        }
+      }
+
+      try {
+        await RazorpayOrder.insert(
+          [RazorpayOrder.RAZORPAY_ORDER_ID, order.id],
+          [RazorpayOrder.USER_ID, user.id],
+          [RazorpayOrder.PLUGIN_ID, null],
+          [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_SPONSOR],
+          [RazorpayOrder.AMOUNT, Math.round(converted.amount * subunitMultiplier)],
+          [RazorpayOrder.CURRENCY, converted.currency],
+          [RazorpayOrder.AMOUNT_INR, price],
+          [RazorpayOrder.RECEIPT, receipt],
+        );
+      } catch (err) {
+        removeImageFile(imageFilename);
+        console.error('Failed to insert razorpay_order (sponsor):', err);
+
+        const [raceRec] = await RazorpayOrder.get(
+          [RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.STATUS, RazorpayOrder.AMOUNT, RazorpayOrder.CURRENCY],
+          [
+            [RazorpayOrder.USER_ID, user.id],
+            [RazorpayOrder.PRODUCT_TYPE, RazorpayOrder.PRODUCT_SPONSOR],
+            [RazorpayOrder.STATUS, [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING], 'IN'],
+          ],
+        );
+
+        if (raceRec) {
+          res.send({
+            orderId: raceRec.razorpay_order_id,
+            amount: raceRec.amount,
+            currency: raceRec.currency,
+            keyId: process.env.PG_KEY_ID,
+            userEmail: user.email,
+            tier,
+            originalPrice: price,
+            displayCurrency: raceRec.currency,
+            existingOrder: true,
+          });
+          return;
+        }
+      }
+    }
+
+    res.send({
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: process.env.PG_KEY_ID,
+      userEmail: user.email,
+      tier,
+      originalPrice: price,
+      displayCurrency: converted.currency,
+    });
+  } catch (error) {
+    console.error('Razorpay create sponsor order error:', error);
+    res.status(500).send({ error: 'Failed to create order' });
+  }
+});
+
+/**
+ * Verify Razorpay payment for Sponsor and activate
+ * POST /api/razorpay/verify-sponsor
+ * Body: { razorpay_order_id, razorpay_payment_id, razorpay_signature }
+ */
+router.post('/verify-sponsor', async (req, res) => {
+  try {
+    const user = await getLoggedInUser(req);
+    if (!user) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      res.status(400).send({ error: 'Missing required fields' });
+      return;
+    }
+
+    const generatedSignature = crypto
+      .createHmac('sha256', process.env.PG_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (
+      generatedSignature.length !== razorpay_signature.length ||
+      !crypto.timingSafeEqual(Buffer.from(generatedSignature), Buffer.from(razorpay_signature))
+    ) {
+      res.status(400).send({ error: 'Invalid payment signature' });
+      return;
+    }
+
+    const rzpOrder = await getRazorpay().orders.fetch(razorpay_order_id);
+    if (!rzpOrder || rzpOrder.status !== 'paid') {
+      if (rzpOrder && rzpOrder.status === 'attempted') {
+        await RazorpayOrder.update(
+          [[RazorpayOrder.STATUS, RazorpayOrder.STATUS_PENDING]],
+          [
+            [RazorpayOrder.RAZORPAY_ORDER_ID, razorpay_order_id],
+            [RazorpayOrder.STATUS, RazorpayOrder.STATUS_CREATED],
+          ],
+        ).catch((err) => console.error('Failed to set pending status in verify-sponsor:', err));
+      }
+
+      res.status(400).send({
+        code: 'PAYMENT_PROCESSING',
+        error: 'Payment is still processing. Your sponsorship will be activated automatically once payment is confirmed.',
+      });
+      return;
+    }
+
+    if (rzpOrder.notes?.type !== 'sponsor') {
+      res.status(400).send({ error: 'Order type mismatch' });
+      return;
+    }
+
+    if (String(rzpOrder.notes?.userId) !== String(user.id)) {
+      res.status(403).send({ error: 'Order does not belong to this user' });
+      return;
+    }
+
+    // TOCTOU: check if already purchased via webhook
+    const [sponsor] = await Sponsor.get([Sponsor.ID, Sponsor.STATUS], [Sponsor.ORDER_ID, razorpay_order_id]);
+
+    if (!sponsor || sponsor.status !== Sponsor.STATE_PENDING) {
+      if (sponsor?.status === Sponsor.STATE_PURCHASED) {
+        res.send({ success: true, message: 'Thank you for sponsoring Acode!' });
+        return;
+      }
+      res.status(400).send({ error: 'Sponsor order not found or already processed' });
+      return;
+    }
+
+    const sponsorUpdateCols = [
+      [Sponsor.STATUS, Sponsor.STATE_PURCHASED],
+      [Sponsor.TOKEN, razorpay_payment_id],
+      [Sponsor.EXPIRES_AT, new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()],
+    ];
+
+    const notesAmount = Number(rzpOrder.notes?.original_amount_inr);
+    if (notesAmount && notesAmount > 0) {
+      sponsorUpdateCols.push([Sponsor.AMOUNT, notesAmount]);
+    }
+
+    await Sponsor.update(sponsorUpdateCols, [Sponsor.ID, sponsor.id]);
+
+    await RazorpayOrder.update(
+      [
+        [RazorpayOrder.STATUS, RazorpayOrder.STATUS_PAID],
+        [RazorpayOrder.RAZORPAY_PAYMENT_ID, razorpay_payment_id],
+      ],
+      [RazorpayOrder.RAZORPAY_ORDER_ID, razorpay_order_id],
+    );
+
+    notifyPurchase(razorpay_payment_id, { email: user.email, name: user.name }).catch((err) =>
+      console.error('Failed to send sponsor purchase email:', err),
+    );
+
+    res.send({ success: true, message: 'Thank you for sponsoring Acode!' });
+  } catch (error) {
+    console.error('Razorpay verify sponsor error:', error);
     res.status(500).send({ error: 'Failed to verify payment' });
   }
 });

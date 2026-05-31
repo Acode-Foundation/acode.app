@@ -167,11 +167,26 @@ export default async function Orders() {
       }
     };
 
+    let icon = 'extension';
+    let displayName = order.pluginName;
+
+    switch (order.productType) {
+      case 'acode_pro':
+        icon = 'star';
+        break;
+      case 'sponsor':
+        icon = 'favorite';
+        if (order.sponsorTier) {
+          displayName = `${order.sponsorTier.charAt(0).toUpperCase() + order.sponsorTier.slice(1)} Sponsor`;
+        }
+        break;
+    }
+
     return (
       <tr className='order-row' onclick={handleView}>
         <td className='order-plugin'>
-          <span className={order.productType === 'acode_pro' ? 'icon star' : 'icon extension'} />
-          <span>{order.productType === 'acode_pro' ? 'Acode Pro' : order.pluginName}</span>
+          <span className={`icon ${icon}`} />
+          <span>{order.productType === 'acode_pro' ? 'Acode Pro' : displayName}</span>
         </td>
         <td className='order-amount'>
           {order.currencySymbol}

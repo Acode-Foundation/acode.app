@@ -8,6 +8,14 @@ const { getSubunitDigits, getCurrencySymbol } = require('./currencyMap');
 const PRO_WELCOME_MESSAGE =
   'You just made our day!<br><br>By getting <strong>Acode Pro</strong>, you\'re not just unlocking an ad-free experience and exclusive themes \u2014 you\'re directly supporting a small team of developers who pour their hearts into keeping Acode free and open-source for everyone.<br><br>Every Pro purchase means we can spend more time building features, fixing bugs, and making Acode the best mobile code editor out there. Seriously, thank you. It means the world to us.<br><br>If for any reason you need a refund, no hard feelings \u2014 you can request one within 2 hours from the <a href="https://acode.app/pro">Pro page</a>.<br><br>Happy coding!';
 
+function sponsorWelcomeMessage(tier) {
+  const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
+  return `Thank you for becoming a <strong>${tierLabel}</strong> sponsor of Acode!<br><br>
+  Your support helps keep Acode free and open-source for mobile developers around the world.<br><br>
+  Your sponsorship will appear on our <a href="https://acode.app/sponsors">sponsors page</a>.<br><br>
+  — The Acode Team`;
+}
+
 function pluginWelcomeMessage(pluginName, symbol, amount) {
   return `You've successfully purchased <strong>${pluginName}</strong> for ${symbol}${amount}.<br><br>You can now download and use the plugin right away. If you run into any issues or have questions, feel free to reach out at <a href="https://acode.app/contact">acode.app/contact</a>.<br><br>Thank you for supporting the Acode ecosystem and the developer behind this plugin!`;
 }
@@ -34,6 +42,16 @@ async function notifyPurchase(paymentId, knownUser) {
   if (order.product_type === RazorpayOrder.PRODUCT_PRO) {
     sendEmail(user.email, user.name, 'You are awesome! Welcome to Acode Pro', PRO_WELCOME_MESSAGE).catch((err) =>
       console.error('Failed to send pro activation email:', err),
+    );
+  } else if (order.product_type === RazorpayOrder.PRODUCT_SPONSOR) {
+    const Sponsor = require('../entities/sponsor');
+    const [sponsor] = await Sponsor.get([Sponsor.TIER], [[Sponsor.TOKEN, paymentId]]);
+    if (!sponsor) {
+      console.error('Failed to send sponsor email: sponsor record not found for payment', paymentId);
+      return;
+    }
+    sendEmail(user.email, user.name, 'Thank you for sponsoring Acode!', sponsorWelcomeMessage(sponsor.tier)).catch((err) =>
+      console.error('Failed to send sponsor email:', err),
     );
   } else if (order.plugin_id) {
     const [plugin] = await Plugin.get([Plugin.ID, order.plugin_id]);
