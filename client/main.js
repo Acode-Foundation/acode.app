@@ -9,7 +9,7 @@ import { getLoggedInUser, hideLoading, invalidateLoggedInUser, showLoading } fro
 import Router from 'lib/Router';
 import Theme from 'lib/theme';
 import dark from 'themes/dark';
-import View, { addProButton, updateAccountButton, updateOrdersBadge } from './main.view';
+import View, { addProButton, updateAccountButton } from './main.view';
 
 document.addEventListener('DOMContentLoaded', () => {
   showLoading();
@@ -45,7 +45,6 @@ window.onload = async () => {
   const user = await getLoggedInUser();
   updateAccountButton(user);
   addProButton(user);
-  updateOrdersBadge();
 
   const main = app.get('main');
 
@@ -120,8 +119,6 @@ window.onload = async () => {
       invalidateLoggedInUser();
       updateAccountButton();
       addProButton();
-      const badge = tag.get('#orders-badge');
-      if (badge) badge.style.display = 'none';
       if (window.history.length > 1) {
         window.history.go(-1);
       } else {

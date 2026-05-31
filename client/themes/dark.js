@@ -15,6 +15,7 @@ export default {
   successColor: 'green',
   dangerColor: 'orangered',
   dangerTextColor: '#ffffff',
+  linkColor: '#3399ff',
   themeType: 'dark',
   codeBgColor: 'rgba(0,0,0,0.5)',
 };

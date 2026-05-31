@@ -3,6 +3,7 @@ import Router from 'lib/Router';
 
 /**
  * @typedef {(hide: ()=>void, $box: HTMLElement) => void} DialogBoxCallback
+ * @typedef {HTMLElement & {hide: () => void}} DialogBox
  */
 
 /**
@@ -19,7 +20,7 @@ import Router from 'lib/Router';
  * @param {string} [props.body]
  * @param {boolean} [props.keep]
  * @param {HTMLElement[]} [children]
- * @returns
+ * @returns {DialogBox}
  */
 export default function DialogBox({ title = '', onhide, onok, oncancel, onselect, options, message, body, keep = false }, children) {
   const buttons = [];
@@ -79,6 +80,8 @@ export default function DialogBox({ title = '', onhide, onok, oncancel, onselect
       $box.classList.remove('hide');
     }, 300);
   }
+
+  $box.hide = hide;
 
   return $box;
 }

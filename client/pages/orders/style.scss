@@ -98,11 +98,8 @@
     }
 
     .order-plugin {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
       min-width: 150px;
-      width: 60%;
+      width: 100%;
 
       .icon {
         opacity: 0.5;
@@ -173,6 +170,11 @@
     &.status-paid {
       background: rgba(34, 197, 94, 0.15);
       color: #22c55e;
+    }
+
+    &.status-created {
+      background: rgba(148, 163, 184, 0.15);
+      color: #94a3b8;
     }
 
     &.status-pending {
