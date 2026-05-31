@@ -13,10 +13,6 @@ const PurchaseOrder = require('../entities/purchaseOrder');
  * @returns {Promise<number>}
  */
 async function fromPaidPlugins(year, month, user, report) {
-  if (!report) {
-    throw new Error('Report is required');
-  }
-
   const { monthStart, monthEnd } = getDate(year, month);
   const plugins = await Plugin.get([Plugin.ID], [Plugin.USER_ID, user.id]);
   const orders = await PurchaseOrder.for('internal').get([
@@ -38,7 +34,7 @@ async function fromPaidPlugins(year, month, user, report) {
 
         const reportRows = report.filter((r) => r.Description === orderId);
         if (!reportRows.length) {
-          throw new Error('Unable to get reports, try again later.');
+          return amount * 0.7;
         }
 
         let calculatedAmount = 0;
