@@ -23,6 +23,7 @@ const router = Router();
 function getProductDisplayName(productType, pluginId, pluginMap) {
   if (productType === 'acode_pro') return 'Acode Pro';
   if (productType === 'sponsor') return 'Sponsor';
+  if (!pluginMap) return 'Acode Pro';
   return pluginMap.get(String(pluginId)) || 'Deleted Plugin';
 }
 
