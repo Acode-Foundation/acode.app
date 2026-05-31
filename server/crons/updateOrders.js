@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 const { google } = require('googleapis');
 const { config } = require('dotenv');
 const path = require('node:path');

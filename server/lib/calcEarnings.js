@@ -13,6 +13,10 @@ const PurchaseOrder = require('../entities/purchaseOrder');
  * @returns {Promise<number>}
  */
 async function fromPaidPlugins(year, month, user, report) {
+  if (!report) {
+    throw new Error('Report is required');
+  }
+
   const { monthStart, monthEnd } = getDate(year, month);
   const plugins = await Plugin.get([Plugin.ID], [Plugin.USER_ID, user.id]);
   const orders = await PurchaseOrder.for('internal').get([
@@ -28,35 +32,27 @@ async function fromPaidPlugins(year, month, user, report) {
       }
 
       try {
-        const updates = [];
+        if (provider === 'razorpay') {
+          return amount * 0.7;
+        }
+
+        const reportRows = report.filter((r) => r.Description === orderId);
+        if (!reportRows.length) {
+          throw new Error('Unable to get reports, try again later.');
+        }
 
         let calculatedAmount = 0;
-        if (provider === 'razorpay') {
-          // Razorpay orders: 30% platform cut (no Google Play involved)
-          calculatedAmount = amount * 0.7;
-        } else if (report) {
-          const reportRows = report.filter((r) => r.Description === orderId);
-          if (!reportRows.length) {
-            calculatedAmount = amount * 0.65;
-          } else {
-            for (const row of reportRows) {
-              calculatedAmount += Number.parseFloat(row['Amount (Merchant Currency)']);
-            }
-          }
-        } else {
-          calculatedAmount = amount;
+        for (const row of reportRows) {
+          calculatedAmount += Number.parseFloat(row['Amount (Merchant Currency)']);
         }
 
         if (calculatedAmount !== amount) {
-          updates.push([PurchaseOrder.AMOUNT, calculatedAmount]);
-        }
-
-        if (updates.length) {
-          await PurchaseOrder.update(updates, [PurchaseOrder.ID, rowId]);
+          await PurchaseOrder.update([PurchaseOrder.AMOUNT, calculatedAmount], [PurchaseOrder.ID, rowId]);
         }
 
         return calculatedAmount;
-      } catch (_error) {
+      } catch (error) {
+        console.error(error);
         return 0;
       }
     }),
