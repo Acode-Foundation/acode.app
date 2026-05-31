@@ -54,7 +54,7 @@ router.post('/create-order', async (req, res) => {
     }
 
     if (plugin[Plugin.STATUS] !== Plugin.STATUS_APPROVED) {
-      res.send(400).send({ error: 'You can not buy this plugin, please try again later' });
+      res.status(400).send({ error: 'You can not buy this plugin, please try again later' });
       return;
     }
 
