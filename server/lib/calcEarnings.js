@@ -32,8 +32,8 @@ async function fromPaidPlugins(year, month, user, report) {
           return amount * 0.7;
         }
 
-        const reportRows = report.filter((r) => r.Description === orderId);
-        if (!reportRows.length) {
+        const reportRows = report?.filter((r) => r.Description === orderId);
+        if (!reportRows?.length) {
           return amount * 0.7;
         }
 
