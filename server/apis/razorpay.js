@@ -684,6 +684,12 @@ router.get('/orders/:orderId', async (req, res) => {
       pluginName = plugin?.name || 'Deleted Plugin';
     }
 
+    let sponsorTier = null;
+    if (order.product_type === 'sponsor') {
+      const [linked] = await Sponsor.get([Sponsor.TIER], [Sponsor.ORDER_ID, order.razorpay_order_id]);
+      sponsorTier = linked?.tier || null;
+    }
+
     const [purchaseOrder] = await Order.get([Order.ID, Order.STATE, Order.CREATED_AT, Order.PROVIDER], [Order.ORDER_ID, order.razorpay_order_id]);
 
     let refundEligible = false;
@@ -702,6 +708,7 @@ router.get('/orders/:orderId', async (req, res) => {
       productType: order.product_type,
       pluginId: order.plugin_id,
       pluginName,
+      sponsorTier,
       status: order.status,
       amount: formatAmount(baseUnits, order.currency),
       currency: order.currency,
@@ -1516,9 +1523,8 @@ router.post('/create-sponsor-order', async (req, res) => {
           sponsorUpdateCols.push([Sponsor.IMAGE, imageFilename]);
         }
 
-        await Sponsor.update(sponsorUpdateCols, [Sponsor.ORDER_ID, existingOrder.razorpay_order_id]);
-
         if (imageBase64) writeImageFile(imageFilename, imageBase64);
+        await Sponsor.update(sponsorUpdateCols, [Sponsor.ORDER_ID, existingOrder.razorpay_order_id]);
         if (oldImage && imageFilename) removeImageFile(oldImage);
       } catch (err) {
         removeImageFile(imageFilename);
