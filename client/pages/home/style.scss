@@ -605,6 +605,7 @@
     }
 
     .sponsor-card {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -656,6 +657,55 @@
       &.sponsor-card-titanium {
         &:hover {
           border-color: rgba(245, 158, 11, 0.3);
+        }
+      }
+
+      .sponsor-tier-badge {
+        position: absolute;
+        top: -1px;
+        right: -1px;
+        font-size: 0.55rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 2px 6px;
+        border-radius: 0 12px 0 8px;
+        opacity: 0.85;
+
+        &.sponsor-tier-badge-titanium {
+          background: rgba(249, 115, 22, 0.15);
+          color: #f97316;
+          border: 1px solid rgba(249, 115, 22, 0.25);
+        }
+
+        &.sponsor-tier-badge-platinum {
+          background: rgba(167, 139, 250, 0.15);
+          color: #a78bfa;
+          border: 1px solid rgba(167, 139, 250, 0.25);
+        }
+
+        &.sponsor-tier-badge-gold {
+          background: rgba(245, 158, 11, 0.15);
+          color: #f59e0b;
+          border: 1px solid rgba(245, 158, 11, 0.25);
+        }
+
+        &.sponsor-tier-badge-silver {
+          background: rgba(156, 163, 175, 0.15);
+          color: #9ca3af;
+          border: 1px solid rgba(156, 163, 175, 0.25);
+        }
+
+        &.sponsor-tier-badge-bronze {
+          background: rgba(217, 119, 6, 0.15);
+          color: #d97706;
+          border: 1px solid rgba(217, 119, 6, 0.25);
+        }
+
+        &.sponsor-tier-badge-crystal {
+          background: rgba(94, 234, 212, 0.15);
+          color: #5eead4;
+          border: 1px solid rgba(94, 234, 212, 0.25);
         }
       }
 

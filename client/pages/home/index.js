@@ -4,7 +4,7 @@ import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import background from 'lib/background';
 import { hideLoading, showLoading } from 'lib/helpers';
-import getSponsorTiers, { TIER_ORDER } from 'lib/sponsorTiers';
+import { TIER_ORDER } from 'lib/sponsorTiers';
 import phoneImageJpg from 'res/phone.jpg';
 import phoneImageWebp from 'res/phone.webp';
 import tabletImageJpg from 'res/tablet.jpg';
@@ -42,11 +42,8 @@ export default async function home() {
   }
 
   let sponsors = [];
-  let tiers = {};
   try {
     sponsors = await (await fetch('/api/sponsors')).json();
-    const sponsorTiers = await getSponsorTiers();
-    tiers = sponsorTiers.tiers;
   } catch (_error) {
     // ignore
   }
@@ -122,23 +119,9 @@ export default async function home() {
             No sponsors yet. <a href='/become-sponsor'>Be the first!</a>
           </p>
         ) : (
-          TIER_ORDER.map((tier) => {
-            const tierSponsors = sponsors.filter((s) => s.tier === tier);
-            const tierInfo = tiers[tier];
-            if (!tierInfo) return null;
-            return (
-              <div className='sponsor-tier-group' key={tier}>
-                <h3 className={`tier-label tier-label-${tier}`}>{tierInfo.label}</h3>
-                {tierSponsors.length === 0 ? (
-                  <p className='sponsors-tier-empty'>
-                    Be the first <a href={`/become-sponsor?tier=${tier}`}>{tierInfo.label}</a> Sponsor!
-                  </p>
-                ) : (
-                  <div className='sponsors-grid'>{tierSponsors.map(renderSponsorCard)}</div>
-                )}
-              </div>
-            );
-          })
+          <div className='sponsors-grid'>
+            {sponsors.sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier)).map(renderSponsorCard)}
+          </div>
         )}
       </div>
     </section>
@@ -176,18 +159,18 @@ function renderSponsorCard(sponsor) {
     .toUpperCase();
 
   const hasImage = ['gold', 'platinum', 'titanium'].includes(tier);
+  const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
+
+  const Tag = website ? 'a' : 'div';
 
   return (
-    <a
+    <Tag
       key={id}
-      href={website || '#'}
-      target={website ? '_blank' : undefined}
-      rel={website ? 'noopener' : undefined}
+      {...(website ? { href: website, target: '_blank', rel: 'noopener' } : {})}
       className={`sponsor-card sponsor-card-${tier}`}
-      onclick={(e) => {
-        if (!website) e.preventDefault();
-      }}
+      title={tierLabel}
     >
+      <span className={`sponsor-tier-badge sponsor-tier-badge-${tier}`}>{tierLabel}</span>
       {hasImage && (
         <div className='sponsor-avatar'>
           {image ? <img src={`/sponsor/image/${image}`} alt={name} loading='lazy' /> : <span className='avatar-fallback'>{initials}</span>}
@@ -197,7 +180,7 @@ function renderSponsorCard(sponsor) {
         <span className='sponsor-name'>{name}</span>
         {tagline && ['platinum', 'titanium'].includes(tier) && <p className='sponsor-tagline'>{tagline}</p>}
       </div>
-    </a>
+    </Tag>
   );
 }
 
