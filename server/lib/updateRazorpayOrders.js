@@ -2,6 +2,7 @@ const moment = require('moment');
 const RazorpayOrder = require('../entities/razorpayOrder');
 const Order = require('../entities/purchaseOrder');
 const User = require('../entities/user');
+const Sponsor = require('../entities/sponsor');
 const getRazorpay = require('./razorpay');
 const ensurePurchaseOwnership = require('./ensurePurchaseOwnership');
 const notifyRefund = require('./notifyRefund');
@@ -68,7 +69,12 @@ async function syncPendingOrders() {
         }
       }
     } catch (error) {
-      console.error(`Error syncing pending razorpay order ${order.razorpay_order_id}:`, error.message);
+      const errDesc = error?.error?.description || error?.message || String(error);
+      console.error(`Error syncing pending razorpay order ${order.razorpay_order_id}: ${errDesc}`);
+
+      if (error?.statusCode === 400 || error?.error?.code === 'BAD_REQUEST_ERROR') {
+        await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_CANCELLED]], [RazorpayOrder.ID, order.id]).catch(() => {});
+      }
     }
   }
 }
@@ -95,27 +101,39 @@ async function syncRefundsOnPaidOrders() {
 
         await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_REFUNDED]], [RazorpayOrder.ID, order.id]);
 
-        await Order.update(
-          [
-            [Order.STATE, Order.STATE_CANCELED],
-            [Order.AMOUNT, 0],
-          ],
-          [Order.TOKEN, order.razorpay_payment_id],
-        );
+        if (order.product_type === RazorpayOrder.PRODUCT_SPONSOR) {
+          await Sponsor.update([[Sponsor.STATUS, Sponsor.STATE_CANCELED]], [Sponsor.TOKEN, order.razorpay_payment_id]);
+        } else {
+          await Order.update(
+            [
+              [Order.STATE, Order.STATE_CANCELED],
+              [Order.AMOUNT, 0],
+            ],
+            [Order.TOKEN, order.razorpay_payment_id],
+          );
 
-        await User.update(
-          [
-            [User.ACODE_PRO, 0],
-            [User.PRO_PURCHASE_TOKEN, null],
-            [User.PRO_PURCHASED_AT, null],
-          ],
-          [User.PRO_PURCHASE_TOKEN, order.razorpay_payment_id],
-        );
+          await User.update(
+            [
+              [User.ACODE_PRO, 0],
+              [User.PRO_PURCHASE_TOKEN, null],
+              [User.PRO_PURCHASED_AT, null],
+            ],
+            [
+              [User.PRO_PURCHASE_TOKEN, order.razorpay_payment_id],
+              [User.ACODE_PRO, 1],
+            ],
+          );
+        }
 
         notifyRefund(order.razorpay_payment_id).catch((err) => console.error('Failed to send refund email via cron:', err));
       }
     } catch (error) {
-      console.error(`Error checking refund for payment ${order.razorpay_payment_id}:`, error.message);
+      const errDesc = error?.error?.description || error?.message || String(error);
+      console.error(`Error checking refund for payment ${order.razorpay_payment_id}: ${errDesc}`);
+
+      if (error?.statusCode === 400 || error?.error?.code === 'BAD_REQUEST_ERROR') {
+        await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_CANCELLED]], [RazorpayOrder.ID, order.id]).catch(() => {});
+      }
     }
   }
 }

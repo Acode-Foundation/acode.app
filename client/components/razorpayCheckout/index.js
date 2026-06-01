@@ -272,6 +272,107 @@ export async function initiateProCheckout(userInfo = {}, onSuccess, onCancel) {
 }
 
 /**
+ * Initiate Razorpay checkout for a sponsorship
+ * @param {Object} sponsorData - { tier, name, email, website, tagline, image }
+ * @param {Function} onSuccess - Callback on successful payment
+ * @param {Function} [onCancel] - Callback when checkout cancelled
+ * @returns {Promise<void>}
+ */
+export async function initiateSponsorCheckout(sponsorData, onSuccess, onCancel) {
+  try {
+    await loadRazorpayScript();
+
+    const orderRes = await fetch('/api/razorpay/create-sponsor-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sponsorData),
+    });
+
+    const orderData = await orderRes.json();
+
+    if (orderData.error) {
+      alert('ERROR', orderData.error);
+      return;
+    }
+
+    const { orderId, amount, currency, keyId, userEmail, tier } = orderData;
+
+    const options = {
+      key: keyId,
+      amount,
+      currency,
+      name: 'Acode',
+      description: `Sponsor: ${tier} Tier`,
+      image: RAZORPAY_CONFIG.branding.image,
+      order_id: orderId,
+      handler: async (response) => {
+        try {
+          const verifyRes = await fetch('/api/razorpay/verify-sponsor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          });
+
+          const verifyData = await verifyRes.json().catch(() => ({}));
+
+          if (verifyData.success) {
+            alert('SUCCESS', 'Thank you for sponsoring Acode!', onSuccess);
+          } else if (!verifyRes.ok && verifyData.code === 'PAYMENT_PROCESSING') {
+            alert(
+              'PAYMENT PENDING',
+              'Your payment is being processed. You will be notified once it is confirmed. You can check your order status on the Orders page.',
+              () => {
+                Router.loadUrl('/orders');
+              },
+            );
+          } else {
+            alert('ERROR', verifyData.error || 'Payment verification failed', onCancel);
+          }
+        } catch (error) {
+          console.error('Verification error:', error);
+          alert('ERROR', 'Payment may have succeeded but verification failed. Please contact support if charged.', onCancel);
+        }
+      },
+      prefill: {
+        email: sponsorData.email || userEmail || '',
+        name: sponsorData.name || '',
+      },
+      theme: {
+        color: RAZORPAY_CONFIG.theme.color,
+        backdrop_color: RAZORPAY_CONFIG.theme.backdrop_color,
+      },
+      modal: {
+        confirm_close: true,
+        escape: true,
+        animation: true,
+        ondismiss: () => {
+          if (onCancel) onCancel();
+        },
+      },
+      notes: {
+        type: 'sponsorship',
+        tier,
+        source: 'acode_web',
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.on('payment.failed', (response) => {
+      alert('ERROR', `Payment failed: ${response.error.description}`);
+    });
+    rzp.open();
+  } catch (error) {
+    onCancel?.();
+    console.error('Sponsor checkout error:', error);
+    alert('ERROR', error.message || 'Failed to initiate checkout');
+  }
+}
+
+/**
  * Buy Button Component for paid plugins
  * @param {Object} props
  * @param {string} props.pluginId - Plugin ID

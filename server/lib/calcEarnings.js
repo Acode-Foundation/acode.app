@@ -32,21 +32,25 @@ async function fromPaidPlugins(year, month, user, report) {
           return amount * 0.7;
         }
 
-        const reportRows = report?.filter((r) => r.Description === orderId);
-        if (!reportRows?.length) {
-          return amount * 0.7;
+        if (report) {
+          const reportRows = report.filter((r) => r.Description === orderId);
+          if (!reportRows.length) {
+            return amount * 0.65;
+          }
+
+          let calculatedAmount = 0;
+          for (const row of reportRows) {
+            calculatedAmount += Number.parseFloat(row['Amount (Merchant Currency)']);
+          }
+
+          if (calculatedAmount !== amount) {
+            await PurchaseOrder.update([PurchaseOrder.AMOUNT, calculatedAmount], [PurchaseOrder.ID, rowId]);
+          }
+
+          return calculatedAmount;
         }
 
-        let calculatedAmount = 0;
-        for (const row of reportRows) {
-          calculatedAmount += Number.parseFloat(row['Amount (Merchant Currency)']);
-        }
-
-        if (calculatedAmount !== amount) {
-          await PurchaseOrder.update([PurchaseOrder.AMOUNT, calculatedAmount], [PurchaseOrder.ID, rowId]);
-        }
-
-        return calculatedAmount;
+        return amount * 0.7;
       } catch (error) {
         console.error(error);
         return 0;

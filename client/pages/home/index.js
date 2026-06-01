@@ -4,6 +4,7 @@ import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import background from 'lib/background';
 import { hideLoading, showLoading } from 'lib/helpers';
+import { TIER_ORDER } from 'lib/sponsorTiers';
 import phoneImageJpg from 'res/phone.jpg';
 import phoneImageWebp from 'res/phone.webp';
 import tabletImageJpg from 'res/tablet.jpg';
@@ -36,6 +37,13 @@ export default async function home() {
 
     pluginCount.value = count.toLocaleString();
     plugins = await Promise.all(pluginIds.map(async (plugin) => <Plugin data={plugin} />));
+  } catch (_error) {
+    // ignore
+  }
+
+  let sponsors = [];
+  try {
+    sponsors = await (await fetch('/api/sponsors')).json();
   } catch (_error) {
     // ignore
   }
@@ -99,18 +107,22 @@ export default async function home() {
         <ul className='featured-plugins__list'>{plugins}</ul>
       </div>
 
-      <div className='from-the-creator'>
+      <div className='sponsors-section'>
         <div className='section-header'>
-          <h2>Learn</h2>
+          <h2>Our Sponsors</h2>
+          <a href='/sponsors' className='see-all'>
+            View all <span className='icon chevron-right' />
+          </a>
         </div>
-        <ProjectCard
-          logo='https://academy.acode.app/icon.png'
-          alt='Acode Academy'
-          title='Acode Academy'
-          subtitle='Best-crafted courses, hands-on exercises, and progress tracking — right inside Acode. Earn a certificate when you finish.'
-          url='https://academy.acode.app'
-          cta='Explore Courses'
-        />
+        {sponsors.length === 0 ? (
+          <p className='sponsors-empty'>
+            No sponsors yet. <a href='/become-sponsor'>Be the first!</a>
+          </p>
+        ) : (
+          <div className='sponsors-grid'>
+            {sponsors.sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier)).map(renderSponsorCard)}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -137,16 +149,38 @@ async function GhButton({ url, title, count, icon = 'github' }) {
   );
 }
 
-function ProjectCard({ logo, alt, title, subtitle, url, cta }) {
+function renderSponsorCard(sponsor) {
+  const { id, name, tier, tagline, website, image } = sponsor;
+  const initials = name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  const hasImage = ['gold', 'platinum', 'titanium'].includes(tier);
+  const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
+
+  const Tag = website ? 'a' : 'div';
+
   return (
-    <a href={url} target='_blank' rel='noopener noreferrer' className='project-card'>
-      <img src={logo} alt={alt} className='project-card__logo' />
-      <div className='project-card__body'>
-        <h3 className='project-card__title'>{title}</h3>
-        <p className='project-card__subtitle'>{subtitle}</p>
+    <Tag
+      key={id}
+      {...(website ? { href: website, target: '_blank', rel: 'noopener' } : {})}
+      className={`sponsor-card sponsor-card-${tier}`}
+      title={tierLabel}
+    >
+      <span className={`sponsor-tier-badge sponsor-tier-badge-${tier}`}>{tierLabel}</span>
+      {hasImage && (
+        <div className='sponsor-avatar'>
+          {image ? <img src={`/sponsor/image/${image}`} alt={name} loading='lazy' /> : <span className='avatar-fallback'>{initials}</span>}
+        </div>
+      )}
+      <div className='sponsor-info'>
+        <span className='sponsor-name'>{name}</span>
+        {tagline && ['platinum', 'titanium'].includes(tier) && <p className='sponsor-tagline'>{tagline}</p>}
       </div>
-      <span className='project-card__cta'>{cta} →</span>
-    </a>
+    </Tag>
   );
 }
 

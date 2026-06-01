@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { href: '/faqs', text: 'FAQs' },
         { href: 'https://docs.acode.app', text: 'Plugin Docs' },
         { href: '/plugins', text: 'Plugins' },
+        { href: '/sponsors', text: 'Sponsors' },
         { href: 'https://academy.acode.app', text: 'Learn' },
       ]}
     />
@@ -60,6 +61,8 @@ window.onload = async () => {
 
   if (process.env.RAZORPAY_ENABLED) {
     Router.add('/pro', (_params, query) => loadModule('pro', query));
+    Router.add('/sponsors', (_params, query) => loadModule('sponsors', query));
+    Router.add('/become-sponsor', (_params, query) => loadModule('becomeSponsor', query));
   }
 
   Router.add('/login', (_params, query) => loadModule('login', query));

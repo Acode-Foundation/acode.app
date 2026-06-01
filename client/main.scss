@@ -264,7 +264,7 @@ header {
     display: none;
   }
 
-  @media screen and (max-width: 600px) {
+  @media screen and (max-width: 700px) {
     label[for='nav-menu-toggler']:not(.mask) {
       display: flex;
       height: 40px;

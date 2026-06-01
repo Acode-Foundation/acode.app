@@ -2,6 +2,7 @@ const Plugin = require('../entities/plugin');
 const Order = require('../entities/purchaseOrder');
 const User = require('../entities/user');
 const AppConfig = require('../entities/appConfig');
+const Sponsor = require('../entities/sponsor');
 const getRazorpay = require('./razorpay');
 const { getSubunitDigits } = require('./currencyMap');
 const notifyPurchase = require('./notifyPurchase');
@@ -57,6 +58,37 @@ async function ensurePurchaseOwnership(orderId, paymentId) {
       console.log(`Activated Acode Pro for user ${userId} via webhook`);
       if (paymentId) notifyPurchase(paymentId).catch((err) => console.error('Failed to send pro activation email:', err));
     }
+    return;
+  }
+
+  if (type === 'sponsor' && userId) {
+    const [existingSponsor] = await Sponsor.get([Sponsor.STATUS], [Sponsor.ORDER_ID, orderId]);
+
+    if (!existingSponsor) {
+      console.warn(`Sponsor record not found for order ${orderId}`);
+      return;
+    }
+
+    if (existingSponsor.status === Sponsor.STATE_PURCHASED) {
+      console.log(`Sponsor already activated for order ${orderId}`);
+      return;
+    }
+
+    if (existingSponsor.status === Sponsor.STATE_CANCELED) {
+      console.log(`Ignoring webhook for cancelled sponsor order ${orderId}`);
+      return;
+    }
+
+    const sponsorCols = [
+      [Sponsor.STATUS, Sponsor.STATE_PURCHASED],
+      [Sponsor.EXPIRES_AT, new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()],
+    ];
+    if (paymentId) {
+      sponsorCols.push([Sponsor.TOKEN, paymentId]);
+    }
+    await Sponsor.update(sponsorCols, [Sponsor.ORDER_ID, orderId]);
+    console.log(`Activated sponsor for user ${userId} via webhook`);
+    if (paymentId) notifyPurchase(paymentId).catch((err) => console.error('Failed to send sponsor purchase email:', err));
     return;
   }
 

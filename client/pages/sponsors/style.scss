@@ -1,0 +1,320 @@
+#sponsors-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 60px 24px 40px;
+
+  .highlight {
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .section-heading {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 36px;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .subtitle {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.1rem;
+    line-height: 1.7;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 1rem;
+    padding: 40px 0;
+  }
+
+  .sponsors-hero {
+    text-align: center;
+    margin-bottom: 60px;
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+  }
+
+  .btn-become-sponsor {
+    display: inline-block;
+    margin-top: 32px;
+    padding: 14px 36px;
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 28px rgba(245, 158, 11, 0.4);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  .sponsors-grid-section {
+    margin-bottom: 60px;
+  }
+
+  .sponsor-tier-section {
+    margin-bottom: 40px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .empty-state {
+      padding: 24px 0;
+      font-style: italic;
+      font-size: 0.9rem;
+    }
+  }
+
+  .tier-heading {
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .tier-icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-right: 10px;
+
+    &.tier-icon-crystal {
+      background: linear-gradient(45deg, #5eead4, #2dd4bf);
+    }
+
+    &.tier-icon-bronze {
+      background: linear-gradient(45deg, #d97706, #f59e0b);
+    }
+
+    &.tier-icon-silver {
+      background: linear-gradient(45deg, #c0c0c0, #e6e6fa);
+    }
+
+    &.tier-icon-gold {
+      background: linear-gradient(45deg, #ffd700, #ffed4e);
+    }
+
+    &.tier-icon-platinum {
+      background: linear-gradient(45deg, #a78bfa, #c084fc);
+    }
+
+    &.tier-icon-titanium {
+      background: linear-gradient(45deg, #878681, #c4c4b0);
+    }
+  }
+
+  .sponsors-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+
+    .sponsor-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 24px 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(245, 158, 11, 0.3);
+        transform: translateY(-4px);
+      }
+
+      &.sponsor-card-crystal {
+        &:hover {
+          border-color: rgba(94, 234, 212, 0.3);
+        }
+
+        .sponsor-name {
+          font-size: 0.9rem;
+        }
+      }
+
+      &.sponsor-card-bronze {
+        &:hover {
+          border-color: rgba(217, 119, 6, 0.3);
+        }
+
+        .sponsor-name {
+          font-size: 0.95rem;
+        }
+      }
+
+      &.sponsor-card-silver {
+        &:hover {
+          border-color: rgba(156, 163, 175, 0.3);
+        }
+
+        .sponsor-name {
+          font-size: 1rem;
+        }
+      }
+
+      &.sponsor-card-platinum {
+        .sponsor-avatar {
+          width: 80px;
+          height: 80px;
+          border-radius: 14px;
+        }
+
+        .sponsor-name {
+          font-size: 1.05rem;
+        }
+
+        &:hover {
+          border-color: rgba(167, 139, 250, 0.3);
+        }
+      }
+
+      &.sponsor-card-titanium {
+        .sponsor-avatar {
+          width: 100px;
+          height: 100px;
+          border-radius: 16px;
+        }
+
+        .sponsor-name {
+          font-size: 1.1rem;
+        }
+      }
+
+      .sponsor-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 12px;
+        margin: 0 auto 14px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .avatar-fallback {
+          font-size: 1.3rem;
+          font-weight: 700;
+          color: rgba(255, 255, 255, 0.5);
+          letter-spacing: 0.05em;
+        }
+      }
+
+      .sponsor-info {
+        .sponsor-name {
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.85);
+          margin-bottom: 6px;
+
+          &.sponsor-name-link {
+            display: block;
+            color: rgba(245, 158, 11, 0.8);
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s ease;
+
+            &:hover {
+              color: #f59e0b;
+            }
+          }
+        }
+
+        .tier-badge {
+          display: inline-block;
+          font-size: 0.65rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          padding: 3px 10px;
+          border-radius: 6px;
+          margin-bottom: 8px;
+
+          &.tier-badge-silver {
+            background: rgba(156, 163, 175, 0.12);
+            color: #9ca3af;
+            border: 1px solid rgba(156, 163, 175, 0.3);
+          }
+
+          &.tier-badge-gold {
+            background: rgba(245, 158, 11, 0.12);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+          }
+
+          &.tier-badge-titanium {
+            background: rgba(249, 115, 22, 0.12);
+            color: #f97316;
+            border: 1px solid rgba(249, 115, 22, 0.3);
+          }
+        }
+
+        .sponsor-tagline {
+          font-size: 0.75rem;
+          color: rgba(255, 255, 255, 0.4);
+          line-height: 1.4;
+          margin-bottom: 8px;
+        }
+
+        .sponsor-website {
+          font-size: 0.75rem;
+          color: rgba(245, 158, 11, 0.7);
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          transition: color 0.2s ease;
+
+          .icon {
+            font-size: 0.75rem;
+            margin: 0;
+          }
+
+          &:hover {
+            color: #f59e0b;
+          }
+        }
+      }
+    }
+
+    @media screen and (max-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media screen and (max-width: 480px) {
+      grid-template-columns: 1fr;
+    }
+  }
+}
