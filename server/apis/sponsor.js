@@ -28,7 +28,7 @@ router.get('/{:top}', async (req, res) => {
   } else if (isTop) {
     whereClause.push([Sponsor.TIER, 'titanium']);
   } else if (/^\d+$/.test(param)) {
-    const [sponsor] = await Sponsor.get(Sponsor.safeColumns, [[Sponsor.ID, param]]);
+    const [sponsor] = await Sponsor.get(Sponsor.safeColumns, [[Sponsor.ID, param], ...whereClause]);
     if (!sponsor) {
       return res.status(404).json({ error: 'Sponsor not found' });
     }

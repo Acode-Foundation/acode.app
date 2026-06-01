@@ -133,7 +133,7 @@ export default async function BecomeSponsor() {
   }
 }
 
-function SponsorshipForm({ isLoggedIn, onSuccess, loggedInEmail, loggedInName }) {
+function SponsorshipForm({ isLoggedIn, onSuccess, onCancel, loggedInEmail, loggedInName }) {
   const fileRef = Ref();
   const previewRef = Ref();
   const uploadZoneRef = Ref();
@@ -173,7 +173,7 @@ function SponsorshipForm({ isLoggedIn, onSuccess, loggedInEmail, loggedInName })
     await initiateSponsorCheckout(
       sponsorData,
       () => onSuccess(),
-      () => {},
+      () => onCancel?.(),
     );
   }
 
