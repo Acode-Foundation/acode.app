@@ -120,22 +120,6 @@ router.post('/create-order', async (req, res) => {
         return;
       }
 
-      if (existingOrder.status === RazorpayOrder.STATUS_CREATED && existingOrder.currency === currency.code) {
-        res.send({
-          orderId: existingOrder.razorpay_order_id,
-          amount: existingOrder.amount,
-          currency: existingOrder.currency,
-          keyId: process.env.PG_KEY_ID,
-          pluginName: plugin.name,
-          pluginId: plugin.id,
-          userEmail: user.email,
-          originalPrice: plugin.price,
-          displayCurrency: existingOrder.currency,
-          existingOrder: true,
-        });
-        return;
-      }
-
       // REFUNDED/REFUNDING → create a fresh record (no reuse)
       if (existingOrder.status !== RazorpayOrder.STATUS_REFUNDED && existingOrder.status !== RazorpayOrder.STATUS_REFUNDING) {
         if (existingOrder.status !== RazorpayOrder.STATUS_CANCELLED && existingOrder.status !== RazorpayOrder.STATUS_FAILED) {
@@ -1131,20 +1115,6 @@ router.post('/create-pro-order', async (req, res) => {
         return;
       }
 
-      if (existingProOrder.status === RazorpayOrder.STATUS_CREATED && existingProOrder.currency === currency.code) {
-        res.send({
-          orderId: existingProOrder.razorpay_order_id,
-          amount: existingProOrder.amount,
-          currency: existingProOrder.currency,
-          keyId: process.env.PG_KEY_ID,
-          userEmail: user.email,
-          originalPrice: Number(await AppConfig.getValue('acode_pro_price')),
-          displayCurrency: existingProOrder.currency,
-          existingOrder: true,
-        });
-        return;
-      }
-
       // REFUNDED/REFUNDING → create a fresh record (no reuse)
       if (existingProOrder.status !== RazorpayOrder.STATUS_REFUNDED && existingProOrder.status !== RazorpayOrder.STATUS_REFUNDING) {
         if (existingProOrder.status !== RazorpayOrder.STATUS_CANCELLED && existingProOrder.status !== RazorpayOrder.STATUS_FAILED) {
@@ -1441,21 +1411,6 @@ router.post('/create-sponsor-order', async (req, res) => {
       if (existingOrder.status === RazorpayOrder.STATUS_PAID) {
         await ensurePurchaseOwnership(existingOrder.razorpay_order_id, null);
         res.status(400).send({ error: 'Your sponsorship is already active' });
-        return;
-      }
-
-      if (existingOrder.status === RazorpayOrder.STATUS_CREATED && existingOrder.currency === currency.code) {
-        res.send({
-          orderId: existingOrder.razorpay_order_id,
-          amount: existingOrder.amount,
-          currency: existingOrder.currency,
-          keyId: process.env.PG_KEY_ID,
-          userEmail: user.email,
-          tier,
-          originalPrice: price,
-          displayCurrency: existingOrder.currency,
-          existingOrder: true,
-        });
         return;
       }
 

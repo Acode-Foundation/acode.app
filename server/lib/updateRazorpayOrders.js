@@ -69,7 +69,12 @@ async function syncPendingOrders() {
         }
       }
     } catch (error) {
-      console.error(`Error syncing pending razorpay order ${order.razorpay_order_id}:`, error.message);
+      const errDesc = error?.error?.description || error?.message || String(error);
+      console.error(`Error syncing pending razorpay order ${order.razorpay_order_id}: ${errDesc}`);
+
+      if (error?.statusCode === 400 || error?.error?.code === 'BAD_REQUEST_ERROR') {
+        await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_CANCELLED]], [RazorpayOrder.ID, order.id]).catch(() => {});
+      }
     }
   }
 }
@@ -123,7 +128,12 @@ async function syncRefundsOnPaidOrders() {
         notifyRefund(order.razorpay_payment_id).catch((err) => console.error('Failed to send refund email via cron:', err));
       }
     } catch (error) {
-      console.error(`Error checking refund for payment ${order.razorpay_payment_id}:`, error.message);
+      const errDesc = error?.error?.description || error?.message || String(error);
+      console.error(`Error checking refund for payment ${order.razorpay_payment_id}: ${errDesc}`);
+
+      if (error?.statusCode === 400 || error?.error?.code === 'BAD_REQUEST_ERROR') {
+        await RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_CANCELLED]], [RazorpayOrder.ID, order.id]).catch(() => {});
+      }
     }
   }
 }
