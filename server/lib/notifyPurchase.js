@@ -45,7 +45,7 @@ async function notifyPurchase(paymentId, knownUser) {
     );
   } else if (order.product_type === RazorpayOrder.PRODUCT_SPONSOR) {
     const Sponsor = require('../entities/sponsor');
-    const [sponsor] = await Sponsor.get([Sponsor.TIER], [[Sponsor.TOKEN, paymentId]]);
+    const [sponsor] = await Sponsor.get([Sponsor.TIER], [Sponsor.TOKEN, paymentId]);
     if (!sponsor) {
       console.error('Failed to send sponsor email: sponsor record not found for payment', paymentId);
       return;
