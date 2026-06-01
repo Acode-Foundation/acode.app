@@ -1409,9 +1409,16 @@ router.post('/create-sponsor-order', async (req, res) => {
       }
 
       if (existingOrder.status === RazorpayOrder.STATUS_PAID) {
-        await ensurePurchaseOwnership(existingOrder.razorpay_order_id, null);
-        res.status(400).send({ error: 'Your sponsorship is already active' });
-        return;
+        const [linkedSponsor] = await Sponsor.get([Sponsor.EXPIRES_AT, Sponsor.STATUS], [Sponsor.ORDER_ID, existingOrder.razorpay_order_id]);
+
+        if (linkedSponsor?.status === Sponsor.STATE_PURCHASED && linkedSponsor.expires_at) {
+          const expired = new Date(linkedSponsor.expires_at) <= new Date();
+          if (!expired) {
+            await ensurePurchaseOwnership(existingOrder.razorpay_order_id, null);
+            res.status(400).send({ error: 'Your sponsorship is already active' });
+            return;
+          }
+        }
       }
 
       if (existingOrder.status !== RazorpayOrder.STATUS_REFUNDED && existingOrder.status !== RazorpayOrder.STATUS_REFUNDING) {

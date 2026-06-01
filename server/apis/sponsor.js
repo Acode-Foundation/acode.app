@@ -14,18 +14,27 @@ const sponsorImagesPath = resolve(__dirname, '../../data/sponsors');
 router.get('/{:top}', async (req, res) => {
   let page;
   let limit;
-  const isTop = req.params.top === 'top';
+  const param = req.params.top;
+  const isTop = param === 'top';
   const whereClause = [
     [Sponsor.STATUS, Sponsor.STATE_PURCHASED],
     [Sponsor.PUBLIC, 1],
     [Sponsor.EXPIRES_AT, new Date().toISOString(), '>'],
   ];
 
-  if (isTop) {
-    whereClause.push([Sponsor.TIER, 'titanium']);
-  } else {
+  if (!param) {
     page = req.query.page;
     limit = req.query.limit;
+  } else if (isTop) {
+    whereClause.push([Sponsor.TIER, 'titanium']);
+  } else if (/^\d+$/.test(param)) {
+    const [sponsor] = await Sponsor.get(Sponsor.safeColumns, [[Sponsor.ID, param]]);
+    if (!sponsor) {
+      return res.status(404).json({ error: 'Sponsor not found' });
+    }
+    return res.json(sponsor);
+  } else {
+    return res.status(404).json({ error: 'Not found' });
   }
 
   const rows = await Sponsor.get(Sponsor.safeColumns, whereClause, { page, limit });
@@ -42,15 +51,6 @@ router.get('/{:top}', async (req, res) => {
   }
 
   res.send(rows);
-});
-
-router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-  const [sponsor] = await Sponsor.get(Sponsor.safeColumns, [[Sponsor.ID, id]]);
-  if (!sponsor) {
-    return res.status(404).json({ error: 'Sponsor not found' });
-  }
-  res.json(sponsor);
 });
 
 router.post('/', async (req, res) => {
