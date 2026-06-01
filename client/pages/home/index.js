@@ -149,6 +149,12 @@ async function GhButton({ url, title, count, icon = 'github' }) {
   );
 }
 
+function ensureAbsoluteUrl(url) {
+  if (!url) return '';
+  if (/^https?:\/\//.test(url)) return url;
+  return `https://${url}`;
+}
+
 function renderSponsorCard(sponsor) {
   const { id, name, tier, tagline, website, image } = sponsor;
   const initials = name
@@ -166,7 +172,7 @@ function renderSponsorCard(sponsor) {
   return (
     <Tag
       key={id}
-      {...(website ? { href: website, target: '_blank', rel: 'noopener' } : {})}
+      {...(website ? { href: ensureAbsoluteUrl(website), target: '_blank', rel: 'noopener' } : {})}
       className={`sponsor-card sponsor-card-${tier}`}
       title={tierLabel}
     >
