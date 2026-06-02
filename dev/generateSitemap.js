@@ -3,7 +3,6 @@ const puppeteer = require('puppeteer');
 
 const BASE_URL = 'https://acode.app';
 const visited = new Set();
-// const sitemapEntries = [];
 
 /**
  * Pages that should NOT appear in sitemap.
@@ -13,6 +12,7 @@ const visited = new Set();
 const EXCLUDED_PATTERNS = [
   '/login',
   '/register',
+  '/logout',
   '/user',
   '/profile',
   '/change-password',
@@ -42,6 +42,27 @@ const EXCLUDED_PATTERNS = [
 /**
  * Priority mapping for different page types.
  */
+const LANDING_PAGE_PATHS = [
+  'android-ide',
+  'claude-code-android',
+  'codex-android',
+  'opencode-android',
+  'ai-coding-android',
+  'termux-alternative',
+  'linux-terminal-android',
+  'nodejs-android',
+  'npm-android',
+  'react-android',
+  'nextjs-android',
+  'git-android',
+  'ssh-android',
+  'vscode-alternative-android',
+  'cursor-alternative-android',
+  'windsurf-alternative-android',
+  'spck-alternative',
+  'web-development-android',
+];
+
 function getPriority(url) {
   const path = new URL(url).pathname;
   if (path === '/' || path === '') return '1.0';
@@ -52,6 +73,7 @@ function getPriority(url) {
   if (path.startsWith('/plugin/')) return '0.7';
   if (path === '/policy' || path === '/terms' || path === '/refund') return '0.3';
   if (path.startsWith('/faqs/')) return '0.5';
+  if (LANDING_PAGE_PATHS.includes(path.replace(/^\//, ''))) return '0.6';
   return '0.5';
 }
 
@@ -103,26 +125,33 @@ async function crawl(url, browser) {
   }
 
   visited.add(normalized);
-
-  // BASE_URL is already added via visited.add(normalized) above
-
   console.info(`Crawling: ${normalized}`);
+
+  let links = [];
 
   try {
     const page = await browser.newPage();
-    await page.goto(normalized, { waitUntil: 'networkidle2', timeout: 30000 });
-    const links = await page.$$eval('a[href]', (anchors) => anchors.map((a) => new URL(a.getAttribute('href'), location.origin).href));
-
-    await page.close();
-
-    for (const link of links) {
-      const linkNormalized = normalizeUrl(link);
-      if (!visited.has(linkNormalized) && !isExcluded(linkNormalized)) {
-        await crawl(linkNormalized, browser);
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      const type = req.resourceType();
+      if (type === 'image' || type === 'font' || type === 'media') {
+        req.abort();
+      } else {
+        req.continue();
       }
-    }
+    });
+    await page.goto(normalized, { waitUntil: 'networkidle2', timeout: 30000 });
+    links = await page.$$eval('a[href]', (anchors) => anchors.map((a) => new URL(a.getAttribute('href'), location.origin).href));
+    await page.close();
   } catch (error) {
-    console.error(`Failed to crawl ${normalized}:`, error.message);
+    console.error(`Failed to crawl ${normalized}: ${error.message}`);
+  }
+
+  for (const link of links) {
+    const linkNormalized = normalizeUrl(link);
+    if (!visited.has(linkNormalized) && !isExcluded(linkNormalized)) {
+      await crawl(linkNormalized, browser);
+    }
   }
 }
 
@@ -138,6 +167,13 @@ async function generateSitemap() {
 
   try {
     await crawl(BASE_URL, browser);
+
+    for (const landingPath of LANDING_PAGE_PATHS) {
+      const landingUrl = `${BASE_URL}/${landingPath}`;
+      if (!visited.has(landingUrl)) {
+        await crawl(landingUrl, browser);
+      }
+    }
 
     const sorted = Array.from(visited)
       .filter((url) => url.startsWith(BASE_URL))
