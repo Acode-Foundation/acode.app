@@ -104,11 +104,7 @@ async function crawl(url, browser) {
 
   visited.add(normalized);
 
-  if (normalized === BASE_URL || normalized === `${BASE_URL}/`) {
-    if (!visited.has(BASE_URL)) {
-      visited.add(BASE_URL);
-    }
-  }
+  // BASE_URL is already added via visited.add(normalized) above
 
   console.info(`Crawling: ${normalized}`);
 
