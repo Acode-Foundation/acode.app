@@ -151,6 +151,72 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acaw.my.id</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/ace.ai.neosantara</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.ai.coder</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.animation.runner</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.api.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.api_tester.ghostman</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.bash.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.better.monokai</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.catppuccin</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.catppuccin.macchiato</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.catppuccin.ui</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.cli.plugin</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
@@ -158,6 +224,12 @@
   </url>
   <url>
     <loc>https://acode.app/plugin/acode.coderunner.plugin</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.console.cleaner</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -181,7 +253,67 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.devx.env</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.devx.prismax</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.editor.customization</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.emmet.engine</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.env.prisma.highlight</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.fonticons</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.go.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.golang.server</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.hot.reload</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.icon.react</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.iconpack</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -193,7 +325,55 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.java.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.jsongraph.acode</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.kotlin.server</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.language.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.language.client.mod</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.language.servers</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.lua.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.material.icons.advanced</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.motivation</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -211,6 +391,24 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.php.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.pinch</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.ace_linters</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
@@ -223,7 +421,25 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.acelinters_full</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.acelivepreview</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.acopilot</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.ai.sidebar</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -235,13 +451,25 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://acode.app/plugin/acode.plugin.androidbuilder/comments</loc>
+    <loc>https://acode.app/plugin/acode.plugin.anote</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://acode.app/plugin/acode.plugin.anote</loc>
+    <loc>https://acode.app/plugin/acode.plugin.anycdn</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.astro</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.better.comments</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -253,13 +481,67 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.calm_peppermint_theme</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.cdn.manager</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.chaitheme</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.chatgpt</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.clausnori</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.cloud</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.cloud.pro</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.code_snap</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.codepilot</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.color.picker</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.color_palette</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -289,6 +571,18 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.filespilotpro</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.fstreepro</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.generate_code</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
@@ -301,7 +595,43 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.godot</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.gradient</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.header.comment.inserter</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.intellisense</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.jdts</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.json_visualizer</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.jsonformatter</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -319,6 +649,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.localhostpreview</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.loremipsum</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
@@ -331,7 +667,43 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.lovelauncher</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.lumina_code_dark</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.lumina_code_dark_pro</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.macro</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.macro_pro</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.material_icons</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.mini_leet</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -343,7 +715,31 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.moonloaderautocomplete</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.nekotheme</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.package.adder</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.phpspa</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.phpworkstation</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -355,7 +751,19 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.pixel_icons</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.prettier</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.ptmono</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -373,7 +781,31 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.react.snippet</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.renpy</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.restapi</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.restapi.pro</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.rust_claus</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -391,13 +823,55 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.smart_claus</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.snippets</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.solidity</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.sugerserver</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.svelte</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.synthwave</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.tab</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.tab_pro</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.tab_xp</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -427,7 +901,25 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.todo</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.todo_pro</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.typescript</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.urus.foundation</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -457,7 +949,19 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.plugin.vscode_syntax_highlights</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.plugin.workspace</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.plugin.workspace.manager</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -469,13 +973,91 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.prisma.highlight</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.python.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.python.custom</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.python.fmt</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.radiant_eclispe_theme</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.rakha.gradient.generator</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.rose.pine</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.runner.plugin</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.rust.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.ryu.tslsp</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.sanjeet.snippetx</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.sdk.plugin</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.solar2d.autocompletion</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.ssh.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.svelte.client</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -493,7 +1075,91 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/acode.theme.codenokami</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.theme.hacker_console</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/acode.theme.jellyfish</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.theme.lumina_code_dark</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.theme.modern.dark</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.theme.modern.light</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.theme.monokai_pro</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.theme.oceanicafternext</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.typescript.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.typst.server</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.ugex.tailwindcss_intellisense</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.vim</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.vscode.great.icons</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.vue.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/acode.yaml.server</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -505,13 +1171,67 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/almukaafih.icons</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/almukaafih.jetbrains.icon.auto</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/almukaafih.jetbrains.icon.dark</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/almukaafih.jetbrains.icon.light</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/almukaafih.jetbrains.icon.v1</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/almukaafih.nomo.dark</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/almukaafih.vscode_api</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/almukaafih.zipfs</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/aocde.clone.repo</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/autoclose</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/axpo.dev</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -559,6 +1279,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/bajrangcoder.one.dark</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/bajrangcoder.path.intellize</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
@@ -583,6 +1309,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/bajrangcoder.tailwind.fold</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/bajrangcoder.templat</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
@@ -595,7 +1327,163 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/bongo.cat.typing</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/chat</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/code.metrics</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/code_formatter</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/codewithchai.theme.draculax</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.acode.aiagent</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.acode.commentedly</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.acode.community</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.acode.mysolidity</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.acode.svelteformatter</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.alis219.sqlite.viewer</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.arfoxcode.runner_python_node</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.arman260802.javascript.snippets</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.asyncpranav.acodepets</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.asyncpranav.bettercomments</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.fikriwardana.aichat</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.itsvks.axon</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.loremipsuminline.plugin</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.mesanjeet.acode.arcticaurora</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.mesanjeet.acode.chaitheme</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.mesanjeet.acode.deepoceanglass</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.mesanjeet.acode.midnightmatcha</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.mesanjeet.acode.sunsetember</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.rightfix.acodeopencode</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.rightfix.ngrok</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.techsetuapps.instantweb.livepreviewer</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/com.ytgandroid.smali.runner</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -619,7 +1507,115 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/cubarabara.responsive</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/customcss</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/customjs</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/dconco.google_sans_code_fonts</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/dev.ct.minecraft.autocomplete.v2</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/dev.rugved.githubmanager</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/devilhunter.cpp.snippets</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/dikidjatar.plugin.github</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/documentsviewer</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/fanorisky.pawn.kit</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/fast.html</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/filelistmanager</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/fulminyx.plugin.userdb</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/github</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/github.next.monaspace</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/hackesofice.browser</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/hackesofice.messanger_ax</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/hallofcodes.rutex.coding_agent</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/iconbrowser</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -631,7 +1627,43 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/jobians.lsp.client</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/jobians.theme.amoled_black</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/jobians.todo.manager</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/jsonrunner</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/keyboard.disabler.plugin</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/knxtr.svelte.autocomplete</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/live_auto_pre</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -643,13 +1675,73 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/love2d</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/manus.dart.autocomplete</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/marshall.nekiu.bookmark</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/matrix.api.lab</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/mcp.sidebar.app</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/me.bajrangcoder.sql</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/mermaid_preview</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/mingokrb.sm64coopdx.autocomplete</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/my.icons</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/neonheart711.theme</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/neonheart711.theme.v2</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/northlabs.bezier_studio.plugin</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -679,7 +1771,31 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/plugin.acode.fstucture</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/plugin.acode.inlinelog</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/plugin.acode.javascript</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/plugin.acode.markdownexecutor</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/plugin.acode.minimap</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -691,7 +1807,61 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://acode.app/plugin/plugin.acode.stickybread/comments</loc>
+    <loc>https://acode.app/plugin/plugin.acode.ultimatejsonoryaml</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/plugin.acodecm6.minimap</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/plugin.codicon.font</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/plugin.overpass.mono</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/plugin.ts.compiler</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/projects.x2.com</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/pyformatter</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/pyrofork_helper.onlynoco</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/repechul.gdscript.quick.comments</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/responsive.tester</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -703,7 +1873,67 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/rk.adoc</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/rk.termux</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/ronilsonrsj.plugin.rn</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/rsjronilson.acode.gitlens</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/rsjronilson.amoled.theme</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/rsjronilson.bluloco</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/rsjronilson.css.intellisense</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/rsjronilson.css.peek</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/rsjronilson.mini.map</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/rsjronilson.npm.intellisense</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/rsjronilson.task.manager</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -715,7 +1945,25 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/sebastianjnuwu.bulma.intellisense</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/sebastianjnuwu.material.icons</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/sebastianjnuwu.materializecss.intellisense</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/sebastianjnuwu.symbols.icons</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -733,7 +1981,97 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/slabs.theme.halloween_pumpkin_night</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/smart.todo.scanner</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/su_hat_sudo_font</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/surf</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/sync</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/techno.acode.reload</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/techno.autorenametag</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/terser</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/the.dragon</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/thunder.plugin.csv_to_table</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/thunder.plugin.csv_to_table.free</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/thunder.plugin.data_vis.free</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/thunder.plugin.data_vis.pro</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/thunder.plugin.terminal.quick_button</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/thunder.starter.bolt</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/twistedfish.emoji_picker</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -751,7 +2089,37 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/webfonts</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/whodaff.acodethebox.theme</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/x.always.welcome.page</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/x.better.appslauncher</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/x.better.githubdark</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/x.better.snippets</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -763,7 +2131,67 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://acode.app/plugin/x.breadcrumbs</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/x.discord.rpc</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/x.friend</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/x.profile</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/x.treesitter</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/x.util.o.u.t.f</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://acode.app/plugin/x.wakatime</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/xiex.my.id_api_ai</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/ych.csv2json</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/ych.json2code</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://acode.app/plugin/zigclient.plugin</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

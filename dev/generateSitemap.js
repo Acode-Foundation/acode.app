@@ -1,8 +1,54 @@
 const fs = require('node:fs');
+const path = require('node:path');
 const puppeteer = require('puppeteer');
+const sqlite3 = require('better-sqlite3');
 
 const BASE_URL = 'https://acode.app';
 const visited = new Set();
+
+const DB_FILE = path.resolve(__dirname, '../data/db.sqlite3');
+const FAQS_FILE = path.resolve(__dirname, '../data/faqs.json');
+
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash).toString(36);
+}
+
+/**
+ * Adds all plugin and FAQ detail-page URLs directly from the database
+ * and JSON files, skipping the need to crawl them.
+ */
+function addPluginAndFaqUrls() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const db = sqlite3(DB_FILE);
+      const plugins = db.prepare('SELECT id FROM plugin WHERE status = 1').all();
+      for (const { id } of plugins) {
+        visited.add(`${BASE_URL}/plugin/${id}`);
+      }
+      console.info(`Added ${plugins.length} plugin detail pages from DB`);
+      db.close();
+    }
+  } catch (err) {
+    console.error('Failed to read plugins from DB:', err.message);
+  }
+
+  try {
+    if (fs.existsSync(FAQS_FILE)) {
+      const faqs = JSON.parse(fs.readFileSync(FAQS_FILE, 'utf8'));
+      for (const { q } of faqs) {
+        const id = hashString(q);
+        visited.add(`${BASE_URL}/faqs/${id}`);
+      }
+      console.info(`Added ${faqs.length} FAQ detail pages from JSON`);
+    }
+  } catch (err) {
+    console.error('Failed to read FAQs from JSON:', err.message);
+  }
+}
 
 /**
  * Pages that should NOT appear in sitemap.
@@ -28,6 +74,8 @@ const EXCLUDED_PATTERNS = [
   '/api',
   '/res/',
   '/plugin-icon/',
+  '/plugin/',
+  '/faqs/',
   '?redirect=',
   '/src/',
   '.d.ts',
@@ -174,6 +222,8 @@ async function generateSitemap() {
         await crawl(landingUrl, browser);
       }
     }
+
+    addPluginAndFaqUrls();
 
     const sorted = Array.from(visited)
       .filter((url) => url.startsWith(BASE_URL))
