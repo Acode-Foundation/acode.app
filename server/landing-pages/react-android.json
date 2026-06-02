@@ -1,0 +1,97 @@
+{
+  "path": "/react-android",
+  "title": "React Development on Android — Complete Guide | Acode",
+  "description": "Build React applications on your Android phone with Acode. Full React development environment with Node.js, npm, terminal, and live preview. Create React apps anywhere, anytime.",
+  "heroHeadline": "Build React Apps on Your Android Phone",
+  "heroSubheadline": "Acode gives you a complete React development environment on Android. Create React App, Vite, JSX syntax highlighting, live preview, Node.js, and npm — all running natively on your phone.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Get Started",
+  "problemHeadline": "React Development Needs a Desktop — Right?",
+  "problemPoints": [
+    "React development requires Node.js, npm, a terminal, and a browser for preview. These are desktop tools. Running them on Android has been considered impossible — until now.",
+    "Sure, you can edit JSX files in a text editor app, but you can't run them. You can't <code>npm install</code>. You can't start a dev server. You can't see your components render. You're editing blind.",
+    "React developers who want to code on the go have had no real option. They either carry a laptop everywhere or wait until they're at their desk. Mobile development has been a dream, not reality."
+  ],
+  "solutionHeadline": "Full React Development on Acode",
+  "solutionPoints": [
+    "Acode's Alpine Linux terminal runs Node.js and npm natively. Run <code>npx create-react-app my-app</code> or <code>npm create vite@latest</code> to scaffold a React project. It works exactly like it does on desktop.",
+    "<strong>JSX/TSX syntax highlighting</strong> is built into Acode's editor. Your React components are color-coded and readable. Install the React Snippets plugin for component templates and shortcuts.",
+    "Start the dev server with <code>npm start</code> or <code>npm run dev</code>. Your React app runs locally on your phone. Preview it in Acode's built-in browser or any web browser on your device.",
+    "The complete React workflow on Android: write components in the editor, see errors in the terminal, debug in the JavaScript console, commit with Git, and deploy — all from your phone."
+  ],
+  "setupHeadline": "Create Your First React App on Acode",
+  "setupSteps": [
+    { "title": "Install Acode & Terminal", "description": "Download Acode and set up the Alpine Linux terminal (first launch only)." },
+    { "title": "Install Node.js", "description": "Run: <code>apk update && apk add nodejs npm</code>" },
+    {
+      "title": "Create a React Project",
+      "description": "Choose your setup:<br/><code>npx create-react-app my-app</code> (CRA)<br/>or <code>npm create vite@latest my-app -- --template react</code> (Vite — faster)."
+    },
+    {
+      "title": "Start Development",
+      "description": "Run: <code>cd my-app && npm start</code> (CRA) or <code>npm run dev</code> (Vite). Your React app is now live on your phone."
+    },
+    {
+      "title": "Edit Components",
+      "description": "Open <code>src/App.js</code> in Acode's editor. Make changes. See them update instantly with hot module replacement."
+    },
+    {
+      "title": "Install Additional Dependencies",
+      "description": "Need React Router? <code>npm install react-router-dom</code>. Tailwind? <code>npm install tailwindcss</code>. Any npm package works."
+    }
+  ],
+  "featuresHeadline": "React Development Features on Acode",
+  "features": [
+    {
+      "title": "JSX/TSX Support",
+      "description": "Full syntax highlighting for JSX and TSX. Acode's editor understands React's component syntax and provides clear visual distinction between markup and logic."
+    },
+    {
+      "title": "Hot Module Replacement",
+      "description": "Changes you make to React components are reflected instantly in the browser. Vite's HMR works perfectly through Acode's terminal and browser."
+    },
+    {
+      "title": "React Developer Tools",
+      "description": "Debug your React apps using the JavaScript console, terminal output, and browser DevTools. Full debugging capabilities on mobile."
+    },
+    {
+      "title": "Component Libraries",
+      "description": "Install and use Material UI, Ant Design, Chakra UI, or any React component library via npm. They all work on Acode."
+    },
+    {
+      "title": "State Management",
+      "description": "Redux, Zustand, Jotai, React Context — all work on Acode. Install via npm and use in your components."
+    },
+    {
+      "title": "Tailwind CSS",
+      "description": "Install Tailwind CSS plugin for Acode to get IntelliSense for Tailwind classes. Edit utility classes with autocompletion."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Can I really build a full React app on Android?",
+      "answer": "Yes. Acode provides everything you need: Node.js, npm, terminal, editor with JSX support, and live preview. You can scaffold, develop, and test a complete React application on your phone."
+    },
+    {
+      "question": "Does Create React App work on Acode?",
+      "answer": "Yes, but Vite is recommended for faster startup and better mobile performance. Both work — Vite is significantly faster on mobile devices."
+    },
+    {
+      "question": "Can I run React Native on Acode?",
+      "answer": "React Native development is limited on Android since it requires native build tools. For React Native, use a desktop. For React web apps, Acode is perfect."
+    },
+    {
+      "question": "Can I deploy my React app from Acode?",
+      "answer": "Yes. Use <code>npm run build</code> to create a production build. Then deploy via Git (push to GitHub and use Vercel/Netlify) or FTP (upload build files to your server)."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Next.js on Android", "url": "/nextjs-android" },
+    { "title": "Node.js on Android", "url": "/nodejs-android" },
+    { "title": "npm on Android", "url": "/npm-android" },
+    { "title": "Web Dev on Android", "url": "/web-development-android" },
+    { "title": "Git on Android", "url": "/git-android" },
+    { "title": "Android IDE Guide", "url": "/android-ide" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"React Development on Android — Complete Guide\",\"description\":\"Build React applications on your Android phone with Acode. Full React development environment with Node.js, npm, terminal, and live preview.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/react-android\"}}"
+}

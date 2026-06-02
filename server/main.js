@@ -9,6 +9,17 @@ const fileUpload = require('express-fileupload');
 const Handlebars = require('handlebars');
 const markdownToText = require('markdown-to-txt');
 const defaultOg = require('./defaultOg.json');
+const { getMetadata, getPluginsMetadata, getFaqsMetadata, FALLBACK_TITLE } = require('./routeMetadata');
+
+/**
+ * Escape JSON-LD string for safe embedding inside a <script> tag.
+ * Prevents </script> and similar sequences in schema text from
+ * prematurely terminating the JSON-LD script tag.
+ */
+function safeSchema(jsonString) {
+  if (!jsonString) return null;
+  return jsonString.replace(/<\//g, '<\\/');
+}
 const Plugin = require('./entities/plugin');
 const apis = require('./routes/apis');
 const oauth = require('./apis/oauth');
@@ -97,6 +108,11 @@ async function main() {
   app.get('/sitemap.xml', (_req, res) => {
     res.setHeader('Content-Type', 'application/xml');
     res.sendFile('sitemap.xml', { root: process.cwd() });
+  });
+
+  app.get('/robots.txt', (_req, res) => {
+    res.setHeader('Content-Type', 'text/plain');
+    res.sendFile('robots.txt', { root: process.cwd() });
   });
 
   app.use('/api', apis);
@@ -203,16 +219,31 @@ async function main() {
       const template = path.resolve(__dirname, './index.hbs');
       const source = fs.readFileSync(template, 'utf8');
       const templateScript = Handlebars.compile(source);
+      const pageDesc = markdownToText.default(plugin.description);
 
       res.header('Content-Type', 'text/html;charset=utf-8');
       res.send(
         templateScript({
           title: `${plugin.name} - Acode`,
-          description: markdownToText.default(plugin.description),
+          description: pageDesc,
           icon: `plugin-icon/${plugin.id}`,
-          url: `plugin/${plugin.id}`,
+          ogUrl: `plugin/${plugin.id}`,
+          canonicalPath: `/plugin/${plugin.id}`,
           icon_alt: `${plugin.name} icon`,
           site_name: `Acode - ${plugin.name}`,
+          robots: 'index, follow',
+          pageSchema: safeSchema(
+            JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'SoftwareApplication',
+              name: plugin.name,
+              applicationCategory: 'DeveloperApplication',
+              operatingSystem: 'Android',
+              description: pageDesc,
+              url: `https://acode.app/plugin/${plugin.id}`,
+            }),
+          ),
+          orgSchema: null,
         }),
       );
     } catch (_error) {
@@ -220,13 +251,130 @@ async function main() {
     }
   });
 
-  app.get('*path', (_req, res) => {
+  // Landing pages — fully server-rendered for SEO
+  const LANDING_PAGE_PATHS = [
+    'claude-code-android',
+    'codex-android',
+    'opencode-android',
+    'termux-alternative',
+    'android-ide',
+    'ai-coding-android',
+    'linux-terminal-android',
+    'nodejs-android',
+    'npm-android',
+    'react-android',
+    'nextjs-android',
+    'git-android',
+    'ssh-android',
+    'vscode-alternative-android',
+    'cursor-alternative-android',
+    'windsurf-alternative-android',
+    'spck-alternative',
+    'web-development-android',
+  ];
+
+  for (const landingPath of LANDING_PAGE_PATHS) {
+    app.get(`/${landingPath}`, (_req, res) => {
+      const pageFile = path.resolve(__dirname, `./landing-pages/${landingPath}.json`);
+      if (!fs.existsSync(pageFile)) {
+        res.status(404).send({ error: 'Page not found' });
+        return;
+      }
+      const pageData = JSON.parse(fs.readFileSync(pageFile, 'utf8'));
+      const landingTemplate = path.resolve(__dirname, './landing.hbs');
+      const source = fs.readFileSync(landingTemplate, 'utf8');
+      const templateScript = Handlebars.compile(source);
+
+      res.header('Content-Type', 'text/html;charset=utf-8');
+      res.send(
+        templateScript({
+          ...pageData,
+          canonicalPath: `/${landingPath}`,
+        }),
+      );
+    });
+  }
+
+  // Plugins page — dynamic count from DB
+  app.get('/plugins', async (_req, res) => {
     const template = path.resolve(__dirname, './index.hbs');
     const source = fs.readFileSync(template, 'utf8');
     const templateScript = Handlebars.compile(source);
 
+    const pluginsMeta = await getPluginsMetadata();
+    const metadata = getMetadata('/plugins');
+
     res.header('Content-Type', 'text/html;charset=utf-8');
-    res.send(templateScript(defaultOg));
+    res.send(
+      templateScript({
+        ...defaultOg,
+        title: pluginsMeta.title,
+        description: pluginsMeta.description,
+        icon: metadata?.icon || defaultOg.icon,
+        icon_alt: pluginsMeta.title,
+        ogUrl: 'plugins',
+        canonicalPath: '/plugins',
+        robots: 'index, follow',
+        pageSchema: metadata?.schema ? safeSchema(JSON.stringify(metadata.schema)) : null,
+        orgSchema: null,
+      }),
+    );
+  });
+
+  // FAQs page — dynamic schema from data/faqs.json
+  app.get('/faqs', (_req, res) => {
+    const template = path.resolve(__dirname, './index.hbs');
+    const source = fs.readFileSync(template, 'utf8');
+    const templateScript = Handlebars.compile(source);
+
+    const faqMeta = getFaqsMetadata();
+
+    res.header('Content-Type', 'text/html;charset=utf-8');
+    res.send(
+      templateScript({
+        ...defaultOg,
+        title: faqMeta.title,
+        description: faqMeta.description,
+        ogUrl: 'faqs',
+        canonicalPath: '/faqs',
+        robots: 'index, follow',
+        pageSchema: faqMeta.schema ? safeSchema(JSON.stringify(faqMeta.schema)) : null,
+        orgSchema: null,
+      }),
+    );
+  });
+
+  app.get('*path', (req, res) => {
+    const template = path.resolve(__dirname, './index.hbs');
+    const source = fs.readFileSync(template, 'utf8');
+    const templateScript = Handlebars.compile(source);
+
+    const metadata = getMetadata(req.path);
+    const context = metadata
+      ? {
+          ...defaultOg,
+          title: metadata.title,
+          description: metadata.description,
+          icon: metadata.icon || defaultOg.icon,
+          icon_alt: metadata.iconAlt || metadata.title || defaultOg.icon_alt,
+          ogUrl: req.path.replace(/^\//, ''),
+          canonicalPath: req.path,
+          robots: 'index, follow',
+          pageSchema: metadata.schema ? safeSchema(JSON.stringify(metadata.schema)) : null,
+          orgSchema: metadata.orgSchema ? JSON.stringify(metadata.orgSchema) : null,
+        }
+      : {
+          ...defaultOg,
+          title: FALLBACK_TITLE,
+          ogUrl: req.path.replace(/^\//, ''),
+          canonicalPath: req.path,
+          robots: 'index, follow',
+          orgSchema: null,
+          pageSchema: null,
+        };
+
+    res.header('Content-Type', 'text/html;charset=utf-8');
+    res.send(templateScript(context));
   });
 
   // eslint-disable-next-line no-unused-vars

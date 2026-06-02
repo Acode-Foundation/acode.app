@@ -1,0 +1,120 @@
+{
+  "path": "/claude-code-android",
+  "title": "How to Run Claude Code on Android — A Complete Guide | Acode",
+  "description": "Learn how to run Claude Code (Anthropic's agentic AI coding tool) on your Android phone using Acode. Full setup guide with Alpine Linux terminal. The only way to use Claude Code on Android.",
+  "heroHeadline": "Run Claude Code on Your Android Phone",
+  "heroSubheadline": "Acode is the only Android IDE that lets you run Claude Code natively in a full Alpine Linux terminal. Get Anthropic's AI coding agent working on your phone in under 5 minutes.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "How It Works",
+  "problemHeadline": "Why Can't You Run Claude Code on Android?",
+  "problemPoints": [
+    "Claude Code is Anthropic's powerful AI coding agent — but it's designed for desktops. It runs in a terminal, requires Node.js, and expects a full command-line environment.",
+    "Regular Android code editors can't run terminal commands. They're text editors, not development environments. You can edit files, but you can't run Claude Code.",
+    "Termux can run terminal commands, but it has no code editor. You'd need to constantly switch between Termux (for Claude Code) and another app (for editing files). That's not a real workflow.",
+    "Until now, there was simply no way to use Claude Code on Android with a proper development setup. Developers who wanted AI-assisted coding on the go were stuck."
+  ],
+  "solutionHeadline": "How Acode Makes Claude Code Work on Android",
+  "solutionPoints": [
+    "Acode includes a <strong>full Alpine Linux terminal</strong> using proot technology — the same kind of environment Claude Code expects. You get <code>bash</code>, <code>apk</code> package manager, and everything you need.",
+    "Install Node.js and npm directly in Acode's terminal with a single command: <code>apk add nodejs npm</code>. Then install Claude Code just like you would on a desktop.",
+    "Once Claude Code is running, it can create, edit, and modify files — and you can <strong>view those changes immediately in Acode's code editor</strong> with full syntax highlighting. Use the <code>acode</code> CLI command to open files from terminal to editor instantly.",
+    "Acode combines the terminal and editor in one app. Claude Code runs in one tab, your project files are open in another. No switching apps. No compromises. This is real AI-assisted development on Android."
+  ],
+  "setupHeadline": "Setup Guide: Claude Code on Acode",
+  "setupSteps": [
+    {
+      "title": "Install Acode",
+      "description": "Download Acode from the <a href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree' target='_blank' rel='noopener'>Google Play Store</a> or <a href='https://www.f-droid.org/packages/com.foxdebug.acode/' target='_blank' rel='noopener'>F-Droid</a>. Open the app."
+    },
+    {
+      "title": "Set Up the Terminal",
+      "description": "Tap the terminal icon in the top-right corner. If this is your first time, Acode will download and set up Alpine Linux automatically. This takes about 30-60 seconds."
+    },
+    {
+      "title": "Install Node.js and npm",
+      "description": "In the terminal, run: <br/><code>apk update && apk add nodejs npm</code><br/>This installs Node.js and npm — required by Claude Code."
+    },
+    {
+      "title": "Install Claude Code",
+      "description": "Follow <a href='https://docs.anthropic.com/en/docs/claude-code' target='_blank' rel='noopener'>Anthropic's installation guide</a>. Typically: <br/><code>npm install -g @anthropic-ai/claude-code</code><br/>Then authenticate with your Anthropic API key."
+    },
+    {
+      "title": "Run Claude Code",
+      "description": "In Acode's terminal, run: <br/><code>claude</code><br/>Claude Code will start in interactive mode. It can now access your project files, create new files, run commands, and help you code — all on your Android phone."
+    },
+    {
+      "title": "Use Acode's Editor Alongside",
+      "description": "When Claude Code creates or modifies files, use Acode's editor to view changes. Open a file from terminal with: <br/><code>acode .</code> (opens current folder) or <code>acode filename.js</code> (opens a specific file)."
+    }
+  ],
+  "featuresHeadline": "What You Can Do with Claude Code on Acode",
+  "features": [
+    {
+      "title": "AI-Powered Code Generation",
+      "description": "Ask Claude Code to generate functions, components, or entire modules. It writes the code, and you preview it in Acode's editor with full syntax highlighting."
+    },
+    {
+      "title": "Automated Debugging",
+      "description": "Paste error messages into Claude Code and it will analyze, explain, and fix bugs in your codebase — directly on your phone."
+    },
+    {
+      "title": "Refactoring & Code Review",
+      "description": "Have Claude Code review your code for best practices, refactor legacy patterns, and suggest improvements — all within Acode's terminal."
+    },
+    {
+      "title": "File Operations via AI",
+      "description": "Claude Code can create, rename, move, and search files in your project. Use it as an AI file manager within Acode's workspace."
+    },
+    {
+      "title": "Multi-File Project Context",
+      "description": "Claude Code understands your entire project structure. Ask it questions about your codebase, and it can work across multiple files simultaneously."
+    },
+    {
+      "title": "Terminal + Editor Integration",
+      "description": "Switch between Claude Code (in terminal tab) and your code (in editor tab) seamlessly. Use <code>acode</code> CLI to bridge both environments."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Can I really run Claude Code on an Android phone?",
+      "answer": "Yes. Acode includes a full Alpine Linux terminal that runs natively on Android via proot technology. Since Claude Code is a command-line tool, it works in Acode's terminal just like it works on a desktop or server."
+    },
+    {
+      "question": "Do I need root access on my Android phone?",
+      "answer": "No. Acode's terminal uses proot, which runs a Linux environment entirely in userspace. No root access is required. It works on any Android 7.0+ device."
+    },
+    {
+      "question": "Is there a free version of Claude Code?",
+      "answer": "Claude Code is Anthropic's product. You'll need an Anthropic API key and may incur usage costs based on their pricing. Check <a href='https://anthropic.com/pricing' target='_blank' rel='noopener'>Anthropic's pricing page</a> for current rates. Acode itself is completely free and open source."
+    },
+    {
+      "question": "Does Claude Code work offline on Acode?",
+      "answer": "Claude Code requires an internet connection to communicate with Anthropic's API. Acode's editor and terminal work offline, but the AI agent needs connectivity."
+    },
+    {
+      "question": "Can I use Claude Code alongside other AI tools?",
+      "answer": "Yes. Acode's terminal can run any CLI-based AI tool. You can use Claude Code alongside OpenAI Codex, OpenCode, or any other AI coding agent that works on Alpine Linux."
+    },
+    {
+      "question": "What programming languages does Claude Code support?",
+      "answer": "Claude Code understands and generates code in most programming languages — Python, JavaScript, TypeScript, Java, Go, Rust, C/C++, and more. Acode provides syntax highlighting for all of them."
+    },
+    {
+      "question": "Is Acode better than using Termux for Claude Code?",
+      "answer": "Termux can run Claude Code, but it has no code editor. You'd need to switch between Termux and a separate editor app. Acode combines both — terminal and editor in one app — with an <code>acode</code> CLI that bridges them. It's a much better workflow."
+    },
+    {
+      "question": "Can Claude Code edit files that I have open in the editor?",
+      "answer": "Yes. Claude Code runs in the terminal and can modify files on disk. You can open those files in Acode's editor to see the changes with full syntax highlighting. The editor and terminal share the same file system."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Run Codex on Android", "url": "/codex-android" },
+    { "title": "Run OpenCode on Android", "url": "/opencode-android" },
+    { "title": "AI Coding on Android Guide", "url": "/ai-coding-android" },
+    { "title": "Android IDE with Terminal", "url": "/android-ide" },
+    { "title": "Node.js on Android", "url": "/nodejs-android" },
+    { "title": "Termux Alternative", "url": "/termux-alternative" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"How to Run Claude Code on Android\",\"description\":\"Learn how to run Claude Code (Anthropic's agentic AI coding tool) on your Android phone using Acode. The only way to use Claude Code on Android with a full development environment.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/claude-code-android\"}}"
+}

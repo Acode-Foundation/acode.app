@@ -1,0 +1,56 @@
+{
+  "path": "/ssh-android",
+  "title": "SSH on Android — Remote Server Access Guide | Acode",
+  "description": "Connect to remote servers via SSH from your Android phone using Acode. Edit configs, manage deployments, and troubleshoot from anywhere. Full Alpine Linux terminal with OpenSSH support.",
+  "heroHeadline": "SSH from Your Android Phone",
+  "heroSubheadline": "Acode gives you a full SSH experience on Android. Install OpenSSH in the Alpine Linux terminal, connect to remote servers, edit files with syntax highlighting — all from your phone.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Setup Guide",
+  "problemHeadline": "Remote Server Access on Mobile Is Painful",
+  "problemPoints": [
+    "Developers on call need SSH access from anywhere. Android SSH apps exist, but they are basic terminals without code editors. You can connect, but editing config files without syntax highlighting is painful.",
+    "Editing nginx.conf, docker-compose.yml, or Python scripts in a basic terminal means no syntax highlighting, no line numbers, and no project navigation. Emergency fixes on mobile become an exercise in frustration."
+  ],
+  "solutionHeadline": "SSH + Professional Editor in Acode",
+  "solutionPoints": [
+    "Install OpenSSH in Acode's terminal: <code>apk add openssh</code>. Connect to any server with standard SSH commands. Use SSH keys for secure, passwordless authentication.",
+    "The game-changer: download server files and edit them in Acode's editor with full syntax highlighting. YAML, JSON, Python, bash — all with proper color coding and formatting.",
+    "Acode also has an SSH client plugin for a GUI connection manager. Combine terminal SSH with the editor for complete remote development on Android."
+  ],
+  "featuresHeadline": "SSH Features on Acode",
+  "features": [
+    {
+      "title": "OpenSSH Client",
+      "description": "Full OpenSSH in Alpine Linux. Support for SSH keys, SSH agent forwarding, port forwarding, and all standard SSH features."
+    },
+    {
+      "title": "Syntax-Highlighted Editing",
+      "description": "Edit server configs in Acode's editor with proper highlighting for YAML, JSON, Python, bash, nginx configs, and 100+ more languages."
+    },
+    {
+      "title": "SCP/SFTP File Transfer",
+      "description": "Transfer files between your phone and servers using SCP and SFTP commands in the terminal."
+    },
+    {
+      "title": "GUI SSH Plugin",
+      "description": "Install the SSH Client plugin for a visual connection manager. Save connections, organize servers, and connect with one tap."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Is SSH on Acode secure?",
+      "answer": "Yes. Acode uses standard OpenSSH with full encryption. SSH keys are stored in the Alpine Linux environment. Acode is open source, so the code is auditable."
+    },
+    {
+      "question": "Can I use SSH keys from my desktop?",
+      "answer": "Yes. Copy your SSH private key to Acode's terminal (via secure file transfer) and add it to the SSH agent. Or generate new keys with ssh-keygen."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Linux Terminal Android", "url": "/linux-terminal-android" },
+    { "title": "Git on Android", "url": "/git-android" },
+    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Termux Alternative", "url": "/termux-alternative" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"SSH on Android — Remote Server Access Guide\",\"description\":\"Connect to remote servers via SSH from your Android phone using Acode.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/ssh-android\"}}"
+}

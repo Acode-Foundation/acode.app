@@ -1,0 +1,57 @@
+{
+  "path": "/spck-alternative",
+  "title": "Spck Alternative — Acode Android IDE with Terminal | Acode",
+  "description": "Looking beyond Spck Editor? Acode adds a full Linux terminal, AI coding agents, SSH, FTP, and 250+ plugins. The Android IDE that lets you edit AND run code in one app.",
+  "heroHeadline": "Spck Lets You Edit Code. Acode Lets You Run It.",
+  "heroSubheadline": "Spck is a good code editor for Android. Acode is a complete IDE — same code editing capabilities plus a full Alpine Linux terminal, AI coding agents, 250+ plugins, SSH, and FTP.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Compare Features",
+  "problemHeadline": "Spck Can Edit Code, But It Can't Run It",
+  "problemPoints": [
+    "Spck Editor is a popular Android code editor with good Git integration and a clean UI. It's great for editing code — but it stops there. You can't run Node.js, can't install npm packages, can't execute Python scripts.",
+    "Without a terminal, Spck is an editor, not a development environment. You can write code but never see it run. You can import libraries but never install them."
+  ],
+  "solutionHeadline": "Acode: Editor + Terminal + AI",
+  "solutionPoints": [
+    "Acode gives you everything Spck offers — syntax highlighting, Git integration, clean UI, project management — plus a full Alpine Linux terminal. Install Node.js, Python, Git, compilers. Run your code. See the output.",
+    "Acode has 250+ plugins (vs Spck's limited ecosystem). AI coding agents (Claude Code, Codex, OpenCode) run natively. SSH and FTP clients built in. It's not a code editor — it's a complete IDE."
+  ],
+  "comparisonHeadline": "Acode vs Spck",
+  "comparisonHeaders": ["Feature", "Acode", "Spck Editor"],
+  "comparisonRows": [
+    ["Code Editor", "<span class='lan-check'>✔ 100+ languages</span>", "<span class='lan-check'>✔ Syntax highlighting</span>"],
+    ["Linux Terminal", "<span class='lan-check'>✔ Alpine Linux (apk)</span>", "<span class='lan-cross'>✘ None</span>"],
+    ["Run Code", "<span class='lan-check'>✔ Node.js, Python, etc.</span>", "<span class='lan-cross'>✘ Edit only</span>"],
+    ["npm/npx", "<span class='lan-check'>✔ Works</span>", "<span class='lan-cross'>✘ No</span>"],
+    ["AI Coding Agents", "<span class='lan-check'>✔ Claude Code, Codex</span>", "<span class='lan-cross'>✘ No</span>"],
+    ["Git Integration", "<span class='lan-check'>✔ CLI + GUI</span>", "<span class='lan-check'>✔ Yes</span>"],
+    ["SSH Client", "<span class='lan-check'>✔ Plugin + terminal</span>", "<span class='lan-cross'>✘ No</span>"],
+    ["FTP/SFTP", "<span class='lan-check'>✔ Built-in</span>", "<span class='lan-cross'>✘ No</span>"],
+    ["Plugins", "<span class='lan-check'>✔ 250+ plugins</span>", "<span class='lan-check'>✔ Limited</span>"],
+    ["Command Palette", "<span class='lan-check'>✔ Ctrl+Shift+P</span>", "<span class='lan-cross'>✘ No</span>"],
+    ["Open Source", "<span class='lan-check'>✔ MIT License</span>", "<span class='lan-check'>✔ Open source</span>"],
+    ["Price", "<span class='lan-check'>✔ Free</span>", "<span class='lan-check'>✔ Free</span>"]
+  ],
+  "featuresHeadline": "Why Switch to Acode",
+  "features": [
+    {
+      "title": "Run What You Write",
+      "description": "Spck lets you edit JavaScript. Acode lets you run it. Install Node.js, npm, Python — execute your code in the terminal and see the output instantly."
+    },
+    {
+      "title": "AI Coding on Mobile",
+      "description": "Spck has no AI features. Acode runs Claude Code, Codex, and OpenCode natively. AI agents generate code in the terminal, you edit it in the editor."
+    },
+    {
+      "title": "250+ Plugins",
+      "description": "Spck has limited extensibility. Acode has a thriving plugin ecosystem with themes, language servers, AI tools, formatters, and more."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Termux Alternative", "url": "/termux-alternative" },
+    { "title": "VS Code Alternative", "url": "/vscode-alternative-android" },
+    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Node.js on Android", "url": "/nodejs-android" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Spck Alternative — Acode Android IDE with Terminal\",\"description\":\"Looking beyond Spck Editor? Acode adds a full Linux terminal, AI coding agents, SSH, FTP, and 250+ plugins.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/spck-alternative\"}}"
+}

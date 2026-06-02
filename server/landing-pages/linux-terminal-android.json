@@ -1,0 +1,71 @@
+{
+  "path": "/linux-terminal-android",
+  "title": "Linux Terminal for Android — Full Alpine Linux on Your Phone | Acode",
+  "description": "Get a full Linux terminal on your Android phone with Acode. Alpine Linux with apk package manager, bash shell, Node.js, Python, Git — everything a developer needs. No root required.",
+  "heroHeadline": "A Real Linux Terminal on Your Android Phone",
+  "heroSubheadline": "Acode includes a full Alpine Linux terminal running natively on Android via proot. apk package manager, bash shell, multiple tabs — everything you expect from a Linux terminal. No root. No cloud. Just Linux.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Terminal Features",
+  "problemHeadline": "Android Doesn't Come with a Linux Terminal",
+  "problemPoints": [
+    "Android is based on Linux, but it doesn't give you a terminal. No bash. No package manager. No way to run Linux commands or install Linux tools. Your phone is a locked-down consumer device, not a development environment.",
+    "Existing solutions like Termux provide a Linux terminal but nothing else. You get the command line but no code editor, no project management, no file browser. You're forced to use two separate apps just to write and run code.",
+    "What developers need is a Linux terminal integrated with their development tools — the same way VS Code integrates a terminal. One environment where you can edit, run, debug, and deploy."
+  ],
+  "solutionHeadline": "Alpine Linux in Your Pocket",
+  "solutionPoints": [
+    "Acode embeds a full Alpine Linux distribution using proot technology. Alpine is the same lightweight Linux used in Docker containers and servers. It's fast, secure, and gives you the <code>apk</code> package manager.",
+    "Install anything from Alpine's repository: Node.js, Python, Git, compilers, databases, web servers — thousands of packages. <code>apk add nodejs npm</code>, <code>apk add python3</code>, <code>apk add git</code> — it just works.",
+    "The terminal runs inside Acode's IDE — not as a separate app. Write code in the editor, run it in the terminal, debug the output. Use <code>acode .</code> to open your project folder from terminal to editor instantly.",
+    "Customize everything: shell prompt, aliases, environment variables via <code>/etc/profile</code> and <code>~/.bashrc</code>. Multiple terminal tabs. Fish-style path shortening. Backup and restore your entire Linux installation."
+  ],
+  "featuresHeadline": "Terminal Features",
+  "features": [
+    {
+      "title": "Alpine Linux (proot)",
+      "description": "Full Alpine Linux distribution via proot. No root access required. Works on Android 7.0+. Thousands of packages available."
+    },
+    {
+      "title": "apk Package Manager",
+      "description": "Install Node.js, Python, Git, GCC, OpenSSH, and thousands more. Same package manager used in Docker containers and CI/CD pipelines."
+    },
+    {
+      "title": "Multiple Terminal Tabs",
+      "description": "Run your dev server in one tab, git operations in another, and your AI agent in a third. Each tab is an independent shell session."
+    },
+    {
+      "title": "Shell Customization",
+      "description": "Customize bash with <code>/etc/profile</code>, <code>~/.bashrc</code>, and <code>/initrc</code>. Set aliases, environment variables, and a custom prompt."
+    },
+    {
+      "title": "acode CLI Tool",
+      "description": "Bridge terminal and editor: <code>acode file.js</code> opens a file in the editor. <code>acode .</code> opens the current folder. Seamless integration."
+    },
+    {
+      "title": "Backup & Restore",
+      "description": "Back up your entire Linux installation and restore it later. Safe experimentation with packages and configurations."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Do I need to root my Android phone?",
+      "answer": "No. Acode uses proot, which runs Linux entirely in userspace. No root access, no system modifications. Works on any Android 7.0+ device."
+    },
+    {
+      "question": "What's the difference between Acode's terminal and Termux?",
+      "answer": "Both use proot-based Alpine Linux with the apk package manager. The terminal experience is identical. Acode's difference: it includes a full code editor, project management, and AI coding support — all in one app."
+    },
+    {
+      "question": "Can I run desktop Linux apps?",
+      "answer": "You can run CLI applications and tools. GUI applications require additional setup (see AcodeX plugin for GUI support via VNC). Most developer tools are CLI-based and work perfectly."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Node.js on Android", "url": "/nodejs-android" },
+    { "title": "Termux Alternative", "url": "/termux-alternative" },
+    { "title": "SSH on Android", "url": "/ssh-android" },
+    { "title": "Git on Android", "url": "/git-android" },
+    { "title": "Android IDE Guide", "url": "/android-ide" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Linux Terminal for Android — Full Alpine Linux on Your Phone\",\"description\":\"Get a full Linux terminal on your Android phone with Acode. Alpine Linux with apk package manager, bash shell, Node.js, Python, Git.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/linux-terminal-android\"}}"
+}

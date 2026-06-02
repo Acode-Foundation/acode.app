@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" href="/main.css" />
+  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+  <link rel="icon" href="/favicon-16x16.png" type="image/png" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" type="image/png" />
+
+  <title>{{title}}</title>
+  <meta name="title" content="{{title}}" />
+  <meta name="description" content="{{description}}" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://acode.app{{canonicalPath}}" />
+
+  <meta property="og:title" content="{{title}}" />
+  <meta property="og:description" content="{{description}}" />
+  <meta property="og:image" content="https://acode.app/og-image.png" />
+  <meta property="og:image:width" content="400" />
+  <meta property="og:image:height" content="200" />
+  <meta property="og:image:alt" content="Acode — Android IDE with Linux terminal and AI coding" />
+  <meta property="og:url" content="https://acode.app{{canonicalPath}}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Acode" />
+  <meta property="og:locale" content="en_US" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{{title}}" />
+  <meta name="twitter:description" content="{{description}}" />
+  <meta name="twitter:image" content="https://acode.app/og-image.png" />
+  <meta name="twitter:image:alt" content="Acode — Android IDE with Linux terminal and AI coding" />
+
+  <script type="application/ld+json">{{{pageSchema}}}</script>
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YX6J9WVCDP"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-YX6J9WVCDP');
+  </script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #1a1b2e;
+      color: #e0e0e8;
+      line-height: 1.7;
+    }
+    .lan-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; background: rgba(26,27,46,0.95);
+      backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.06);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .lan-nav a {
+      color: #e0e0e8; text-decoration: none; font-weight: 600; font-size: 18px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .lan-nav a:hover { color: #7c8aff; }
+    .lan-nav img { height: 32px; }
+    .lan-hero {
+      max-width: 900px; margin: 60px auto 0; padding: 0 24px; text-align: center;
+    }
+    .lan-hero h1 {
+      font-size: 40px; font-weight: 700; line-height: 1.2;
+      background: linear-gradient(135deg, #7c8aff, #a78bfa); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; margin-bottom: 20px;
+    }
+    .lan-hero p {
+      font-size: 19px; color: #b0b0c0; margin-bottom: 32px;
+    }
+    .lan-cta {
+      display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+    }
+    .lan-cta a {
+      padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 16px;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .lan-cta-primary {
+      background: linear-gradient(135deg, #7c8aff, #5b6cf0); color: #fff;
+    }
+    .lan-cta-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,138,255,0.3); }
+    .lan-cta-secondary {
+      background: rgba(255,255,255,0.06); color: #c0c0d0; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .lan-cta-secondary:hover { background: rgba(255,255,255,0.1); }
+    .lan-section {
+      max-width: 900px; margin: 80px auto; padding: 0 24px;
+    }
+    .lan-section h2 {
+      font-size: 28px; font-weight: 700; margin-bottom: 20px; color: #f0f0f8;
+    }
+    .lan-section h3 {
+      font-size: 20px; font-weight: 700; margin: 32px 0 12px; color: #d0d0e0;
+    }
+    .lan-section p, .lan-section li {
+      font-size: 17px; color: #b0b0c0; margin-bottom: 16px;
+    }
+    .lan-section ul, .lan-section ol {
+      padding-left: 24px; margin-bottom: 20px;
+    }
+    .lan-section li { margin-bottom: 8px; }
+    .lan-section code {
+      background: rgba(124,138,255,0.12); color: #a0b0ff; padding: 2px 8px;
+      border-radius: 4px; font-size: 15px; font-family: 'Courier New', monospace;
+    }
+    .lan-section pre {
+      background: #111122; border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px; padding: 20px; overflow-x: auto; margin-bottom: 20px;
+    }
+    .lan-section pre code {
+      background: none; color: #d0d0e0; padding: 0; font-size: 14px; line-height: 1.6;
+    }
+    .lan-feature-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px; margin-top: 24px;
+    }
+    .lan-feature-card {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px; padding: 24px;
+    }
+    .lan-feature-card h3 { margin-top: 0; font-size: 18px; }
+    .lan-feature-card p { font-size: 15px; margin-bottom: 0; }
+    .lan-faq { margin-top: 12px; }
+    .lan-faq h3 {
+      font-size: 18px; cursor: default; padding: 16px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .lan-faq p { padding-top: 8px; }
+    .lan-related {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px; margin-top: 20px;
+    }
+    .lan-related a {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px; padding: 16px; text-decoration: none; color: #c0c0d0;
+      font-weight: 600; transition: all 0.15s;
+    }
+    .lan-related a:hover { background: rgba(124,138,255,0.1); border-color: rgba(124,138,255,0.2); }
+    .lan-table {
+      width: 100%; border-collapse: collapse; margin-top: 20px;
+    }
+    .lan-table th, .lan-table td {
+      padding: 14px 16px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .lan-table th { color: #a0b0ff; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .lan-table td { color: #c0c0d0; font-size: 15px; }
+    .lan-check { color: #4ade80; } .lan-cross { color: #f87171; }
+    .lan-steps { counter-reset: step; list-style: none; padding-left: 0; }
+    .lan-steps li { counter-increment: step; padding-left: 48px; position: relative; margin-bottom: 24px; }
+    .lan-steps li::before {
+      content: counter(step); position: absolute; left: 0; top: -2px;
+      width: 32px; height: 32px; background: linear-gradient(135deg, #7c8aff, #5b6cf0);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 15px;
+    }
+    .lan-footer {
+      max-width: 900px; margin: 60px auto; padding: 40px 24px;
+      text-align: center; border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .lan-footer p { color: #707088; font-size: 14px; }
+    .lan-footer a { color: #7c8aff; text-decoration: none; }
+    @media (max-width: 640px) {
+      .lan-hero h1 { font-size: 28px; }
+      .lan-hero p { font-size: 17px; }
+      .lan-section h2 { font-size: 23px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="lan-nav">
+    <a href="/"><img src="/logo.svg" alt="Acode" /> Acode</a>
+    <div>
+      <a href="/plugins" style="margin-right:16px;font-size:15px;">Plugins</a>
+      <a href="/faqs" style="font-size:15px;">FAQs</a>
+    </div>
+  </nav>
+
+  <div class="lan-hero">
+    <h1>{{heroHeadline}}</h1>
+    <p>{{heroSubheadline}}</p>
+    <div class="lan-cta">
+      <a href="https://play.google.com/store/apps/details?id=com.foxdebug.acodefree" class="lan-cta-primary" target="_blank" rel="noopener">{{ctaPrimary}}</a>
+      <a href="/" class="lan-cta-secondary">{{ctaSecondary}}</a>
+    </div>
+  </div>
+
+  <div class="lan-section">
+    <h2>{{problemHeadline}}</h2>
+    {{#each problemPoints}}
+    <p>{{{this}}}</p>
+    {{/each}}
+  </div>
+
+  <div class="lan-section">
+    <h2>{{solutionHeadline}}</h2>
+    {{#each solutionPoints}}
+    <p>{{{this}}}</p>
+    {{/each}}
+  </div>
+
+  {{#if setupSteps}}
+  <div class="lan-section">
+    <h2>{{setupHeadline}}</h2>
+    <ol class="lan-steps">
+      {{#each setupSteps}}
+      <li><p><strong>{{title}}</strong>: {{description}}</p></li>
+      {{/each}}
+    </ol>
+  </div>
+  {{/if}}
+
+  <div class="lan-section">
+    <h2>{{featuresHeadline}}</h2>
+    <div class="lan-feature-grid">
+      {{#each features}}
+      <div class="lan-feature-card">
+        <h3>{{title}}</h3>
+        <p>{{description}}</p>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+
+  {{#if comparisonTable}}
+  <div class="lan-section">
+    <h2>{{comparisonHeadline}}</h2>
+    <div style="overflow-x:auto;">
+    <table class="lan-table">
+      <thead>
+        <tr>
+          {{#each comparisonHeaders}}<th>{{this}}</th>{{/each}}
+        </tr>
+      </thead>
+      <tbody>
+        {{#each comparisonRows}}
+        <tr>
+          {{#each this}}<td>{{{this}}}</td>{{/each}}
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {{/if}}
+
+  {{#if faqs}}
+  <div class="lan-section">
+    <h2>Frequently Asked Questions</h2>
+    {{#each faqs}}
+    <div class="lan-faq">
+      <h3>{{question}}</h3>
+      <p>{{{answer}}}</p>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+
+  <div class="lan-section">
+    <h2>Related Pages</h2>
+    <div class="lan-related">
+      {{#each relatedPages}}
+      <a href="{{url}}">{{title}}</a>
+      {{/each}}
+    </div>
+  </div>
+
+  <div class="lan-section" style="text-align:center;">
+    <h2>Ready to Start Coding on Android?</h2>
+    <p style="font-size:18px;margin-bottom:24px;">Acode is free, open source, and trusted by 3.6M+ developers. Get it now.</p>
+    <div class="lan-cta">
+      <a href="https://play.google.com/store/apps/details?id=com.foxdebug.acodefree" class="lan-cta-primary" target="_blank" rel="noopener">Download Acode — Free</a>
+    </div>
+  </div>
+
+  <div class="lan-footer">
+    <p>
+      <a href="/">Home</a> · <a href="/plugins">Plugins</a> · <a href="/faqs">FAQs</a> ·
+      <a href="https://docs.acode.app">Docs</a> · <a href="/sponsors">Sponsors</a> ·
+      <a href="/policy">Privacy</a> · <a href="/terms">Terms</a>
+    </p>
+    <p style="margin-top:8px;">&copy; 2026 Foxbiz Software Pvt. Ltd. Acode is open source under the MIT License.</p>
+  </div>
+</body>
+</html>

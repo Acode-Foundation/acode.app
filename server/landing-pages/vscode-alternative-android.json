@@ -1,0 +1,97 @@
+{
+  "path": "/vscode-alternative-android",
+  "title": "VS Code Alternative for Android — Acode Is the Closest Mobile IDE | Acode",
+  "description": "Looking for a VS Code alternative on Android? Acode brings VS Code's core features to your phone: terminal, Git, extensions, command palette, and 100+ language support. Open source and free.",
+  "heroHeadline": "VS Code on Android? Meet Acode.",
+  "heroSubheadline": "Acode brings the VS Code experience to Android: command palette, file search, extensions, built-in terminal, Git, and 100+ languages. The closest thing to VS Code on your phone.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Acode vs VS Code",
+  "problemHeadline": "VS Code Doesn't Run on Android",
+  "problemPoints": [
+    "VS Code is the world's most popular code editor. But it's a desktop app. There's no official VS Code for Android — and likely never will be. You can install code-server for a web version, but that requires a server and constant internet access.",
+    "Android developers have been left with a gap: they want the VS Code workflow — command palette, integrated terminal, extensions, Git, multi-file editing — but no Android app has delivered it.",
+    "Basic code editors exist for Android, but they're just text editors. No terminal. No extensions. No Git. No real development experience. They look nothing like the IDE developers are used to."
+  ],
+  "solutionHeadline": "Acode: The VS Code Experience on Android",
+  "solutionPoints": [
+    "<strong>Command Palette (Ctrl+Shift+P)</strong>: Just like VS Code, Acode has a command palette for quick access to all commands. Search, open files, run tools — without touching menus.",
+    "<strong>Integrated Terminal</strong>: Acode includes a full Alpine Linux terminal — just like VS Code's integrated terminal. Run <code>npm install</code>, <code>git push</code>, <code>python script.py</code> — all without leaving the editor.",
+    "<strong>Extensions (250+ Plugins)</strong>: VS Code has extensions. Acode has plugins. Same concept. Install language support, themes, AI assistants, linters, formatters, and tools from the in-app Plugin Store.",
+    "<strong>Git Integration</strong>: Just like VS Code's Git panel, Acode supports Git via terminal and GUI plugins. Clone repos, stage changes, commit, and push — full Git workflow on Android.",
+    "<strong>Multi-File Tabs & File Search (Ctrl+P)</strong>: Open multiple files in tabs. Search files across your project instantly with Ctrl+P. The same keyboard-driven workflow VS Code users know.",
+    "<strong>100+ Language Support</strong>: Syntax highlighting and editing for JavaScript, TypeScript, Python, Java, Go, Rust, HTML, CSS, SQL, and 90+ more — matching VS Code's language breadth."
+  ],
+  "comparisonHeadline": "Acode vs VS Code: Feature Comparison",
+  "comparisonHeaders": ["Feature", "Acode", "VS Code"],
+  "comparisonRows": [
+    ["Platform", "<span class='lan-check'>Android</span>", "<span class='lan-check'>Desktop (Windows/Mac/Linux)</span>"],
+    ["Command Palette", "<span class='lan-check'>✔ Ctrl+Shift+P</span>", "<span class='lan-check'>✔ Ctrl+Shift+P</span>"],
+    ["File Search", "<span class='lan-check'>✔ Ctrl+P</span>", "<span class='lan-check'>✔ Ctrl+P</span>"],
+    ["Integrated Terminal", "<span class='lan-check'>✔ Alpine Linux</span>", "<span class='lan-check'>✔ System terminal</span>"],
+    ["Extensions", "<span class='lan-check'>✔ 250+ plugins</span>", "<span class='lan-check'>✔ 40,000+ extensions</span>"],
+    ["Git Integration", "<span class='lan-check'>✔ CLI + GUI</span>", "<span class='lan-check'>✔ Built-in + CLI</span>"],
+    ["Multi-File Tabs", "<span class='lan-check'>✔ Yes</span>", "<span class='lan-check'>✔ Yes</span>"],
+    ["Syntax Highlighting", "<span class='lan-check'>✔ 100+ languages</span>", "<span class='lan-check'>✔ 100+ languages</span>"],
+    ["AI Coding", "<span class='lan-check'>✔ Claude Code, Codex, OpenCode</span>", "<span class='lan-check'>✔ Copilot, Claude, extensions</span>"],
+    ["LSP Support", "<span class='lan-check'>✔ Via plugins</span>", "<span class='lan-check'>✔ Built-in</span>"],
+    ["Debugging", "<span class='lan-check'>✔ JS Console, terminal</span>", "<span class='lan-check'>✔ Full debugger</span>"],
+    ["Live Preview", "<span class='lan-check'>✔ HTML/MD preview</span>", "<span class='lan-check'>✔ Live Server extension</span>"],
+    ["Package Manager", "<span class='lan-check'>✔ apk + npm + pip</span>", "<span class='lan-check'>✔ System + npm + pip</span>"],
+    ["Open Source", "<span class='lan-check'>✔ MIT License</span>", "<span class='lan-check'>✔ MIT License</span>"],
+    ["Price", "<span class='lan-check'>✔ Free</span>", "<span class='lan-check'>✔ Free</span>"]
+  ],
+  "featuresHeadline": "What Acode Shares with VS Code",
+  "features": [
+    {
+      "title": "Keyboard-Driven Workflow",
+      "description": "Ctrl+S to save, Ctrl+Shift+P for commands, Ctrl+P for files. Connect a Bluetooth keyboard and code with the same shortcuts you use in VS Code."
+    },
+    {
+      "title": "Extension Ecosystem",
+      "description": "VS Code has 40K+ extensions. Acode has 250+ and growing. Install language servers, themes, formatters, AI tools, and more from the Plugin Store."
+    },
+    {
+      "title": "Integrated Terminal",
+      "description": "VS Code's integrated terminal changed how developers work. Acode brings the same concept to Android — terminal and editor in one app."
+    },
+    {
+      "title": "Git at Your Fingertips",
+      "description": "Clone, commit, and push from Acode's terminal. GUI Git plugins available. Same Git workflow, different device."
+    },
+    {
+      "title": "Open Source & Free",
+      "description": "Both are MIT licensed. Both are community-driven. Both are free. Acode shares VS Code's commitment to open, accessible development tools."
+    },
+    {
+      "title": "Customizable Themes",
+      "description": "Dark mode, light mode, and dozens of community themes. Personalize Acode's appearance just like you customize VS Code."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Can Acode completely replace VS Code?",
+      "answer": "For many workflows — web development, scripting, Node.js projects, Python development — yes. For heavy enterprise development with advanced debugging, VS Code on desktop is still more powerful. Many developers use both: VS Code at their desk and Acode on the go."
+    },
+    {
+      "question": "Can I use my VS Code extensions in Acode?",
+      "answer": "No — VS Code extensions are not directly compatible. But Acode has equivalent plugins for common needs: language servers, themes, formatters, linters, and AI assistants. The plugin ecosystem is growing."
+    },
+    {
+      "question": "Does Acode support VS Code's keyboard shortcuts?",
+      "answer": "Many common shortcuts are the same: Ctrl+S, Ctrl+Shift+P, Ctrl+P, Ctrl+C/V. Some VS Code-specific shortcuts differ, but Acode's keybinding system is customizable."
+    },
+    {
+      "question": "Is Acode faster than VS Code?",
+      "answer": "Acode is optimized for mobile devices and handles files with 50,000+ lines smoothly. While it doesn't match VS Code's full feature set, it's remarkably fast for an Android IDE."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Claude Code on Android", "url": "/claude-code-android" },
+    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Cursor Alternative", "url": "/cursor-alternative-android" },
+    { "title": "Termux Alternative", "url": "/termux-alternative" },
+    { "title": "Node.js on Android", "url": "/nodejs-android" },
+    { "title": "React on Android", "url": "/react-android" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"VS Code Alternative for Android — Acode IDE\",\"description\":\"Looking for a VS Code alternative on Android? Acode brings VS Code's core features to your phone.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/vscode-alternative-android\"}}"
+}

@@ -1,0 +1,112 @@
+{
+  "path": "/codex-android",
+  "title": "How to Run OpenAI Codex on Android — Complete Setup Guide | Acode",
+  "description": "Run OpenAI Codex on your Android phone with Acode. Full Alpine Linux terminal, step-by-step setup, and integrated code editor. The only Android IDE that supports Codex natively.",
+  "heroHeadline": "Run OpenAI Codex on Your Android Phone",
+  "heroSubheadline": "Acode is the only Android development environment that lets you run OpenAI Codex natively. Set up Codex in Acode's Alpine Linux terminal and get AI-powered coding on your phone.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Setup Guide",
+  "problemHeadline": "The Problem: Codex Needs a Real Terminal",
+  "problemPoints": [
+    "OpenAI Codex is a powerful command-line AI coding tool — but it runs in a terminal. It needs Node.js, npm, and a proper shell environment to function.",
+    "Android doesn't come with a terminal. Regular code editor apps can only edit text — they can't run commands, install packages, or execute CLI tools like Codex.",
+    "Even if you install a terminal app like Termux, you'd need to switch back and forth between the terminal (for Codex) and an editor (for your code). There's no integrated workflow.",
+    "For Android developers who want AI-assisted coding, there has been no solution that combines editor + terminal + Codex in one seamless experience. Until now."
+  ],
+  "solutionHeadline": "Acode: The Only Android IDE with Codex Support",
+  "solutionPoints": [
+    "Acode provides a <strong>native Alpine Linux terminal</strong> inside the app. This is the same environment Codex expects — <code>bash</code>, <code>apk</code>, and full package management.",
+    "Install Node.js with <code>apk add nodejs npm</code> and follow OpenAI's instructions to install Codex. It's the exact same setup process as on a desktop, just on your phone.",
+    "The real power is <strong>Acode's editor-terminal integration</strong>. Codex generates and modifies code in the terminal. You view and edit it in Acode's editor with syntax highlighting. Use <code>acode .</code> to open your project from terminal to editor instantly.",
+    "Acode gives you the complete AI coding loop on Android: ask Codex to write code, review the output, run it in the terminal, debug with Codex, and iterate — all without leaving the app."
+  ],
+  "setupHeadline": "Step-by-Step: Install Codex on Acode",
+  "setupSteps": [
+    {
+      "title": "Install Acode",
+      "description": "Get Acode from <a href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree' target='_blank' rel='noopener'>Google Play</a> or <a href='https://www.f-droid.org/packages/com.foxdebug.acode/' target='_blank' rel='noopener'>F-Droid</a>. Free and open source."
+    },
+    {
+      "title": "Set Up the Alpine Linux Terminal",
+      "description": "Tap the terminal icon. Acode will download and configure Alpine Linux via proot. Takes about a minute on first launch."
+    },
+    {
+      "title": "Install Prerequisites",
+      "description": "Run in terminal: <br/><code>apk update && apk add nodejs npm git</code><br/>This gives you Node.js, npm, and Git — everything Codex needs."
+    },
+    {
+      "title": "Install OpenAI Codex",
+      "description": "Follow <a href='https://platform.openai.com/docs' target='_blank' rel='noopener'>OpenAI's documentation</a> for current Codex CLI installation. Typically involves: <br/><code>npm install -g @openai/codex</code> (check OpenAI docs for exact package name). Then authenticate with your OpenAI API key."
+    },
+    {
+      "title": "Run Codex",
+      "description": "Start Codex in Acode's terminal and begin coding. Codex can generate functions, explain code, refactor files, and help debug — directly on your phone."
+    },
+    {
+      "title": "Work with Files in Acode's Editor",
+      "description": "When Codex generates or modifies code, open the files in Acode's editor: <br/><code>acode .</code> (opens folder) or <code>acode file.js</code> (opens specific file). Full syntax highlighting for 100+ languages."
+    }
+  ],
+  "featuresHeadline": "What Codex + Acode Enables",
+  "features": [
+    {
+      "title": "AI Code Generation on Mobile",
+      "description": "Ask Codex to write code in any language — Python, JavaScript, Go, Rust, and more. It generates production-ready code while you're on the go."
+    },
+    {
+      "title": "Intelligent Code Explanation",
+      "description": "Paste any code snippet into Codex and get a detailed explanation of what it does, how it works, and suggestions for improvement."
+    },
+    {
+      "title": "Automated Refactoring",
+      "description": "Let Codex refactor your codebase — extract functions, rename variables, convert between patterns — while Acode's editor shows the results with full syntax highlighting."
+    },
+    {
+      "title": "Multi-Language Support",
+      "description": "Codex works across dozens of programming languages. Acode supports over 100 languages with syntax highlighting. Together, you're never limited."
+    },
+    {
+      "title": "Terminal-Native Workflow",
+      "description": "Codex runs where it performs best: in the terminal. Send commands, get output, pipe results, and chain operations — all within Acode's Linux environment."
+    },
+    {
+      "title": "Complete Mobile IDE",
+      "description": "Codex + Acode's editor + Alpine Linux terminal = the closest thing to a desktop AI coding environment on Android. Git, npm, SSH — all included."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Is Codex free to use on Android?",
+      "answer": "OpenAI Codex has its own pricing (check <a href='https://openai.com/pricing' target='_blank' rel='noopener'>openai.com/pricing</a>). Acode is completely free and open source under the MIT license."
+    },
+    {
+      "question": "Can I use Codex offline on my phone?",
+      "answer": "Codex requires an internet connection to communicate with OpenAI's API. Acode's editor and terminal work offline, but the AI agent needs connectivity."
+    },
+    {
+      "question": "Does Acode require root access?",
+      "answer": "No. Acode's Alpine Linux terminal runs via proot — entirely in userspace. Works on any Android 7.0+ device without root."
+    },
+    {
+      "question": "Can I use Codex alongside Claude Code?",
+      "answer": "Yes! Acode's terminal can run multiple AI tools. You can have Claude Code, Codex, and OpenCode all installed and switch between them based on your needs."
+    },
+    {
+      "question": "Is Acode only for AI coding?",
+      "answer": "No. Acode is a complete Android IDE. It includes a code editor for 100+ languages, Git integration, FTP/SFTP, SSH, live preview, JavaScript console, and 250+ plugins. AI coding is one of many features."
+    },
+    {
+      "question": "How does Acode compare to using Codex on a desktop?",
+      "answer": "The Codex experience is the same — it's the same CLI tool. The difference is Acode provides the terminal and editor on your phone. You get mobile convenience without sacrificing the tool's capabilities."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Claude Code on Android", "url": "/claude-code-android" },
+    { "title": "Run OpenCode on Android", "url": "/opencode-android" },
+    { "title": "AI Coding on Android Guide", "url": "/ai-coding-android" },
+    { "title": "Node.js on Android", "url": "/nodejs-android" },
+    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Termux Alternative", "url": "/termux-alternative" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"How to Run OpenAI Codex on Android\",\"description\":\"Run OpenAI Codex on your Android phone with Acode. Full Alpine Linux terminal, step-by-step setup, and integrated code editor.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/codex-android\"}}"
+}

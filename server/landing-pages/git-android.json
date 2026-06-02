@@ -1,0 +1,76 @@
+{
+  "path": "/git-android",
+  "title": "Git on Android — Version Control Guide | Acode",
+  "description": "Use Git on your Android phone with Acode. Clone repos, commit changes, push to GitHub, manage branches — full Git workflow via Acode's Alpine Linux terminal and Git plugins.",
+  "heroHeadline": "Git on Android — Full Version Control on Your Phone",
+  "heroSubheadline": "Acode gives you a complete Git workflow on Android. Install Git in the Alpine Linux terminal, use CLI commands or GUI plugins, and manage your repositories — all from your phone.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Setup Guide",
+  "problemHeadline": "Git on Android Has Always Been Limited",
+  "problemPoints": [
+    "Git is essential for every developer — but Git GUIs are desktop tools. On Android, you're limited to basic Git clients that can clone repos but can't provide a full development workflow.",
+    "You can install Git in Termux, but then you need to switch to a code editor to actually work with the files. Edit in one app, commit in another, push in the first again — it's a fragmented mess.",
+    "What developers need is Git integrated into their IDE — just like VS Code's Git panel. Clone, edit, stage, commit, and push without leaving the development environment."
+  ],
+  "solutionHeadline": "Complete Git Workflow on Acode",
+  "solutionPoints": [
+    "Install Git in Acode's terminal: <code>apk add git</code>. Configure your identity: <code>git config --global user.name 'Your Name'</code> and <code>git config --global user.email 'email@example.com'</code>. That's it.",
+    "Clone repositories, edit files in Acode's editor with syntax highlighting, stage changes in the terminal, commit, and push — all in one app. No switching between Termux and an editor.",
+    "Acode also has Git GUI plugins available in the Plugin Store. Get visual diffs, branch management, and commit history — similar to VS Code's Git panel.",
+    "Use Git alongside your other development tools — Node.js, Python, SSH, AI agents — all in the same Alpine Linux environment. This is how Git was meant to be used: in an IDE, not isolation."
+  ],
+  "setupHeadline": "Set Up Git on Acode",
+  "setupSteps": [
+    { "title": "Install Acode & Terminal", "description": "Download Acode and set up the Alpine Linux terminal." },
+    { "title": "Install Git", "description": "Run: <code>apk update && apk add git</code>" },
+    {
+      "title": "Configure Git",
+      "description": "Run: <code>git config --global user.name 'Your Name'</code> and <code>git config --global user.email 'email@example.com'</code>"
+    },
+    {
+      "title": "Clone a Repository",
+      "description": "Run: <code>git clone https://github.com/user/repo.git</code>. The repo downloads to your phone."
+    },
+    { "title": "Open in Editor", "description": "Run: <code>acode repo-name</code> to open the cloned project in Acode's editor." },
+    {
+      "title": "Make Changes & Commit",
+      "description": "Edit files, then in terminal: <code>git add . && git commit -m 'My changes' && git push</code>"
+    }
+  ],
+  "featuresHeadline": "Git Features on Acode",
+  "features": [
+    {
+      "title": "Full Git CLI",
+      "description": "Every Git command works: clone, pull, push, branch, merge, rebase, stash, log, diff. Git runs natively in Alpine Linux."
+    },
+    {
+      "title": "GUI Git Plugins",
+      "description": "Install Git GUI plugins from the Plugin Store for visual diffs, branch management, and commit staging."
+    },
+    {
+      "title": "Editor + Git Integration",
+      "description": "Edit files in the code editor, commit from the terminal. Use <code>acode .</code> to open your Git repo in the editor instantly."
+    },
+    {
+      "title": "GitHub/GitLab Integration",
+      "description": "Push to GitHub, GitLab, or any Git host. Use SSH keys stored in Acode's terminal for secure authentication."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Is Git on Android as capable as desktop Git?",
+      "answer": "Yes. It's the exact same Git binary running in Alpine Linux. All Git commands, including advanced operations like rebase, cherry-pick, and bisect, work exactly as they do on desktop."
+    },
+    {
+      "question": "Can I use GitHub authentication on Acode?",
+      "answer": "Yes. Set up SSH keys in Acode's terminal or use GitHub CLI (gh). You can also use personal access tokens for HTTPS authentication."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Node.js on Android", "url": "/nodejs-android" },
+    { "title": "SSH on Android", "url": "/ssh-android" },
+    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Termux Alternative", "url": "/termux-alternative" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Git on Android — Version Control Guide\",\"description\":\"Use Git on your Android phone with Acode. Clone repos, commit changes, push to GitHub, manage branches.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/git-android\"}}"
+}

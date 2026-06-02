@@ -1,0 +1,104 @@
+{
+  "path": "/nodejs-android",
+  "title": "Node.js on Android — Complete Development Guide | Acode",
+  "description": "Run Node.js on your Android phone with Acode. Install Node.js and npm via the Alpine Linux terminal. Build, run, and deploy Node.js applications directly from your phone. Full development guide.",
+  "heroHeadline": "Run Node.js on Your Android Phone",
+  "heroSubheadline": "Acode gives you a full Node.js development environment on Android. Install Node.js and npm in the Alpine Linux terminal, edit code with syntax highlighting, run your apps — all on your phone.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Setup Guide",
+  "problemHeadline": "Node.js Development Is Desktop-Only — Until Now",
+  "problemPoints": [
+    "Node.js is the most popular JavaScript runtime — powering millions of web servers, APIs, and tools. But running Node.js on Android has always been difficult. You need a real terminal, a package manager, and the ability to install native packages.",
+    "Regular Android code editors can display JavaScript code, but they can't run it. You can write <code>console.log('hello')</code> but you can never see the output. That's not development — that's typing.",
+    "Termux can run Node.js, but without a proper code editor, you're stuck editing JavaScript in Vim on a touchscreen. No syntax-aware editing, no project management, no debugging console."
+  ],
+  "solutionHeadline": "Full Node.js Environment on Android with Acode",
+  "solutionPoints": [
+    "Install Node.js and npm in Acode's terminal with a single command: <code>apk add nodejs npm</code>. That's it. Node.js is now running natively on your Android phone — no cloud, no remote server, no compromises.",
+    "Write Node.js code in Acode's editor with full JavaScript syntax highlighting, code completion, and IntelliSense. Create Express servers, build CLI tools, write automation scripts — exactly as you would on a desktop.",
+    "Use npm to install any package from the registry. <code>npm install express</code>, <code>npm init</code>, <code>npm run dev</code> — they all work. Run npm scripts, manage dependencies, and use npx for one-off commands.",
+    "Debug your Node.js apps with Acode's interactive JavaScript console, terminal-based Node.js debugging, and console.log output visible in real-time. The complete Node.js development loop on Android."
+  ],
+  "setupHeadline": "Setup Node.js on Acode",
+  "setupSteps": [
+    {
+      "title": "Install Acode",
+      "description": "Get Acode from <a href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree' target='_blank' rel='noopener'>Google Play</a> or <a href='https://www.f-droid.org/packages/com.foxdebug.acode/' target='_blank' rel='noopener'>F-Droid</a>."
+    },
+    { "title": "Open the Terminal", "description": "Tap the terminal icon. Alpine Linux will set up on first launch (~60 seconds)." },
+    {
+      "title": "Install Node.js and npm",
+      "description": "Run: <code>apk update && apk add nodejs npm</code>. This installs the latest Node.js and npm available in Alpine's repository."
+    },
+    {
+      "title": "Verify Installation",
+      "description": "Run: <code>node --version</code> and <code>npm --version</code>. You should see the installed versions."
+    },
+    {
+      "title": "Create Your First Project",
+      "description": "Run: <code>mkdir my-project && cd my-project && npm init -y</code>. Then <code>npm install express</code> to add Express."
+    },
+    {
+      "title": "Code and Run",
+      "description": "Create <code>index.js</code> in Acode's editor with Express server code. Run <code>node index.js</code> in the terminal. Your server is now running on your phone."
+    }
+  ],
+  "featuresHeadline": "Node.js Capabilities on Acode",
+  "features": [
+    {
+      "title": "Express & Web Servers",
+      "description": "Build REST APIs, web servers, and full-stack applications with Express, Fastify, or Koa. All npm packages that work on Alpine Linux work on Acode."
+    },
+    {
+      "title": "npm Package Management",
+      "description": "Install any npm package that's compatible with Node.js on Alpine. <code>npm install</code>, <code>npm update</code>, <code>npm audit</code> — it all works."
+    },
+    {
+      "title": "CLI Tools",
+      "description": "Build and run CLI tools with Node.js. Use <code>commander</code>, <code>inquirer</code>, <code>chalk</code> — all the familiar libraries."
+    },
+    {
+      "title": "npm Scripts",
+      "description": "Run build processes, tests, linters, and formatters through npm scripts. Use <code>npm run build</code>, <code>npm test</code> — just like on desktop."
+    },
+    {
+      "title": "npx Support",
+      "description": "Run one-off commands with npx: <code>npx create-react-app my-app</code>, <code>npx eslint .</code>, <code>npx prettier --write .</code>."
+    },
+    {
+      "title": "JavaScript Console",
+      "description": "Acode's interactive JS console lets you test snippets, debug variables, and experiment with APIs without creating files."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Does Node.js run natively on Android?",
+      "answer": "Yes, through Acode's Alpine Linux terminal. Node.js runs in a Linux environment (via proot) on your Android device. It's not an emulator or simulator — it's real Node.js."
+    },
+    {
+      "question": "Can I install any npm package?",
+      "answer": "Most npm packages work. Packages with native C++ addons may need Alpine-compatible binaries. Pure JavaScript packages work universally. Test with <code>npm install</code> — if it compiles, it works."
+    },
+    {
+      "question": "Can I run a production Node.js server on Android?",
+      "answer": "Acode is designed for development, not production hosting. You can run a Node.js server for testing and development, but for production, deploy to a cloud server or VPS."
+    },
+    {
+      "question": "Is Node.js performance different on Android?",
+      "answer": "There is a small overhead from proot, but it's minimal. For development and testing, performance is excellent. Modern Android phones have more than enough power for Node.js development."
+    },
+    {
+      "question": "Can I use nvm on Acode?",
+      "answer": "nvm may work but the Alpine package manager provides Node.js versions directly. Use <code>apk search nodejs</code> to see available versions."
+    }
+  ],
+  "relatedPages": [
+    { "title": "npm on Android", "url": "/npm-android" },
+    { "title": "React on Android", "url": "/react-android" },
+    { "title": "Next.js on Android", "url": "/nextjs-android" },
+    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Web Dev on Android", "url": "/web-development-android" },
+    { "title": "Git on Android", "url": "/git-android" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Node.js on Android — Complete Development Guide\",\"description\":\"Run Node.js on your Android phone with Acode. Install Node.js and npm via the Alpine Linux terminal.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/nodejs-android\"}}"
+}
