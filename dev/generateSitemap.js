@@ -33,6 +33,7 @@ const EXCLUDED_PATTERNS = [
   '.d.ts',
   'license.md',
   'License.md',
+  'License',
   'documentation.md',
   'DOCS.md',
   'CONTRIBUTING.md',
@@ -78,7 +79,7 @@ function isExcluded(url) {
   if (path.endsWith('.jpg')) return true;
 
   for (const pattern of EXCLUDED_PATTERNS) {
-    if (path.includes(pattern)) return true;
+    if (path.toLowerCase().includes(pattern.toLowerCase())) return true;
   }
 
   return false;

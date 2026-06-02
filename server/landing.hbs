@@ -9,10 +9,10 @@
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
   <link rel="icon" href="/favicon-16x16.png" type="image/png" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" type="image/png" />
+   <link rel="preconnect" href="https://fonts.googleapis.com" />
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+   <link rel="apple-touch-icon" href="/apple-touch-icon.png" type="image/png" />
 
   <title>{{title}}</title>
   <meta name="title" content="{{title}}" />
@@ -47,142 +47,194 @@
     gtag('config', 'G-YX6J9WVCDP');
   </script>
 
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #1a1b2e;
-      color: #e0e0e8;
-      line-height: 1.7;
-    }
-    .lan-nav {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 24px; background: rgba(26,27,46,0.95);
-      backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.06);
-      position: sticky; top: 0; z-index: 10;
-    }
-    .lan-nav a {
-      color: #e0e0e8; text-decoration: none; font-weight: 600; font-size: 18px;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .lan-nav a:hover { color: #7c8aff; }
-    .lan-nav img { height: 32px; }
-    .lan-hero {
-      max-width: 900px; margin: 60px auto 0; padding: 0 24px; text-align: center;
-    }
-    .lan-hero h1 {
-      font-size: 40px; font-weight: 700; line-height: 1.2;
-      background: linear-gradient(135deg, #7c8aff, #a78bfa); -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent; margin-bottom: 20px;
-    }
-    .lan-hero p {
-      font-size: 19px; color: #b0b0c0; margin-bottom: 32px;
-    }
-    .lan-cta {
-      display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center;
-    }
-    .lan-cta a {
-      padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 16px;
-      text-decoration: none; transition: all 0.2s;
-    }
-    .lan-cta-primary {
-      background: linear-gradient(135deg, #7c8aff, #5b6cf0); color: #fff;
-    }
-    .lan-cta-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,138,255,0.3); }
-    .lan-cta-secondary {
-      background: rgba(255,255,255,0.06); color: #c0c0d0; border: 1px solid rgba(255,255,255,0.1);
-    }
-    .lan-cta-secondary:hover { background: rgba(255,255,255,0.1); }
-    .lan-section {
-      max-width: 900px; margin: 80px auto; padding: 0 24px;
-    }
-    .lan-section h2 {
-      font-size: 28px; font-weight: 700; margin-bottom: 20px; color: #f0f0f8;
-    }
-    .lan-section h3 {
-      font-size: 20px; font-weight: 700; margin: 32px 0 12px; color: #d0d0e0;
-    }
-    .lan-section p, .lan-section li {
-      font-size: 17px; color: #b0b0c0; margin-bottom: 16px;
-    }
-    .lan-section ul, .lan-section ol {
-      padding-left: 24px; margin-bottom: 20px;
-    }
-    .lan-section li { margin-bottom: 8px; }
-    .lan-section code {
-      background: rgba(124,138,255,0.12); color: #a0b0ff; padding: 2px 8px;
-      border-radius: 4px; font-size: 15px; font-family: 'Courier New', monospace;
-    }
-    .lan-section pre {
-      background: #111122; border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 10px; padding: 20px; overflow-x: auto; margin-bottom: 20px;
-    }
-    .lan-section pre code {
-      background: none; color: #d0d0e0; padding: 0; font-size: 14px; line-height: 1.6;
-    }
-    .lan-feature-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 20px; margin-top: 24px;
-    }
-    .lan-feature-card {
-      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 12px; padding: 24px;
-    }
-    .lan-feature-card h3 { margin-top: 0; font-size: 18px; }
-    .lan-feature-card p { font-size: 15px; margin-bottom: 0; }
-    .lan-faq { margin-top: 12px; }
-    .lan-faq h3 {
-      font-size: 18px; cursor: default; padding: 16px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .lan-faq p { padding-top: 8px; }
-    .lan-related {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px; margin-top: 20px;
-    }
-    .lan-related a {
-      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 10px; padding: 16px; text-decoration: none; color: #c0c0d0;
-      font-weight: 600; transition: all 0.15s;
-    }
-    .lan-related a:hover { background: rgba(124,138,255,0.1); border-color: rgba(124,138,255,0.2); }
-    .lan-table {
-      width: 100%; border-collapse: collapse; margin-top: 20px;
-    }
-    .lan-table th, .lan-table td {
-      padding: 14px 16px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .lan-table th { color: #a0b0ff; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .lan-table td { color: #c0c0d0; font-size: 15px; }
-    .lan-check { color: #4ade80; } .lan-cross { color: #f87171; }
-    .lan-steps { counter-reset: step; list-style: none; padding-left: 0; }
-    .lan-steps li { counter-increment: step; padding-left: 48px; position: relative; margin-bottom: 24px; }
-    .lan-steps li::before {
-      content: counter(step); position: absolute; left: 0; top: -2px;
-      width: 32px; height: 32px; background: linear-gradient(135deg, #7c8aff, #5b6cf0);
-      border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      color: #fff; font-weight: 700; font-size: 15px;
-    }
-    .lan-footer {
-      max-width: 900px; margin: 60px auto; padding: 40px 24px;
-      text-align: center; border-top: 1px solid rgba(255,255,255,0.06);
-    }
-    .lan-footer p { color: #707088; font-size: 14px; }
-    .lan-footer a { color: #7c8aff; text-decoration: none; }
-    @media (max-width: 640px) {
-      .lan-hero h1 { font-size: 28px; }
-      .lan-hero p { font-size: 17px; }
-      .lan-section h2 { font-size: 23px; }
-    }
-  </style>
+   <style>
+     * { margin: 0; padding: 0; box-sizing: border-box; }
+     body {
+       font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+       background: linear-gradient(135deg, #141824 0%, #1f232f 25%);
+       color: #e0e0e0;
+       line-height: 1.7;
+       overflow: auto;
+       scrollbar-width: none;
+     }
+     body::-webkit-scrollbar { display: none; }
+     .lan-nav {
+       display: flex; align-items: center; justify-content: space-between;
+       padding: 0 24px; height: 50px;
+       background: rgba(20, 24, 36, 0.85);
+       backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+       border-bottom: 1px solid rgba(255,255,255,0.06);
+       position: sticky; top: 0; z-index: 10;
+     }
+     .lan-nav a {
+       color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;
+       display: flex; align-items: center; gap: 8px;
+       font-family: 'Lexend', sans-serif;
+     }
+     .lan-nav a:hover { color: #3399ff; }
+     .lan-nav a.logo { font-size: 18px; }
+     .lan-nav > div { display: flex; gap: 10px; }
+     .lan-nav img { height: 30px; }
+     .lan-hero {
+       max-width: 900px; margin: 80px auto 0; padding: 0 24px; text-align: center;
+     }
+     .lan-hero h1 {
+       font-family: 'Lexend', sans-serif;
+       font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 800; line-height: 1.15;
+       background: linear-gradient(135deg, #3399ff, #66b3ff);
+       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+       margin-bottom: 20px; letter-spacing: -0.02em;
+     }
+     .lan-hero p {
+       font-size: 19px; color: rgba(255,255,255,0.7); margin-bottom: 36px;
+     }
+     .lan-cta {
+       display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+     }
+     .lan-cta a {
+       padding: 14px 32px; border-radius: 20px; font-weight: 700; font-size: 16px;
+       text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+     }
+     .lan-cta-primary {
+       background: linear-gradient(135deg, #3399ff, #66b3ff); color: #000;
+     }
+     .lan-cta-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(51,153,255,0.35); }
+     .lan-cta-secondary {
+       background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.85);
+       border: 1px solid rgba(255,255,255,0.12);
+     }
+     .lan-cta-secondary:hover { background: rgba(51,153,255,0.1); border-color: rgba(51,153,255,0.3); }
+     .lan-section {
+       max-width: 900px; margin: 80px auto; padding: 0 24px;
+     }
+     .lan-section h2 {
+       font-family: 'Lexend', sans-serif;
+       font-size: 1.8rem; font-weight: 700; margin-bottom: 20px; color: #ffffff;
+     }
+     .lan-section h3 {
+       font-family: 'Lexend', sans-serif;
+       font-size: 1.2rem; font-weight: 600; margin: 32px 0 12px;
+       color: rgba(255,255,255,0.9);
+     }
+     .lan-section p, .lan-section li {
+       font-size: 17px; color: rgba(255,255,255,0.7); margin-bottom: 16px;
+     }
+     .lan-section ul, .lan-section ol {
+       padding-left: 24px; margin-bottom: 20px;
+     }
+     .lan-section li { margin-bottom: 8px; }
+     .lan-section code {
+       background: rgba(51,153,255,0.12); color: #66b3ff; padding: 2px 8px;
+       border-radius: 4px; font-size: 0.9em;
+     }
+     .lan-section pre {
+       background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.06);
+       border-radius: 12px; padding: 20px; overflow-x: auto; margin-bottom: 20px;
+     }
+     .lan-section pre code {
+       background: none; color: #e0e0e0; padding: 0; font-size: 14px; line-height: 1.6;
+     }
+     .lan-feature-grid {
+       display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+       gap: 20px; margin-top: 24px;
+     }
+     .lan-feature-card {
+       background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+       border-radius: 18px; padding: 32px 24px;
+       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+       position: relative; overflow: hidden;
+     }
+     .lan-feature-card::before {
+       content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+       background: radial-gradient(circle at top right, rgba(51,153,255,0.1), transparent 70%);
+       opacity: 0; transition: opacity 0.3s ease;
+     }
+     .lan-feature-card:hover {
+       transform: translateY(-4px); background: rgba(255,255,255,0.06);
+       border-color: rgba(51,153,255,0.3); box-shadow: 0 16px 36px rgba(0,0,0,0.3);
+     }
+     .lan-feature-card:hover::before { opacity: 1; }
+     .lan-feature-card h3 { margin-top: 0; font-size: 1.1rem; font-family: 'Lexend', sans-serif; }
+     .lan-feature-card p { font-size: 15px; margin-bottom: 0; }
+     .lan-faq { margin-top: 12px; }
+     .lan-faq h3 {
+       font-family: 'Lexend', sans-serif;
+       font-size: 1.1rem; cursor: default; padding: 16px 0;
+       border-bottom: 1px solid rgba(255,255,255,0.06);
+     }
+     .lan-faq p { padding-top: 8px; }
+     .lan-related {
+       display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+       gap: 12px; margin-top: 20px;
+     }
+     .lan-related a {
+       background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+       border-radius: 12px; padding: 16px; text-decoration: none;
+       color: rgba(255,255,255,0.7); font-weight: 600;
+       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+     }
+     .lan-related a:hover {
+       background: rgba(51,153,255,0.1); border-color: rgba(51,153,255,0.3);
+       transform: translateY(-2px); color: #3399ff;
+     }
+     .lan-table {
+       width: 100%; border-collapse: collapse; margin-top: 20px;
+       border-radius: 12px; overflow: hidden;
+     }
+     .lan-table th, .lan-table td {
+       padding: 14px 16px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06);
+     }
+     .lan-table th {
+       background: rgba(51,153,255,0.08); color: #66b3ff;
+       font-family: 'Lexend', sans-serif; font-weight: 600;
+       font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
+     }
+     .lan-table td { color: rgba(255,255,255,0.7); font-size: 15px; }
+     .lan-table tr:nth-child(even) td { background: rgba(0,0,0,0.15); }
+     .lan-check { color: #4ade80; } .lan-cross { color: #f87171; }
+     .lan-steps { counter-reset: step; list-style: none; padding-left: 0; }
+     .lan-steps li { counter-increment: step; padding-left: 48px; position: relative; margin-bottom: 24px; }
+     .lan-steps li::before {
+       content: counter(step); position: absolute; left: 0; top: -2px;
+       width: 32px; height: 32px; background: linear-gradient(135deg, #3399ff, #66b3ff);
+       border-radius: 50%; display: flex; align-items: center; justify-content: center;
+       color: #000; font-weight: 700; font-size: 15px;
+     }
+     .lan-footer {
+       max-width: 1000px; margin: 80px auto 0; padding: 60px 24px 40px;
+       text-align: center; border-top: 1px solid rgba(51,153,255,0.15);
+     }
+     .lan-footer .lan-footer-links {
+       display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;
+       margin-bottom: 20px;
+     }
+     .lan-footer .lan-footer-links a {
+       color: rgba(255,255,255,0.5); text-decoration: none; font-size: 0.85rem;
+       transition: all 0.2s ease;
+     }
+     .lan-footer .lan-footer-links a:hover { color: #3399ff; }
+     .lan-footer p { color: rgba(255,255,255,0.4); font-size: 0.8rem; }
+     .lan-footer a { color: #3399ff; text-decoration: none; }
+     .lan-footer a:hover { text-decoration: underline; }
+     @media (max-width: 640px) {
+       .lan-hero h1 { font-size: 1.8rem; }
+       .lan-hero p { font-size: 17px; }
+       .lan-section h2 { font-size: 1.5rem; }
+       .lan-section { margin: 50px auto; }
+       .lan-nav a.logo .lan-nav-text { display: none; }
+     }
+     @media (max-width: 480px) {
+       .lan-cta a { width: 100%; text-align: center; }
+      }
+   </style>
 </head>
 <body>
   <nav class="lan-nav">
-    <a href="/"><img src="/logo.svg" alt="Acode" /> Acode</a>
-    <div>
-      <a href="/plugins" style="margin-right:16px;font-size:15px;">Plugins</a>
-      <a href="/faqs" style="font-size:15px;">FAQs</a>
-    </div>
+    <a href="/" class="logo"><img src="/logo.svg" alt="Acode" /> <span class="lan-nav-text">Acode</span></a>
+     <div>
+       <a href="/plugins">Plugins</a>
+       <a href="/faqs">FAQs</a>
+     </div>
   </nav>
 
   <div class="lan-hero">
@@ -282,13 +334,17 @@
     </div>
   </div>
 
-  <div class="lan-footer">
-    <p>
-      <a href="/">Home</a> · <a href="/plugins">Plugins</a> · <a href="/faqs">FAQs</a> ·
-      <a href="https://docs.acode.app">Docs</a> · <a href="/sponsors">Sponsors</a> ·
-      <a href="/policy">Privacy</a> · <a href="/terms">Terms</a>
-    </p>
-    <p style="margin-top:8px;">&copy; 2026 Foxbiz Software Pvt. Ltd. Acode is open source under the MIT License.</p>
-  </div>
+   <div class="lan-footer">
+     <div class="lan-footer-links">
+       <a href="/">Home</a>
+       <a href="/plugins">Plugins</a>
+       <a href="/faqs">FAQs</a>
+       <a href="https://docs.acode.app">Docs</a>
+       <a href="/sponsors">Sponsors</a>
+       <a href="/policy">Privacy</a>
+       <a href="/terms">Terms</a>
+     </div>
+     <p>&copy; 2026 Foxbiz Software Pvt. Ltd. Acode is open source under the <a href="https://github.com/AcodeOrg/acode/blob/main/LICENSE">MIT License</a>.</p>
+   </div>
 </body>
 </html>
