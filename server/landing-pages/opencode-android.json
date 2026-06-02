@@ -1,0 +1,112 @@
+{
+  "path": "/opencode-android",
+  "title": "How to Run OpenCode on Android — Open-Source AI Coding | Acode",
+  "description": "Run OpenCode, the open-source AI coding agent, on your Android phone using Acode. Free, no API costs, fully local. Complete setup guide for Android AI development.",
+  "heroHeadline": "Run OpenCode on Your Android Phone",
+  "heroSubheadline": "Acode is the only Android IDE that lets you run OpenCode — the open-source AI coding agent — natively in a full Alpine Linux terminal. Free. Open source. No API costs.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Setup Guide",
+  "problemHeadline": "AI Coding Tools Are Locked to Desktops",
+  "problemPoints": [
+    "Most AI coding tools — Claude Code, Codex, Cursor, Windsurf — are either desktop-only or require expensive API subscriptions. There's been no open-source alternative that works on mobile.",
+    "OpenCode is an open-source AI coding agent that anyone can run for free. But like other coding agents, it needs a real terminal environment — something Android apps typically don't provide.",
+    "Regular Android code editors can't help. They can edit text, but they can't run CLI tools, install packages, or execute AI agents. They're editors, not development environments.",
+    "The combination of open-source AI coding + mobile development has been impossible — until Acode brought a real Linux terminal to Android."
+  ],
+  "solutionHeadline": "Acode + OpenCode: Open-Source AI Coding on Android",
+  "solutionPoints": [
+    "Acode provides a <strong>full Alpine Linux terminal</strong> on Android. Install Node.js with <code>apk add nodejs npm git</code> and you have everything needed to clone and run OpenCode.",
+    "Since OpenCode is open source (<a href='https://github.com/anomalyco/opencode' target='_blank' rel='noopener'>github.com/anomalyco/opencode</a>), there are no API costs or subscriptions. <strong>It's completely free to use</strong>, matching Acode's own MIT license philosophy.",
+    "OpenCode runs in Acode's terminal as an agentic AI coder — it can create, edit, and manage files across your project. View every change in Acode's editor with full syntax highlighting.",
+    "This is the first time open-source AI coding is available on Android. No vendor lock-in. No API bills. Just real AI development tools running on your phone."
+  ],
+  "setupHeadline": "Install OpenCode on Acode",
+  "setupSteps": [
+    {
+      "title": "Install Acode",
+      "description": "Download Acode from <a href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree' target='_blank' rel='noopener'>Google Play</a> or <a href='https://www.f-droid.org/packages/com.foxdebug.acode/' target='_blank' rel='noopener'>F-Droid</a>."
+    },
+    {
+      "title": "Initialize the Terminal",
+      "description": "Tap the terminal icon in Acode. Alpine Linux will install via proot on first launch. Takes about 60 seconds."
+    },
+    {
+      "title": "Install Dependencies",
+      "description": "Run in Acode's terminal: <br/><code>apk update && apk add nodejs npm git</code>"
+    },
+    {
+      "title": "Clone or Install OpenCode",
+      "description": "Clone the OpenCode repository: <br/><code>git clone https://github.com/anomalyco/opencode.git</code><br/>Or follow the project's installation guide for the latest instructions. Install dependencies with npm."
+    },
+    {
+      "title": "Configure Your AI Provider",
+      "description": "OpenCode supports multiple AI backends. Set your API key (Anthropic, OpenAI, or others) as an environment variable: <br/><code>export ANTHROPIC_API_KEY=your-key-here</code><br/>Or configure a local model for fully offline AI coding."
+    },
+    {
+      "title": "Run OpenCode",
+      "description": "Start OpenCode in Acode's terminal. It can now access your files, create new code, and help you develop — all from your Android phone. Use <code>acode .</code> to open your project in the editor."
+    }
+  ],
+  "featuresHeadline": "Why OpenCode + Acode Is Powerful",
+  "features": [
+    {
+      "title": "Completely Free AI Coding",
+      "description": "OpenCode is open source and free. Acode is open source and free. Combine them for AI-powered coding on Android with zero software costs."
+    },
+    {
+      "title": "No Vendor Lock-In",
+      "description": "OpenCode supports multiple AI backends — Anthropic, OpenAI, local models. You're not locked into one provider. Switch anytime based on your needs."
+    },
+    {
+      "title": "Full Transparency",
+      "description": "Both Acode and OpenCode are open source. Every line of code is visible and auditable. No black boxes. No hidden telemetry."
+    },
+    {
+      "title": "Terminal + Editor Workflow",
+      "description": "OpenCode runs in Acode's terminal while you edit files in the editor. Use the <code>acode</code> CLI to bridge both environments for seamless development."
+    },
+    {
+      "title": "Full Linux Environment",
+      "description": "Beyond AI coding, Acode gives you a complete Alpine Linux system. Install any package with <code>apk</code>. Use Git, Python, compilers, databases — everything you need."
+    },
+    {
+      "title": "Community-Driven",
+      "description": "Both Acode (5,500+ GitHub stars) and OpenCode are community projects. Contribute to either, build plugins, and shape the future of mobile development."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Is OpenCode really free?",
+      "answer": "Yes. OpenCode is an open-source project under a permissive license. There are no subscription fees or API markups. You may need API keys from your chosen AI provider (Anthropic, OpenAI), which have their own costs — but the tool itself is free."
+    },
+    {
+      "question": "Can OpenCode work completely offline?",
+      "answer": "If you configure OpenCode to use a local AI model (running in Acode's terminal or on a local server), it can work offline. With cloud AI providers, an internet connection is needed."
+    },
+    {
+      "question": "What's the difference between OpenCode and Claude Code?",
+      "answer": "Claude Code is Anthropic's proprietary tool tied to their API. OpenCode is community-built, supports multiple AI backends, and is fully open source. Both run in Acode's terminal — you can use whichever fits your workflow."
+    },
+    {
+      "question": "Is Acode's terminal powerful enough for AI coding?",
+      "answer": "Yes. Acode's proot-based Alpine Linux terminal provides a complete Linux environment. You can install Node.js, Python, compilers, and any CLI tool. It handles AI agent workloads without issues."
+    },
+    {
+      "question": "Does Acode cost anything?",
+      "answer": "Acode is free and open source under the MIT license. Optional in-app purchases are available for premium features, but the core editor, terminal, and plugin system are completely free."
+    },
+    {
+      "question": "Can I contribute to OpenCode through Acode?",
+      "answer": "Yes! Clone the OpenCode repo in Acode's terminal, make changes in the editor, test in the terminal, and push back to GitHub — all from your phone."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Claude Code on Android", "url": "/claude-code-android" },
+    { "title": "Run Codex on Android", "url": "/codex-android" },
+    { "title": "AI Coding on Android", "url": "/ai-coding-android" },
+    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Git on Android", "url": "/git-android" },
+    { "title": "SSH on Android", "url": "/ssh-android" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"How to Run OpenCode on Android\",\"description\":\"Run OpenCode, the open-source AI coding agent, on your Android phone using Acode. Free, no API costs, fully local.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/opencode-android\"}}"
+}

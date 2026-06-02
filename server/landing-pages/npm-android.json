@@ -1,0 +1,56 @@
+{
+  "path": "/npm-android",
+  "title": "npm on Android — Package Management Guide | Acode",
+  "description": "Use npm on your Android phone with Acode. Install packages, run scripts, manage dependencies through the Alpine Linux terminal. Full npm workflow on mobile. Complete setup guide.",
+  "heroHeadline": "Use npm on Your Android Phone",
+  "heroSubheadline": "Acode lets you use npm natively on Android through its Alpine Linux terminal. Install packages, run scripts, manage dependencies — the full npm workflow on your phone.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Setup Guide",
+  "problemHeadline": "npm Requires a Real Terminal",
+  "problemPoints": [
+    "npm is the world's largest package registry — but it's a command-line tool. No Android code editor can run npm commands. You can write JavaScript but can never install or manage packages.",
+    "Web development without npm is like cooking without ingredients. You can write imports but never resolve dependencies. No npm install. No node_modules. No build scripts."
+  ],
+  "solutionHeadline": "Full npm Support on Acode",
+  "solutionPoints": [
+    "Install npm alongside Node.js in Acode's terminal: <code>apk add nodejs npm</code>. npm is now running natively on your Android phone.",
+    "Use every npm command: <code>npm init</code>, <code>npm install</code>, <code>npm run</code>, <code>npm publish</code>, <code>npm update</code>, <code>npm audit</code>. It all works exactly as it does on desktop.",
+    "npx also works: <code>npx create-react-app my-app</code>, <code>npx eslint .</code>, <code>npx prettier --write .</code>. Run tools without installing them globally."
+  ],
+  "featuresHeadline": "npm Capabilities on Acode",
+  "features": [
+    {
+      "title": "Package Installation",
+      "description": "<code>npm install express</code>, <code>npm install -D typescript</code>. Install any npm package. Dependencies download to your phone's storage."
+    },
+    {
+      "title": "npm Scripts",
+      "description": "Run build processes, tests, and automation via package.json scripts. <code>npm run build</code>, <code>npm test</code>, <code>npm run lint</code>."
+    },
+    {
+      "title": "npx for One-Off Tools",
+      "description": "Use <code>npx</code> to run CLI tools without installing them. Scaffold projects, run linters, format code — all from the terminal."
+    },
+    {
+      "title": "package.json Management",
+      "description": "Edit package.json in Acode's editor with JSON syntax highlighting. Manage dependencies, scripts, and configs visually."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Do all npm packages work on Acode?",
+      "answer": "Most do. Pure JavaScript packages work universally. Packages with native C++ addons need Alpine Linux-compatible binaries — most popular packages support this."
+    },
+    {
+      "question": "Can I publish npm packages from Acode?",
+      "answer": "Yes. Authenticate with <code>npm login</code> and publish with <code>npm publish</code>. Full npm publishing workflow on Android."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Node.js on Android", "url": "/nodejs-android" },
+    { "title": "React on Android", "url": "/react-android" },
+    { "title": "Next.js on Android", "url": "/nextjs-android" },
+    { "title": "Web Dev on Android", "url": "/web-development-android" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"npm on Android — Package Management Guide\",\"description\":\"Use npm on your Android phone with Acode. Install packages, run scripts, manage dependencies.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/npm-android\"}}"
+}

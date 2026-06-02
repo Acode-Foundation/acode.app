@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /register
+Disallow: /user
+Disallow: /profile
+Disallow: /change-password
+Disallow: /payments
+Disallow: /orders
+Disallow: /earnings
+Disallow: /publish
+Disallow: /add-payment-method
+Disallow: /oauth
+Disallow: /update-plugin-editor
+Disallow: /api
+Disallow: /admin
+Disallow: /become-sponsor
+
+Sitemap: https://acode.app/sitemap.xml

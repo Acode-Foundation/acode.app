@@ -1,0 +1,56 @@
+{
+  "path": "/windsurf-alternative-android",
+  "title": "Windsurf Alternative for Android — AI IDE on Mobile | Acode",
+  "description": "Windsurf for your desktop, Acode for your pocket. Get AI-powered coding with multi-agent support on Android. Open source. No subscription required.",
+  "heroHeadline": "Windsurf for Desktop. Acode for Android.",
+  "heroSubheadline": "Windsurf is a powerful AI IDE on desktop. Acode brings AI coding to Android — run Claude Code, Codex, and OpenCode in a full terminal with a professional editor. Open source and free.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Compare Features",
+  "problemHeadline": "Windsurf Is Desktop-Only",
+  "problemPoints": [
+    "Windsurf by Codeium is an AI-powered IDE for desktop. It has Cascade for multi-file editing and AI features. But there is no Android version. No mobile support at all.",
+    "When you want to code on the go, Windsurf users are stuck. You can't access your AI coding workflow without your laptop."
+  ],
+  "solutionHeadline": "Acode: AI Coding Anywhere",
+  "solutionPoints": [
+    "Acode brings AI coding to Android. Run Claude Code, Codex, and OpenCode in Acode's Alpine Linux terminal — multiple AI agents, no vendor lock-in.",
+    "Unlike Windsurf, Acode is fully open source (MIT). No subscription. No proprietary lock-in. Your development environment belongs to you.",
+    "Acode's terminal + editor integration mirrors the Windsurf workflow: AI agents run in the terminal, you edit and review code in the editor."
+  ],
+  "featuresHeadline": "Comparison Highlights",
+  "features": [
+    {
+      "title": "Multi-Agent AI Coding",
+      "description": "Windsurf has Cascade. Acode supports Claude Code, Codex, and OpenCode — switch between any AI agent based on your task."
+    },
+    {
+      "title": "Open Source Freedom",
+      "description": "Windsurf is proprietary with free tier. Acode is MIT licensed — completely free and open source."
+    },
+    {
+      "title": "Full Terminal",
+      "description": "Windsurf has an integrated terminal. Acode has a native Alpine Linux terminal with apk package manager — install anything."
+    },
+    {
+      "title": "Mobile-First",
+      "description": "Windsurf is desktop. Acode is built for Android — touch-optimized, works on any phone, no laptop needed."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Can Acode replace Windsurf?",
+      "answer": "For mobile AI coding — yes. For desktop development with full debugging and refactoring — Windsurf on desktop is more powerful. Many developers use both: Windsurf at their desk, Acode on their phone."
+    },
+    {
+      "question": "Does Acode cost anything?",
+      "answer": "Acode is free and open source. No IDE subscription. You only pay for AI APIs you use (Anthropic, OpenAI)."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Cursor Alternative", "url": "/cursor-alternative-android" },
+    { "title": "VS Code Alternative", "url": "/vscode-alternative-android" },
+    { "title": "Claude Code on Android", "url": "/claude-code-android" },
+    { "title": "Android IDE Guide", "url": "/android-ide" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Windsurf Alternative for Android — AI IDE on Mobile\",\"description\":\"Windsurf for your desktop, Acode for your pocket. Get AI-powered coding with multi-agent support on Android.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/windsurf-alternative-android\"}}"
+}

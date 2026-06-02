@@ -1,0 +1,50 @@
+{
+  "path": "/nextjs-android",
+  "title": "Next.js on Android — Development Guide | Acode",
+  "description": "Build Next.js applications on your Android phone with Acode. Create Next.js projects, run dev servers, and deploy — all from Acode's Alpine Linux terminal and code editor.",
+  "heroHeadline": "Build Next.js Apps on Your Android Phone",
+  "heroSubheadline": "Acode lets you create and develop Next.js applications directly on Android. Node.js, npm, terminal, and JSX/TSX editor — everything you need to build with Next.js on the go.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Get Started",
+  "problemHeadline": "Next.js Development Needs a Desktop — Until Now",
+  "problemPoints": [
+    "Next.js is the most popular React framework — but it requires Node.js, npm, and a terminal. These are desktop tools. Running a Next.js dev server on a phone has been impossible without a real development environment.",
+    "You can edit Next.js files in a text editor, but you can't run them. You can't <code>npm run dev</code>. You can't see your pages. You can't use the App Router. Editing blind isn't development."
+  ],
+  "solutionHeadline": "Full Next.js on Acode",
+  "solutionPoints": [
+    "Acode's terminal runs Node.js and npm. Create a Next.js app: <code>npx create-next-app@latest</code>. Start the dev server: <code>npm run dev</code>. Preview in Acode's browser. All on your phone.",
+    "Enjoy full JSX/TSX syntax highlighting for your Next.js components, pages, and API routes. App Router and Pages Router both supported."
+  ],
+  "setupHeadline": "Create a Next.js App on Acode",
+  "setupSteps": [
+    { "title": "Install Acode & Terminal", "description": "Download Acode, set up the Alpine Linux terminal." },
+    { "title": "Install Node.js", "description": "Run: <code>apk add nodejs npm</code>" },
+    {
+      "title": "Create Next.js Project",
+      "description": "Run: <code>npx create-next-app@latest my-next-app</code> — choose your preferences (TypeScript, ESLint, Tailwind, App Router)."
+    },
+    { "title": "Start Dev Server", "description": "Run: <code>cd my-next-app && npm run dev</code>. Open the localhost URL in Acode's browser." },
+    { "title": "Edit & Preview", "description": "Edit pages in Acode's editor. Changes appear instantly with hot reload via Next.js's Fast Refresh." }
+  ],
+  "featuresHeadline": "Next.js Features on Acode",
+  "features": [
+    {
+      "title": "App Router Support",
+      "description": "Build with Next.js App Router. Server Components, layouts, loading states, and route handlers — all developable on your phone."
+    },
+    { "title": "API Routes", "description": "Create and test API routes directly. Run the dev server and test endpoints from Acode's browser." },
+    { "title": "TypeScript Support", "description": "Next.js with TypeScript works great on Acode. TSX syntax highlighting in the editor." },
+    {
+      "title": "Tailwind CSS",
+      "description": "Install the Tailwind plugin for Acode to get IntelliSense for Tailwind classes in your Next.js components."
+    }
+  ],
+  "relatedPages": [
+    { "title": "React on Android", "url": "/react-android" },
+    { "title": "Node.js on Android", "url": "/nodejs-android" },
+    { "title": "npm on Android", "url": "/npm-android" },
+    { "title": "Web Dev on Android", "url": "/web-development-android" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Next.js on Android — Development Guide\",\"description\":\"Build Next.js applications on your Android phone with Acode. Create Next.js projects, run dev servers, and deploy.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/nextjs-android\"}}"
+}

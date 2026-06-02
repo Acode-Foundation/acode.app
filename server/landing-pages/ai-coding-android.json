@@ -1,0 +1,78 @@
+{
+  "path": "/ai-coding-android",
+  "title": "AI Coding on Android — The Complete Guide | Acode",
+  "description": "Learn how to do AI-powered coding on your Android phone. Run Claude Code, Codex, and OpenCode in Acode. The only Android IDE with native AI coding agent support. Full guide with setup instructions.",
+  "heroHeadline": "AI Coding on Android Starts Here",
+  "heroSubheadline": "Acode is the only Android development environment that runs AI coding agents natively. Use Claude Code, Codex, and OpenCode — all on your phone. Edit AI-generated code in a real editor with syntax highlighting.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Explore AI Guides",
+  "problemHeadline": "AI Coding Tools Have Ignored Android",
+  "problemPoints": [
+    "The AI coding revolution has transformed how developers work — but it's been a desktop-only revolution. Claude Code, Codex, Cursor, Windsurf, GitHub Copilot — all designed for laptops and workstations.",
+    "If you wanted to use AI for coding on the go, your options were zero. No Android app could run AI coding agents. The tools simply didn't exist on mobile.",
+    "This left a massive gap: millions of developers with powerful Android phones, wanting AI coding assistance, with no way to access it. The AI coding revolution stopped at the desktop door."
+  ],
+  "solutionHeadline": "Acode Brings AI Coding to Android",
+  "solutionPoints": [
+    "Acode is the <strong>only</strong> Android app that runs AI coding agents. Its built-in Alpine Linux terminal provides the environment that Claude Code, Codex, and OpenCode need to function.",
+    "<strong>Three AI agents, one app</strong>: Install Claude Code (Anthropic), Codex (OpenAI), and OpenCode (open-source) side by side. Use the best tool for each task without switching environments.",
+    "Acode isn't just an AI terminal — it's a <strong>complete IDE</strong>. AI agents generate code in the terminal. You view, edit, and enhance it in a professional editor with syntax highlighting for 100+ languages. Git, npm, SSH — everything is integrated.",
+    "And because Acode is <strong>open source and free</strong>, there's no IDE subscription on top of your AI API costs. Pay only for the AI services you use. Your development environment is yours."
+  ],
+  "featuresHeadline": "AI Coding Capabilities",
+  "features": [
+    {
+      "title": "Claude Code",
+      "description": "Anthropic's agentic AI coding tool. Edit multiple files, run commands, search codebases, and debug complex issues — all from Acode's terminal."
+    },
+    {
+      "title": "OpenAI Codex",
+      "description": "OpenAI's coding CLI. Generate functions, explain code, refactor files, and get AI assistance directly in your Android development workflow."
+    },
+    {
+      "title": "OpenCode",
+      "description": "The open-source AI coding agent. Free, no API markup, supports multiple AI backends. True open-source AI development on mobile."
+    },
+    {
+      "title": "AI Plugins",
+      "description": "In-editor AI assistance via plugins: AcoPilot, Blackbox AI, ChatGPT, Cosmo AI. Get code suggestions without leaving the editor."
+    },
+    {
+      "title": "Full IDE Integration",
+      "description": "AI agents work alongside regular development tools. Use Git, npm, SSH, and your AI agent — all in the same Linux environment."
+    }
+  ],
+  "setupHeadline": "Get Started with AI Coding",
+  "setupSteps": [
+    { "title": "Install Acode", "description": "Download from Google Play or F-Droid. Free." },
+    { "title": "Set Up Terminal", "description": "Tap the terminal icon. Alpine Linux installs automatically." },
+    { "title": "Install Node.js", "description": "<code>apk add nodejs npm git</code>" },
+    {
+      "title": "Install AI Agents",
+      "description": "Choose one: Claude Code (<code>npm install -g @anthropic-ai/claude-code</code>), Codex, or OpenCode. Follow each tool's setup guide."
+    },
+    { "title": "Start AI Coding", "description": "Run your AI agent in the terminal. Open files in Acode's editor with <code>acode .</code>." }
+  ],
+  "faqs": [
+    {
+      "question": "Is AI coding free on Acode?",
+      "answer": "Acode is free. AI agents have their own costs: Claude Code requires an Anthropic API key (pay-as-you-go), Codex requires an OpenAI API key, and OpenCode is open-source (free tool, but needs an AI backend)."
+    },
+    {
+      "question": "Can I use multiple AI agents?",
+      "answer": "Yes. Install Claude Code, Codex, and OpenCode all together. Switch between them based on the task. Each runs in a separate terminal tab."
+    },
+    {
+      "question": "Does AI coding work offline?",
+      "answer": "Cloud-based AI (Claude, OpenAI) needs internet. If you run a local AI model in Acode's terminal (e.g., via Ollama), AI coding can work fully offline."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Claude Code on Android", "url": "/claude-code-android" },
+    { "title": "Run Codex on Android", "url": "/codex-android" },
+    { "title": "OpenCode on Android", "url": "/opencode-android" },
+    { "title": "Cursor Alternative", "url": "/cursor-alternative-android" },
+    { "title": "Android IDE Guide", "url": "/android-ide" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"AI Coding on Android — The Complete Guide\",\"description\":\"Learn how to do AI-powered coding on your Android phone. Run Claude Code, Codex, and OpenCode in Acode.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/ai-coding-android\"}}"
+}

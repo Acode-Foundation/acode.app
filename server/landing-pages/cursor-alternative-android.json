@@ -1,0 +1,78 @@
+{
+  "path": "/cursor-alternative-android",
+  "title": "Cursor Alternative for Android — AI Coding on Your Phone | Acode",
+  "description": "Cursor is AI coding on desktop. Acode is AI coding on Android. Run Claude Code, Codex, and OpenCode in a full Linux terminal. The closest thing to Cursor for Android phones.",
+  "heroHeadline": "Cursor for Desktop. Acode for Android.",
+  "heroSubheadline": "Cursor is the leading AI-first IDE on desktop. Acode brings the same AI-powered coding to Android — run Claude Code, Codex, and OpenCode in a native terminal. Your phone is now an AI coding machine.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Compare Features",
+  "problemHeadline": "Cursor Is Desktop-Only",
+  "problemPoints": [
+    "Cursor is a powerful AI-first code editor built on VS Code. It deeply integrates AI for code generation, refactoring, and debugging. But it runs exclusively on desktop — there's no Android version.",
+    "If you're a Cursor user who wants to code on the go, you're stuck. You can read code on your phone but can't run AI agents, can't execute tests, can't deploy. Your AI coding workflow ends when you leave your desk.",
+    "No Android app has attempted to replicate the Cursor experience — until Acode. The gap between desktop AI IDEs and mobile coding tools has been enormous."
+  ],
+  "solutionHeadline": "Acode: AI Coding on Android",
+  "solutionPoints": [
+    "<strong>Multiple AI Agents</strong>: Where Cursor integrates one AI experience, Acode's terminal lets you run <strong>any</strong> CLI-based AI agent — Claude Code, Codex, OpenCode. Choose the best tool for each task.",
+    "<strong>Open Source Freedom</strong>: Cursor is proprietary. Acode is MIT licensed. Your development environment belongs to you. No subscriptions. No vendor lock-in.",
+    "<strong>Full Terminal + Editor</strong>: Cursor inherits VS Code's integrated terminal. Acode has a native Alpine Linux terminal with the <code>apk</code> package manager. Same concept, different platform.",
+    "<strong>Real Linux Environment</strong>: Cursor uses your system's terminal. Acode provides a complete Alpine Linux system. Install any package. Run any CLI tool. Your phone is a real development machine."
+  ],
+  "comparisonHeadline": "Acode vs Cursor",
+  "comparisonHeaders": ["Feature", "Acode", "Cursor"],
+  "comparisonRows": [
+    ["Platform", "<span class='lan-check'>Android</span>", "<span class='lan-check'>Desktop (Win/Mac/Linux)</span>"],
+    ["AI Coding", "<span class='lan-check'>✔ Claude Code, Codex, OpenCode</span>", "<span class='lan-check'>✔ Built-in AI features</span>"],
+    ["Multiple AI Models", "<span class='lan-check'>✔ Any CLI AI agent</span>", "<span class='lan-check'>✔ Proprietary + API</span>"],
+    ["Code Editor", "<span class='lan-check'>✔ Ace Editor (100+ langs)</span>", "<span class='lan-check'>✔ VS Code-based editor</span>"],
+    ["Integrated Terminal", "<span class='lan-check'>✔ Alpine Linux</span>", "<span class='lan-check'>✔ System terminal</span>"],
+    ["Extensions", "<span class='lan-check'>✔ 250+ plugins</span>", "<span class='lan-check'>✔ VS Code extensions</span>"],
+    ["Git", "<span class='lan-check'>✔ CLI + GUI</span>", "<span class='lan-check'>✔ Built-in + CLI</span>"],
+    ["Open Source", "<span class='lan-check'>✔ MIT License</span>", "<span class='lan-cross'>✘ Proprietary</span>"],
+    ["Price", "<span class='lan-check'>✔ Free</span>", "<span class='lan-cross'>✘ Subscription</span>"],
+    ["Mobile", "<span class='lan-check'>✔ Fully mobile</span>", "<span class='lan-cross'>✘ Desktop only</span>"]
+  ],
+  "featuresHeadline": "Why Acode for AI Coding",
+  "features": [
+    {
+      "title": "No Subscription Required",
+      "description": "Acode is free and open source. You only pay for the AI APIs you use (Anthropic, OpenAI). No IDE subscription fees on top of API costs."
+    },
+    {
+      "title": "Multi-Agent Flexibility",
+      "description": "Use Claude Code for one task, Codex for another. OpenCode for open-source AI. Pick the right AI for each job — not locked into one vendor."
+    },
+    {
+      "title": "Android-Native",
+      "description": "Designed for phones. Touch-optimized UI. Works offline for non-AI tasks. Your entire dev environment fits in your pocket."
+    },
+    {
+      "title": "Same AI Tools, Different Device",
+      "description": "Claude Code runs the same on Acode as on Cursor's desktop terminal. No watered-down mobile version. Full AI agent capabilities."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Can Acode replace Cursor completely?",
+      "answer": "For AI-assisted coding on the go — yes. For full desktop IDE features like advanced debugging and refactoring — Cursor on desktop is more powerful. Many developers use both: Cursor at their desk, Acode on their phone."
+    },
+    {
+      "question": "Does Acode have AI built into the editor like Cursor?",
+      "answer": "Acode has AI plugins (AcoPilot, Blackbox AI) for in-editor suggestions. For agentic AI coding (multi-file edits, complex refactoring), run Claude Code/Codex/OpenCode in the terminal. Both approaches work."
+    },
+    {
+      "question": "Why would I use Acode instead of just using Cursor?",
+      "answer": "When you're away from your desk — commuting, traveling, or just don't have your laptop — Acode keeps you coding. It's not a replacement for Cursor; it's your mobile AI coding companion."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Claude Code on Android", "url": "/claude-code-android" },
+    { "title": "Run Codex on Android", "url": "/codex-android" },
+    { "title": "OpenCode on Android", "url": "/opencode-android" },
+    { "title": "VS Code Alternative", "url": "/vscode-alternative-android" },
+    { "title": "Windsurf Alternative", "url": "/windsurf-alternative-android" },
+    { "title": "Android IDE Guide", "url": "/android-ide" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Cursor Alternative for Android — AI Coding on Your Phone\",\"description\":\"Cursor is AI coding on desktop. Acode is AI coding on Android. Run Claude Code, Codex, and OpenCode in a full Linux terminal.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/cursor-alternative-android\"}}"
+}

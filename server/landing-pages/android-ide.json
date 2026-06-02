@@ -1,0 +1,120 @@
+{
+  "path": "/android-ide",
+  "title": "Android IDE — The Complete Development Environment for Your Phone | Acode",
+  "description": "Acode is the most powerful Android IDE with a full Linux terminal, AI coding support, 100+ language syntax highlighting, Git, and 250+ plugins. Desktop-grade development on your phone.",
+  "heroHeadline": "The Android IDE That Runs Real Linux",
+  "heroSubheadline": "Acode isn't just a code editor — it's a complete development environment for Android. Full Alpine Linux terminal, AI coding agents, Git, SSH, and 250+ plugins. Everything you need to code on your phone.",
+  "ctaPrimary": "Download Acode — Free",
+  "ctaSecondary": "Explore Features",
+  "problemHeadline": "Why Android Needs a Real IDE",
+  "problemPoints": [
+    "Most Android 'code editors' are just text editors with basic syntax highlighting. They can display code, but they can't run it. You can write JavaScript but can't execute it. You can edit Python but can't install packages.",
+    "Desktop developers have powerful IDEs — VS Code, IntelliJ, Cursor — that combine editing, debugging, terminal, and version control. Android developers have been stuck with fragmented tools: one app for editing, another for terminal, another for Git.",
+    "The rise of AI coding tools has made the gap even bigger. Desktop IDEs integrate AI natively. Android developers have been completely left out of the AI coding revolution — no terminal, no AI agents, no real development environment.",
+    "What Android needs isn't another text editor. It needs a real IDE — one that combines editor, terminal, package management, version control, and AI tools into a single, cohesive environment."
+  ],
+  "solutionHeadline": "Acode: A Complete Android IDE",
+  "solutionPoints": [
+    "<strong>Professional Code Editor</strong>: Acode uses Ace Editor v1.22.0 with syntax highlighting for 100+ programming languages. Multi-file tabs, command palette (Ctrl+Shift+P), file search (Ctrl+P), code completion, keyboard shortcuts, and customizable themes.",
+    "<strong>Native Linux Terminal</strong>: Inside Acode, a full Alpine Linux distribution runs via proot. Use the <code>apk</code> package manager to install Node.js, Python, Git, compilers, databases — anything in Alpine's repository. Multiple terminal tabs. Shell customization.",
+    "<strong>AI Coding Agents</strong>: Acode is the only Android IDE where you can run Claude Code, OpenAI Codex, and OpenCode natively. Install them in the terminal, run AI agents to generate and debug code, and view output in the editor. Full AI development workflow on Android.",
+    "<strong>Complete Developer Toolkit</strong>: Git integration (clone, commit, push, pull). FTP/SFTP client for remote file management. SSH client for server access. Live HTML preview. JavaScript console. Language Server Protocol (LSP) for IntelliSense. 250+ community plugins."
+  ],
+  "featuresHeadline": "What Makes Acode a Real IDE",
+  "features": [
+    {
+      "title": "Editor + Terminal in One App",
+      "description": "No more switching between apps. Edit code with syntax highlighting, run it in the terminal, and debug — all in Acode. The <code>acode</code> CLI bridges editor and terminal."
+    },
+    {
+      "title": "100+ Language Support",
+      "description": "Syntax highlighting and editing support for JavaScript, TypeScript, Python, Java, Go, Rust, C/C++, PHP, Ruby, Swift, Kotlin, Dart, and 90+ more languages."
+    },
+    {
+      "title": "AI-Powered Development",
+      "description": "Run Claude Code, Codex, and OpenCode in Acode's terminal. AI agents can generate code, debug errors, refactor files, and explain complex logic — directly on your phone."
+    },
+    {
+      "title": "Full Package Management",
+      "description": "Alpine Linux's <code>apk</code> gives you thousands of packages. Install Node.js (<code>apk add nodejs npm</code>), Python (<code>apk add python3</code>), Git, compilers, databases, and more."
+    },
+    {
+      "title": "Version Control",
+      "description": "Git CLI runs in the terminal. GUI Git plugins available in the Plugin Store. Clone repos, commit changes, manage branches, push to GitHub — full Git workflow on Android."
+    },
+    {
+      "title": "Extensible with Plugins",
+      "description": "250+ community plugins add language servers, themes, AI assistants, build tools, formatters, linters, and more. Build your own plugins with the developer API (JavaScript/TypeScript)."
+    },
+    {
+      "title": "Remote Access",
+      "description": "Built-in FTP/SFTP client for remote file management. SSH client for server access. Manage remote servers and edit config files directly from Acode's editor."
+    },
+    {
+      "title": "Web Development Ready",
+      "description": "Live HTML/Markdown preview. JavaScript console for debugging. Node.js and npm for backend. React, Next.js, Vue, Svelte support via syntax highlighting and plugins."
+    }
+  ],
+  "setupHeadline": "Get Started with Acode IDE",
+  "setupSteps": [
+    {
+      "title": "Download Acode",
+      "description": "Available on <a href='https://play.google.com/store/apps/details?id=com.foxdebug.acodefree' target='_blank' rel='noopener'>Google Play</a> and <a href='https://www.f-droid.org/packages/com.foxdebug.acode/' target='_blank' rel='noopener'>F-Droid</a>. Free. Open source."
+    },
+    {
+      "title": "Set Up the Terminal",
+      "description": "Tap the terminal icon to install Alpine Linux. First-time setup takes about 60 seconds. No root required."
+    },
+    {
+      "title": "Install Your Dev Tools",
+      "description": "Run <code>apk update && apk add nodejs npm git python3 py3-pip</code> to get started. Install whatever languages and tools you need."
+    },
+    {
+      "title": "Explore the Editor",
+      "description": "Create a new file, open the command palette (Ctrl+Shift+P), search files (Ctrl+P). Customize themes in Settings."
+    },
+    {
+      "title": "Browse Plugins",
+      "description": "Go to Settings → Plugins and explore 250+ community extensions. Install language servers, themes, and tools."
+    },
+    {
+      "title": "Start Coding",
+      "description": "Open a folder, create files, write code, run in terminal. Your phone is now a complete development environment."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "What is an Android IDE?",
+      "answer": "An Android IDE (Integrated Development Environment) is an app that combines code editing, debugging, terminal access, and development tools into one environment. Acode is the most complete Android IDE available, offering editor + terminal + Git + AI support in a single app."
+    },
+    {
+      "question": "Can Acode replace my desktop IDE?",
+      "answer": "For many workflows, yes. Acode supports the same languages and tools as desktop IDEs. It's ideal for web development, scripting, AI-assisted coding, and quick edits. For large-scale enterprise projects requiring heavy compilation, a desktop may still be preferable — but Acode handles surprising amounts of real development work."
+    },
+    {
+      "question": "Does Acode support keyboard shortcuts?",
+      "answer": "Yes. Connect a Bluetooth keyboard and use Ctrl+S (save), Ctrl+Shift+P (command palette), Ctrl+P (file search), Ctrl+C/V (copy/paste), and more. Many developers use Acode with a folding keyboard for a laptop-like experience."
+    },
+    {
+      "question": "Is Acode free for commercial use?",
+      "answer": "Yes. Acode is MIT licensed — you can use it for personal projects, commercial work, and even modify the source code. No restrictions."
+    },
+    {
+      "question": "How does Acode compare to VS Code?",
+      "answer": "VS Code is the gold standard for desktop IDEs. Acode brings the same core concepts to Android: command palette, file search, multi-file tabs, extensions, terminal, and Git. It's the closest thing to VS Code on Android. See our <a href='/vscode-alternative-android'>VS Code alternative guide</a>."
+    },
+    {
+      "question": "Can I use Acode without the terminal?",
+      "answer": "Yes. The terminal is optional. You can use Acode purely as a code editor with syntax highlighting, file management, and plugins. The terminal is there when you need it."
+    }
+  ],
+  "relatedPages": [
+    { "title": "Claude Code on Android", "url": "/claude-code-android" },
+    { "title": "Run Codex on Android", "url": "/codex-android" },
+    { "title": "Termux Alternative", "url": "/termux-alternative" },
+    { "title": "VS Code Alternative", "url": "/vscode-alternative-android" },
+    { "title": "Node.js on Android", "url": "/nodejs-android" },
+    { "title": "React on Android", "url": "/react-android" }
+  ],
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Android IDE — The Complete Development Environment for Your Phone\",\"description\":\"Acode is the most powerful Android IDE with a full Linux terminal, AI coding support, 100+ language syntax highlighting, Git, and 250+ plugins.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/android-ide\"}}"
+}
