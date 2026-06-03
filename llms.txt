@@ -1,0 +1,55 @@
+# Acode — Android IDE with Linux Terminal & AI Coding
+
+> Open-source Android IDE with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Node.js, React, Next.js, Python, Git, SSH, and 250+ plugins. 3.6M+ downloads. Built by Foxbiz Software Pvt. Ltd.
+
+Acode is the only Android app that combines a professional code editor with a native Alpine Linux terminal (proot-based, no root required). It supports 100+ languages with syntax highlighting, uses the apk package manager for Linux packages, and enables desktop-grade development workflows entirely on a phone.
+
+Key capabilities:
+- Native Alpine Linux terminal with bash, zsh, apk package manager
+- Runs Claude Code, OpenAI Codex, and OpenCode natively
+- Node.js, npm, React, Next.js, Python, Git — install and run via terminal
+- SSH client, FTP/SFTP support, Git integration
+- 250+ community plugins (AI assistants, themes, language support, build tools)
+- Free and open source (MIT license) on F-Droid and Google Play
+
+## AI Coding
+
+- [Claude Code on Android](https://acode.app/claude-code-android): Run Anthropic's Claude Code agentic AI coding CLI on your phone — full setup guide
+- [Codex on Android](https://acode.app/codex-android): Run OpenAI Codex on Android with the Alpine Linux terminal
+- [OpenCode on Android](https://acode.app/opencode-android): Run the open-source AI coding agent on your phone
+- [AI Coding on Android](https://acode.app/ai-coding-android): Complete guide to AI-assisted development on mobile
+- [Cursor Alternative for Android](https://acode.app/cursor-alternative-android): How Acode compares to Cursor's AI-powered IDE
+- [Windsurf Alternative for Android](https://acode.app/windsurf-alternative-android): Codeium Windsurf alternative on mobile
+
+## Linux Terminal & DevOps
+
+- [Linux Terminal for Android](https://acode.app/linux-terminal-android): Full Alpine Linux terminal with proot — no root needed
+- [Termux Alternative](https://acode.app/termux-alternative): Why Acode is the upgrade from Termux — same terminal plus a real code editor
+- [SSH on Android](https://acode.app/ssh-android): SSH client setup and remote development guide
+- [Git on Android](https://acode.app/git-android): Full Git workflow — clone, commit, push, branch from your phone
+
+## Development Frameworks
+
+- [Node.js on Android](https://acode.app/nodejs-android): Install Node.js and run JavaScript apps on your phone
+- [npm on Android](https://acode.app/npm-android): Package management and npm workflow on mobile
+- [React on Android](https://acode.app/react-android): React development environment with live preview
+- [Next.js on Android](https://acode.app/nextjs-android): Full Next.js development on your phone
+- [Web Development on Android](https://acode.app/web-development-android): Complete web dev guide for mobile
+
+## Comparisons & Alternatives
+
+- [Android IDE Guide](https://acode.app/android-ide): Why Acode is the most complete Android development environment
+- [VS Code Alternative for Android](https://acode.app/vscode-alternative-android): VS Code-like experience on mobile
+- [Spck Editor Alternative](https://acode.app/spck-alternative): How Acode compares to Spck Editor
+
+## Optional
+
+- [Homepage](https://acode.app): Product overview and features
+- [Plugin Directory](https://acode.app/plugins): Browse 250+ community plugins — AI assistants, themes, language packs
+- [Acode Pro](https://acode.app/pro): Premium features and Pro subscription
+- [FAQs](https://acode.app/faqs): Frequently asked questions about Acode
+- [Sponsors](https://acode.app/sponsors): Support Acode development
+- [Documentation](https://docs.acode.app): Developer docs — plugin API, user guide, tutorials
+- [GitHub](https://github.com/Acode-Foundation/Acode): Source code (5,458 stars, 1,096 forks, MIT license)
+- [Google Play](https://play.google.com/store/apps/details?id=com.foxdebug.acodefree): Download from Play Store
+- [F-Droid](https://www.f-droid.org/packages/com.foxdebug.acode/): Download from F-Droid

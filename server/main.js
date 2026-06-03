@@ -52,6 +52,12 @@ async function main() {
     next();
   });
 
+  // Inject Link headers for AI crawler and sitemap discovery
+  app.use((_req, res, next) => {
+    res.setHeader('Link', ['<https://acode.app/llms.txt>; rel="llms.txt"', '<https://acode.app/sitemap.xml>; rel="sitemap"'].join(', '));
+    next();
+  });
+
   // CSRF protection: require a custom header or same-origin on state-changing requests
   // Browsers won't send custom headers on cross-origin form submissions
   // Skip for webhooks (Razorpay sends raw JSON without custom headers)
@@ -113,6 +119,11 @@ async function main() {
   app.get('/robots.txt', (_req, res) => {
     res.setHeader('Content-Type', 'text/plain');
     res.sendFile('robots.txt', { root: process.cwd() });
+  });
+
+  app.get('/llms.txt', (_req, res) => {
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.sendFile('llms.txt', { root: process.cwd() });
   });
 
   app.use('/api', apis);
