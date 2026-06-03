@@ -99,5 +99,5 @@ async function fetchSponsors() {
 function ensureAbsoluteUrl(url) {
   if (!url) return '';
   if (/^https?:\/\//.test(url)) return url;
-  return `https://${url}`;
+  return `http://${url}`;
 }
