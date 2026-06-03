@@ -78,7 +78,7 @@ function renderSponsorCard(sponsor) {
         )}
         {tagline && ['platinum', 'titanium'].includes(tier) && <p className='sponsor-tagline'>{tagline}</p>}
         {hasWebsite && website && (
-          <a href={website} target='_blank' rel='noopener' className='sponsor-website'>
+          <a href={ensureAbsoluteUrl(website)} target='_blank' rel='noopener' className='sponsor-website'>
             <span className='icon link' /> {website.replace(/^https?:\/\//, '')}
           </a>
         )}
@@ -94,4 +94,10 @@ async function fetchSponsors() {
   } catch {
     return [];
   }
+}
+
+function ensureAbsoluteUrl(url) {
+  if (!url) return '';
+  if (/^https?:\/\//.test(url)) return url;
+  return `https://${url}`;
 }
