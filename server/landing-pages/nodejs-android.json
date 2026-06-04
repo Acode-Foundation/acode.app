@@ -96,7 +96,7 @@
     { "title": "npm on Android", "url": "/npm-android" },
     { "title": "React on Android", "url": "/react-android" },
     { "title": "Next.js on Android", "url": "/nextjs-android" },
-    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Code Editor Guide", "url": "/android-ide" },
     { "title": "Web Dev on Android", "url": "/web-development-android" },
     { "title": "Git on Android", "url": "/git-android" }
   ],

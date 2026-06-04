@@ -1,6 +1,6 @@
-# Acode — Android IDE with Linux Terminal & AI Coding
+# Acode — Code Editor with Linux Terminal & AI Coding
 
-> Open-source Android IDE with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Node.js, React, Next.js, Python, Git, SSH, and 250+ plugins. 3.6M+ downloads. Built by Foxbiz Software Pvt. Ltd.
+> Open-source Code Editor with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Node.js, React, Next.js, Python, Git, SSH, and 250+ plugins. 3.6M+ downloads. Built by Foxbiz Software Pvt. Ltd.
 
 Acode is the only Android app that combines a professional code editor with a native Alpine Linux terminal (proot-based, no root required). It supports 100+ languages with syntax highlighting, uses the apk package manager for Linux packages, and enables desktop-grade development workflows entirely on a phone.
 
@@ -38,7 +38,7 @@ Key capabilities:
 
 ## Comparisons & Alternatives
 
-- [Android IDE Guide](https://acode.app/android-ide): Why Acode is the most complete Android development environment
+- [Code Editor Guide](https://acode.app/android-ide): Why Acode is the most complete Android development environment
 - [VS Code Alternative for Android](https://acode.app/vscode-alternative-android): VS Code-like experience on mobile
 - [Spck Editor Alternative](https://acode.app/spck-alternative): How Acode compares to Spck Editor
 

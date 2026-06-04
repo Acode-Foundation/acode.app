@@ -3,7 +3,7 @@
   "title": "Cursor Alternative for Android — AI Coding on Your Phone | Acode",
   "description": "Cursor is AI coding on desktop. Acode is AI coding on Android. Run Claude Code, Codex, and OpenCode in a full Linux terminal. The closest thing to Cursor for Android phones.",
   "heroHeadline": "Cursor for Desktop. Acode for Android.",
-  "heroSubheadline": "Cursor is the leading AI-first IDE on desktop. Acode brings the same AI-powered coding to Android — run Claude Code, Codex, and OpenCode in a native terminal. Your phone is now an AI coding machine.",
+  "heroSubheadline": "Cursor is the leading AI-first Code Editor on desktop. Acode brings the same AI-powered coding to Android — run Claude Code, Codex, and OpenCode in a native terminal. Your phone is now an AI coding machine.",
   "ctaPrimary": "Download Acode — Free",
   "ctaSecondary": "Compare Features",
   "problemHeadline": "Cursor Is Desktop-Only",
@@ -37,7 +37,7 @@
   "features": [
     {
       "title": "No Subscription Required",
-      "description": "Acode is free and open source. You only pay for the AI APIs you use (Anthropic, OpenAI). No IDE subscription fees on top of API costs."
+      "description": "Acode is free and open source. You only pay for the AI APIs you use (Anthropic, OpenAI). No subscription fees on top of API costs."
     },
     {
       "title": "Multi-Agent Flexibility",
@@ -55,7 +55,7 @@
   "faqs": [
     {
       "question": "Can Acode replace Cursor completely?",
-      "answer": "For AI-assisted coding on the go — yes. For full desktop IDE features like advanced debugging and refactoring — Cursor on desktop is more powerful. Many developers use both: Cursor at their desk, Acode on their phone."
+      "answer": "For AI-assisted coding on the go — yes. For full desktop code editor features like advanced debugging and refactoring — Cursor on desktop is more powerful. Many developers use both: Cursor at their desk, Acode on their phone."
     },
     {
       "question": "Does Acode have AI built into the editor like Cursor?",
@@ -72,7 +72,7 @@
     { "title": "OpenCode on Android", "url": "/opencode-android" },
     { "title": "VS Code Alternative", "url": "/vscode-alternative-android" },
     { "title": "Windsurf Alternative", "url": "/windsurf-alternative-android" },
-    { "title": "Android IDE Guide", "url": "/android-ide" }
+    { "title": "Code Editor Guide", "url": "/android-ide" }
   ],
   "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Cursor Alternative for Android — AI Coding on Your Phone\",\"description\":\"Cursor is AI coding on desktop. Acode is AI coding on Android. Run Claude Code, Codex, and OpenCode in a full Linux terminal.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/cursor-alternative-android\"}}"
 }

@@ -49,7 +49,7 @@
   "relatedPages": [
     { "title": "Linux Terminal Android", "url": "/linux-terminal-android" },
     { "title": "Git on Android", "url": "/git-android" },
-    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Code Editor Guide", "url": "/android-ide" },
     { "title": "Termux Alternative", "url": "/termux-alternative" }
   ],
   "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"SSH on Android — Remote Server Access Guide\",\"description\":\"Connect to remote servers via SSH from your Android phone using Acode.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/ssh-android\"}}"

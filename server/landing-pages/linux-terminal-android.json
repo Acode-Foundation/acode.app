@@ -16,7 +16,7 @@
   "solutionPoints": [
     "Acode embeds a full Alpine Linux distribution using proot technology. Alpine is the same lightweight Linux used in Docker containers and servers. It's fast, secure, and gives you the <code>apk</code> package manager.",
     "Install anything from Alpine's repository: Node.js, Python, Git, compilers, databases, web servers — thousands of packages. <code>apk add nodejs npm</code>, <code>apk add python3</code>, <code>apk add git</code> — it just works.",
-    "The terminal runs inside Acode's IDE — not as a separate app. Write code in the editor, run it in the terminal, debug the output. Use <code>acode .</code> to open your project folder from terminal to editor instantly.",
+    "The terminal runs inside Acode's editor — not as a separate app. Write code in the editor, run it in the terminal, debug the output. Use <code>acode .</code> to open your project folder from terminal to editor instantly.",
     "Customize everything: shell prompt, aliases, environment variables via <code>/etc/profile</code> and <code>~/.bashrc</code>. Multiple terminal tabs. Fish-style path shortening. Backup and restore your entire Linux installation."
   ],
   "featuresHeadline": "Terminal Features",
@@ -65,7 +65,7 @@
     { "title": "Termux Alternative", "url": "/termux-alternative" },
     { "title": "SSH on Android", "url": "/ssh-android" },
     { "title": "Git on Android", "url": "/git-android" },
-    { "title": "Android IDE Guide", "url": "/android-ide" }
+    { "title": "Code Editor Guide", "url": "/android-ide" }
   ],
   "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Linux Terminal for Android — Full Alpine Linux on Your Phone\",\"description\":\"Get a full Linux terminal on your Android phone with Acode. Alpine Linux with apk package manager, bash shell, Node.js, Python, Git.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/linux-terminal-android\"}}"
 }

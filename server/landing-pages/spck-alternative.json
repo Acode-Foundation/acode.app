@@ -1,9 +1,9 @@
 {
   "path": "/spck-alternative",
-  "title": "Spck Alternative — Acode Android IDE with Terminal | Acode",
-  "description": "Looking beyond Spck Editor? Acode adds a full Linux terminal, AI coding agents, SSH, FTP, and 250+ plugins. The Android IDE that lets you edit AND run code in one app.",
+  "title": "Spck Alternative — Acode Code Editor with Terminal | Acode",
+  "description": "Looking beyond Spck Editor? Acode adds a full Linux terminal, AI coding agents, SSH, FTP, and 250+ plugins. The Code Editor that lets you edit AND run code in one app.",
   "heroHeadline": "Spck Lets You Edit Code. Acode Lets You Run It.",
-  "heroSubheadline": "Spck is a good code editor for Android. Acode is a complete IDE — same code editing capabilities plus a full Alpine Linux terminal, AI coding agents, 250+ plugins, SSH, and FTP.",
+  "heroSubheadline": "Spck is a good code editor for Android. Acode is a complete development environment — same code editing capabilities plus a full Alpine Linux terminal, AI coding agents, 250+ plugins, SSH, and FTP.",
   "ctaPrimary": "Download Acode — Free",
   "ctaSecondary": "Compare Features",
   "problemHeadline": "Spck Can Edit Code, But It Can't Run It",
@@ -14,7 +14,7 @@
   "solutionHeadline": "Acode: Editor + Terminal + AI",
   "solutionPoints": [
     "Acode gives you everything Spck offers — syntax highlighting, Git integration, clean UI, project management — plus a full Alpine Linux terminal. Install Node.js, Python, Git, compilers. Run your code. See the output.",
-    "Acode has 250+ plugins (vs Spck's limited ecosystem). AI coding agents (Claude Code, Codex, OpenCode) run natively. SSH and FTP clients built in. It's not a code editor — it's a complete IDE."
+    "Acode has 250+ plugins (vs Spck's limited ecosystem). AI coding agents (Claude Code, Codex, OpenCode) run natively. SSH and FTP clients built in. It's not a code editor — it's a complete development environment in your pocket."
   ],
   "comparisonHeadline": "Acode vs Spck",
   "comparisonHeaders": ["Feature", "Acode", "Spck Editor"],
@@ -50,8 +50,8 @@
   "relatedPages": [
     { "title": "Termux Alternative", "url": "/termux-alternative" },
     { "title": "VS Code Alternative", "url": "/vscode-alternative-android" },
-    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Code Editor Guide", "url": "/android-ide" },
     { "title": "Node.js on Android", "url": "/nodejs-android" }
   ],
-  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Spck Alternative — Acode Android IDE with Terminal\",\"description\":\"Looking beyond Spck Editor? Acode adds a full Linux terminal, AI coding agents, SSH, FTP, and 250+ plugins.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/spck-alternative\"}}"
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Spck Alternative — Acode Code Editor with Terminal\",\"description\":\"Looking beyond Spck Editor? Acode adds a full Linux terminal, AI coding agents, SSH, FTP, and 250+ plugins.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/spck-alternative\"}}"
 }

@@ -91,7 +91,7 @@
     { "title": "npm on Android", "url": "/npm-android" },
     { "title": "Web Dev on Android", "url": "/web-development-android" },
     { "title": "Git on Android", "url": "/git-android" },
-    { "title": "Android IDE Guide", "url": "/android-ide" }
+    { "title": "Code Editor Guide", "url": "/android-ide" }
   ],
   "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"React Development on Android — Complete Guide\",\"description\":\"Build React applications on your Android phone with Acode. Full React development environment with Node.js, npm, terminal, and live preview.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/react-android\"}}"
 }

@@ -1,7 +1,7 @@
 {
   "path": "/termux-alternative",
   "title": "Termux Alternative: Why Acode Is the Better Android Development Environment | Acode",
-  "description": "Looking for a Termux alternative? Acode combines the same Alpine Linux terminal with a professional code editor, AI coding support, Git, and 250+ plugins. The complete Android IDE Termux users upgrade to.",
+  "description": "Looking for a Termux alternative? Acode combines the same Alpine Linux terminal with a professional code editor, AI coding support, Git, and 250+ plugins. The complete Code Editor Termux users upgrade to.",
   "heroHeadline": "The Termux Alternative with a Real Code Editor",
   "heroSubheadline": "Acode gives you the same proot-based Alpine Linux terminal as Termux — plus a professional code editor, AI coding agents, Git integration, and 250+ plugins. One app. No switching.",
   "ctaPrimary": "Download Acode — Free",
@@ -13,7 +13,7 @@
     "Every Termux user eventually hits the same wall: you need to edit code, but you can't do it comfortably. You end up installing a separate code editor app and constantly switching between Termux (for the terminal) and another app (for editing).",
     "There's been no app that combines the terminal power of Termux with a real modern code editor. That's exactly what Acode was built to solve."
   ],
-  "solutionHeadline": "Acode: The Same Terminal, Plus a Complete IDE",
+  "solutionHeadline": "Acode: The Same Terminal, Plus a Complete development environment",
   "solutionPoints": [
     "Acode uses the <strong>same proot-based Alpine Linux</strong> as Termux. You get the same <code>apk</code> package manager, the same access to Alpine's repository, the same terminal commands. Nothing changes in your terminal workflow.",
     "But Acode adds a <strong>professional code editor</strong> — Ace Editor v1.22.0 with syntax highlighting for 100+ languages, multi-file tabs, command palette (Ctrl+Shift+P), file search (Ctrl+P), keyboard shortcuts, and live HTML preview.",
@@ -124,7 +124,7 @@
   ],
   "relatedPages": [
     { "title": "Claude Code on Android", "url": "/claude-code-android" },
-    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Code Editor Guide", "url": "/android-ide" },
     { "title": "Linux Terminal Android", "url": "/linux-terminal-android" },
     { "title": "Node.js on Android", "url": "/nodejs-android" },
     { "title": "Git on Android", "url": "/git-android" },

@@ -1,7 +1,7 @@
 {
   "path": "/codex-android",
   "title": "How to Run OpenAI Codex on Android — Complete Setup Guide | Acode",
-  "description": "Run OpenAI Codex on your Android phone with Acode. Full Alpine Linux terminal, step-by-step setup, and integrated code editor. The only Android IDE that supports Codex natively.",
+  "description": "Run OpenAI Codex on your Android phone with Acode. Full Alpine Linux terminal, step-by-step setup, and integrated code editor. The only Code Editor that supports Codex natively.",
   "heroHeadline": "Run OpenAI Codex on Your Android Phone",
   "heroSubheadline": "Acode is the only Android development environment that lets you run OpenAI Codex natively. Set up Codex in Acode's Alpine Linux terminal and get AI-powered coding on your phone.",
   "ctaPrimary": "Download Acode — Free",
@@ -13,7 +13,7 @@
     "Even if you install a terminal app like Termux, you'd need to switch back and forth between the terminal (for Codex) and an editor (for your code). There's no integrated workflow.",
     "For Android developers who want AI-assisted coding, there has been no solution that combines editor + terminal + Codex in one seamless experience. Until now."
   ],
-  "solutionHeadline": "Acode: The Only Android IDE with Codex Support",
+  "solutionHeadline": "Acode: The Only Code Editor with Codex Support",
   "solutionPoints": [
     "Acode provides a <strong>native Alpine Linux terminal</strong> inside the app. This is the same environment Codex expects — <code>bash</code>, <code>apk</code>, and full package management.",
     "Install Node.js with <code>apk add nodejs npm</code> and follow OpenAI's instructions to install Codex. It's the exact same setup process as on a desktop, just on your phone.",
@@ -70,7 +70,7 @@
       "description": "Codex runs where it performs best: in the terminal. Send commands, get output, pipe results, and chain operations — all within Acode's Linux environment."
     },
     {
-      "title": "Complete Mobile IDE",
+      "title": "Complete Mobile Code Editor",
       "description": "Codex + Acode's editor + Alpine Linux terminal = the closest thing to a desktop AI coding environment on Android. Git, npm, SSH — all included."
     }
   ],
@@ -93,7 +93,7 @@
     },
     {
       "question": "Is Acode only for AI coding?",
-      "answer": "No. Acode is a complete Android IDE. It includes a code editor for 100+ languages, Git integration, FTP/SFTP, SSH, live preview, JavaScript console, and 250+ plugins. AI coding is one of many features."
+      "answer": "No. Acode is a complete Code Editor. It includes a code editor for 100+ languages, Git integration, FTP/SFTP, SSH, live preview, JavaScript console, and 250+ plugins. AI coding is one of many features."
     },
     {
       "question": "How does Acode compare to using Codex on a desktop?",
@@ -105,7 +105,7 @@
     { "title": "Run OpenCode on Android", "url": "/opencode-android" },
     { "title": "AI Coding on Android Guide", "url": "/ai-coding-android" },
     { "title": "Node.js on Android", "url": "/nodejs-android" },
-    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Code Editor Guide", "url": "/android-ide" },
     { "title": "Termux Alternative", "url": "/termux-alternative" }
   ],
   "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"How to Run OpenAI Codex on Android\",\"description\":\"Run OpenAI Codex on your Android phone with Acode. Full Alpine Linux terminal, step-by-step setup, and integrated code editor.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/codex-android\"}}"

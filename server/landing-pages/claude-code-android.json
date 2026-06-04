@@ -3,7 +3,7 @@
   "title": "How to Run Claude Code on Android — A Complete Guide | Acode",
   "description": "Learn how to run Claude Code (Anthropic's agentic AI coding tool) on your Android phone using Acode. Full setup guide with Alpine Linux terminal. The only way to use Claude Code on Android.",
   "heroHeadline": "Run Claude Code on Your Android Phone",
-  "heroSubheadline": "Acode is the only Android IDE that lets you run Claude Code natively in a full Alpine Linux terminal. Get Anthropic's AI coding agent working on your phone in under 5 minutes.",
+  "heroSubheadline": "Acode is the only Code Editor that lets you run Claude Code natively in a full Alpine Linux terminal. Get Anthropic's AI coding agent working on your phone in under 5 minutes.",
   "ctaPrimary": "Download Acode — Free",
   "ctaSecondary": "How It Works",
   "problemHeadline": "Why Can't You Run Claude Code on Android?",
@@ -112,7 +112,7 @@
     { "title": "Run Codex on Android", "url": "/codex-android" },
     { "title": "Run OpenCode on Android", "url": "/opencode-android" },
     { "title": "AI Coding on Android Guide", "url": "/ai-coding-android" },
-    { "title": "Android IDE with Terminal", "url": "/android-ide" },
+    { "title": "Code Editor with Terminal", "url": "/android-ide" },
     { "title": "Node.js on Android", "url": "/nodejs-android" },
     { "title": "Termux Alternative", "url": "/termux-alternative" }
   ],

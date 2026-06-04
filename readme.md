@@ -4,7 +4,7 @@ Welcome to the repository for Acode's official website. This project contains th
 
 ## About Acode
 
-Acode is a lightweight yet robust code editor and web IDE designed specifically for Android. It supports a wide range of programming languages, including but not limited to:
+Acode is a lightweight yet robust code editor designed specifically for Android. It supports a wide range of programming languages, including but not limited to:
 
 - HTML
 - JavaScript
@@ -58,4 +58,4 @@ For any inquiries or support, please visit our [contact page](https://acode.app/
 
 ---
 
-*Empower your coding journey with Acode—code anytime, anywhere.*
+_Empower your coding journey with Acode—code anytime, anywhere._

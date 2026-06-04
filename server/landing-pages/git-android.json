@@ -10,14 +10,14 @@
   "problemPoints": [
     "Git is essential for every developer — but Git GUIs are desktop tools. On Android, you're limited to basic Git clients that can clone repos but can't provide a full development workflow.",
     "You can install Git in Termux, but then you need to switch to a code editor to actually work with the files. Edit in one app, commit in another, push in the first again — it's a fragmented mess.",
-    "What developers need is Git integrated into their IDE — just like VS Code's Git panel. Clone, edit, stage, commit, and push without leaving the development environment."
+    "What developers need is Git integrated into their code editor — just like VS Code's Git panel. Clone, edit, stage, commit, and push without leaving the development environment."
   ],
   "solutionHeadline": "Complete Git Workflow on Acode",
   "solutionPoints": [
     "Install Git in Acode's terminal: <code>apk add git</code>. Configure your identity: <code>git config --global user.name 'Your Name'</code> and <code>git config --global user.email 'email@example.com'</code>. That's it.",
     "Clone repositories, edit files in Acode's editor with syntax highlighting, stage changes in the terminal, commit, and push — all in one app. No switching between Termux and an editor.",
     "Acode also has Git GUI plugins available in the Plugin Store. Get visual diffs, branch management, and commit history — similar to VS Code's Git panel.",
-    "Use Git alongside your other development tools — Node.js, Python, SSH, AI agents — all in the same Alpine Linux environment. This is how Git was meant to be used: in an IDE, not isolation."
+    "Use Git alongside your other development tools — Node.js, Python, SSH, AI agents — all in the same Alpine Linux environment. This is how Git was meant to be used: in a code editor, not isolation."
   ],
   "setupHeadline": "Set Up Git on Acode",
   "setupSteps": [
@@ -69,7 +69,7 @@
   "relatedPages": [
     { "title": "Node.js on Android", "url": "/nodejs-android" },
     { "title": "SSH on Android", "url": "/ssh-android" },
-    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Code Editor Guide", "url": "/android-ide" },
     { "title": "Termux Alternative", "url": "/termux-alternative" }
   ],
   "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Git on Android — Version Control Guide\",\"description\":\"Use Git on your Android phone with Acode. Clone repos, commit changes, push to GitHub, manage branches.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/git-android\"}}"

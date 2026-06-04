@@ -11,9 +11,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const FALLBACK_TITLE = 'Acode — Android IDE with Linux Terminal & AI Coding';
+const FALLBACK_TITLE = 'Acode — Code Editor with Linux Terminal & AI Coding';
 const FALLBACK_DESC =
-  'Acode is an Android IDE with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Node.js, React, Next.js, Python, Git, and 250+ plugins. Open source. 3.6M+ downloads.';
+  'Acode is an Code Editor with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Node.js, React, Next.js, Python, Git, and 250+ plugins. Open source. 3.6M+ downloads.';
 
 /**
  * Explicit route → metadata map.
@@ -22,7 +22,7 @@ const FALLBACK_DESC =
  */
 const namedRoutes = {
   '/': {
-    title: 'Acode — Android IDE with Linux Terminal & AI Coding',
+    title: 'Acode — Code Editor with Linux Terminal & AI Coding',
     description: FALLBACK_DESC,
     schema: {
       '@context': 'https://schema.org',
@@ -54,13 +54,13 @@ const namedRoutes = {
   '/plugins': {
     title: 'Acode Plugins — {{count}} Community Extensions',
     description:
-      'Browse {{count}} community plugins for Acode. Language support, themes, AI assistants, build tools, and more. Extend your Android IDE with JavaScript and TypeScript plugins.',
+      'Browse {{count}} community plugins for Acode. Language support, themes, AI assistants, build tools, and more. Extend your Code Editor with JavaScript and TypeScript plugins.',
   },
 
   '/faqs': {
-    title: 'Frequently Asked Questions — Acode Android IDE',
+    title: 'Frequently Asked Questions — Acode Code Editor',
     description:
-      '150+ answers about Acode, the Android IDE. Learn about AI coding (Claude Code, Codex, OpenCode), Linux terminal setup, web development (Node.js, React, Next.js, Python), Git, SSH, plugin installation, pricing, comparisons with Termux/VS Code/Cursor, and more.',
+      '150+ answers about Acode, the Code Editor. Learn about AI coding (Claude Code, Codex, OpenCode), Linux terminal setup, web development (Node.js, React, Next.js, Python), Git, SSH, plugin installation, pricing, comparisons with Termux/VS Code/Cursor, and more.',
     _buildFaqSchema() {
       return buildFaqSchema();
     },
@@ -69,31 +69,31 @@ const namedRoutes = {
   '/sponsors': {
     title: 'Sponsors — Support Acode Development',
     description:
-      'Support the development of Acode — the open-source Android IDE with a Linux terminal and AI coding capabilities. See our sponsors and learn how to become one.',
+      'Support the development of Acode — the open-source Code Editor with a Linux terminal and AI coding capabilities. See our sponsors and learn how to become one.',
   },
 
   '/pro': {
-    title: 'Acode Pro — Premium Android IDE Features',
-    description: 'Unlock premium features in Acode, the Android IDE with a Linux terminal and AI coding support.',
+    title: 'Acode Pro — Premium Code Editor Features',
+    description: 'Unlock premium features in Acode, the Code Editor with a Linux terminal and AI coding support.',
   },
 
   '/policy': {
-    title: 'Privacy Policy — Acode Android IDE',
-    description: 'Read the privacy policy for Acode, the open-source Android IDE.',
+    title: 'Privacy Policy — Acode Code Editor',
+    description: 'Read the privacy policy for Acode, the open-source Code Editor.',
   },
 
   '/terms': {
-    title: 'Terms of Service — Acode Android IDE',
-    description: 'Read the terms of service for Acode, the open-source Android IDE with Linux terminal and AI coding capabilities.',
+    title: 'Terms of Service — Acode Code Editor',
+    description: 'Read the terms of service for Acode, the open-source Code Editor with Linux terminal and AI coding capabilities.',
   },
 
   '/refund': {
-    title: 'Refund Policy — Acode Android IDE',
+    title: 'Refund Policy — Acode Code Editor',
     description: 'Read the refund policy for Acode Pro and in-app purchases.',
   },
 
   '/contact': {
-    title: 'Contact Us — Acode Android IDE',
+    title: 'Contact Us — Acode Code Editor',
     description: 'Get in touch with the Acode team. Support, feedback, and business inquiries.',
   },
 };
@@ -163,7 +163,7 @@ function getMetadata(pathname) {
     const pageName = pathToTitle(lastSegment);
     return {
       title: `${pageName} — Acode`,
-      description: `${pageName} — Acode is an Android IDE with a full Alpine Linux terminal, AI coding support, and 250+ plugins.`,
+      description: `${pageName} — Acode is an Code Editor with a full Alpine Linux terminal, AI coding support, and 250+ plugins.`,
     };
   }
 

@@ -1,6 +1,6 @@
 {
   "path": "/vscode-alternative-android",
-  "title": "VS Code Alternative for Android — Acode Is the Closest Mobile IDE | Acode",
+  "title": "VS Code Alternative for Android — Acode Is the Closest Mobile Code Editor | Acode",
   "description": "Looking for a VS Code alternative on Android? Acode brings VS Code's core features to your phone: terminal, Git, extensions, command palette, and 100+ language support. Open source and free.",
   "heroHeadline": "VS Code on Android? Meet Acode.",
   "heroSubheadline": "Acode brings the VS Code experience to Android: command palette, file search, extensions, built-in terminal, Git, and 100+ languages. The closest thing to VS Code on your phone.",
@@ -10,7 +10,7 @@
   "problemPoints": [
     "VS Code is the world's most popular code editor. But it's a desktop app. There's no official VS Code for Android — and likely never will be. You can install code-server for a web version, but that requires a server and constant internet access.",
     "Android developers have been left with a gap: they want the VS Code workflow — command palette, integrated terminal, extensions, Git, multi-file editing — but no Android app has delivered it.",
-    "Basic code editors exist for Android, but they're just text editors. No terminal. No extensions. No Git. No real development experience. They look nothing like the IDE developers are used to."
+    "Basic code editors exist for Android, but they're just text editors. No terminal. No extensions. No Git. No real development experience. They look nothing like the code editor developers are used to."
   ],
   "solutionHeadline": "Acode: The VS Code Experience on Android",
   "solutionPoints": [
@@ -82,16 +82,16 @@
     },
     {
       "question": "Is Acode faster than VS Code?",
-      "answer": "Acode is optimized for mobile devices and handles files with 50,000+ lines smoothly. While it doesn't match VS Code's full feature set, it's remarkably fast for an Android IDE."
+      "answer": "Acode is optimized for mobile devices and handles files with 50,000+ lines smoothly. While it doesn't match VS Code's full feature set, it's remarkably fast for an Code Editor."
     }
   ],
   "relatedPages": [
     { "title": "Claude Code on Android", "url": "/claude-code-android" },
-    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Code Editor Guide", "url": "/android-ide" },
     { "title": "Cursor Alternative", "url": "/cursor-alternative-android" },
     { "title": "Termux Alternative", "url": "/termux-alternative" },
     { "title": "Node.js on Android", "url": "/nodejs-android" },
     { "title": "React on Android", "url": "/react-android" }
   ],
-  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"VS Code Alternative for Android — Acode IDE\",\"description\":\"Looking for a VS Code alternative on Android? Acode brings VS Code's core features to your phone.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/vscode-alternative-android\"}}"
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"VS Code Alternative for Android — Acode Editor\",\"description\":\"Looking for a VS Code alternative on Android? Acode brings VS Code's core features to your phone.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/vscode-alternative-android\"}}"
 }

@@ -3,7 +3,7 @@
   "title": "How to Run OpenCode on Android — Open-Source AI Coding | Acode",
   "description": "Run OpenCode, the open-source AI coding agent, on your Android phone using Acode. Free, no API costs, fully local. Complete setup guide for Android AI development.",
   "heroHeadline": "Run OpenCode on Your Android Phone",
-  "heroSubheadline": "Acode is the only Android IDE that lets you run OpenCode — the open-source AI coding agent — natively in a full Alpine Linux terminal. Free. Open source. No API costs.",
+  "heroSubheadline": "Acode is the only Code Editor that lets you run OpenCode — the open-source AI coding agent — natively in a full Alpine Linux terminal. Free. Open source. No API costs.",
   "ctaPrimary": "Download Acode — Free",
   "ctaSecondary": "Setup Guide",
   "problemHeadline": "AI Coding Tools Are Locked to Desktops",
@@ -104,7 +104,7 @@
     { "title": "Claude Code on Android", "url": "/claude-code-android" },
     { "title": "Run Codex on Android", "url": "/codex-android" },
     { "title": "AI Coding on Android", "url": "/ai-coding-android" },
-    { "title": "Android IDE Guide", "url": "/android-ide" },
+    { "title": "Code Editor Guide", "url": "/android-ide" },
     { "title": "Git on Android", "url": "/git-android" },
     { "title": "SSH on Android", "url": "/ssh-android" }
   ],

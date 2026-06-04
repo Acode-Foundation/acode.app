@@ -1,8 +1,8 @@
 {
-  "title": "Acode — Android IDE with Linux Terminal & AI Coding",
-  "description": "Acode is an Android IDE with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Node.js, React, Next.js, Python, Git, and 250+ plugins. Open source. 3.6M+ downloads.",
+  "title": "Acode — Code Editor with Linux Terminal & AI Coding",
+  "description": "Acode is an Code Editor with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Node.js, React, Next.js, Python, Git, and 250+ plugins. Open source. 3.6M+ downloads.",
   "icon": "og-image.png",
   "url": "path",
-  "icon_alt": "Acode — Android IDE with Linux terminal and AI coding",
+  "icon_alt": "Acode — Code Editor with Linux terminal and AI coding",
   "site_name": "Acode"
 }

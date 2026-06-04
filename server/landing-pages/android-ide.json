@@ -1,26 +1,26 @@
 {
   "path": "/android-ide",
-  "title": "Android IDE — The Complete Development Environment for Your Phone | Acode",
-  "description": "Acode is the most powerful Android IDE with a full Linux terminal, AI coding support, 100+ language syntax highlighting, Git, and 250+ plugins. Desktop-grade development on your phone.",
-  "heroHeadline": "The Android IDE That Runs Real Linux",
+  "title": "Code Editor — The Complete Development Environment for Your Phone | Acode",
+  "description": "Acode is the most powerful Code Editor with a full Linux terminal, AI coding support, 100+ language syntax highlighting, Git, and 250+ plugins. Desktop-grade development on your phone.",
+  "heroHeadline": "The Code Editor That Runs Real Linux",
   "heroSubheadline": "Acode isn't just a code editor — it's a complete development environment for Android. Full Alpine Linux terminal, AI coding agents, Git, SSH, and 250+ plugins. Everything you need to code on your phone.",
   "ctaPrimary": "Download Acode — Free",
   "ctaSecondary": "Explore Features",
-  "problemHeadline": "Why Android Needs a Real IDE",
+  "problemHeadline": "Why Android Needs a Real Code Editor",
   "problemPoints": [
     "Most Android 'code editors' are just text editors with basic syntax highlighting. They can display code, but they can't run it. You can write JavaScript but can't execute it. You can edit Python but can't install packages.",
     "Desktop developers have powerful IDEs — VS Code, IntelliJ, Cursor — that combine editing, debugging, terminal, and version control. Android developers have been stuck with fragmented tools: one app for editing, another for terminal, another for Git.",
     "The rise of AI coding tools has made the gap even bigger. Desktop IDEs integrate AI natively. Android developers have been completely left out of the AI coding revolution — no terminal, no AI agents, no real development environment.",
-    "What Android needs isn't another text editor. It needs a real IDE — one that combines editor, terminal, package management, version control, and AI tools into a single, cohesive environment."
+    "What Android needs isn't another text editor. It needs a real code editor — one that combines editor, terminal, package management, version control, and AI tools into a single, cohesive environment."
   ],
-  "solutionHeadline": "Acode: A Complete Android IDE",
+  "solutionHeadline": "Acode: A Complete Code Editor",
   "solutionPoints": [
     "<strong>Professional Code Editor</strong>: Acode uses Ace Editor v1.22.0 with syntax highlighting for 100+ programming languages. Multi-file tabs, command palette (Ctrl+Shift+P), file search (Ctrl+P), code completion, keyboard shortcuts, and customizable themes.",
     "<strong>Native Linux Terminal</strong>: Inside Acode, a full Alpine Linux distribution runs via proot. Use the <code>apk</code> package manager to install Node.js, Python, Git, compilers, databases — anything in Alpine's repository. Multiple terminal tabs. Shell customization.",
-    "<strong>AI Coding Agents</strong>: Acode is the only Android IDE where you can run Claude Code, OpenAI Codex, and OpenCode natively. Install them in the terminal, run AI agents to generate and debug code, and view output in the editor. Full AI development workflow on Android.",
+    "<strong>AI Coding Agents</strong>: Acode is the only Code Editor where you can run Claude Code, OpenAI Codex, and OpenCode natively. Install them in the terminal, run AI agents to generate and debug code, and view output in the editor. Full AI development workflow on Android.",
     "<strong>Complete Developer Toolkit</strong>: Git integration (clone, commit, push, pull). FTP/SFTP client for remote file management. SSH client for server access. Live HTML preview. JavaScript console. Language Server Protocol (LSP) for IntelliSense. 250+ community plugins."
   ],
-  "featuresHeadline": "What Makes Acode a Real IDE",
+  "featuresHeadline": "What Makes Acode a Real Code Editor",
   "features": [
     {
       "title": "Editor + Terminal in One App",
@@ -55,7 +55,7 @@
       "description": "Live HTML/Markdown preview. JavaScript console for debugging. Node.js and npm for backend. React, Next.js, Vue, Svelte support via syntax highlighting and plugins."
     }
   ],
-  "setupHeadline": "Get Started with Acode IDE",
+  "setupHeadline": "Get Started with Acode Editor",
   "setupSteps": [
     {
       "title": "Download Acode",
@@ -84,11 +84,11 @@
   ],
   "faqs": [
     {
-      "question": "What is an Android IDE?",
-      "answer": "An Android IDE (Integrated Development Environment) is an app that combines code editing, debugging, terminal access, and development tools into one environment. Acode is the most complete Android IDE available, offering editor + terminal + Git + AI support in a single app."
+      "question": "What is an Code Editor?",
+      "answer": "An Code Editor (Integrated Development Environment) is an app that combines code editing, debugging, terminal access, and development tools into one environment. Acode is the most complete Code Editor available, offering editor + terminal + Git + AI support in a single app."
     },
     {
-      "question": "Can Acode replace my desktop IDE?",
+      "question": "Can Acode replace my desktop Code Editor?",
       "answer": "For many workflows, yes. Acode supports the same languages and tools as desktop IDEs. It's ideal for web development, scripting, AI-assisted coding, and quick edits. For large-scale enterprise projects requiring heavy compilation, a desktop may still be preferable — but Acode handles surprising amounts of real development work."
     },
     {
@@ -116,5 +116,5 @@
     { "title": "Node.js on Android", "url": "/nodejs-android" },
     { "title": "React on Android", "url": "/react-android" }
   ],
-  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Android IDE — The Complete Development Environment for Your Phone\",\"description\":\"Acode is the most powerful Android IDE with a full Linux terminal, AI coding support, 100+ language syntax highlighting, Git, and 250+ plugins.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/android-ide\"}}"
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Code Editor — The Complete Development Environment for Your Phone\",\"description\":\"Acode is the most powerful Code Editor with a full Linux terminal, AI coding support, 100+ language syntax highlighting, Git, and 250+ plugins.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/android-ide\"}}"
 }
