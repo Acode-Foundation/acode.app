@@ -38,7 +38,8 @@ function addPluginAndFaqUrls() {
 
   try {
     if (fs.existsSync(FAQS_FILE)) {
-      const faqs = JSON.parse(fs.readFileSync(FAQS_FILE, 'utf8'));
+      const data = JSON.parse(fs.readFileSync(FAQS_FILE, 'utf8'));
+      const faqs = Array.isArray(data) ? data : (data.categories || []).flatMap((c) => c.faqs || []);
       for (const { q } of faqs) {
         const id = hashString(q);
         visited.add(`${BASE_URL}/faqs/${id}`);

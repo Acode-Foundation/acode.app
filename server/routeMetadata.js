@@ -60,7 +60,7 @@ const namedRoutes = {
   '/faqs': {
     title: 'Frequently Asked Questions — Acode Android IDE',
     description:
-      'Find answers to common questions about Acode — the Android IDE with a Linux terminal. Learn about the terminal setup, plugin installation, AI coding agents, Git, and more.',
+      '150+ answers about Acode, the Android IDE. Learn about AI coding (Claude Code, Codex, OpenCode), Linux terminal setup, web development (Node.js, React, Next.js, Python), Git, SSH, plugin installation, pricing, comparisons with Termux/VS Code/Cursor, and more.',
     _buildFaqSchema() {
       return buildFaqSchema();
     },
@@ -196,14 +196,16 @@ async function getPluginsMetadata() {
 
 /**
  * Read data/faqs.json and build a schema.org FAQPage mainEntity array.
+ * Handles both legacy flat array format and the v2 categorized format.
  * Each entry becomes { '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } }.
- * Falls back to an empty array if the file is missing or unparseable.
+ * Falls back to null if the file is missing or unparseable.
  */
 function buildFaqSchema() {
   try {
     const faqPath = path.resolve(__dirname, '..', 'data', 'faqs.json');
     const raw = fs.readFileSync(faqPath, 'utf8');
-    const faqs = JSON.parse(raw);
+    const data = JSON.parse(raw);
+    const faqs = Array.isArray(data) ? data : (data.categories || []).flatMap((c) => c.faqs || []);
     return {
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
