@@ -31,7 +31,7 @@ export default async function CurrencySelector({ className }, children) {
   }
 
   const mask = <div className='currency-selector-mask' onclick={hide} />;
-  const dorpDown = (
+  const dropDown = (
     <div className='currency-dropdown'>
       {currencies.map((currency) => (
         <div
@@ -79,63 +79,69 @@ export default async function CurrencySelector({ className }, children) {
 
     const targetRect = target.getBoundingClientRect();
 
-    dorpDown.style.removeProperty('height');
-    dorpDown.style.removeProperty('width');
-    dorpDown.style.removeProperty('bottom');
-    dorpDown.style.removeProperty('left');
-    dorpDown.style.top = `${targetRect.bottom}px`;
-    dorpDown.style.right = `${window.innerWidth - targetRect.right}px`;
+    dropDown.style.removeProperty('height');
+    dropDown.style.removeProperty('width');
+    dropDown.style.removeProperty('bottom');
+    dropDown.style.removeProperty('left');
+    dropDown.style.top = `${targetRect.bottom}px`;
+    dropDown.style.right = `${window.innerWidth - targetRect.right}px`;
 
-    app.append(mask, dorpDown);
+    app.append(mask, dropDown);
     Router.on('navigate', hide);
 
     requestAnimationFrame(() => {
       const MAX_RIGHT = window.innerWidth - 10;
       const MAX_BOTTOM = window.innerHeight - 10;
-      let { height, width, left, right, top, bottom } = dorpDown.getBoundingClientRect();
+      let { height, width, left, right, top, bottom } = dropDown.getBoundingClientRect();
 
       if (width > window.innerWidth - 20) {
         width = window.innerWidth - 20;
-        dorpDown.style.width = `${width}px`;
+        dropDown.style.width = `${width}px`;
       }
 
       if (height > window.innerHeight - 20) {
         height = window.innerHeight - 20;
-        dorpDown.style.height = `${height}px`;
+        dropDown.style.height = `${height}px`;
       }
 
       if (left < 10) {
         left = 10;
-        dorpDown.style.left = `${left}px`;
+        dropDown.style.removeProperty('right');
+        dropDown.style.left = `${left}px`;
       }
 
       if (right > MAX_RIGHT) {
-        right = MAX_RIGHT;
-        dorpDown.style.right = '10px';
+        dropDown.style.removeProperty('left');
+        dropDown.style.right = '10px';
       }
 
       if (top < 10) {
         top = 10;
-        dorpDown.style.top = `${top}px`;
+        dropDown.style.top = `${top}px`;
       }
 
       if (bottom > MAX_BOTTOM) {
         bottom = MAX_BOTTOM;
-        dorpDown.style.bottom = '10px';
-        dorpDown.style.top = `${window.innerHeight - height}px`;
+        dropDown.style.bottom = '10px';
+        dropDown.style.top = `${window.innerHeight - height}px`;
       }
 
-      dorpDown.classList.add('show');
+      const activeOption = dropDown.querySelector('.currency-option.active');
+      if (activeOption) {
+        activeOption.scrollIntoView({ block: 'center' });
+      }
+
+      dropDown.classList.add('show');
     });
   }
 
   function hide() {
     Router.off('navigate', hide);
     mask.remove();
-    dorpDown.classList.remove('show');
-    dorpDown.classList.add('hide');
+    dropDown.classList.remove('show');
+    dropDown.classList.add('hide');
     setTimeout(() => {
-      dorpDown.remove();
+      dropDown.remove();
     }, 150);
   }
 }

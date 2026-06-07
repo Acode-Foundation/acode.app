@@ -1941,9 +1941,15 @@ router.get('/currency-config', async (req, res) => {
 
     if (preferred) {
       const upper = preferred.toUpperCase();
+      const entry = CURRENCIES[upper];
 
-      if (!CURRENCIES[upper]) {
-        res.status(400).send({ error: `Unsupported currency: ${preferred}` });
+      if (!entry) {
+        res.status(400).send({ error: `Unknown currency: ${preferred}` });
+        return;
+      }
+
+      if (!entry.supported) {
+        res.status(400).send({ error: `Currency ${upper} is not supported by the payment provider` });
         return;
       }
 
@@ -1953,7 +1959,7 @@ router.get('/currency-config', async (req, res) => {
         expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365 * 10),
       });
 
-      res.send(CURRENCIES[upper]);
+      res.send(entry);
       return;
     }
 

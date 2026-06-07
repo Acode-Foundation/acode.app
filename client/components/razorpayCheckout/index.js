@@ -87,13 +87,11 @@ export async function initiateCheckout(pluginId, userInfo = {}, onSuccess, onCan
       return;
     }
 
-    const { orderId, amount, currency, keyId, pluginName, userEmail } = orderData;
+    const { orderId, keyId, pluginName, userEmail } = orderData;
 
     // Open Razorpay checkout with customization
     const options = {
       key: keyId,
-      amount,
-      currency,
       name: RAZORPAY_CONFIG.branding.name,
       description: `Purchase: ${pluginName}`.replace(/[\u{10000}-\u{10FFFF}]/gu, ''),
       image: RAZORPAY_CONFIG.branding.image,
@@ -196,12 +194,10 @@ export async function initiateProCheckout(userInfo = {}, onSuccess, onCancel) {
       return;
     }
 
-    const { orderId, amount, currency, keyId, userEmail } = orderData;
+    const { orderId, keyId, userEmail } = orderData;
 
     const options = {
       key: keyId,
-      amount,
-      currency,
       name: 'Acode',
       description: 'Acode Pro - Support Open Source',
       image: RAZORPAY_CONFIG.branding.image,
@@ -295,12 +291,10 @@ export async function initiateSponsorCheckout(sponsorData, onSuccess, onCancel) 
       return;
     }
 
-    const { orderId, amount, currency, keyId, userEmail, tier } = orderData;
+    const { orderId, keyId, userEmail, tier } = orderData;
 
     const options = {
       key: keyId,
-      amount,
-      currency,
       name: 'Acode',
       description: `Sponsor: ${tier} Tier`,
       image: RAZORPAY_CONFIG.branding.image,
