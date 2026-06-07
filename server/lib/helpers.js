@@ -138,10 +138,21 @@ function detectUserCurrency(req) {
   const preferredCurrency = req.cookies.preferred_currency;
 
   if (preferredCurrency && CURRENCIES[preferredCurrency]) {
-    return CURRENCIES[preferredCurrency];
+    if (CURRENCIES[preferredCurrency].supported) {
+      return CURRENCIES[preferredCurrency];
+    }
+    console.warn(`Preferred currency ${preferredCurrency} is not supported by Razorpay, falling back to ${FALLBACK_CURRENCY}`);
+    return CURRENCIES[FALLBACK_CURRENCY];
   }
+
   const countryCode = getCountryFromIp(req.ip);
   const currency = countryCode ? getCurrencyForCountry(countryCode) : null;
+
+  if (currency && !currency.supported) {
+    console.warn(`Detected currency ${currency.code} (${countryCode}) is not supported by Razorpay, falling back to ${FALLBACK_CURRENCY}`);
+    return CURRENCIES[FALLBACK_CURRENCY];
+  }
+
   return currency || CURRENCIES[FALLBACK_CURRENCY];
 }
 
