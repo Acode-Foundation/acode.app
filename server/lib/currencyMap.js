@@ -2,10 +2,6 @@ const FALLBACK_CURRENCY = 'USD';
 
 const FREQUENT_CURRENCIES = ['USD', 'EUR', 'INR', 'GBP', 'SGD', 'AED', 'AUD', 'CAD'];
 
-const ZERO_DECIMAL = new Set(['BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW', 'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF']);
-
-const THREE_DECIMAL = new Set(['BHD', 'IQD', 'JOD', 'KWD', 'OMR', 'TND']);
-
 const CURRENCIES = {
   AED: { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham', subunitDigits: 2, supported: true },
   AFN: { code: 'AFN', symbol: '؋', name: 'Afghan Afghani', subunitDigits: 2, supported: false },
@@ -86,7 +82,7 @@ const CURRENCIES = {
   LSL: { code: 'LSL', symbol: 'M', name: 'Lesotho Loti', subunitDigits: 2, supported: true },
   MAD: { code: 'MAD', symbol: 'د.م.', name: 'Moroccan Dirham', subunitDigits: 2, supported: true },
   MDL: { code: 'MDL', symbol: 'L', name: 'Moldovan Leu', subunitDigits: 2, supported: true },
-  MGA: { code: 'MGA', symbol: 'Ar', name: 'Malagasy Ariary', subunitDigits: 2, supported: true },
+  MGA: { code: 'MGA', symbol: 'Ar', name: 'Malagasy Ariary', subunitDigits: 0, supported: true },
   MKD: { code: 'MKD', symbol: 'ден', name: 'Macedonian Denar', subunitDigits: 2, supported: true },
   MMK: { code: 'MMK', symbol: 'K', name: 'Myanmar Kyat', subunitDigits: 2, supported: true },
   MNT: { code: 'MNT', symbol: '₮', name: 'Mongolian Tögrög', subunitDigits: 2, supported: true },
@@ -439,8 +435,6 @@ module.exports = {
   FALLBACK_CURRENCY,
   CURRENCIES,
   COUNTRY_TO_CURRENCY,
-  ZERO_DECIMAL,
-  THREE_DECIMAL,
   getCurrencyForCountry,
   getCurrencySymbol,
   getSubunitDigits,
