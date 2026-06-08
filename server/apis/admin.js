@@ -199,7 +199,11 @@ router.get('/promotions', async (_req, res) => {
   try {
     const data = JSON.parse(fs.readFileSync(promotionsFile, 'utf8'));
     res.json(Array.isArray(data) ? data : []);
-  } catch {
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      res.json([]);
+      return;
+    }
     res.status(500).json({ error: 'Failed to read promotions' });
   }
 });
@@ -225,7 +229,8 @@ router.put('/promotions', async (req, res) => {
 });
 
 router.get('/sponsors', async (req, res) => {
-  const { page, limit } = req.query;
+  const { page } = req.query;
+  const limit = parseInt(req.query.limit, 10) || 10;
   const total = await Sponsor.count();
   const SPONSOR_ADMIN_COLUMNS = [Sponsor.ID, Sponsor.NAME, Sponsor.TIER, Sponsor.EMAIL, Sponsor.STATUS, Sponsor.CREATED_AT, Sponsor.EXPIRES_AT];
 

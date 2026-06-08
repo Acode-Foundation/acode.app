@@ -132,6 +132,10 @@ function Sponsors() {
 
     const res = await fetch(`api/admin/sponsors?page=${page}&limit=${limit}`);
     const { sponsors, pages } = await res.json();
+    if (!res.ok || !Array.isArray(sponsors)) {
+      ref.innerHTML = 'Failed to load sponsors';
+      return;
+    }
     totalPages.value = pages || 0;
 
     if (pages === 0) {

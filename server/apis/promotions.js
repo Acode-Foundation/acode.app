@@ -9,7 +9,11 @@ router.get('/', async (_req, res) => {
   try {
     const data = JSON.parse(fs.readFileSync(promotionsFile, 'utf8'));
     res.json(Array.isArray(data) ? data : []);
-  } catch {
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      res.json([]);
+      return;
+    }
     res.status(500).json({ error: 'Failed to read promotions' });
   }
 });
