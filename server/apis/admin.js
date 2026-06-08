@@ -1,3 +1,6 @@
+const path = require('node:path');
+const fs = require('node:fs');
+
 const { Router } = require('express');
 const moment = require('moment');
 const User = require('../entities/user');
@@ -7,6 +10,7 @@ const AppConfig = require('../entities/appConfig');
 const { getLoggedInUser } = require('../lib/helpers');
 const purchaseOrder = require('../entities/purchaseOrder');
 const plugin = require('../entities/plugin');
+const Sponsor = require('../entities/sponsor');
 const downloadSalesReportCsv = require('../lib/downloadSalesCsv');
 const sendEmail = require('../lib/sendEmail');
 
@@ -187,6 +191,58 @@ router.put('/config', async (req, res) => {
   } catch {
     res.status(500).send({ error: 'Failed to update config' });
   }
+});
+
+const promotionsFile = path.resolve(__dirname, '../../data/promotions.json');
+
+router.get('/promotions', async (_req, res) => {
+  try {
+    const data = JSON.parse(fs.readFileSync(promotionsFile, 'utf8'));
+    res.json(Array.isArray(data) ? data : []);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      res.json([]);
+      return;
+    }
+    res.status(500).json({ error: 'Failed to read promotions' });
+  }
+});
+
+router.put('/promotions', async (req, res) => {
+  try {
+    const { promotions } = req.body;
+    if (!Array.isArray(promotions)) {
+      res.status(400).json({ error: 'promotions must be an array' });
+      return;
+    }
+    for (const promo of promotions) {
+      if (!promo.url || !promo.label || !promo.icon || !promo.link_text) {
+        res.status(400).json({ error: 'Each promotion must have url, label, icon, and link_text' });
+        return;
+      }
+    }
+    fs.writeFileSync(promotionsFile, JSON.stringify(promotions, null, 2));
+    res.json({ message: 'success', promotions });
+  } catch {
+    res.status(500).json({ error: 'Failed to save promotions' });
+  }
+});
+
+router.get('/sponsors', async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
+  const total = await Sponsor.count();
+  const SPONSOR_ADMIN_COLUMNS = [Sponsor.ID, Sponsor.NAME, Sponsor.TIER, Sponsor.EMAIL, Sponsor.STATUS, Sponsor.CREATED_AT, Sponsor.EXPIRES_AT];
+
+  const sponsors = await Sponsor.get(SPONSOR_ADMIN_COLUMNS, [], {
+    page,
+    limit,
+    orderBy: 'created_at DESC',
+  });
+  res.send({
+    pages: Math.ceil(total / limit),
+    sponsors,
+  });
 });
 
 module.exports = router;
