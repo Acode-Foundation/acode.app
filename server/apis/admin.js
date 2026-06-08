@@ -229,7 +229,7 @@ router.put('/promotions', async (req, res) => {
 });
 
 router.get('/sponsors', async (req, res) => {
-  const { page } = req.query;
+  const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
   const total = await Sponsor.count();
   const SPONSOR_ADMIN_COLUMNS = [Sponsor.ID, Sponsor.NAME, Sponsor.TIER, Sponsor.EMAIL, Sponsor.STATUS, Sponsor.CREATED_AT, Sponsor.EXPIRES_AT];
