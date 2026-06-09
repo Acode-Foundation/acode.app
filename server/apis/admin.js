@@ -1,5 +1,5 @@
 const path = require('node:path');
-const fs = require('node:fs');
+const fs = require('node:fs/promises');
 
 const { Router } = require('express');
 const moment = require('moment');
@@ -205,7 +205,8 @@ const promotionsFile = path.resolve(__dirname, '../../data/promotions.json');
 
 router.get('/promotions', async (_req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(promotionsFile, 'utf8'));
+    const raw = await fs.readFile(promotionsFile, 'utf8');
+    const data = JSON.parse(raw);
     res.json(Array.isArray(data) ? data : []);
   } catch (err) {
     if (err.code === 'ENOENT') {
@@ -229,7 +230,7 @@ router.put('/promotions', async (req, res) => {
         return;
       }
     }
-    fs.writeFileSync(promotionsFile, JSON.stringify(promotions, null, 2));
+    await fs.writeFile(promotionsFile, JSON.stringify(promotions, null, 2));
     res.json({ message: 'success', promotions });
   } catch {
     res.status(500).json({ error: 'Failed to save promotions' });
