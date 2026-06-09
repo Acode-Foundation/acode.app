@@ -15,6 +15,7 @@ CREATE TRIGGER IF NOT EXISTS app_config_updated_at
 
 const DEFAULTS = {
   acode_pro_price: '370',
+  payment_threshold: '15000',
 };
 
 class AppConfig extends Entity {

@@ -11,6 +11,7 @@ const PaymentMethod = require('../entities/paymentMethod');
 const UserEarnings = require('../entities/userEarnings');
 const calcEarnings = require('../lib/calcEarnings');
 const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
+const AppConfig = require('../entities/appConfig');
 const login = require('../entities/login');
 
 const route = Router();
@@ -123,6 +124,7 @@ route.get('/earnings/:year/:month', async (req, res) => {
 route.get('/unpaid-earnings', async (req, res) => {
   try {
     const user = await getAuthorizedUser(req);
+    const threshold = parseInt(await AppConfig.getValue('payment_threshold'), 10) || PAYMENT_THRESHOLD;
     const { earnings, from, to } = await calcEarnings.unpaid(user);
 
     if (!earnings) {
@@ -139,7 +141,7 @@ route.get('/unpaid-earnings', async (req, res) => {
         // send earnings from this month
         const thisMonthEarnings = await calcEarnings.total(now.year(), now.month(), user);
         res.send({
-          threshold: PAYMENT_THRESHOLD,
+          threshold,
           earnings: thisMonthEarnings,
           from: now.startOf('month').format('YYYY-MM-DD'),
           to: now.endOf('month').format('YYYY-MM-DD'),
@@ -148,7 +150,7 @@ route.get('/unpaid-earnings', async (req, res) => {
       }
 
       res.send({
-        threshold: PAYMENT_THRESHOLD,
+        threshold,
         earnings: lastMonthEarnings,
         from: lastMonth.startOf('month').format('YYYY-MM-DD'),
         to: lastMonth.endOf('month').format('YYYY-MM-DD'),
@@ -157,7 +159,7 @@ route.get('/unpaid-earnings', async (req, res) => {
     }
 
     res.send({
-      threshold: PAYMENT_THRESHOLD,
+      threshold,
       earnings,
       from,
       to,
@@ -453,7 +455,11 @@ route.post('/', async (req, res) => {
 });
 
 route.put('/threshold', async (_req, res) => {
-  res.status(410).send({ error: 'Payment threshold is now fixed at ₹30,000 for all users.' });
+  const raw = await AppConfig.getValue('payment_threshold');
+  const threshold = parseInt(raw, 10) || PAYMENT_THRESHOLD;
+  res.status(410).send({
+    error: `Payment threshold is now fixed at ₹${threshold.toLocaleString()} for all users. It can be changed by an admin in Settings.`,
+  });
 });
 
 route.put('/', async (req, res) => {

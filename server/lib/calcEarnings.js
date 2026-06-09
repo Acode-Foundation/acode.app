@@ -35,7 +35,7 @@ async function fromPaidPlugins(year, month, user, report) {
         if (report) {
           const reportRows = report.filter((r) => r.Description === orderId);
           if (!reportRows.length) {
-            return amount * 0.65;
+            return amount * 0.7;
           }
 
           let calculatedAmount = 0;
@@ -47,7 +47,8 @@ async function fromPaidPlugins(year, month, user, report) {
             await PurchaseOrder.update([PurchaseOrder.AMOUNT, calculatedAmount], [PurchaseOrder.ID, rowId]);
           }
 
-          return calculatedAmount;
+          // calculated amount here already has deduction of 15%
+          return Math.round(calculatedAmount * 85) / 100;
         }
 
         return amount * 0.7;
@@ -89,11 +90,8 @@ async function fromDownloads(year, month, user) {
  * @param {Array<object>} [report]
  */
 async function total(year, month, user, report) {
-  let earnings = 0;
-  const paidPluginEarnings = await fromPaidPlugins(year, month, user, report);
-  earnings = (1 - process.env.PERCENTAGE_CUT) * paidPluginEarnings;
-  const freePluginDownloads = await fromDownloads(year, month, user);
-  earnings += freePluginDownloads;
+  let earnings = await fromPaidPlugins(year, month, user, report);
+  earnings += await fromDownloads(year, month, user);
   earnings = Number.parseFloat(Math.round(earnings * 100) / 100);
   return earnings;
 }

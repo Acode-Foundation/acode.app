@@ -73,7 +73,7 @@ export default async function Earnings({ user }) {
             <tr>
               <th>Payment Threshold</th>
               <td>
-                <div>&#8377; 30,000</div>
+                <div>&#8377; {unpaidEarnings.threshold.toLocaleString()}</div>
                 <p>
                   You will be paid when your earnings reach this amount. Please read <a href='/terms'>Terms of Service</a> "Payment threshold" section
                   for more info.

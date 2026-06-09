@@ -8,6 +8,7 @@ const UserEarnings = require('../entities/userEarnings');
 const PaymentMethod = require('../entities/paymentMethod');
 const sendEmail = require('./sendEmail');
 const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
+const AppConfig = require('../entities/appConfig');
 
 const args = process.argv.slice(2);
 const yearArg = args[0];
@@ -65,7 +66,7 @@ async function updateEarnings(year, month) {
     for (const user of users) {
       const { payment_method_id, email, name } = user;
       const earnings = await calcEarnings.total(year, month, user, report);
-      const threshold = PAYMENT_THRESHOLD;
+      const threshold = parseInt(await AppConfig.getValue('payment_threshold'), 10) || PAYMENT_THRESHOLD;
 
       const [row] = await UserEarnings.get([
         [UserEarnings.USER_ID, user.id],

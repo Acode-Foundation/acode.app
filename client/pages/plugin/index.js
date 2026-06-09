@@ -11,6 +11,7 @@ import Input from 'components/input';
 import MonthSelect from 'components/MonthSelect';
 import PluginStatus from 'components/pluginStatus';
 import BuyButton, { checkPluginOwnership } from 'components/razorpayCheckout';
+import Tabs from 'components/tabs';
 import YearSelect from 'components/YearSelect';
 import hilightjs from 'highlight.js';
 import Ref from 'html-tag-js/ref';
@@ -57,12 +58,8 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
 
   const user = await getLoggedInUser();
   const userComment = await getUserComment(pluginId);
-  const sectionDescription = Ref();
-  const sectionChangelogs = Ref();
-  const sectionComments = Ref();
-  const sectionOrders = Ref();
+  const pluginSectionRef = Ref();
   const ordersList = Ref();
-  const mainBody = Ref();
   const commentListRef = Ref();
   const selectYear = Ref();
   const selectMonth = Ref();
@@ -109,14 +106,10 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     canInstall = false;
   }
 
-  /** @type {Ref} */
-  let currentSection;
-
   for (const code of $description.getAll('pre code')) {
     hilightjs.highlightElement(code);
   }
 
-  changeSection(section, false);
   renderComments(commentListRef, userId, user, pluginId, author);
 
   if (shouldShowOrders) {
@@ -267,7 +260,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   }
 
   return (
-    <section id='plugin'>
+    <section ref={pluginSectionRef} id='plugin'>
       <div className='row plugin-head'>
         <div className='plugin-logo'>
           <img src={`/plugin-icon/${id}`} alt={name} />
@@ -303,7 +296,13 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
               </div>
             )}
             {votesUp + votesDown > 0 && (
-              <div className='chip' onclick={() => changeSection('comments')}>
+              <div
+                className='chip'
+                onclick={() => {
+                  const btn = pluginSectionRef.get('[data-tab="comments"]');
+                  if (btn) btn.click();
+                }}
+              >
                 <img src='/thumbs-up.gif' alt='thumbs up' />
                 <span>{calcRating(votesUp, votesDown)}</span>
               </div>
@@ -337,72 +336,33 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
         </div>
       )}
       <div className='detailed'>
-        <div
-          className='options'
-          onwheel={(e) => {
-            const target = e.target.closest('.options');
-            target.scrollLeft += e.deltaY;
-            e.preventDefault();
+        <Tabs
+          variant='underline'
+          defaultActive={section}
+          onChange={(tabId) => {
+            Router.setUrl(`/plugin/${pluginId}/${tabId}`);
           }}
-        >
-          <h2 onclick={() => changeSection('description')} ref={sectionDescription}>
-            Description
-          </h2>
-          <h2 onclick={() => changeSection('changelogs')} ref={sectionChangelogs}>
-            Changelogs
-          </h2>
-          <h2 onclick={() => changeSection('comments')} ref={sectionComments} style={{ whiteSpace: 'nowrap' }}>
-            {commentCount} Reviews
-          </h2>
-          {shouldShowOrders && (
-            <h2 onclick={() => changeSection('orders')} ref={sectionOrders}>
-              Orders
-            </h2>
-          )}
-        </div>
-        <div ref={mainBody} className='body' />
+          tabs={[
+            { id: 'description', label: 'Description', content: $description },
+            {
+              id: 'changelogs',
+              label: 'Changelogs',
+              content: () => {
+                const changelogs = plugin.changelogs ? marked.parse(plugin.changelogs) : '';
+                return (
+                  <p className='md' innerHTML={changelogs}>
+                    {!changelogs && <span style={{ opacity: 0.8, fontSize: 'italic' }}>No changelogs</span>}
+                  </p>
+                );
+              },
+            },
+            { id: 'comments', label: `${commentCount} Reviews`, content: $comments },
+            { id: 'orders', label: 'Orders', visible: shouldShowOrders, content: $orders },
+          ]}
+        />
       </div>
     </section>
   );
-
-  /**
-   *
-   * @param {'comments' | 'description' | 'changelogs' | 'orders'} sectionName
-   */
-  function changeSection(sectionName, updateLocation = true) {
-    if (currentSection) currentSection.className = '';
-    mainBody.innerHTML = '';
-
-    switch (sectionName) {
-      case 'comments':
-        currentSection = sectionComments;
-        mainBody.append($comments);
-        break;
-      case 'orders':
-        currentSection = sectionOrders;
-        mainBody.append($orders);
-        break;
-      case 'changelogs': {
-        currentSection = sectionChangelogs;
-        const changelogs = plugin.changelogs ? marked.parse(plugin.changelogs) : '';
-        mainBody.append(
-          <p className='md' innerHTML={changelogs}>
-            {!changelogs && <span style={{ opacity: 0.8, fontSize: 'italic' }}>No changelogs</span>}
-          </p>,
-        );
-        break;
-      }
-      default:
-        currentSection = sectionDescription;
-        mainBody.append($description);
-    }
-
-    currentSection.className = 'selected';
-
-    if (updateLocation) {
-      Router.setUrl(`/plugin/${pluginId}/${sectionName}`);
-    }
-  }
 
   function Order() {
     return (

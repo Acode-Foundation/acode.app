@@ -150,7 +150,7 @@ router.post('/send-email', async (req, res) => {
   res.send({ sent: users.length });
 });
 
-const ALLOWED_CONFIG_KEYS = ['acode_pro_price'];
+const ALLOWED_CONFIG_KEYS = ['acode_pro_price', 'payment_threshold'];
 
 router.get('/config', async (_req, res) => {
   try {
@@ -182,6 +182,14 @@ router.put('/config', async (req, res) => {
       const price = Number(value);
       if (Number.isNaN(price) || price <= 0) {
         res.status(400).send({ error: 'Price must be a positive number' });
+        return;
+      }
+    }
+
+    if (key === 'payment_threshold') {
+      const threshold = Number(value);
+      if (Number.isNaN(threshold) || threshold <= 0 || !Number.isInteger(threshold)) {
+        res.status(400).send({ error: 'Threshold must be a positive integer' });
         return;
       }
     }
