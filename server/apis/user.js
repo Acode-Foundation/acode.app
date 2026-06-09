@@ -455,11 +455,17 @@ route.post('/', async (req, res) => {
 });
 
 route.put('/threshold', async (_req, res) => {
-  const raw = await AppConfig.getValue('payment_threshold');
-  const threshold = parseInt(raw, 10) || PAYMENT_THRESHOLD;
-  res.status(410).send({
-    error: `Payment threshold is now fixed at ₹${threshold.toLocaleString()} for all users. It can be changed by an admin in Settings.`,
-  });
+  try {
+    const raw = await AppConfig.getValue('payment_threshold');
+    const threshold = parseInt(raw, 10) || PAYMENT_THRESHOLD;
+    res.status(410).send({
+      error: `Payment threshold is now fixed at ₹${threshold.toLocaleString()} for all users. It can be changed by an admin in Settings.`,
+    });
+  } catch {
+    res.status(410).send({
+      error: `Payment threshold is fixed. It can be changed by an admin in Settings.`,
+    });
+  }
 });
 
 route.put('/', async (req, res) => {
