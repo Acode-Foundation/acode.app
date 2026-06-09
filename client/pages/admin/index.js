@@ -15,20 +15,73 @@ export default async function Admin() {
     return <div className='error'>Access denied</div>;
   }
 
+  const activeTab = Reactive('dashboard');
+
+  const switchTab = (tab) => {
+    activeTab.value = tab;
+    const nav = document.querySelector('#admin .admin-tabs');
+    const content = document.querySelector('#admin .tab-content');
+    if (nav) {
+      for (const btn of nav.querySelectorAll('.tab-btn')) {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      }
+    }
+    if (content) {
+      for (const panel of content.querySelectorAll('.tab-panel')) {
+        panel.classList.toggle('active', panel.dataset.tab === tab);
+      }
+    }
+  };
+
   return (
     <section ref={usersList} id='admin'>
       <h1>Admin Panel</h1>
-      <Tabs
-        defaultActive='dashboard'
-        tabs={[
-          { id: 'dashboard', label: 'Dashboard', content: <Dashboard /> },
-          { id: 'settings', label: 'Settings', content: <AppSettings /> },
-          { id: 'users', label: 'Users', content: <Users /> },
-          { id: 'email', label: 'Email', content: <EmailUsers /> },
-          { id: 'promotions', label: 'Promotions', content: <Promotions /> },
-          { id: 'sponsors', label: 'Sponsors', content: <Sponsors /> },
-        ]}
-      />
+      <nav
+        className='admin-tabs'
+        on:click={(e) => {
+          const tab = e.target.dataset.tab;
+          if (tab) switchTab(tab);
+        }}
+      >
+        <button type='button' data-tab='dashboard' className='tab-btn active'>
+          Dashboard
+        </button>
+        <button type='button' data-tab='settings' className='tab-btn'>
+          Settings
+        </button>
+        <button type='button' data-tab='users' className='tab-btn'>
+          Users
+        </button>
+        <button type='button' data-tab='email' className='tab-btn'>
+          Email
+        </button>
+        <button type='button' data-tab='promotions' className='tab-btn'>
+          Promotions
+        </button>
+        <button type='button' data-tab='sponsors' className='tab-btn'>
+          Sponsors
+        </button>
+      </nav>
+      <div className='tab-content'>
+        <div data-tab='dashboard' className='tab-panel active'>
+          <Dashboard />
+        </div>
+        <div data-tab='settings' className='tab-panel'>
+          <AppSettings />
+        </div>
+        <div data-tab='users' className='tab-panel'>
+          <Users />
+        </div>
+        <div data-tab='email' className='tab-panel'>
+          <EmailUsers />
+        </div>
+        <div data-tab='promotions' className='tab-panel'>
+          <Promotions />
+        </div>
+        <div data-tab='sponsors' className='tab-panel'>
+          <Sponsors />
+        </div>
+      </div>
     </section>
   );
 }
