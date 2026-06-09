@@ -36,11 +36,11 @@ For purchases made through Google Play, refunds are subject to Google Play's ref
 
 We will pay developers for their plugin sales and download count. Payments will be made to the bank account you provide as your default payment method. If your earnings from the previous month(s) sum up to an amount equal to or greater than the threshold, your payment will be automatically transferred to your default payment method on the 16th of each month. If the 16th falls on a weekend, the transfer will occur on the next working day. Please note that it may take up to 5 working days for the amount to be credited to your account. You are responsible for any taxes or fees associated with receiving payments.
 
-For plugin sales made via Razorpay, the platform retains a **30% service fee**. For plugin sales made via Google Play, the platform retains a **35% service fee** (which includes Google's transaction fee).
+For plugin sales made via Razorpay, the platform retains a **30% service fee** (which includes Razorpay's transaction fee). For plugin sales made via Google Play, the platform retains a **30% service fee** (which includes Google's transaction fee).
 
 ## Payment Threshold
 
-The payment threshold is fixed at **₹30,000 INR** for all payment methods. This is the minimum amount of earnings required for a payment to be processed and transferred to your designated payment method. This threshold cannot be changed by users.
+The payment threshold is currently **₹15,000 INR** for all payment methods. This is the minimum amount of earnings required for a payment to be processed and transferred to your designated payment method. This threshold may be updated by the platform and the current value can be viewed on your Earnings page.
 
 Please note that all bank charges and taxes associated with receiving payments will be deducted from the payment amount.
 

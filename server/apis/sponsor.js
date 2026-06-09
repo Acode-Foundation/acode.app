@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const { Router } = require('express');
 const { writeFile, mkdir } = require('node:fs/promises');
 const Sponsor = require('../entities/sponsor');

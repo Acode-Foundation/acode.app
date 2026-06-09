@@ -8,7 +8,7 @@ import { calcRating, getLoggedInUser, hideLoading, showLoading, since } from 'li
 import Router from 'lib/Router';
 import EditorType from '../editorType';
 
-export default async function Plugins({ user, orderBy, status, name, editor }) {
+export default async function Plugins({ user, orderBy, status, name, editor, owned }) {
   const el = <div className='plugins' data-msg='loading...' />;
 
   try {
@@ -33,6 +33,10 @@ export default async function Plugins({ user, orderBy, status, name, editor }) {
 
     if (orderBy) {
       params.set('orderBy', orderBy);
+    }
+
+    if (owned) {
+      params.set('owned', owned);
     }
 
     const query = params.toString();

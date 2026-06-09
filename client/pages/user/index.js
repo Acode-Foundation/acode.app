@@ -3,6 +3,7 @@ import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import select from 'components/dialogs/select';
 import Plugins from 'components/plugins';
+import Tabs from 'components/tabs';
 import Ref from 'html-tag-js/ref';
 import { getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers';
 import Router from 'lib/Router';
@@ -131,7 +132,17 @@ export default async function User({ userId }) {
           {isSelf && <a href='/publish'>Publish Plugin</a>}
         </div>
       </div>
-      <Plugins user={user.id} />
+      {isSelf ? (
+        <Tabs
+          defaultActive='owned'
+          tabs={[
+            { id: 'owned', label: 'Owned', icon: 'shopping_bag', content: () => Plugins({ owned: true }) },
+            { id: 'published', label: 'Published', icon: 'publish', content: () => Plugins({ user: user.id }) },
+          ]}
+        />
+      ) : (
+        <Plugins user={user.id} />
+      )}
     </section>
   );
 

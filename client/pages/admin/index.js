@@ -2,6 +2,7 @@ import './style.scss';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import Input from 'components/input';
+import Tabs from 'components/tabs';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { getLoggedInUser } from 'lib/helpers';
@@ -14,73 +15,20 @@ export default async function Admin() {
     return <div className='error'>Access denied</div>;
   }
 
-  const activeTab = Reactive('dashboard');
-
-  const switchTab = (tab) => {
-    activeTab.value = tab;
-    const nav = document.querySelector('#admin .admin-tabs');
-    const content = document.querySelector('#admin .tab-content');
-    if (nav) {
-      for (const btn of nav.querySelectorAll('.tab-btn')) {
-        btn.classList.toggle('active', btn.dataset.tab === tab);
-      }
-    }
-    if (content) {
-      for (const panel of content.querySelectorAll('.tab-panel')) {
-        panel.classList.toggle('active', panel.dataset.tab === tab);
-      }
-    }
-  };
-
   return (
     <section ref={usersList} id='admin'>
       <h1>Admin Panel</h1>
-      <nav
-        className='admin-tabs'
-        on:click={(e) => {
-          const tab = e.target.dataset.tab;
-          if (tab) switchTab(tab);
-        }}
-      >
-        <button type='button' data-tab='dashboard' className='tab-btn active'>
-          Dashboard
-        </button>
-        <button type='button' data-tab='settings' className='tab-btn'>
-          Settings
-        </button>
-        <button type='button' data-tab='users' className='tab-btn'>
-          Users
-        </button>
-        <button type='button' data-tab='email' className='tab-btn'>
-          Email
-        </button>
-        <button type='button' data-tab='promotions' className='tab-btn'>
-          Promotions
-        </button>
-        <button type='button' data-tab='sponsors' className='tab-btn'>
-          Sponsors
-        </button>
-      </nav>
-      <div className='tab-content'>
-        <div data-tab='dashboard' className='tab-panel active'>
-          <Dashboard />
-        </div>
-        <div data-tab='settings' className='tab-panel'>
-          <AppSettings />
-        </div>
-        <div data-tab='users' className='tab-panel'>
-          <Users />
-        </div>
-        <div data-tab='email' className='tab-panel'>
-          <EmailUsers />
-        </div>
-        <div data-tab='promotions' className='tab-panel'>
-          <Promotions />
-        </div>
-        <div data-tab='sponsors' className='tab-panel'>
-          <Sponsors />
-        </div>
-      </div>
+      <Tabs
+        defaultActive='dashboard'
+        tabs={[
+          { id: 'dashboard', label: 'Dashboard', content: <Dashboard /> },
+          { id: 'settings', label: 'Settings', content: <AppSettings /> },
+          { id: 'users', label: 'Users', content: <Users /> },
+          { id: 'email', label: 'Email', content: <EmailUsers /> },
+          { id: 'promotions', label: 'Promotions', content: <Promotions /> },
+          { id: 'sponsors', label: 'Sponsors', content: <Sponsors /> },
+        ]}
+      />
     </section>
   );
 }
@@ -130,9 +78,13 @@ function Sponsors() {
       return;
     }
 
-    const res = await fetch(`api/admin/sponsors?page=${page}&limit=${limit}`);
+    const res = await fetch(`/api/admin/sponsors?page=${page}&limit=${limit}`);
+    if (!res.ok) {
+      ref.innerHTML = 'Failed to load sponsors';
+      return;
+    }
     const { sponsors, pages } = await res.json();
-    if (!res.ok || !Array.isArray(sponsors)) {
+    if (!Array.isArray(sponsors)) {
       ref.innerHTML = 'Failed to load sponsors';
       return;
     }
@@ -240,7 +192,9 @@ function Card({ title, text, icon, onclick }) {
 
 function AppSettings() {
   const priceRef = Ref();
-  const statusRef = Ref();
+  const thresholdRef = Ref();
+  const priceStatusRef = Ref();
+  const thresholdStatusRef = Ref();
 
   (async () => {
     try {
@@ -249,34 +203,54 @@ function AppSettings() {
       if (priceRef.el) {
         priceRef.el.value = config.acode_pro_price;
       }
-    } catch {
-      if (statusRef.el) {
-        statusRef.el.textContent = 'Failed to load config';
+      if (thresholdRef.el) {
+        thresholdRef.el.value = config.payment_threshold;
       }
+    } catch {
+      const msg = 'Failed to load config';
+      if (priceStatusRef.el) priceStatusRef.el.textContent = msg;
+      if (thresholdStatusRef.el) thresholdStatusRef.el.textContent = msg;
     }
   })();
 
-  const onSave = async () => {
-    const price = priceRef.el.value;
-    const numPrice = Number(price);
-    if (Number.isNaN(numPrice) || numPrice <= 0) {
-      alert('ERROR', 'Price must be a positive number');
-      return;
+  const onSave = async (key) => {
+    let value;
+    let numValue;
+
+    if (key === 'acode_pro_price') {
+      if (!priceRef.el) return;
+      value = priceRef.el.value;
+      numValue = Number(value);
+      if (Number.isNaN(numValue) || numValue <= 0) {
+        alert('ERROR', 'Price must be a positive number');
+        return;
+      }
+    } else if (key === 'payment_threshold') {
+      if (!thresholdRef.el) return;
+      value = thresholdRef.el.value;
+      numValue = Number(value);
+      if (Number.isNaN(numValue) || numValue <= 0 || !Number.isInteger(numValue)) {
+        alert('ERROR', 'Threshold must be a positive integer');
+        return;
+      }
     }
+
+    const statusEl = key === 'acode_pro_price' ? priceStatusRef.el : thresholdStatusRef.el;
+    if (!statusEl) return;
 
     try {
       const res = await fetch('/api/admin/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'acode_pro_price', value: price }),
+        body: JSON.stringify({ key, value }),
       });
       const json = await res.json();
       if (json.error) {
         alert('ERROR', json.error);
       } else {
-        statusRef.el.textContent = 'Saved!';
+        statusEl.textContent = 'Saved!';
         setTimeout(() => {
-          if (statusRef.el) statusRef.el.textContent = '';
+          statusEl.textContent = '';
         }, 2000);
       }
     } catch {
@@ -290,10 +264,20 @@ function AppSettings() {
         <label>Acode Pro Price (INR)</label>
         <div className='setting-input'>
           <input ref={priceRef} type='number' min='1' step='1' placeholder='370' />
-          <button type='button' onclick={onSave}>
+          <button type='button' onclick={() => onSave('acode_pro_price')}>
             Save
           </button>
-          <span ref={statusRef} className='status' />
+          <span ref={priceStatusRef} className='status' />
+        </div>
+      </div>
+      <div className='setting-row'>
+        <label>Payment Threshold (INR)</label>
+        <div className='setting-input'>
+          <input ref={thresholdRef} type='number' min='1' step='1' placeholder='15000' />
+          <button type='button' onclick={() => onSave('payment_threshold')}>
+            Save
+          </button>
+          <span ref={thresholdStatusRef} className='status' />
         </div>
       </div>
     </div>

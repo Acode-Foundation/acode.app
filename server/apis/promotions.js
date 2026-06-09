@@ -1,5 +1,5 @@
 const path = require('node:path');
-const fs = require('node:fs');
+const fs = require('node:fs/promises');
 const { Router } = require('express');
 
 const promotionsFile = path.resolve(__dirname, '../../data/promotions.json');
@@ -7,7 +7,8 @@ const router = Router();
 
 router.get('/', async (_req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(promotionsFile, 'utf8'));
+    const raw = await fs.readFile(promotionsFile, 'utf8');
+    const data = JSON.parse(raw);
     res.json(Array.isArray(data) ? data : []);
   } catch (err) {
     if (err.code === 'ENOENT') {
