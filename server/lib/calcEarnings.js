@@ -47,7 +47,7 @@ async function fromPaidPlugins(year, month, user, report) {
             await PurchaseOrder.update([PurchaseOrder.AMOUNT, calculatedAmount], [PurchaseOrder.ID, rowId]);
           }
 
-          // calculated amount here already has deduction of 15%
+          // apply 15% platform fee (Google's fee is already reflected in the settlement amount)
           return Math.round(calculatedAmount * 85) / 100;
         }
 
