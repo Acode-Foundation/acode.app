@@ -94,6 +94,15 @@ export default async function home() {
             <GhButton count={stars} url='https://github.com/acode-foundation/acode' title='Stars' icon='star' />
             <GhButton count={forks} url='https://github.com/acode-foundation/acode/fork' title='Forks' icon='fork' />
           </div>
+          <div className='featured-in'>
+            <span className='featured-in__label'>As featured in</span>
+            <a href='https://zapier.com/blog/best-code-editor/' target='_blank' rel='noopener' className='featured-in__link'>
+              Zapier
+            </a>
+            <a href='https://www.kdnuggets.com/5-android-apps-for-code-editing' target='_blank' rel='noopener' className='featured-in__link'>
+              KDnuggets
+            </a>
+          </div>
         </div>
       </div>
 

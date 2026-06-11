@@ -167,7 +167,7 @@
         flex-wrap: wrap;
         gap: 12px;
         align-items: center;
-        margin-bottom: 0;
+        margin-bottom: 20px;
 
         .gh-button-modern {
           display: inline-flex;
@@ -218,6 +218,40 @@
             color: rgba(255, 255, 255, 0.6);
             font-weight: 500;
             transition: all 0.2s ease;
+          }
+        }
+      }
+
+      .featured-in {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+
+        &__label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.5);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-right: 4px;
+        }
+
+        &__link {
+          font-size: 0.8rem;
+          font-weight: 500;
+          color: rgba(255, 255, 255, 0.7);
+          text-decoration: none;
+          padding: 3px 10px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 6px;
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: rgba(0, 212, 255, 0.08);
+            border-color: rgba(0, 212, 255, 0.3);
+            color: #00d4ff;
           }
         }
       }
@@ -304,6 +338,10 @@
         }
 
         .gh-buttons {
+          justify-content: center;
+        }
+
+        .featured-in {
           justify-content: center;
         }
       }
