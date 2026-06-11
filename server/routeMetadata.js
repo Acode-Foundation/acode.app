@@ -96,6 +96,12 @@ const namedRoutes = {
     title: 'Contact Us — Acode Code Editor',
     description: 'Get in touch with the Acode team. Support, feedback, and business inquiries.',
   },
+
+  '/about': {
+    title: 'About Us — Acode Code Editor',
+    description:
+      'Learn about Acode — the powerful Android code editor with Linux terminal and AI coding. Meet the team at Foxbiz Software Pvt. Ltd. building the future of mobile development.',
+  },
 };
 
 /**

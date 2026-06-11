@@ -1,0 +1,292 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap');
+
+#about-us {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 60px 24px 60px;
+
+  .hero {
+    text-align: center;
+    margin-bottom: 80px;
+
+    h1 {
+      font-family: 'Lexend', sans-serif;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #00d4ff 0%, #3399ff 50%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: rgba(255, 255, 255, 0.55);
+      max-width: 540px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+  }
+
+  .about-section {
+    margin-bottom: 80px;
+
+    &:last-of-type {
+      margin-bottom: 0;
+    }
+
+    .section-label {
+      font-family: 'Lexend', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #00d4ff;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-family: 'Lexend', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-body {
+      font-size: 1.05rem;
+      line-height: 1.75;
+      color: rgba(255, 255, 255, 0.6);
+      max-width: 680px;
+    }
+  }
+
+  .team-grid {
+    position: relative;
+    margin-top: 36px;
+    visibility: hidden;
+  }
+
+  .team-card {
+    display: flex;
+    gap: 16px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 16px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    box-sizing: border-box;
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      background: radial-gradient(circle at top right,
+          rgba(0, 212, 255, 0.06),
+          transparent 60%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(0, 212, 255, 0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+      z-index: 2;
+
+      &::before {
+        opacity: 1;
+      }
+
+      .team-avatar {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.3);
+      }
+    }
+
+    .team-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      object-fit: cover;
+      transition: all 0.35s ease;
+    }
+
+    .team-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+      position: relative;
+      z-index: 1;
+      flex: 1;
+    }
+
+    .team-name {
+      font-family: 'Lexend', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #ffffff;
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .team-login {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.4);
+      line-height: 1;
+    }
+
+    .team-bio {
+      font-size: 0.82rem;
+      color: rgba(255, 255, 255, 0.5);
+      line-height: 1.5;
+      margin: 4px 0 2px;
+    }
+
+    .team-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+
+      .meta-tag {
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.35);
+      }
+
+      .meta-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.5);
+        text-decoration: none;
+        transition: all 0.2s ease;
+        margin: 0;
+
+        .icon {
+          font-size: 0.9rem;
+          margin: 0;
+        }
+
+        &:hover {
+          background: rgba(0, 212, 255, 0.12);
+          border-color: rgba(0, 212, 255, 0.25);
+          color: #00d4ff;
+        }
+      }
+    }
+  }
+
+  .team-card.skeleton {
+    cursor: default;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.07);
+      transform: none;
+      box-shadow: none;
+      z-index: auto;
+
+      &::before {
+        opacity: 0;
+      }
+    }
+
+    .avatar-placeholder {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
+      flex-shrink: 0;
+      animation: shimmer 1.5s ease-in-out infinite;
+    }
+
+    .name-placeholder {
+      width: 65%;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      margin-top: 6px;
+      animation: shimmer 1.5s ease-in-out infinite;
+    }
+
+    .bio-placeholder {
+      width: 85%;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 4px;
+      margin-top: 8px;
+      animation: shimmer 1.5s ease-in-out infinite;
+      animation-delay: 0.1s;
+    }
+  }
+
+  @keyframes shimmer {
+
+    0%,
+    100% {
+      opacity: 0.4;
+    }
+
+    50% {
+      opacity: 0.8;
+    }
+  }
+
+  .error-state {
+    width: 100%;
+    text-align: center;
+    padding: 40px 0;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.95rem;
+
+    a {
+      color: #00d4ff;
+      text-decoration: none;
+      font-weight: 500;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  @media screen and (max-width: 600px) {
+    padding: 40px 20px 40px;
+
+    .hero {
+      margin-bottom: 50px;
+
+      h1 {
+        font-size: 1.8rem;
+      }
+    }
+
+    .about-section {
+      margin-bottom: 50px;
+
+      h2 {
+        font-size: 1.5rem;
+      }
+    }
+  }
+}

@@ -15,6 +15,7 @@ apis.use('/promotions', require('../apis/promotions'));
 apis.use('/admin', require('../apis/admin'));
 apis.use(['/sponsor', '/sponsors'], require('../apis/sponsor'));
 apis.use('/razorpay', require('../apis/razorpay'));
+apis.use('/team', require('../apis/team'));
 
 apis.get('/status', (_req, res) => {
   res.json({ status: 'ok' });

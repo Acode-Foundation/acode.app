@@ -57,6 +57,7 @@ window.onload = async () => {
   Router.add('/terms', () => loadModule('termsOfService'));
   Router.add('/refund', () => loadModule('refundPolicy'));
   Router.add('/contact', () => loadModule('contactUs'));
+  Router.add('/about', () => loadModule('aboutUs'));
 
   if (process.env.RAZORPAY_ENABLED) {
     Router.add('/pro', (_params, query) => loadModule('pro', query));

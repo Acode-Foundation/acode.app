@@ -1,71 +1,227 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap');
+
 #contact-us {
-  max-width: 600px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 60px 24px 60px;
 
   h1 {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-    text-align: left;
+    font-family: 'Lexend', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-align: center;
+    background: linear-gradient(135deg, #00d4ff 0%, #3399ff 50%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
   }
 
   .subtitle {
-    color: var(--secondary-text-color, #aaa);
-    margin-bottom: 2rem;
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.55);
+    max-width: 540px;
+    margin: 0 auto 80px;
+    line-height: 1.6;
+    text-align: center;
   }
 
   .contact-card {
     display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    background: var(--secondary-color, #1e1e2e);
-    border: 1px solid var(--border-color, #333);
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+    align-items: center;
+    gap: 20px;
+    padding: 24px 28px;
+    margin-bottom: 80px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 16px;
+    text-decoration: none;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
 
-    .icon.email::before {
-      font-size: 1.5rem;
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      background: radial-gradient(circle at top right,
+          rgba(0, 212, 255, 0.06),
+          transparent 60%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(0, 212, 255, 0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+
+      &::before {
+        opacity: 1;
+      }
+    }
+
+    .icon.email {
+      font-size: 1.8rem;
+      color: #00d4ff;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
     }
 
     .contact-info {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      z-index: 1;
+
       h2 {
-        font-size: 1rem;
+        font-family: 'Lexend', sans-serif;
+        font-size: 0.75rem;
+        font-weight: 500;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--secondary-text-color, #aaa);
-        margin-bottom: 0.25rem;
+        letter-spacing: 0.08em;
+        color: rgba(255, 255, 255, 0.4);
+        margin-bottom: 4px;
       }
 
       a {
+        font-family: 'Lexend', sans-serif;
         font-size: 1.2rem;
         font-weight: 600;
-        color: var(--button-color, #4fa3e3);
+        color: #ffffff;
         text-decoration: none;
+        transition: color 0.2s ease;
 
         &:hover {
-          text-decoration: underline;
+          color: #00d4ff;
         }
       }
 
       p {
-        margin-top: 0.5rem;
-        font-size: 0.9rem;
-        color: var(--secondary-text-color, #aaa);
+        font-size: 0.82rem;
+        color: rgba(255, 255, 255, 0.4);
+        margin-top: 6px;
+        line-height: 1.5;
+      }
+    }
+  }
+
+  .contact-section {
+    margin-bottom: 80px;
+
+    &:last-of-type {
+      margin-bottom: 0;
+    }
+
+    .section-label {
+      font-family: 'Lexend', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #00d4ff;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-family: 'Lexend', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
+    }
+  }
+
+  .social-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .social-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    svg {
+      flex-shrink: 0;
+      opacity: 0.7;
+      transition: opacity 0.3s ease;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(0, 212, 255, 0.2);
+      color: #00d4ff;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+
+      svg {
+        opacity: 1;
       }
     }
   }
 
   .company-info {
-    font-size: 0.9rem;
-    color: var(--secondary-text-color, #aaa);
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: rgba(255, 255, 255, 0.6);
+    max-width: 680px;
 
     p {
-      margin: 0.25rem 0;
+      margin: 0;
     }
 
     strong {
-      color: var(--text-color, #fff);
+      color: #ffffff;
+      font-weight: 600;
+    }
+  }
+
+  @media screen and (max-width: 600px) {
+    padding: 40px 20px 40px;
+
+    h1 {
+      font-size: 1.8rem;
+    }
+
+    .subtitle {
+      margin-bottom: 50px;
+    }
+
+    .contact-card {
+      margin-bottom: 50px;
+      padding: 20px;
+      gap: 14px;
+    }
+
+    .contact-section {
+      margin-bottom: 50px;
+
+      h2 {
+        font-size: 1.5rem;
+      }
+    }
+
+    .social-link {
+      padding: 8px 16px;
+      font-size: 0.8rem;
     }
   }
 }
