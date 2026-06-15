@@ -976,6 +976,7 @@ async function registerSKU(name, id, price) {
       await androidpublisher.monetization.onetimeproducts.patch({
         packageName,
         productId: sku,
+        allowMissing: true,
         updateMask: 'listings',
         'regionsVersion.version': regionsVersion,
         requestBody: {

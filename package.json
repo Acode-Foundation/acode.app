@@ -70,7 +70,8 @@
     "sitemap": "node dev/generateSitemap.js",
     "reports": "node ./server/reportsCli",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.mjs"
   },
   "browserslist": [
     "> 0.25%, not dead"

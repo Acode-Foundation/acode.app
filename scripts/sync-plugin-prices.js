@@ -1,6 +1,7 @@
 const path = require('node:path');
 const sqlite3 = require('better-sqlite3');
 const { google } = require('googleapis');
+const { getPluginSKU } = require('../server/lib/helpers');
 
 const DB_FILE = path.resolve(__dirname, '../data/db.sqlite3');
 const db = sqlite3(DB_FILE);
@@ -16,21 +17,6 @@ async function authenticate() {
   });
   const client = await auth.getClient();
   google.options({ auth: client });
-}
-
-function getPluginSKU(id) {
-  const hash = hashCode(id);
-  return `plugin_${hash.toLowerCase()}`;
-}
-
-function hashCode(str) {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const chr = str.charCodeAt(i);
-    hash = (hash << 5) - hash + chr;
-    hash |= 0;
-  }
-  return Math.abs(hash) + (hash < 0 ? 'N' : '');
 }
 
 function getPaidPlugins() {
