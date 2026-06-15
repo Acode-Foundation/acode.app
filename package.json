@@ -23,21 +23,21 @@
     "nodemon": "^3.1.10",
     "postcss": "^8.5.6",
     "postcss-loader": "^8.1.1",
-    "puppeteer": "^24.16.0",
+    "puppeteer": "^25.1.0",
     "raw-loader": "^4.0.0",
     "sass": "^1.90.0",
-    "sass-loader": "^16.0.4",
+    "sass-loader": "^17.0.0",
     "style-loader": "^4.0.0",
     "terser-webpack-plugin": "^5.3.14",
     "url-loader": "^4.1.1",
-    "webpack": "5.105.4",
+    "vitest": "^4.1.9",
+    "webpack": "^5.107.2",
     "webpack-bundle-analyzer": "^5.2.0",
-    "webpack-cli": "6.0.1"
+    "webpack-cli": "^7.0.3"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.2",
     "@google-cloud/storage": "^7.16.0",
-    "@googleapis/androidpublisher": "^35.3.0",
     "autosize": "^6.0.1",
     "better-sqlite3": "^12.6.2",
     "cookie-parser": "^1.4.7",
@@ -50,17 +50,16 @@
     "express-fileupload": "^1.5.2",
     "geoip-lite": "^2.0.2",
     "github-buttons": "^2.29.1",
-    "googleapis": "^171.4.0",
+    "googleapis": "^173.0.0",
     "handlebars": "^4.7.9",
     "highlight.js": "^11.11.1",
     "html-tag-js": "^2.4.16",
     "jszip": "^3.10.1",
     "markdown-to-txt": "^2.0.1",
-    "marked": "^17.0.4",
+    "marked": "^18.0.5",
     "moment": "^2.30.1",
-    "nodemailer": "^8.0.1",
-    "razorpay": "^2.9.6",
-    "sqlite3": "^5.1.7"
+    "nodemailer": "^9.0.0",
+    "razorpay": "^2.9.6"
   },
   "scripts": {
     "prepare": "husky",
@@ -69,7 +68,9 @@
     "dev": "node ./dev/start-dev",
     "start": "node ./server/main",
     "sitemap": "node dev/generateSitemap.js",
-    "reports": "node ./server/reportsCli"
+    "reports": "node ./server/reportsCli",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "browserslist": [
     "> 0.25%, not dead"
