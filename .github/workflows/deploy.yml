@@ -18,7 +18,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
-            export PATH="/home/${{ secrets.SSH_USER }}/.nvm/versions/node/v22.12.0/bin/:$PATH"
+            export PATH="/home/${{ secrets.SSH_USER }}/.nvm/versions/node/v24.16.0/bin/:$PATH"
             if ! command -v git &> /dev/null
             then
               sudo apt-get update
