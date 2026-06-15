@@ -55,11 +55,16 @@ async function upsertOneTimeProduct(plugin, sku, packageName, regionsVersion) {
     packageName,
     productId: sku,
     allowMissing: true,
-    updateMask: 'listings',
+    updateMask: 'listings,defaultPrice',
     'regionsVersion.version': regionsVersion,
     requestBody: {
       packageName,
       productId: sku,
+      defaultPrice: {
+        currencyCode: 'INR',
+        units: String(Math.floor(plugin.price)),
+        nanos: Math.round((plugin.price % 1) * 1000000000),
+      },
       listings: [
         {
           languageCode: 'en-US',

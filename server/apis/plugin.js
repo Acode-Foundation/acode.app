@@ -977,11 +977,16 @@ async function registerSKU(name, id, price) {
         packageName,
         productId: sku,
         allowMissing: true,
-        updateMask: 'listings',
+        updateMask: 'listings,defaultPrice',
         'regionsVersion.version': regionsVersion,
         requestBody: {
           packageName,
           productId: sku,
+          defaultPrice: {
+            currencyCode: 'INR',
+            units: String(Math.floor(price)),
+            nanos: Math.round((price % 1) * 1000000000),
+          },
           listings: [
             {
               languageCode: 'en-US',
