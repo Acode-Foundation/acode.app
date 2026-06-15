@@ -51,20 +51,48 @@ async function getRegionsVersion() {
 }
 
 async function upsertOneTimeProduct(plugin, sku, packageName, regionsVersion) {
+  let existingOptions = [];
+  try {
+    const { data } = await androidpublisher.monetization.onetimeproducts.get({
+      packageName,
+      productId: sku,
+    });
+    existingOptions = data.purchaseOptions || [];
+  } catch (err) {
+    if (err.code !== 404) throw err;
+  }
+
+  const ourOption = {
+    purchaseOptionId: 'default',
+    buyOption: {},
+    regionalPricingAndAvailabilityConfigs: [
+      {
+        regionCode: 'IN',
+        availability: 'AVAILABLE',
+        price: {
+          currencyCode: 'INR',
+          units: String(Math.floor(plugin.price)),
+          nanos: Math.round((plugin.price % 1) * 1000000000),
+        },
+      },
+    ],
+  };
+
+  const existingIds = new Set(existingOptions.map((po) => po.purchaseOptionId));
+  const purchaseOptions = existingIds.has('default')
+    ? existingOptions.map((po) => (po.purchaseOptionId === 'default' ? ourOption : po))
+    : [...existingOptions, ourOption];
+
   return androidpublisher.monetization.onetimeproducts.patch({
     packageName,
     productId: sku,
     allowMissing: true,
-    updateMask: 'listings,defaultPrice',
+    updateMask: 'listings,purchaseOptions',
     'regionsVersion.version': regionsVersion,
     requestBody: {
       packageName,
       productId: sku,
-      defaultPrice: {
-        currencyCode: 'INR',
-        units: String(Math.floor(plugin.price)),
-        nanos: Math.round((plugin.price % 1) * 1000000000),
-      },
+      purchaseOptions,
       listings: [
         {
           languageCode: 'en-US',
