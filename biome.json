@@ -30,7 +30,7 @@
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "nursery": {},
       "correctness": {
         "noUnusedVariables": "error",
@@ -73,7 +73,10 @@
         "rules": {
           "a11y": {
             "useGenericFontNames": "off",
-            "noLabelWithoutControl": "off"
+            "noLabelWithoutControl": "off",
+            "noStaticElementInteractions": "off",
+            "useSemanticElements": "off",
+            "useFocusableInteractive": "off"
           },
           "correctness": {
             "useJsxKeyInIterable": "off"
@@ -94,6 +97,38 @@
           },
           "style": {
             "noCommonJs": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/tests/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noCommonJs": "off"
+          },
+          "suspicious": {
+            "noConsole": "off"
+          },
+          "correctness": {
+            "noUndeclaredVariables": "off"
+          }
+        }
+      },
+      "javascript": {
+        "globals": ["describe", "it", "expect", "beforeAll", "afterAll", "beforeEach", "afterEach", "vi"]
+      }
+    },
+    {
+      "includes": ["**/scripts/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noCommonJs": "off"
+          },
+          "suspicious": {
+            "noConsole": "off"
           }
         }
       }

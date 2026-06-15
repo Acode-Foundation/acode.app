@@ -265,7 +265,7 @@ router.post('/verify', async (req, res) => {
 
     // Fetch the Razorpay order to verify amount and pluginId from server-side notes
     const rzpOrder = await getRazorpay().orders.fetch(razorpay_order_id);
-    if (!rzpOrder || rzpOrder.status !== 'paid') {
+    if (rzpOrder?.status !== 'paid') {
       // Payment was attempted (valid signature) but not yet captured —
       // transition from 'created' to 'pending' so the user sees their order as processing.
       if (rzpOrder && rzpOrder.status === 'attempted') {
@@ -1272,7 +1272,7 @@ router.post('/verify-pro', async (req, res) => {
 
     // Fetch the Razorpay order to verify it's paid and amount matches expected pro price
     const rzpOrder = await getRazorpay().orders.fetch(razorpay_order_id);
-    if (!rzpOrder || rzpOrder.status !== 'paid') {
+    if (rzpOrder?.status !== 'paid') {
       // Payment was attempted (valid signature) but not yet captured —
       // transition from 'created' to 'pending' so the user sees their order as processing.
       if (rzpOrder && rzpOrder.status === 'attempted') {
@@ -1680,7 +1680,7 @@ router.post('/verify-sponsor', async (req, res) => {
     }
 
     const rzpOrder = await getRazorpay().orders.fetch(razorpay_order_id);
-    if (!rzpOrder || rzpOrder.status !== 'paid') {
+    if (rzpOrder?.status !== 'paid') {
       if (rzpOrder && rzpOrder.status === 'attempted') {
         await RazorpayOrder.update(
           [[RazorpayOrder.STATUS, RazorpayOrder.STATUS_PENDING]],

@@ -477,6 +477,8 @@ router.post('/', async (req, res) => {
       return;
     }
 
+    let skuErrors = [];
+
     if (price) {
       if (price < MIN_PRICE || price > MAX_PRICE) {
         res.status(400).send({
@@ -485,7 +487,10 @@ router.post('/', async (req, res) => {
         return;
       }
 
-      await registerSKU(name, pluginId, price);
+      skuErrors = await registerSKU(name, pluginId, price);
+      if (skuErrors.length) {
+        console.error('Google Play SKU registration had errors:', skuErrors);
+      }
     }
 
     const insert = [
@@ -530,7 +535,13 @@ router.post('/', async (req, res) => {
     await Plugin.insert(...insert);
 
     savePlugin(pluginId, pluginZip, icon);
-    res.send({ message: 'Plugin uploaded successfully' });
+
+    const response = { message: 'Plugin uploaded successfully' };
+    if (skuErrors.length) {
+      response.warning = 'Plugin created but Google Play SKU registration had errors';
+      response.skuErrors = skuErrors;
+    }
+    res.send(response);
 
     User.get([User.EMAIL, User.NAME], [User.ROLE, 'admin']).then((rows) => {
       for (const row of rows) {
@@ -639,9 +650,10 @@ router.put('/', async (req, res) => {
       updates.push([Plugin.NAME, name]);
     }
 
+    let skuErrors = [];
     if (row.price !== price) {
       if (price) {
-        await registerSKU(name, pluginId, price);
+        skuErrors = await registerSKU(name, pluginId, price);
       }
       updates.push([Plugin.PRICE, price]);
     }
@@ -651,7 +663,14 @@ router.put('/', async (req, res) => {
     if (savePluginZip) {
       savePlugin(pluginId, pluginZip, icon);
     }
-    res.send({ message: 'Plugin updated successfully' });
+
+    const response = { message: 'Plugin updated successfully' };
+    if (skuErrors.length) {
+      response.warning = 'Price updated on website but Google Play SKU sync had errors';
+      response.skuErrors = skuErrors;
+      console.error('Google Play SKU registration had errors:', skuErrors);
+    }
+    res.send(response);
   } catch (error) {
     console.error('Error updating plugin:', error);
     res.status(500).send({ error: 'Unable to update plugin, please try again later, if issue persists contact support.' });
@@ -921,71 +940,74 @@ function validatePlugin(json, icon, readmeFile) {
  * @param {string} id
  * @param {number} price
  */
+let cachedRegionsVersion = null;
+
+async function getRegionsVersion() {
+  if (cachedRegionsVersion) return cachedRegionsVersion;
+
+  try {
+    const res = await androidpublisher.monetization.convertRegionPrices({
+      packageName: 'com.foxdebug.acode',
+      requestBody: {
+        price: { currencyCode: 'INR', units: '100', nanos: 0 },
+      },
+    });
+    cachedRegionsVersion = res.data.regionVersion.version;
+    return cachedRegionsVersion;
+  } catch (_) {
+    return '2025/05';
+  }
+}
+
 async function registerSKU(name, id, price) {
   const sku = getPluginSKU(id);
   if (!isValidPrice(price)) {
     throw new Error('Invalid price');
   }
 
+  const regionsVersion = await getRegionsVersion();
+  const errors = [];
+
   await register('com.foxdebug.acode');
   await register('com.foxdebug.acodefree');
+
   async function register(packageName) {
     try {
-      const requestBody = {
-        sku,
+      await androidpublisher.monetization.onetimeproducts.patch({
         packageName,
-        status: 'active',
-        defaultPrice: {
-          currency: 'INR',
-          priceMicros: price * 1000000,
-        },
-        defaultLanguage: 'en-US',
-        purchaseType: 'managedUser',
-        listings: {
-          'en-US': {
-            title: name,
-            description: `Purchase ${name} (${id}) plugin for Acode editor`,
+        productId: sku,
+        allowMissing: true,
+        updateMask: 'listings,defaultPrice',
+        'regionsVersion.version': regionsVersion,
+        requestBody: {
+          packageName,
+          productId: sku,
+          defaultPrice: {
+            currencyCode: 'INR',
+            units: String(Math.floor(price)),
+            nanos: Math.round((price % 1) * 1000000000),
           },
+          listings: [
+            {
+              languageCode: 'en-US',
+              title: name,
+              description: `Purchase ${name} (${id}) plugin for Acode editor`,
+            },
+          ],
         },
-      };
-
-      let skuAlreadyExists = false;
-
-      try {
-        await androidpublisher.inappproducts.get({
-          sku,
-          packageName,
-        });
-        skuAlreadyExists = true;
-      } catch (_error) {
-        // SKU does not exist
-      }
-
-      if (skuAlreadyExists) {
-        await androidpublisher.inappproducts.update({
-          sku,
-          packageName,
-          requestBody,
-          autoConvertMissingPrices: true,
-        });
-        return;
-      }
-
-      await androidpublisher.inappproducts.insert({
-        packageName,
-        requestBody,
-        autoConvertMissingPrices: true,
       });
     } catch (error) {
-      const message = error.errors?.map(({ message: msg }) => msg).join('\n') || error.message;
-      console.warn(`Failed to register SKU for ${packageName}, ${message}`);
-      // Proceed without throwing, to allow Razorpay-only or local testing
+      const details = error.errors?.map(({ message: msg }) => msg).join('\n') || error.message;
+      console.error(`Failed to register SKU for ${packageName}: ${details}`, error);
+      errors.push({ packageName, error: details });
     }
   }
+
+  return errors;
 }
 
 function isValidPrice(price) {
-  return price && !Number.isNaN(price) && price >= MIN_PRICE && price <= MAX_PRICE;
+  return price > 0 && !Number.isNaN(price) && price >= MIN_PRICE && price <= MAX_PRICE;
 }
 
 /**
@@ -1068,3 +1090,5 @@ function isVersionGreater(newV, oldV) {
 }
 
 module.exports = router;
+module.exports.registerSKU = registerSKU;
+module.exports.isValidPrice = isValidPrice;
