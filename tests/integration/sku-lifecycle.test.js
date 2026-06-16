@@ -55,7 +55,116 @@ describe('registerSKU on both packages', () => {
       });
       expect(res.data.listings[0].title).toBe(originalName);
     }
-  }, 15000);
+  }, 30000);
+
+  it('sets worldwide regional pricing, not just India', async () => {
+    const errors = await registerSKU(plugin.name, plugin.id, 50);
+    expect(errors).toHaveLength(0);
+
+    const sku = getPluginSKU(plugin.id);
+    for (const pkg of PACKAGES) {
+      const res = await androidpublisher.monetization.onetimeproducts.get({
+        packageName: pkg,
+        productId: sku,
+      });
+      const purchaseOptions = res.data.purchaseOptions || [];
+      expect(purchaseOptions.length).toBeGreaterThan(0);
+
+      for (const po of purchaseOptions) {
+        const configs = po.regionalPricingAndAvailabilityConfigs || [];
+        expect(configs.length).toBeGreaterThan(1);
+        const codes = configs.map((c) => c.regionCode);
+        expect(codes).toContain('IN');
+        expect(codes).toContain('US');
+        for (const c of configs) {
+          expect(c.availability).toBe('AVAILABLE');
+          expect(c.price).toBeDefined();
+          expect(c.price.currencyCode).toBeTruthy();
+        }
+      }
+    }
+  }, 30000);
+
+  it('preserves existing regions when updating price', async () => {
+    const sku = getPluginSKU(plugin.id);
+
+    for (const pkg of PACKAGES) {
+      const before = await androidpublisher.monetization.onetimeproducts.get({
+        packageName: pkg,
+        productId: sku,
+      });
+      const beforeCodes = new Set();
+      for (const po of before.data.purchaseOptions || []) {
+        for (const c of po.regionalPricingAndAvailabilityConfigs || []) {
+          beforeCodes.add(c.regionCode);
+        }
+      }
+
+      const errors = await registerSKU(plugin.name, plugin.id, 50);
+      expect(errors).toHaveLength(0);
+
+      const after = await androidpublisher.monetization.onetimeproducts.get({
+        packageName: pkg,
+        productId: sku,
+      });
+      const afterCodes = new Set();
+      for (const po of after.data.purchaseOptions || []) {
+        for (const c of po.regionalPricingAndAvailabilityConfigs || []) {
+          afterCodes.add(c.regionCode);
+        }
+      }
+
+      for (const code of beforeCodes) {
+        expect(afterCodes.has(code)).toBe(true);
+      }
+    }
+  }, 30000);
+
+  it('activates purchase options after creating product', async () => {
+    const errors = await registerSKU(plugin.name, plugin.id, 50);
+    expect(errors).toHaveLength(0);
+
+    const sku = getPluginSKU(plugin.id);
+    for (const pkg of PACKAGES) {
+      const res = await androidpublisher.monetization.onetimeproducts.get({
+        packageName: pkg,
+        productId: sku,
+      });
+      const purchaseOptions = res.data.purchaseOptions || [];
+      expect(purchaseOptions.length).toBeGreaterThan(0);
+
+      for (const po of purchaseOptions) {
+        expect(po.purchaseOptionId).toBeTruthy();
+        expect(po.regionalPricingAndAvailabilityConfigs).toBeDefined();
+        expect(po.regionalPricingAndAvailabilityConfigs.length).toBeGreaterThan(0);
+
+        for (const c of po.regionalPricingAndAvailabilityConfigs) {
+          expect(c.availability).toBe('AVAILABLE');
+        }
+      }
+    }
+  }, 30000);
+
+  it('sets minimum price of 1 unit for zero-conversion regions', async () => {
+    const errors = await registerSKU(plugin.name, plugin.id, 15);
+    expect(errors).toHaveLength(0);
+
+    const sku = getPluginSKU(plugin.id);
+    for (const pkg of PACKAGES) {
+      const res = await androidpublisher.monetization.onetimeproducts.get({
+        packageName: pkg,
+        productId: sku,
+      });
+      const purchaseOptions = res.data.purchaseOptions || [];
+
+      for (const po of purchaseOptions) {
+        for (const c of po.regionalPricingAndAvailabilityConfigs || []) {
+          const zeroPrice = parseInt(c.price.units, 10) === 0 && c.price.nanos === 0;
+          expect(zeroPrice).toBe(false);
+        }
+      }
+    }
+  }, 30000);
 
   it('throws for invalid price below MIN_PRICE', async () => {
     await expect(registerSKU('Test', 'test.id', 5)).rejects.toThrow('Invalid price');

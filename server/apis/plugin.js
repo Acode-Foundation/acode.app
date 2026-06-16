@@ -942,20 +942,27 @@ function validatePlugin(json, icon, readmeFile) {
  */
 let cachedRegionsVersion = null;
 
-async function getRegionsVersion() {
-  if (cachedRegionsVersion) return cachedRegionsVersion;
-
+async function getRegionPricing(price) {
   try {
     const res = await androidpublisher.monetization.convertRegionPrices({
       packageName: 'com.foxdebug.acode',
       requestBody: {
-        price: { currencyCode: 'INR', units: '100', nanos: 0 },
+        price: {
+          currencyCode: 'INR',
+          units: String(Math.floor(price)),
+          nanos: Math.round((price % 1) * 1000000000),
+        },
       },
     });
     cachedRegionsVersion = res.data.regionVersion.version;
-    return cachedRegionsVersion;
+    return {
+      version: res.data.regionVersion.version,
+      regionPrices: res.data.convertedRegionPrices || {},
+    };
   } catch (_) {
-    return '2025/05';
+    if (!cachedRegionsVersion) cachedRegionsVersion = '2025/05';
+    console.warn(`convertRegionPrices failed for INR ${price}, falling back to cached region version`);
+    return { version: cachedRegionsVersion, regionPrices: {} };
   }
 }
 
@@ -965,7 +972,7 @@ async function registerSKU(name, id, price) {
     throw new Error('Invalid price');
   }
 
-  const regionsVersion = await getRegionsVersion();
+  const regionPricing = await getRegionPricing(price);
   const errors = [];
 
   await register('com.foxdebug.acode');
@@ -973,8 +980,8 @@ async function registerSKU(name, id, price) {
 
   async function register(packageName) {
     try {
-      // Fetch existing purchase options to preserve them in the PATCH
       let existingOptions = [];
+      let isNew = false;
       try {
         const { data } = await androidpublisher.monetization.onetimeproducts.get({
           packageName,
@@ -983,35 +990,76 @@ async function registerSKU(name, id, price) {
         existingOptions = data.purchaseOptions || [];
       } catch (err) {
         if (err.code !== 404) throw err;
+        isNew = true;
       }
 
-      const ourOption = {
-        purchaseOptionId: 'default',
-        buyOption: {},
-        regionalPricingAndAvailabilityConfigs: [
-          {
-            regionCode: 'IN',
-            availability: 'AVAILABLE',
-            price: {
-              currencyCode: 'INR',
-              units: String(Math.floor(price)),
-              nanos: Math.round((price % 1) * 1000000000),
-            },
-          },
-        ],
-      };
+      if (isNew) {
+        try {
+          await androidpublisher.inappproducts.get({ packageName, sku });
+          await androidpublisher.inappproducts.delete({ packageName, sku });
+        } catch (err) {
+          if (err.code !== 404) {
+            console.warn(`Legacy product check/delete failed for ${packageName}/${sku}:`, err.message);
+          }
+        }
+      }
 
-      const existingIds = new Set(existingOptions.map((po) => po.purchaseOptionId));
-      const purchaseOptions = existingIds.has('default')
-        ? existingOptions.map((po) => (po.purchaseOptionId === 'default' ? ourOption : po))
-        : [...existingOptions, ourOption];
+      const newConfigs = Object.entries(regionPricing.regionPrices).map(([regionCode, region]) => {
+        const units = region.price.units || 0;
+        const nanos = region.price.nanos || 0;
+        return {
+          regionCode,
+          availability: 'AVAILABLE',
+          price: {
+            currencyCode: region.price.currencyCode,
+            units: String(units === 0 && nanos === 0 ? 1 : units),
+            nanos: units === 0 && nanos === 0 ? 0 : nanos,
+          },
+        };
+      });
+
+      if (!newConfigs.length) {
+        newConfigs.push({
+          regionCode: 'IN',
+          availability: 'AVAILABLE',
+          price: {
+            currencyCode: 'INR',
+            units: String(Math.floor(price)),
+            nanos: Math.round((price % 1) * 1000000000),
+          },
+        });
+      }
+
+      let purchaseOptions;
+      if (existingOptions.length > 0) {
+        const newConfigMap = new Map(newConfigs.map((c) => [c.regionCode, c]));
+        purchaseOptions = existingOptions.map((po) => {
+          const oldConfigs = po.regionalPricingAndAvailabilityConfigs || [];
+          const mergedMap = new Map(oldConfigs.map((c) => [c.regionCode, c]));
+          for (const [code, config] of newConfigMap) {
+            mergedMap.set(code, config);
+          }
+          return {
+            ...po,
+            regionalPricingAndAvailabilityConfigs: Array.from(mergedMap.values()),
+          };
+        });
+      } else {
+        purchaseOptions = [
+          {
+            purchaseOptionId: 'default',
+            buyOption: {},
+            regionalPricingAndAvailabilityConfigs: newConfigs,
+          },
+        ];
+      }
 
       await androidpublisher.monetization.onetimeproducts.patch({
         packageName,
         productId: sku,
         allowMissing: true,
         updateMask: 'listings,purchaseOptions',
-        'regionsVersion.version': regionsVersion,
+        'regionsVersion.version': regionPricing.version,
         requestBody: {
           packageName,
           productId: sku,
@@ -1025,6 +1073,24 @@ async function registerSKU(name, id, price) {
           ],
         },
       });
+
+      try {
+        await androidpublisher.monetization.onetimeproducts.purchaseOptions.batchUpdateStates({
+          packageName,
+          productId: sku,
+          requestBody: {
+            requests: purchaseOptions.map((po) => ({
+              activatePurchaseOptionRequest: {
+                packageName,
+                productId: sku,
+                purchaseOptionId: po.purchaseOptionId,
+              },
+            })),
+          },
+        });
+      } catch (err) {
+        console.warn(`Activate purchase options failed for ${packageName}/${sku}: ${err.message}`);
+      }
     } catch (error) {
       const details = error.errors?.map(({ message: msg }) => msg).join('\n') || error.message;
       console.error(`Failed to register SKU for ${packageName}: ${details}`, error);
