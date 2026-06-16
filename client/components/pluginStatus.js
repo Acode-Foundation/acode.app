@@ -70,8 +70,8 @@ async function changePluginStatus(e) {
 
     const pluginRes = await fetch(`/api/plugin/${id}`);
     const pluginData = await pluginRes.json();
-    target.textContent = capitalize(pluginData.status);
-    target.className = pluginData.status;
+    target.textContent = capitalize(pluginData.status_text);
+    target.className = pluginData.status_text;
   } catch (error) {
     alert('Error', error.message);
   } finally {

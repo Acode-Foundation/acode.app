@@ -73,7 +73,7 @@ function Plugin({
   name,
   price,
   owned,
-  status,
+  status_text,
   userId,
   version,
   isAdmin,
@@ -108,7 +108,7 @@ function Plugin({
           <div title='Downloads counter'>
             {downloads.toLocaleString()} <span className='icon download' />
           </div>
-          <PluginStatus status={status} id={id} />
+          <PluginStatus status={status_text} id={id} />
           <div>{calcRating(upVotes, downVotes)}</div>
           {comments > 0 && (
             <div>

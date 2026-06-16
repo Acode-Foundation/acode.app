@@ -10,17 +10,8 @@ const Handlebars = require('handlebars');
 const markdownToText = require('markdown-to-txt');
 const defaultOg = require('./defaultOg.json');
 const { getMetadata, getPluginsMetadata, getFaqsMetadata, FALLBACK_TITLE } = require('./routeMetadata');
-
-/**
- * Escape JSON-LD string for safe embedding inside a <script> tag.
- * Prevents </script> and similar sequences in schema text from
- * prematurely terminating the JSON-LD script tag.
- */
-function safeSchema(jsonString) {
-  if (!jsonString) return null;
-  return jsonString.replace(/<\//g, '<\\/');
-}
 const Plugin = require('./entities/plugin');
+const { getLoggedInUser } = require('./lib/helpers');
 const apis = require('./routes/apis');
 const oauth = require('./apis/oauth');
 const setAuth = require('./lib/gapis');
@@ -28,13 +19,13 @@ const migrationRunner = require('./lib/migrationRunner');
 
 const app = express();
 
-app.set('trust proxy', 1);
-
 const PORT = process.env.PORT || 3000;
 
 const ALLOWED_ORIGINS = new Set(['https://localhost', 'https://acode.app']);
 
 async function main() {
+  app.set('trust proxy', 1);
+
   await setAuth();
 
   app.use((_req, res, next) => {
@@ -227,6 +218,19 @@ async function main() {
         return;
       }
 
+      const loggedInUser = await getLoggedInUser(req);
+      const isOwner = loggedInUser && loggedInUser.id === plugin.user_id;
+
+      if (plugin.status === Plugin.STATUS_INACTIVE && !loggedInUser?.isAdmin) {
+        next();
+        return;
+      }
+
+      if (plugin.status !== Plugin.STATUS_APPROVED && !loggedInUser?.isAdmin && !isOwner) {
+        next();
+        return;
+      }
+
       const template = path.resolve(__dirname, './index.hbs');
       const source = fs.readFileSync(template, 'utf8');
       const templateScript = Handlebars.compile(source);
@@ -406,6 +410,16 @@ async function start() {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
+}
+
+/**
+ * Escape JSON-LD string for safe embedding inside a <script> tag.
+ * Prevents </script> and similar sequences in schema text from
+ * prematurely terminating the JSON-LD script tag.
+ */
+function safeSchema(jsonString) {
+  if (!jsonString) return null;
+  return jsonString.replace(/<\//g, '<\\/');
 }
 
 start();

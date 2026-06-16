@@ -51,6 +51,7 @@ class Plugin extends Entity {
   ICON = 'icon';
   PRICE = 'price';
   STATUS = 'status';
+  STATUS_TEXT = 'status_text';
   AUTHOR = 'author';
   VERSION = 'version';
   USER_ID = 'user_id';
@@ -201,7 +202,7 @@ class Plugin extends Entity {
   }
 
   get allColumns() {
-    return [...this.minColumns, this.STATUS];
+    return [...this.minColumns, this.STATUS, this.STATUS_TEXT];
   }
 
   get #initialColumns() {
@@ -228,7 +229,8 @@ class Plugin extends Entity {
       this.STATUS_CHANGE_DATE,
       this.PACKAGE_UPDATED_AT,
       this.STATUS_CHANGE_MESSAGE,
-      "CASE WHEN status = 0 THEN 'pending' WHEN status = 1 THEN 'approved' WHEN status = 2 THEN 'rejected' WHEN status = 3 THEN 'deleted' END as status",
+      this.STATUS,
+      "CASE WHEN status = 0 THEN 'pending' WHEN status = 1 THEN 'approved' WHEN status = 2 THEN 'rejected' WHEN status = 3 THEN 'deleted' END as status_text",
       `'${process.env.HOST}/plugin-icon/' || id as icon`,
     ];
   }
@@ -248,6 +250,7 @@ class Plugin extends Entity {
       'p.created_at as created_at',
       'p.updated_at as updated_at',
       'p.status as status',
+      'p.status_text as status_text',
       'p.supported_editor as supported_editor',
       'p.min_version_code as min_version_code',
       'p.repository as repository',
