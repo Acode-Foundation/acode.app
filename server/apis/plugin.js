@@ -250,21 +250,23 @@ router.get('{/:pluginId}', async (req, res) => {
       columns.push(Plugin.AUTHOR_EMAIL);
       columns.push(Plugin.AUTHOR_GITHUB);
       columns.push(Plugin.AUTHOR_GITHUB);
-    }
-
-    if (loggedInUser && (loggedInUser.isAdmin || loggedInUser.id === userId)) {
       columns.push(Plugin.STATUS);
-    }
-
-    if (!loggedInUser) {
-      where.push([Plugin.STATUS, Plugin.STATUS_APPROVED]);
-    } else if (loggedInUser.id === userId && !loggedInUser.isAdmin) {
-      where.push([Plugin.STATUS, Plugin.STATUS_INACTIVE, '<>']);
-    }
-
-    if (pluginId) {
+      columns.push(Plugin.STATUS_TEXT);
       where.push([Plugin.ID, pluginId]);
     } else {
+      if (loggedInUser && (loggedInUser.isAdmin || loggedInUser.id === userId)) {
+        columns.push(Plugin.STATUS);
+        columns.push(Plugin.STATUS_TEXT);
+      }
+
+      if (!loggedInUser) {
+        where.push([Plugin.STATUS, Plugin.STATUS_APPROVED]);
+      } else if (loggedInUser.id === userId && !loggedInUser.isAdmin) {
+        where.push([Plugin.STATUS, Plugin.STATUS_DELETED, '<>']);
+      } else if (!loggedInUser.isAdmin) {
+        where.push([Plugin.STATUS, Plugin.STATUS_APPROVED]);
+      }
+
       if (userId) {
         where.push([Plugin.USER_ID, userId]);
       }
@@ -362,6 +364,23 @@ router.get('{/:pluginId}', async (req, res) => {
       if (!row) {
         res.status(404).send({ error: 'Not found' });
         return;
+      }
+
+      const isOwner = loggedInUser && loggedInUser.id === row.user_id;
+
+      if (row.status === Plugin.STATUS_DELETED && !loggedInUser?.isAdmin) {
+        res.status(404).send({ error: 'Not found' });
+        return;
+      }
+
+      if (row.status !== Plugin.STATUS_APPROVED && !loggedInUser?.isAdmin && !isOwner) {
+        res.status(404).send({ error: 'Not found' });
+        return;
+      }
+
+      if (!loggedInUser?.isAdmin && !isOwner) {
+        row.status = undefined;
+        row.status_text = undefined;
       }
 
       res.send(row);
