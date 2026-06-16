@@ -500,7 +500,18 @@ function EmailUsers() {
 }
 
 function Payments() {
-  const list = Ref();
+  const tblBody = Ref();
+  const summaryRef = Ref();
+  const prevBtn = Ref();
+  const nextBtn = Ref();
+  const currentPage = Reactive(1);
+  const totalPages = Reactive(0);
+  const totalCount = Reactive(0);
+  const limit = 10;
+  let debounceTimer;
+  let searchQuery = '';
+  let statusFilter = 'all';
+
   const paymentMethod = Ref();
   const $paymentDialog = (
     <DialogBox oncancel={(hide) => hide()}>
@@ -508,86 +519,144 @@ function Payments() {
     </DialogBox>
   );
 
-  list.onref = async () => {
+  const onSearchInput = (e) => {
+    searchQuery = e.target.value;
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => fetchPayments(1), 400);
+  };
+
+  const onStatusFilter = (e) => {
+    statusFilter = e.target.value;
+    fetchPayments(1);
+  };
+
+  tblBody.onref = () => fetchPayments(1);
+
+  async function fetchPayments(page) {
+    if (!tblBody.el) return;
+    tblBody.el.innerHTML = '<tr><td colspan="6" class="loading-cell">Loading...</td></tr>';
+
+    let url = `/api/admin/payments?page=${page}&limit=${limit}`;
+    if (statusFilter !== 'all') {
+      url += `&status=${encodeURIComponent(statusFilter)}`;
+    }
+    if (searchQuery) {
+      url += `&search=${encodeURIComponent(searchQuery)}`;
+    }
+
     try {
-      const data = await fetch('/api/admin/payments').then((res) => res.json());
+      const res = await fetch(url);
+
+      if (!res.ok) {
+        throw new Error(`Server error (${res.status})`);
+      }
+
+      const data = await res.json();
 
       if (data.error) {
         throw new Error(data.error);
       }
 
-      for (const item of data) {
-        list.append(PaymentRow(item));
+      const { payments, pages, total } = data;
+
+      currentPage.value = page;
+      totalPages.value = pages;
+      totalCount.value = total;
+      updatePaginationButtons();
+
+      if (summaryRef.el) {
+        const start = total === 0 ? 0 : (page - 1) * limit + 1;
+        const end = Math.min(page * limit, total);
+        summaryRef.el.textContent = `Showing ${start}–${end} of ${total} payments`;
       }
+
+      if (!total) {
+        tblBody.el.innerHTML = '<tr><td colspan="6" class="empty-cell">No payments found</td></tr>';
+        return;
+      }
+
+      tblBody.el.innerHTML = '';
+      tblBody.el.append(
+        ...payments.map((p) => (
+          <tr data-id={p.id} data-pmid={p.payment_method_id} data-amount={p.amount} className={`payment-row ${p.status}`}>
+            <td>{p.id}</td>
+            <td>{p.user_name}</td>
+            <td>{p.user_email}</td>
+            <td className='amount-cell'>&#8377; {p.amount.toLocaleString()}</td>
+            <td>
+              <span className={`status-badge status-${p.status}`} data-action='update-status' data-id={p.id}>
+                {p.status} <span className='chevron' />
+              </span>
+            </td>
+            <td>{moment(p.created_at).format('DD-MM-YY')}</td>
+          </tr>
+        )),
+      );
     } catch (err) {
-      alert('ERROR', err.message || err);
+      currentPage.value = 1;
+      totalPages.value = 0;
+      totalCount.value = 0;
+      updatePaginationButtons();
+      if (summaryRef.el) summaryRef.el.textContent = '';
+      tblBody.el.innerHTML = `<tr><td colspan="6" class="error-cell">${err.message || 'Failed to load payments'}</td></tr>`;
+    }
+  }
+
+  function updatePaginationButtons() {
+    if (prevBtn.el) prevBtn.el.disabled = currentPage.value <= 1 || totalPages.value < 1;
+    if (nextBtn.el) nextBtn.el.disabled = currentPage.value >= totalPages.value || totalPages.value < 1;
+  }
+
+  const rowClickHandler = async (e) => {
+    const badge = e.target.closest('.status-badge');
+    if (badge) {
+      e.stopPropagation();
+      const { id } = badge.dataset;
+
+      try {
+        const statusValue = await select('Select Status', ['none', 'paid', 'initiated']);
+        if (!statusValue) return;
+
+        const body = new FormData();
+        body.append('id', id);
+        body.append('status', statusValue);
+
+        const data = await fetch('/api/admin/payment', {
+          method: 'PATCH',
+          body,
+        }).then((res) => res.json());
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        fetchPayments(currentPage.value);
+      } catch (err) {
+        alert('ERROR', err.message || err);
+      }
+      return;
+    }
+
+    const row = e.target.closest('tr');
+    if (row) {
+      showPaymentMethod({
+        id: row.dataset.id,
+        payment_method_id: row.dataset.pmid,
+        amount: row.dataset.amount,
+      });
     }
   };
 
-  return (
-    <div className='admin-payments'>
-      <div className='payments-list'>
-        <ul ref={list} className='list' />
-      </div>
-    </div>
-  );
-
-  function PaymentRow({ id, amount, user_name: name, user_email: email, status, created_at: date, payment_method_id: paymentId }) {
-    return (
-      <li data-id={id} className={`payment ${status}`} onclick={() => renderPaymentMethod(id, paymentId, amount)}>
-        <div className='group'>
-          <strong onclick={updateStatus} data-id={id} className='status'>
-            {status}
-          </strong>
-          <span className='date'>{new Date(date).toLocaleDateString()}</span>
-        </div>
-        <span className='amount'>&#8377; {amount}</span>
-        <div className='group'>
-          <span className='name'>{name}</span>
-          &lt;<span className='email'>{email}</span>&gt;
-        </div>
-      </li>
-    );
-  }
-
-  async function updateStatus(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const { id } = e.target.dataset;
-    const status = await select('Select Status', ['none', 'paid', 'initiated']);
-    if (!status) return;
-
+  async function showPaymentMethod({ id, payment_method_id: pmId, amount }) {
     try {
-      const body = new FormData();
+      const prev = tblBody.el?.querySelector('.active-row');
+      prev?.classList.remove('active-row');
+      const row = tblBody.el?.querySelector(`[data-id='${id}']`);
+      row?.classList.add('active-row');
 
-      body.append('id', id);
-      body.append('status', status);
-
-      const data = await fetch('/api/admin/payment', {
-        method: 'PATCH',
-        body,
-      }).then((res) => res.json());
-
-      if (data.error) {
-        throw new Error(data);
-      }
-
-      list.get(`[data-id='${id}']`)?.replaceWith(<PaymentRow {...data} />);
-    } catch (err) {
-      alert('ERROR', err.message || err);
-    }
-  }
-
-  async function renderPaymentMethod(id, pmId, amount) {
-    try {
-      list.get('li.active')?.classList.remove('active');
-      list.get(`[data-id='${id}']`)?.classList.add('active');
       const data = await fetch(`/api/admin/payment-method/${pmId}`).then((res) => res.json());
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
+      if (data.error) throw new Error(data.error);
 
       paymentMethod.el.content = (
         <>
@@ -635,7 +704,7 @@ function Payments() {
           </tr>
           <tr>
             <th>Amount</th>
-            <td>{amount}</td>
+            <td>&#8377; {amount}</td>
           </tr>
         </>
       );
@@ -644,6 +713,54 @@ function Payments() {
       alert('ERROR', err.message || err);
     }
   }
+
+  const goTo = (page) => {
+    if (page < 1 || (totalPages.value > 0 && page > totalPages.value)) return;
+    if (totalPages.value < 1) return;
+    fetchPayments(page);
+  };
+
+  return (
+    <div className='admin-payments'>
+      <div className='payments-toolbar'>
+        <div className='search-box'>
+          <span className='icon search' />
+          <input className='search-input' type='search' placeholder='Search by name or email...' oninput={onSearchInput} />
+        </div>
+        <select className='status-filter' onchange={onStatusFilter}>
+          <option value='all'>All Status</option>
+          <option value='paid'>Paid</option>
+          <option value='initiated'>Initiated</option>
+          <option value='none'>None</option>
+        </select>
+      </div>
+      <div className='table-container'>
+        <table className='info payments-table'>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>User</th>
+              <th>Email</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody ref={tblBody} onclick={rowClickHandler} />
+        </table>
+      </div>
+      <small ref={summaryRef} className='summary-text'>
+        Loading...
+      </small>
+      <div className='pagination'>
+        <button ref={prevBtn} type='button' on:click={() => goTo(currentPage.value - 1)} title='Previous page' className='icon navigate_before' />
+        <span>
+          {currentPage}/{totalPages}
+        </span>
+        <button ref={nextBtn} type='button' on:click={() => goTo(currentPage.value + 1)} title='Next page' className='icon navigate_next' />
+      </div>
+    </div>
+  );
 }
 
 function Promotions() {
