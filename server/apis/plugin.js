@@ -1005,7 +1005,7 @@ async function registerSKU(name, id, price) {
       }
 
       const newConfigs = Object.entries(regionPricing.regionPrices).map(([regionCode, region]) => {
-        const units = region.price.units || 0;
+        const units = Number(region.price.units) || 0;
         const nanos = region.price.nanos || 0;
         return {
           regionCode,

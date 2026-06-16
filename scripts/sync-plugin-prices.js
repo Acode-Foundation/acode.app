@@ -93,7 +93,7 @@ async function upsertOneTimeProduct(plugin, sku, packageName, regionPricing) {
   }
 
   const newConfigs = Object.entries(regionPricing.regionPrices).map(([regionCode, region]) => {
-    const units = region.price.units || 0;
+    const units = Number(region.price.units) || 0;
     const nanos = region.price.nanos || 0;
     return {
       regionCode,
@@ -206,7 +206,13 @@ async function main() {
   console.log('Authenticated with Google Play API\n');
 
   const plugins = getPaidPlugins();
-  const targetSku = process.argv.includes('--sku') ? process.argv[process.argv.indexOf('--sku') + 1] : null;
+  const skuIdx = process.argv.indexOf('--sku');
+  const targetSku = skuIdx !== -1 ? process.argv[skuIdx + 1] : null;
+
+  if (skuIdx !== -1 && (!targetSku || targetSku.startsWith('--'))) {
+    console.log('Error: --sku flag requires a SKU value');
+    return;
+  }
 
   if (targetSku) {
     const filtered = plugins.filter((p) => getPluginSKU(p.id) === targetSku);
@@ -235,7 +241,7 @@ async function main() {
     const allOk = statuses.every((s) => s.startsWith('OK'));
     console.log(`  ${allOk ? 'OK' : 'HAD ERRORS'}\n`);
 
-    if (plugins.length > 1) {
+    if (results.length < plugins.length) {
       await sleep(500);
     }
   }
