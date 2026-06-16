@@ -508,6 +508,7 @@ function Payments() {
   const totalPages = Reactive(0);
   const totalCount = Reactive(0);
   const limit = 10;
+  let abortController;
   let debounceTimer;
   let searchQuery = '';
   let statusFilter = 'all';
@@ -534,6 +535,10 @@ function Payments() {
 
   async function fetchPayments(page) {
     if (!tblBody.el) return;
+
+    if (abortController) abortController.abort();
+    abortController = new AbortController();
+
     tblBody.el.innerHTML = '<tr><td colspan="6" class="loading-cell">Loading...</td></tr>';
 
     let url = `/api/admin/payments?page=${page}&limit=${limit}`;
@@ -545,7 +550,7 @@ function Payments() {
     }
 
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: abortController.signal });
 
       if (!res.ok) {
         throw new Error(`Server error (${res.status})`);
@@ -593,12 +598,15 @@ function Payments() {
         )),
       );
     } catch (err) {
+      if (err?.name === 'AbortError') return;
+
       currentPage.value = 1;
       totalPages.value = 0;
       totalCount.value = 0;
       updatePaginationButtons();
       if (summaryRef.el) summaryRef.el.textContent = '';
-      tblBody.el.innerHTML = `<tr><td colspan="6" class="error-cell">${err.message || 'Failed to load payments'}</td></tr>`;
+      tblBody.el.innerHTML = '<tr><td colspan="6" class="error-cell"></td></tr>';
+      tblBody.el.querySelector('.error-cell').textContent = err.message || 'Failed to load payments';
     }
   }
 
