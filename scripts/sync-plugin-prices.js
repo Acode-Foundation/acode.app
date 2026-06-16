@@ -36,22 +36,47 @@ function flattenErrors(err) {
   return all;
 }
 
-async function getRegionsVersion() {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function getRegionPricing(price) {
   try {
     const res = await androidpublisher.monetization.convertRegionPrices({
       packageName: 'com.foxdebug.acode',
       requestBody: {
-        price: { currencyCode: 'INR', units: '100', nanos: 0 },
+        price: {
+          currencyCode: 'INR',
+          units: String(Math.floor(price)),
+          nanos: Math.round((price % 1) * 1000000000),
+        },
       },
     });
-    return res.data.regionVersion.version;
+    return {
+      version: res.data.regionVersion.version,
+      regionPrices: res.data.convertedRegionPrices || {},
+    };
   } catch (_) {
-    return '2025/05';
+    console.warn(`  convertRegionPrices failed for INR ${price}, falling back to India-only pricing`);
+    return { version: '2025/05', regionPrices: {} };
   }
 }
 
-async function upsertOneTimeProduct(plugin, sku, packageName, regionsVersion) {
+async function deleteLegacyProduct(packageName, sku) {
+  try {
+    await androidpublisher.inappproducts.get({ packageName, sku });
+    await androidpublisher.inappproducts.delete({ packageName, sku });
+    return true;
+  } catch (err) {
+    if (err.code === 404) return false;
+    console.warn(`  Legacy product check/delete failed (${packageName}/${sku}): ${err.message}`);
+    return false;
+  }
+}
+
+async function upsertOneTimeProduct(plugin, sku, packageName, regionPricing) {
   let existingOptions = [];
+  let isNew = false;
   try {
     const { data } = await androidpublisher.monetization.onetimeproducts.get({
       packageName,
@@ -60,35 +85,69 @@ async function upsertOneTimeProduct(plugin, sku, packageName, regionsVersion) {
     existingOptions = data.purchaseOptions || [];
   } catch (err) {
     if (err.code !== 404) throw err;
+    isNew = true;
   }
 
-  const ourOption = {
-    purchaseOptionId: 'default',
-    buyOption: {},
-    regionalPricingAndAvailabilityConfigs: [
-      {
-        regionCode: 'IN',
-        availability: 'AVAILABLE',
-        price: {
-          currencyCode: 'INR',
-          units: String(Math.floor(plugin.price)),
-          nanos: Math.round((plugin.price % 1) * 1000000000),
-        },
+  if (isNew) {
+    await deleteLegacyProduct(packageName, sku);
+  }
+
+  const newConfigs = Object.entries(regionPricing.regionPrices).map(([regionCode, region]) => {
+    const units = Number(region.price.units) || 0;
+    const nanos = region.price.nanos || 0;
+    return {
+      regionCode,
+      availability: 'AVAILABLE',
+      price: {
+        currencyCode: region.price.currencyCode,
+        units: String(units === 0 && nanos === 0 ? 1 : units),
+        nanos: units === 0 && nanos === 0 ? 0 : nanos,
       },
-    ],
-  };
+    };
+  });
 
-  const existingIds = new Set(existingOptions.map((po) => po.purchaseOptionId));
-  const purchaseOptions = existingIds.has('default')
-    ? existingOptions.map((po) => (po.purchaseOptionId === 'default' ? ourOption : po))
-    : [...existingOptions, ourOption];
+  if (!newConfigs.length) {
+    newConfigs.push({
+      regionCode: 'IN',
+      availability: 'AVAILABLE',
+      price: {
+        currencyCode: 'INR',
+        units: String(Math.floor(plugin.price)),
+        nanos: Math.round((plugin.price % 1) * 1000000000),
+      },
+    });
+  }
 
-  return androidpublisher.monetization.onetimeproducts.patch({
+  let purchaseOptions;
+  if (existingOptions.length > 0) {
+    const newConfigMap = new Map(newConfigs.map((c) => [c.regionCode, c]));
+    purchaseOptions = existingOptions.map((po) => {
+      const oldConfigs = po.regionalPricingAndAvailabilityConfigs || [];
+      const mergedMap = new Map(oldConfigs.map((c) => [c.regionCode, c]));
+      for (const [code, config] of newConfigMap) {
+        mergedMap.set(code, config);
+      }
+      return {
+        ...po,
+        regionalPricingAndAvailabilityConfigs: Array.from(mergedMap.values()),
+      };
+    });
+  } else {
+    purchaseOptions = [
+      {
+        purchaseOptionId: 'default',
+        buyOption: {},
+        regionalPricingAndAvailabilityConfigs: newConfigs,
+      },
+    ];
+  }
+
+  await androidpublisher.monetization.onetimeproducts.patch({
     packageName,
     productId: sku,
     allowMissing: true,
     updateMask: 'listings,purchaseOptions',
-    'regionsVersion.version': regionsVersion,
+    'regionsVersion.version': regionPricing.version,
     requestBody: {
       packageName,
       productId: sku,
@@ -102,15 +161,34 @@ async function upsertOneTimeProduct(plugin, sku, packageName, regionsVersion) {
       ],
     },
   });
+
+  try {
+    await androidpublisher.monetization.onetimeproducts.purchaseOptions.batchUpdateStates({
+      packageName,
+      productId: sku,
+      requestBody: {
+        requests: purchaseOptions.map((po) => ({
+          activatePurchaseOptionRequest: {
+            packageName,
+            productId: sku,
+            purchaseOptionId: po.purchaseOptionId,
+          },
+        })),
+      },
+    });
+  } catch (err) {
+    console.warn(`  Activate purchase options failed for ${packageName}/${sku}: ${err.message}`);
+  }
 }
 
-async function syncPluginPrice(plugin, regionsVersion) {
+async function syncPluginPrice(plugin) {
   const sku = getPluginSKU(plugin.id);
+  const regionPricing = await getRegionPricing(plugin.price);
   const result = { id: plugin.id, name: plugin.name, price: plugin.price, packages: {} };
 
   for (const packageName of PACKAGE_NAMES) {
     try {
-      await upsertOneTimeProduct(plugin, sku, packageName, regionsVersion);
+      await upsertOneTimeProduct(plugin, sku, packageName, regionPricing);
       result.packages[packageName] = 'OK';
     } catch (error) {
       result.packages[packageName] = `FAILED: ${flattenErrors(error).join('; ') || error.message}`;
@@ -127,11 +205,27 @@ async function main() {
   await authenticate();
   console.log('Authenticated with Google Play API\n');
 
-  const regionsVersion = await getRegionsVersion();
-  console.log(`Regions version: ${regionsVersion}\n`);
-
   const plugins = getPaidPlugins();
-  console.log(`Found ${plugins.length} paid plugin(s)\n`);
+  const skuIdx = process.argv.indexOf('--sku');
+  const targetSku = skuIdx !== -1 ? process.argv[skuIdx + 1] : null;
+
+  if (skuIdx !== -1 && (!targetSku || targetSku.startsWith('--'))) {
+    console.log('Error: --sku flag requires a SKU value');
+    return;
+  }
+
+  if (targetSku) {
+    const filtered = plugins.filter((p) => getPluginSKU(p.id) === targetSku);
+    if (filtered.length === 0) {
+      console.log(`No paid plugin found with SKU "${targetSku}".`);
+      return;
+    }
+    console.log(`Filtered to SKU "${targetSku}": ${filtered.length} plugin(s)`);
+    plugins.length = 0;
+    plugins.push(...filtered);
+  }
+
+  console.log(`Syncing ${plugins.length} paid plugin(s)\n`);
 
   if (plugins.length === 0) {
     console.log('No paid plugins to sync.');
@@ -141,11 +235,15 @@ async function main() {
   const results = [];
   for (const plugin of plugins) {
     console.log(`Syncing "${plugin.name}" (${plugin.id}): INR ${plugin.price}`);
-    const result = await syncPluginPrice(plugin, regionsVersion);
+    const result = await syncPluginPrice(plugin);
     results.push(result);
     const statuses = Object.values(result.packages);
     const allOk = statuses.every((s) => s.startsWith('OK'));
     console.log(`  ${allOk ? 'OK' : 'HAD ERRORS'}\n`);
+
+    if (results.length < plugins.length) {
+      await sleep(500);
+    }
   }
 
   console.log('---');
