@@ -49,7 +49,6 @@ window.onload = async () => {
 
   const main = app.get('main');
 
-  Router.add('/payments', (params) => loadModule('payments', params));
   Router.add('/admin', (params) => loadModule('admin', params));
   Router.add('/add-payment-method/:mode', (params) => loadModule('addPaymentMethod', params));
   Router.add('/faqs/:qHash?', (params) => loadModule('FAQs', params));
