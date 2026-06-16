@@ -70,8 +70,9 @@ async function changePluginStatus(e) {
 
     const pluginRes = await fetch(`/api/plugin/${id}`);
     const pluginData = await pluginRes.json();
+    const prefix = target.className.split(' ')[0];
     target.textContent = capitalize(pluginData.status_text);
-    target.className = pluginData.status_text;
+    target.className = `${prefix} ${pluginData.status_text}`;
   } catch (error) {
     alert('Error', error.message);
   } finally {

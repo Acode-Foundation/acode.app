@@ -81,7 +81,7 @@ class Plugin extends Entity {
   STATUS_PENDING = 0;
   STATUS_APPROVED = 1;
   STATUS_REJECTED = 2;
-  STATUS_INACTIVE = 3;
+  STATUS_DELETED = 3;
 
   EDITOR_ACE = 'ace';
   EDITOR_CM = 'cm';
@@ -141,7 +141,7 @@ class Plugin extends Entity {
    * @param {'AND' | 'OR'} operator when there are multiple where clauses
    */
   delete(where, operator = 'AND') {
-    return this.update([this.STATUS, this.STATUS_INACTIVE], where, operator);
+    return this.update([this.STATUS, this.STATUS_DELETED], where, operator);
   }
 
   async deletePermanently(where, operator = 'AND') {

@@ -262,7 +262,7 @@ router.get('{/:pluginId}', async (req, res) => {
       if (!loggedInUser) {
         where.push([Plugin.STATUS, Plugin.STATUS_APPROVED]);
       } else if (loggedInUser.id === userId && !loggedInUser.isAdmin) {
-        where.push([Plugin.STATUS, Plugin.STATUS_INACTIVE, '<>']);
+        where.push([Plugin.STATUS, Plugin.STATUS_DELETED, '<>']);
       } else if (!loggedInUser.isAdmin) {
         where.push([Plugin.STATUS, Plugin.STATUS_APPROVED]);
       }
@@ -368,7 +368,7 @@ router.get('{/:pluginId}', async (req, res) => {
 
       const isOwner = loggedInUser && loggedInUser.id === row.user_id;
 
-      if (row.status === Plugin.STATUS_INACTIVE && !loggedInUser?.isAdmin) {
+      if (row.status === Plugin.STATUS_DELETED && !loggedInUser?.isAdmin) {
         res.status(404).send({ error: 'Not found' });
         return;
       }

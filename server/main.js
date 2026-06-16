@@ -221,7 +221,7 @@ async function main() {
       const loggedInUser = await getLoggedInUser(req);
       const isOwner = loggedInUser && loggedInUser.id === plugin.user_id;
 
-      if (plugin.status === Plugin.STATUS_INACTIVE && !loggedInUser?.isAdmin) {
+      if (plugin.status === Plugin.STATUS_DELETED && !loggedInUser?.isAdmin) {
         next();
         return;
       }
