@@ -70,22 +70,36 @@ router.get('/users', async (req, res) => {
 });
 
 router.get('/payments', async (req, res) => {
-  const { status, user, page, limit } = req.query;
+  const { status, search, page = 1, limit = 10 } = req.query;
+  const pageNum = parseInt(page, 10) || 1;
+  const limitNum = Math.min(parseInt(limit, 10) || 10, 100);
+
   const where = [];
 
-  if (status) {
+  if (status && status !== 'all') {
     where.push([Payment.STATUS, Payment.statusInt(status)]);
   }
 
-  if (user) {
-    where.push([Payment.USER_ID, user]);
+  let payments;
+  let total;
+
+  if (search) {
+    payments = await Payment.for('internal').get(where);
+
+    const searchLower = search.toLowerCase();
+    payments = payments.filter((p) => p.user_name?.toLowerCase().includes(searchLower) || p.user_email?.toLowerCase().includes(searchLower));
+
+    total = payments.length;
+    const offset = (pageNum - 1) * limitNum;
+    payments = payments.slice(offset, offset + limitNum);
+  } else {
+    total = await Payment.count(where);
+    payments = await Payment.get(where, { page: pageNum, limit: limitNum });
   }
 
-  const payments = await Payment.get(where, {
-    page,
-    limit,
-  });
-  res.send(payments);
+  const pages = Math.ceil(total / limitNum);
+
+  res.send({ payments, pages, total });
 });
 
 router.get('/payment-method/:id', async (req, res) => {

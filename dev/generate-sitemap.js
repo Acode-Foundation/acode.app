@@ -63,7 +63,6 @@ const EXCLUDED_PATTERNS = [
   '/user',
   '/profile',
   '/change-password',
-  '/payments',
   '/orders',
   '/earnings',
   '/publish',

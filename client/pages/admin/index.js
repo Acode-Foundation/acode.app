@@ -1,6 +1,8 @@
 import './style.scss';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
+import DialogBox from 'components/dialogs/dialogBox';
+import select from 'components/dialogs/select';
 import Input from 'components/input';
 import Tabs from 'components/tabs';
 import Reactive from 'html-tag-js/reactive';
@@ -25,6 +27,7 @@ export default async function Admin() {
           { id: 'settings', label: 'Settings', content: <AppSettings /> },
           { id: 'users', label: 'Users', content: <Users /> },
           { id: 'email', label: 'Email', content: <EmailUsers /> },
+          { id: 'payments', label: 'Payments', content: <Payments /> },
           { id: 'promotions', label: 'Promotions', content: <Promotions /> },
           { id: 'sponsors', label: 'Sponsors', content: <Sponsors /> },
         ]}
@@ -491,6 +494,278 @@ function EmailUsers() {
         <button ref={sendBtn} type='button' onclick={onSend} className='send-btn'>
           Send Email
         </button>
+      </div>
+    </div>
+  );
+}
+
+function Payments() {
+  const tblBody = Ref();
+  const summaryRef = Ref();
+  const prevBtn = Ref();
+  const nextBtn = Ref();
+  const currentPage = Reactive(1);
+  const totalPages = Reactive(0);
+  const totalCount = Reactive(0);
+  const limit = 10;
+  let abortController;
+  let debounceTimer;
+  let searchQuery = '';
+  let statusFilter = 'all';
+
+  const paymentMethod = Ref();
+  const $paymentDialog = (
+    <DialogBox oncancel={(hide) => hide()}>
+      <table ref={paymentMethod} className='payment-method' />
+    </DialogBox>
+  );
+
+  const onSearchInput = (e) => {
+    searchQuery = e.target.value;
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => fetchPayments(1), 400);
+  };
+
+  const onStatusFilter = (e) => {
+    statusFilter = e.target.value;
+    fetchPayments(1);
+  };
+
+  tblBody.onref = () => fetchPayments(1);
+
+  async function fetchPayments(page) {
+    if (!tblBody.el) return;
+
+    if (abortController) abortController.abort();
+    abortController = new AbortController();
+
+    tblBody.el.innerHTML = '<tr><td colspan="6" class="loading-cell">Loading...</td></tr>';
+
+    let url = `/api/admin/payments?page=${page}&limit=${limit}`;
+    if (statusFilter !== 'all') {
+      url += `&status=${encodeURIComponent(statusFilter)}`;
+    }
+    if (searchQuery) {
+      url += `&search=${encodeURIComponent(searchQuery)}`;
+    }
+
+    try {
+      const res = await fetch(url, { signal: abortController.signal });
+
+      if (!res.ok) {
+        throw new Error(`Server error (${res.status})`);
+      }
+
+      const data = await res.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      const { payments, pages, total } = data;
+
+      currentPage.value = page;
+      totalPages.value = pages;
+      totalCount.value = total;
+      updatePaginationButtons();
+
+      if (summaryRef.el) {
+        const start = total === 0 ? 0 : (page - 1) * limit + 1;
+        const end = Math.min(page * limit, total);
+        summaryRef.el.textContent = `Showing ${start}–${end} of ${total} payments`;
+      }
+
+      if (!total) {
+        tblBody.el.innerHTML = '<tr><td colspan="6" class="empty-cell">No payments found</td></tr>';
+        return;
+      }
+
+      tblBody.el.innerHTML = '';
+      tblBody.el.append(
+        ...payments.map((p) => (
+          <tr data-id={p.id} data-pmid={p.payment_method_id} data-amount={p.amount} className={`payment-row ${p.status}`}>
+            <td>{p.id}</td>
+            <td>{p.user_name}</td>
+            <td>{p.user_email}</td>
+            <td className='amount-cell'>&#8377; {p.amount.toLocaleString()}</td>
+            <td>
+              <span className={`status-badge status-${p.status}`} data-action='update-status' data-id={p.id}>
+                {p.status} <span className='chevron' />
+              </span>
+            </td>
+            <td>{moment(p.created_at).format('DD-MM-YY')}</td>
+          </tr>
+        )),
+      );
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+
+      currentPage.value = 1;
+      totalPages.value = 0;
+      totalCount.value = 0;
+      updatePaginationButtons();
+      if (summaryRef.el) summaryRef.el.textContent = '';
+      tblBody.el.innerHTML = '<tr><td colspan="6" class="error-cell"></td></tr>';
+      tblBody.el.querySelector('.error-cell').textContent = err.message || 'Failed to load payments';
+    }
+  }
+
+  function updatePaginationButtons() {
+    if (prevBtn.el) prevBtn.el.disabled = currentPage.value <= 1 || totalPages.value < 1;
+    if (nextBtn.el) nextBtn.el.disabled = currentPage.value >= totalPages.value || totalPages.value < 1;
+  }
+
+  const rowClickHandler = async (e) => {
+    const badge = e.target.closest('.status-badge');
+    if (badge) {
+      e.stopPropagation();
+      const { id } = badge.dataset;
+
+      try {
+        const statusValue = await select('Select Status', ['none', 'paid', 'initiated']);
+        if (!statusValue) return;
+
+        const body = new FormData();
+        body.append('id', id);
+        body.append('status', statusValue);
+
+        const data = await fetch('/api/admin/payment', {
+          method: 'PATCH',
+          body,
+        }).then((res) => res.json());
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        fetchPayments(currentPage.value);
+      } catch (err) {
+        alert('ERROR', err.message || err);
+      }
+      return;
+    }
+
+    const row = e.target.closest('tr');
+    if (row) {
+      showPaymentMethod({
+        id: row.dataset.id,
+        payment_method_id: row.dataset.pmid,
+        amount: row.dataset.amount,
+      });
+    }
+  };
+
+  async function showPaymentMethod({ id, payment_method_id: pmId, amount }) {
+    try {
+      const prev = tblBody.el?.querySelector('.active-row');
+      prev?.classList.remove('active-row');
+      const row = tblBody.el?.querySelector(`[data-id='${id}']`);
+      row?.classList.add('active-row');
+
+      const data = await fetch(`/api/admin/payment-method/${pmId}`).then((res) => res.json());
+
+      if (data.error) throw new Error(data.error);
+
+      paymentMethod.el.content = (
+        <>
+          {data.bank_account_number && (
+            <tr>
+              <th>Account</th>
+              <td>
+                <span>{data.bank_name}</span>
+                <br />
+                <strong>{data.bank_account_number}</strong>
+                <br />
+                <span>
+                  {data.bank_account_type} ({data.bank_account_holder})
+                </span>
+                <br />
+                <span>IFSC: {data.bank_ifsc_code}</span>
+                <br />
+                <span>SWIFT: {data.bank_swift_code}</span>
+              </td>
+            </tr>
+          )}
+          {data.paypal_email && (
+            <tr>
+              <th>Paypal Email</th>
+              <td>{data.paypal_email}</td>
+            </tr>
+          )}
+          {data.wallet_address && (
+            <tr>
+              <th>Wallet</th>
+              <td>
+                <span>{data.wallet_type}</span>
+                <br />
+                <strong>{data.wallet_address}</strong>
+              </td>
+            </tr>
+          )}
+          <tr>
+            <th>User</th>
+            <td>{data.user_name}</td>
+          </tr>
+          <tr>
+            <th>Email</th>
+            <td>{data.user_email}</td>
+          </tr>
+          <tr>
+            <th>Amount</th>
+            <td>&#8377; {amount}</td>
+          </tr>
+        </>
+      );
+      document.body.append($paymentDialog);
+    } catch (err) {
+      alert('ERROR', err.message || err);
+    }
+  }
+
+  const goTo = (page) => {
+    if (page < 1 || (totalPages.value > 0 && page > totalPages.value)) return;
+    if (totalPages.value < 1) return;
+    fetchPayments(page);
+  };
+
+  return (
+    <div className='admin-payments'>
+      <div className='payments-toolbar'>
+        <div className='search-box'>
+          <span className='icon search' />
+          <input className='search-input' type='search' placeholder='Search by name or email...' oninput={onSearchInput} />
+        </div>
+        <select className='status-filter' onchange={onStatusFilter}>
+          <option value='all'>All Status</option>
+          <option value='paid'>Paid</option>
+          <option value='initiated'>Initiated</option>
+          <option value='none'>None</option>
+        </select>
+      </div>
+      <div className='table-container'>
+        <table className='info payments-table'>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>User</th>
+              <th>Email</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody ref={tblBody} onclick={rowClickHandler} />
+        </table>
+      </div>
+      <small ref={summaryRef} className='summary-text'>
+        Loading...
+      </small>
+      <div className='pagination'>
+        <button ref={prevBtn} type='button' on:click={() => goTo(currentPage.value - 1)} title='Previous page' className='icon navigate_before' />
+        <span>
+          {currentPage}/{totalPages}
+        </span>
+        <button ref={nextBtn} type='button' on:click={() => goTo(currentPage.value + 1)} title='Next page' className='icon navigate_next' />
       </div>
     </div>
   );
