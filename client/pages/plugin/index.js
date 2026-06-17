@@ -39,7 +39,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     id,
     name,
     price,
-    status,
+    status_text,
     author,
     version,
     license,
@@ -102,7 +102,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     }
   }
 
-  if (user?.isAdmin && plugin.status !== 'approved') {
+  if (user?.isAdmin && plugin.status_text !== 'approved') {
     canInstall = false;
   }
 
@@ -269,7 +269,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
               <span className='icon download' /> Install
             </button>
           )}
-          <PluginStatus status={status} id={id} style='button' />
+          <PluginStatus status={status_text} id={id} style='button' />
         </div>
         <div className='info-container'>
           <div className='info'>
