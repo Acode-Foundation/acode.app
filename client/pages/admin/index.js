@@ -1,4 +1,5 @@
 import './style.scss';
+import Chart from 'chart.js/auto';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import DialogBox from 'components/dialogs/dialogBox';
@@ -149,31 +150,225 @@ function Sponsors() {
 
 function Dashboard() {
   const ref = Ref();
+
   (async () => {
-    const res = await fetch('api/admin/');
-    const { users, amountPaid, pluginSales, pluginDownloads } = await res.json();
-    ref.append(
-      ...(
-        <>
-          <Card title='Users' text={users} />
-          <Card title='Amount Paid' text={amountPaid || 0} />
-          <Card title='Plugin Sales' text={pluginSales || 0} />
-          <Card title='Plugin Downloads' text={pluginDownloads || 0} />
-          <Card
-            title='Download Report'
-            icon='download'
-            onclick={() => {
-              const date = new Date();
-              const year = date.getFullYear();
-              const month = date.getMonth();
-              window.open(`api/admin/reports/${year}/${month}`);
-            }}
-          />
-        </>
-      ),
-    );
+    try {
+      const [statsRes, analyticsRes] = await Promise.all([fetch('api/admin/'), fetch('api/admin/analytics')]);
+      const stats = await statsRes.json();
+      const analytics = await analyticsRes.json();
+
+      const revenueCanvas = Ref();
+      const paymentsCanvas = Ref();
+      const paymentStatusCanvas = Ref();
+      const editorCanvas = Ref();
+
+      ref.append(
+        <div className='dashboard-grid'>
+          <Card title='Total Users' text={stats.users} />
+          <Card title='Amount Paid' text={stats.amountPaid || 0} />
+          <Card title='Plugin Sales' text={stats.pluginSales || 0} />
+          <Card title='Plugin Downloads' text={stats.pluginDownloads || 0} />
+          <Card title='Download Report' icon='download' onclick={openReportDialog} />
+        </div>,
+        <div className='charts-grid'>
+          <div className='chart-card'>
+            <h3>Monthly Revenue (INR)</h3>
+            <div className='chart-container'>
+              <canvas ref={revenueCanvas} />
+            </div>
+          </div>
+          <div className='chart-card'>
+            <h3>Monthly Payments (INR)</h3>
+            <div className='chart-container'>
+              <canvas ref={paymentsCanvas} />
+            </div>
+          </div>
+          <div className='chart-card'>
+            <h3>Payment Status</h3>
+            <div className='chart-container chart-container--small'>
+              <canvas ref={paymentStatusCanvas} />
+            </div>
+          </div>
+          <div className='chart-card'>
+            <h3>Editor Distribution</h3>
+            <div className='chart-container chart-container--small'>
+              <canvas ref={editorCanvas} />
+            </div>
+          </div>
+        </div>,
+      );
+
+      initChart(revenueCanvas, lineChartConfig(analytics.monthlyRevenue, 'Revenue (INR)', '#22c55e'));
+      initChart(paymentsCanvas, lineChartConfig(analytics.monthlyPayments, 'Payments (INR)', '#3b82f6'));
+      initChart(paymentStatusCanvas, doughnutChartConfig(analytics.paymentStatus, 'status', 'count'));
+      initChart(editorCanvas, doughnutChartConfig(analytics.editorDistribution, 'editor', 'count'));
+    } catch {
+      ref.innerHTML = '<div class="error">Failed to load dashboard data</div>';
+    }
   })();
-  return <div ref={ref} className='dashboard' />;
+
+  return <div ref={ref} className='admin-dashboard' />;
+}
+
+function initChart(canvasRef, config) {
+  let instance = null;
+  canvasRef.onref = () => {
+    if (instance) instance.destroy();
+    instance = new Chart(canvasRef.el, config);
+  };
+}
+
+function lineChartConfig(rows, label, color = '#3b82f6') {
+  const months = [];
+  const now = new Date();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  const dataMap = {};
+  for (const row of rows) {
+    dataMap[row.month] = Number(row.total || row.count || 0);
+  }
+  const values = months.map((m) => dataMap[m] || 0);
+
+  return {
+    type: 'line',
+    data: {
+      labels: months.map((m) => {
+        const [_, mo] = m.split('-');
+        return monthNames[Number(mo) - 1].slice(0, 3);
+      }),
+      datasets: [
+        {
+          label,
+          data: values,
+          borderColor: color,
+          backgroundColor: `${color}1a`,
+          fill: true,
+          tension: 0.3,
+          pointBackgroundColor: color,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+        },
+      ],
+    },
+    options: chartBaseOptions(),
+  };
+}
+
+function doughnutChartConfig(rows, labelKey, valueKey) {
+  const labels = rows.map((r) => r[labelKey]);
+  const values = rows.map((r) => Number(r[valueKey]) || 0);
+  const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+  return {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [
+        {
+          data: values,
+          backgroundColor: colors.slice(0, rows.length),
+          borderColor: 'rgba(0,0,0,0.2)',
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      ...chartBaseOptions(),
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: 'rgba(255,255,255,0.7)', padding: 16, font: { size: 12 } },
+        },
+      },
+    },
+  };
+}
+
+function chartBaseOptions() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+    },
+    scales: {
+      x: {
+        ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
+        grid: { color: 'rgba(255,255,255,0.06)' },
+      },
+      y: {
+        ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
+        grid: { color: 'rgba(255,255,255,0.06)' },
+        beginAtZero: true,
+      },
+    },
+  };
+}
+
+const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function openReportDialog() {
+  const yearRef = Ref();
+  const monthRef = Ref();
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
+  const currentMonth = new Date().getMonth() + 1;
+
+  const dialogBody = (
+    <div className='report-dialog'>
+      <div className='form-row'>
+        <label>Year</label>
+        <select ref={yearRef}>
+          {years.map((y) => (
+            <option value={y} selected={y === currentYear}>
+              {y}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className='form-row'>
+        <label>Month</label>
+        <select ref={monthRef}>
+          {monthNames.map((m, i) => (
+            <option value={i + 1} selected={i + 1 === currentMonth}>
+              {m}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className='form-row'>
+        <label>Type</label>
+        <div className='radio-group'>
+          <label>
+            <input type='radio' name='reportType' value='sales' checked />
+            Sales (Orders)
+          </label>
+          <label>
+            <input type='radio' name='reportType' value='earnings' />
+            Earnings
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+
+  const $dialog = DialogBox({
+    title: 'Download Report',
+    body: dialogBody,
+    onok: (hide, $box) => {
+      const year = yearRef.el.value;
+      const month = monthRef.el.value;
+      const type = $box.querySelector('input[name="reportType"]:checked')?.value || 'sales';
+      window.open(`api/admin/reports/${year}/${month}?type=${type}`);
+      hide();
+    },
+    oncancel: (hide) => hide(),
+  });
+
+  document.body.append($dialog);
 }
 
 /**
@@ -328,8 +523,8 @@ function Users() {
         </table>
       </div>
       <div className='pagination'>
-        <button type='button' on:click={() => goTo(--currentPage.value)} title='previous page' className='icon navigate_before' /> {currentPage}/
-        {totalPages} <button type='button' on:click={() => goTo(++currentPage.value)} title='next page' className='icon navigate_next' />
+        <button type='button' on:click={() => goTo(currentPage.value - 1)} title='previous page' className='icon navigate_before' /> {currentPage}/
+        {totalPages} <button type='button' on:click={() => goTo(currentPage.value + 1)} title='next page' className='icon navigate_next' />
       </div>
     </div>
   );
