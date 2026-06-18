@@ -49,40 +49,40 @@ router.get('/analytics', async (_req, res) => {
       `SELECT month, SUM(total) as total FROM (
         SELECT strftime('%Y-%m', created_at) as month, SUM(amount) as total
         FROM purchase_order
-        WHERE CAST(state AS INTEGER) = 0 AND created_at >= date('now', '-12 months')
+        WHERE CAST(state AS INTEGER) = ? AND created_at >= date('now', '-12 months')
         GROUP BY strftime('%Y-%m', created_at)
         UNION ALL
         SELECT strftime('%Y-%m', created_at) as month, SUM(amount_inr) as total
         FROM razorpay_order
-        WHERE product_type = '${RazorpayOrder.PRODUCT_PRO}' AND status = '${RazorpayOrder.STATUS_PAID}' AND created_at >= date('now', '-12 months')
+        WHERE product_type = ? AND status = ? AND created_at >= date('now', '-12 months')
         GROUP BY strftime('%Y-%m', created_at)
       ) GROUP BY month ORDER BY month ASC`,
-      [],
+      [purchaseOrder.STATE_PURCHASED, RazorpayOrder.PRODUCT_PRO, RazorpayOrder.STATUS_PAID],
       purchaseOrder,
     );
 
     const monthlyPayments = await Entity.execSql(
       `SELECT strftime('%Y-%m', created_at) as month, SUM(amount) as total
        FROM payment
-       WHERE status = ${Payment.STATUS_PAID} AND created_at >= date('now', '-12 months')
+       WHERE status = ? AND created_at >= date('now', '-12 months')
        GROUP BY strftime('%Y-%m', created_at)
        ORDER BY month ASC`,
-      [],
+      [Payment.STATUS_PAID],
       Payment,
     );
 
     const paymentStatus = await Entity.execSql(
       `SELECT
         CASE
-          WHEN status = ${Payment.STATUS_PAID} THEN 'paid'
-          WHEN status = ${Payment.STATUS_INITIATED} THEN 'initiated'
+          WHEN status = ? THEN 'paid'
+          WHEN status = ? THEN 'initiated'
           ELSE 'none'
         END as status,
         COUNT(*) as count
        FROM payment
        GROUP BY status
        ORDER BY count DESC`,
-      [],
+      [Payment.STATUS_PAID, Payment.STATUS_INITIATED],
       Payment,
     );
 
@@ -100,25 +100,25 @@ router.get('/analytics', async (_req, res) => {
       `SELECT u.name, COALESCE(SUM(p.amount), 0) as total
        FROM payment p
        JOIN user u ON u.id = p.user_id
-       WHERE p.status = ${Payment.STATUS_PAID}
+       WHERE p.status = ?
        GROUP BY p.user_id
        ORDER BY total DESC
        LIMIT 10`,
-      [],
+      [Payment.STATUS_PAID],
       Payment,
     );
 
     const poProviderStatus = await Entity.execSql(
       `SELECT provider,
         CASE
-          WHEN CAST(state AS INTEGER) = ${purchaseOrder.STATE_PURCHASED} THEN 'Successful'
-          WHEN CAST(state AS INTEGER) = ${purchaseOrder.STATE_CANCELED} THEN 'Failed'
+          WHEN CAST(state AS INTEGER) = ? THEN 'Successful'
+          WHEN CAST(state AS INTEGER) = ? THEN 'Failed'
           ELSE 'Other'
         END as status,
         COUNT(*) as count
        FROM purchase_order
        GROUP BY provider, status`,
-      [],
+      [purchaseOrder.STATE_PURCHASED, purchaseOrder.STATE_CANCELED],
       purchaseOrder,
     );
 
@@ -157,7 +157,6 @@ router.get('/analytics', async (_req, res) => {
       editorDistribution,
       topDevelopers,
       providerStatus,
-      rzpRaw,
     });
   } catch (err) {
     res.status(500).send({ error: err.message });
