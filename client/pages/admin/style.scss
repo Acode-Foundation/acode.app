@@ -73,39 +73,121 @@
     }
   }
 
-  .dashboard {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 16px;
+  .admin-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 
-    @media (max-width: 500px) {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
+
+      @media (max-width: 500px) {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
     }
 
-    &:empty {
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+      }
+    }
+  }
+
+  .chart-card {
+    background-color: var(--secondary-color);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+
+    h3 {
+      margin: 0 0 12px;
+      font-size: 0.9em;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .chart-container {
+      position: relative;
+      flex: 1;
+      min-height: 250px;
+
+      &.chart-container--small {
+        min-height: 200px;
+      }
+
+      canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+    }
+  }
+
+  .report-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 320px;
+    padding: 8px 0;
+
+    .form-row {
       display: flex;
       align-items: center;
-      justify-content: center;
-      min-height: 200px;
+      gap: 12px;
 
-      &::before {
-        content: '';
-        height: 48px;
-        width: 48px;
-        border: solid 4px rgba(255, 255, 255, 0.2);
-        border-bottom-color: var(--primary-color);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
+      label {
+        flex-shrink: 0;
+        font-weight: 500;
+        font-size: 0.9em;
+        min-width: 50px;
+      }
 
-        @keyframes spin {
-          0% {
-            transform: rotate(0deg);
-          }
+      select {
+        flex: 1;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background-color: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        font-size: 0.9em;
+        appearance: auto;
 
-          100% {
-            transform: rotate(360deg);
-          }
+        &:focus {
+          outline: none;
+          border-color: var(--primary-color);
+        }
+
+        option {
+          background-color: var(--secondary-color);
+          color: inherit;
+        }
+      }
+
+      .radio-group {
+        display: flex;
+        gap: 16px;
+        margin-left: 8px;
+
+        label {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          cursor: pointer;
+          font-size: 0.88em;
+          font-weight: 400;
+          min-width: auto;
+        }
+
+        input[type='radio'] {
+          accent-color: var(--primary-color);
         }
       }
     }

@@ -3,6 +3,7 @@ const fs = require('node:fs/promises');
 
 const { Router } = require('express');
 const moment = require('moment');
+const Entity = require('../entities/entity');
 const User = require('../entities/user');
 const Payment = require('../entities/payment');
 const PaymentMethod = require('../entities/paymentMethod');
@@ -41,9 +42,72 @@ router.get('/', async (_req, res) => {
   });
 });
 
+router.get('/analytics', async (_req, res) => {
+  try {
+    const monthlyRevenue = await Entity.execSql(
+      `SELECT strftime('%Y-%m', created_at) as month, SUM(amount) as total
+       FROM purchase_order
+       WHERE state = 0 AND created_at >= date('now', '-12 months')
+       GROUP BY strftime('%Y-%m', created_at)
+       ORDER BY month ASC`,
+      [],
+      plugin,
+    );
+
+    const monthlyPayments = await Entity.execSql(
+      `SELECT strftime('%Y-%m', created_at) as month, SUM(amount) as total
+       FROM payment
+       WHERE status = ${Payment.STATUS_PAID} AND created_at >= date('now', '-12 months')
+       GROUP BY strftime('%Y-%m', created_at)
+       ORDER BY month ASC`,
+      [],
+      plugin,
+    );
+
+    const paymentStatus = await Entity.execSql(
+      `SELECT
+        CASE
+          WHEN status = ${Payment.STATUS_PAID} THEN 'paid'
+          WHEN status = ${Payment.STATUS_INITIATED} THEN 'initiated'
+          ELSE 'none'
+        END as status,
+        COUNT(*) as count
+       FROM payment
+       GROUP BY status
+       ORDER BY count DESC`,
+      [],
+      plugin,
+    );
+
+    const editorDistribution = await Entity.execSql(
+      `SELECT supported_editor as editor, COUNT(*) as count
+       FROM plugin
+       WHERE status = ${plugin.STATUS_APPROVED}
+       GROUP BY supported_editor
+       ORDER BY count DESC`,
+      [],
+      plugin,
+    );
+
+    res.send({
+      monthlyRevenue,
+      monthlyPayments,
+      paymentStatus,
+      editorDistribution,
+    });
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+});
+
 router.get('/reports/:year/:month', async (req, res) => {
   const { year, month } = req.params;
-  const report = await downloadSalesReportCsv(year, month);
+  const { type = 'sales' } = req.query;
+  if (!['sales', 'earnings'].includes(type)) {
+    res.status(400).send({ error: 'Invalid report type. Must be "sales" or "earnings".' });
+    return;
+  }
+  const report = await downloadSalesReportCsv(year, month, type);
   res.download(report);
 });
 

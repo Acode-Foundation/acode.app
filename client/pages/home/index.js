@@ -33,7 +33,7 @@ export default async function home() {
   let plugins = [];
   try {
     const { count } = await (await fetch('/api/plugins/count')).json();
-    const pluginIds = await (await fetch('/api/plugins?limit=4&sort=downloads')).json();
+    const pluginIds = await (await fetch('/api/plugins?limit=4&sort=downloads&supported_editor=cm')).json();
 
     pluginCount.value = count.toLocaleString();
     plugins = await Promise.all(pluginIds.map(async (plugin) => <Plugin data={plugin} />));
