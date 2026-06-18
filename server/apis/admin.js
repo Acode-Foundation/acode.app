@@ -49,7 +49,7 @@ router.get('/analytics', async (_req, res) => {
       `SELECT month, SUM(total) as total FROM (
         SELECT strftime('%Y-%m', created_at) as month, SUM(amount) as total
         FROM purchase_order
-        WHERE CAST(state AS INTEGER) = 0 AND created_at >= date('now', '-12 months')
+        WHERE CAST(state AS INTEGER) = ${purchaseOrder.STATE_PURCHASED} AND created_at >= date('now', '-12 months')
         GROUP BY strftime('%Y-%m', created_at)
         UNION ALL
         SELECT strftime('%Y-%m', created_at) as month, SUM(amount_inr) as total
