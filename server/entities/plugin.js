@@ -22,7 +22,7 @@ const table = `CREATE TABLE IF NOT EXISTS plugin (
   license TEXT DEFAULT 'Unknown',
   download_count INTEGER DEFAULT 0,
   min_version_code INTEGER DEFAULT -1,
-  supported_editor TEXT DEFAULT 'ace',
+  supported_editor TEXT DEFAULT 'cm',
   created_at TIMESTAMP DEFAULT (current_timestamp),
   updated_at TIMESTAMP DEFAULT (current_timestamp),
   CONSTRAINT PLUGIN_PK PRIMARY KEY (id),

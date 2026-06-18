@@ -48,14 +48,14 @@ export default async function UpdatePluginEditor({ id }) {
 
   let currentEditorText = 'Unknown';
   switch (plugin.supported_editor) {
-    case 'ace':
-      currentEditorText = 'Ace Editor (Legacy)';
-      break;
     case 'cm':
       currentEditorText = 'CodeMirror (Recommended)';
       break;
     case 'all':
-      currentEditorText = 'Both Ace & CodeMirror';
+      currentEditorText = 'Both CodeMirror & Ace';
+      break;
+    case 'ace':
+      currentEditorText = 'Ace Editor (Legacy)';
       break;
     default:
       currentEditorText = 'Not Set';
@@ -85,10 +85,9 @@ export default async function UpdatePluginEditor({ id }) {
           <span>Important Information</span>
         </div>
         <p>
-          <strong>Ace Editor will be deprecated soon.</strong> We strongly recommend updating your plugin to support CodeMirror for the best
-          experience and future compatibility.
+          <strong>Ace Editor is no longer accepted for new plugins.</strong> All new plugins must support CodeMirror.
         </p>
-        <p>If you're creating a new plugin, please develop it with CodeMirror support from the start.</p>
+        <p>Please update your plugin to support CodeMirror for the best experience and future compatibility.</p>
       </div>
 
       <AjaxForm
@@ -119,23 +118,10 @@ export default async function UpdatePluginEditor({ id }) {
             <input type='radio' name='supported_editor' value='all' defaultChecked={plugin.supported_editor === 'all'} />
             <div className='option-content'>
               <div className='option-header'>
-                <strong>Both Ace & CodeMirror</strong>
+                <strong>Both CodeMirror &amp; Ace</strong>
                 <span className='badge'>Universal</span>
               </div>
-              <p className='option-description'>
-                Support both editors for maximum compatibility. Choose this if your plugin needs to work with users still using Ace editor.
-              </p>
-            </div>
-          </label>
-
-          <label className='radio-option deprecated'>
-            <input type='radio' name='supported_editor' value='ace' defaultChecked={plugin.supported_editor === 'ace'} />
-            <div className='option-content'>
-              <div className='option-header'>
-                <strong>Ace Editor Only</strong>
-                <span className='badge deprecated'>Deprecated</span>
-              </div>
-              <p className='option-description'>Legacy editor support. Will be removed in future versions. Not recommended for continued use.</p>
+              <p className='option-description'>Support both editors for maximum compatibility with existing Ace users.</p>
             </div>
           </label>
         </div>

@@ -11,6 +11,7 @@ const AppConfig = require('../entities/appConfig');
 const { getLoggedInUser } = require('../lib/helpers');
 const purchaseOrder = require('../entities/purchaseOrder');
 const plugin = require('../entities/plugin');
+const RazorpayOrder = require('../entities/razorpayOrder');
 const Sponsor = require('../entities/sponsor');
 const downloadSalesReportCsv = require('../lib/downloadSalesCsv');
 const sendEmail = require('../lib/sendEmail');
@@ -45,37 +46,43 @@ router.get('/', async (_req, res) => {
 router.get('/analytics', async (_req, res) => {
   try {
     const monthlyRevenue = await Entity.execSql(
-      `SELECT strftime('%Y-%m', created_at) as month, SUM(amount) as total
-       FROM purchase_order
-       WHERE state = 0 AND created_at >= date('now', '-12 months')
-       GROUP BY strftime('%Y-%m', created_at)
-       ORDER BY month ASC`,
-      [],
+      `SELECT month, SUM(total) as total FROM (
+        SELECT strftime('%Y-%m', created_at) as month, SUM(amount) as total
+        FROM purchase_order
+        WHERE CAST(state AS INTEGER) = ? AND created_at >= date('now', '-12 months')
+        GROUP BY strftime('%Y-%m', created_at)
+        UNION ALL
+        SELECT strftime('%Y-%m', created_at) as month, SUM(amount_inr) as total
+        FROM razorpay_order
+        WHERE product_type = ? AND status = ? AND created_at >= date('now', '-12 months')
+        GROUP BY strftime('%Y-%m', created_at)
+      ) GROUP BY month ORDER BY month ASC`,
+      [purchaseOrder.STATE_PURCHASED, RazorpayOrder.PRODUCT_PRO, RazorpayOrder.STATUS_PAID],
       purchaseOrder,
     );
 
     const monthlyPayments = await Entity.execSql(
       `SELECT strftime('%Y-%m', created_at) as month, SUM(amount) as total
        FROM payment
-       WHERE status = ${Payment.STATUS_PAID} AND created_at >= date('now', '-12 months')
+       WHERE status = ? AND created_at >= date('now', '-12 months')
        GROUP BY strftime('%Y-%m', created_at)
        ORDER BY month ASC`,
-      [],
+      [Payment.STATUS_PAID],
       Payment,
     );
 
     const paymentStatus = await Entity.execSql(
       `SELECT
         CASE
-          WHEN status = ${Payment.STATUS_PAID} THEN 'paid'
-          WHEN status = ${Payment.STATUS_INITIATED} THEN 'initiated'
+          WHEN status = ? THEN 'paid'
+          WHEN status = ? THEN 'initiated'
           ELSE 'none'
         END as status,
         COUNT(*) as count
        FROM payment
        GROUP BY status
        ORDER BY count DESC`,
-      [],
+      [Payment.STATUS_PAID, Payment.STATUS_INITIATED],
       Payment,
     );
 
@@ -89,11 +96,67 @@ router.get('/analytics', async (_req, res) => {
       plugin,
     );
 
+    const topDevelopers = await Entity.execSql(
+      `SELECT u.name, COALESCE(SUM(p.amount), 0) as total
+       FROM payment p
+       JOIN user u ON u.id = p.user_id
+       WHERE p.status = ?
+       GROUP BY p.user_id
+       ORDER BY total DESC
+       LIMIT 10`,
+      [Payment.STATUS_PAID],
+      Payment,
+    );
+
+    const poProviderStatus = await Entity.execSql(
+      `SELECT provider,
+        CASE
+          WHEN CAST(state AS INTEGER) = ? THEN 'Successful'
+          WHEN CAST(state AS INTEGER) = ? THEN 'Failed'
+          ELSE 'Other'
+        END as status,
+        COUNT(*) as count
+       FROM purchase_order
+       GROUP BY provider, status`,
+      [purchaseOrder.STATE_PURCHASED, purchaseOrder.STATE_CANCELED],
+      purchaseOrder,
+    );
+
+    const rzpRaw = await Entity.execSql(
+      `SELECT status, COUNT(*) as count
+       FROM razorpay_order
+       GROUP BY status`,
+      [],
+      RazorpayOrder,
+    );
+
+    const statusLabel = (s) => {
+      if (s === RazorpayOrder.STATUS_PAID) return 'Successful';
+      if ([RazorpayOrder.STATUS_FAILED, RazorpayOrder.STATUS_CANCELLED, RazorpayOrder.STATUS_REFUNDED].includes(s)) return 'Failed';
+      return 'Other';
+    };
+
+    const statusMap = {};
+    for (const row of poProviderStatus) {
+      const key = `${row.provider}|${row.status}`;
+      statusMap[key] = (statusMap[key] || 0) + Number(row.count);
+    }
+    for (const row of rzpRaw) {
+      const key = `razorpay|${statusLabel(row.status)}`;
+      statusMap[key] = (statusMap[key] || 0) + Number(row.count);
+    }
+    const providerStatus = Object.entries(statusMap).map(([key, count]) => {
+      const [provider, status] = key.split('|');
+      return { provider, status, count };
+    });
+
     res.send({
       monthlyRevenue,
       monthlyPayments,
       paymentStatus,
       editorDistribution,
+      topDevelopers,
+      providerStatus,
     });
   } catch (err) {
     res.status(500).send({ error: err.message });
