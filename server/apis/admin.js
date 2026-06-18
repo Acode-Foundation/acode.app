@@ -51,7 +51,7 @@ router.get('/analytics', async (_req, res) => {
        GROUP BY strftime('%Y-%m', created_at)
        ORDER BY month ASC`,
       [],
-      plugin,
+      purchaseOrder,
     );
 
     const monthlyPayments = await Entity.execSql(
@@ -61,7 +61,7 @@ router.get('/analytics', async (_req, res) => {
        GROUP BY strftime('%Y-%m', created_at)
        ORDER BY month ASC`,
       [],
-      plugin,
+      Payment,
     );
 
     const paymentStatus = await Entity.execSql(
@@ -76,7 +76,7 @@ router.get('/analytics', async (_req, res) => {
        GROUP BY status
        ORDER BY count DESC`,
       [],
-      plugin,
+      Payment,
     );
 
     const editorDistribution = await Entity.execSql(

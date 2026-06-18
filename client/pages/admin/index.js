@@ -203,7 +203,7 @@ function Dashboard() {
       initChart(paymentStatusCanvas, doughnutChartConfig(analytics.paymentStatus, 'status', 'count'));
       initChart(editorCanvas, doughnutChartConfig(analytics.editorDistribution, 'editor', 'count'));
     } catch {
-      ref.innerHTML = '<div className="error">Failed to load dashboard data</div>';
+      ref.innerHTML = '<div class="error">Failed to load dashboard data</div>';
     }
   })();
 
