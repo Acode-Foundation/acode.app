@@ -8,7 +8,7 @@ const table = `CREATE TABLE IF NOT EXISTS purchase_order (
   plugin_id INTEGER NOT NULL,
   order_id VARCHAR(255) UNIQUE,
   token TEXT NOT NULL UNIQUE,
-  state TEXT DEFAULT 2,
+  state INTEGER NOT NULL DEFAULT 2,
   user_id INTEGER,
   provider TEXT DEFAULT 'google_play',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

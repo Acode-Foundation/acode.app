@@ -308,7 +308,7 @@ router.get('{/:pluginId}', async (req, res) => {
           where.push('OR', [Plugin.SUPPORTED_EDITOR, 'all']);
         }
       } else if (!supported_editor && !allowAllEditors) {
-        where.push([Plugin.SUPPORTED_EDITOR, 'all'], 'OR', [Plugin.SUPPORTED_EDITOR, 'ace']);
+        where.push([Plugin.SUPPORTED_EDITOR, 'all'], 'OR', [Plugin.SUPPORTED_EDITOR, 'cm']);
       }
     }
 
@@ -547,9 +547,8 @@ router.post('/', async (req, res) => {
       insert.push([Plugin.CHANGELOGS, req.body.changelogs]);
     }
 
-    if (req.body?.supported_editor && ['ace', 'cm', 'all'].includes(req.body.supported_editor)) {
-      insert.push([Plugin.SUPPORTED_EDITOR, req.body.supported_editor]);
-    }
+    const supportedEditor = req.body?.supported_editor && ['cm', 'all'].includes(req.body.supported_editor) ? req.body.supported_editor : 'cm';
+    insert.push([Plugin.SUPPORTED_EDITOR, supportedEditor]);
 
     await Plugin.insert(...insert);
 
@@ -745,8 +744,8 @@ router.patch('/:id/supported-editor', async (req, res) => {
     const { id } = req.params;
     const { supported_editor } = req.body;
 
-    if (!['ace', 'cm', 'all'].includes(supported_editor)) {
-      res.status(400).send({ error: 'Invalid editor type. Must be ace, cm, or all' });
+    if (!['cm', 'all'].includes(supported_editor)) {
+      res.status(400).send({ error: 'Invalid editor type. Must be cm or all' });
       return;
     }
     const user = await getLoggedInUser(req);

@@ -161,6 +161,8 @@ function Dashboard() {
       const paymentsCanvas = Ref();
       const paymentStatusCanvas = Ref();
       const editorCanvas = Ref();
+      const topDevCanvas = Ref();
+      const providerStatusCanvas = Ref();
 
       ref.append(
         <div className='dashboard-grid'>
@@ -184,6 +186,18 @@ function Dashboard() {
             </div>
           </div>
           <div className='chart-card'>
+            <h3>Top Developers (INR)</h3>
+            <div className='chart-container'>
+              <canvas ref={topDevCanvas} />
+            </div>
+          </div>
+          <div className='chart-card'>
+            <h3>Orders: Provider vs Status</h3>
+            <div className='chart-container'>
+              <canvas ref={providerStatusCanvas} />
+            </div>
+          </div>
+          <div className='chart-card'>
             <h3>Payment Status</h3>
             <div className='chart-container chart-container--small'>
               <canvas ref={paymentStatusCanvas} />
@@ -200,6 +214,8 @@ function Dashboard() {
 
       initChart(revenueCanvas, lineChartConfig(analytics.monthlyRevenue, 'Revenue (INR)', '#22c55e'));
       initChart(paymentsCanvas, lineChartConfig(analytics.monthlyPayments, 'Payments (INR)', '#3b82f6'));
+      initChart(topDevCanvas, horizontalBarChartConfig(analytics.topDevelopers, 'name', 'total'));
+      initChart(providerStatusCanvas, providerStatusChartConfig(analytics.providerStatus));
       initChart(paymentStatusCanvas, doughnutChartConfig(analytics.paymentStatus, 'status', 'count'));
       initChart(editorCanvas, doughnutChartConfig(analytics.editorDistribution, 'editor', 'count'));
     } catch {
@@ -235,8 +251,8 @@ function lineChartConfig(rows, label, color = '#3b82f6') {
     type: 'line',
     data: {
       labels: months.map((m) => {
-        const [_, mo] = m.split('-');
-        return monthNames[Number(mo) - 1].slice(0, 3);
+        const [yr, mo] = m.split('-');
+        return `${monthNames[Number(mo) - 1].slice(0, 3)} '${yr.slice(2)}`;
       }),
       datasets: [
         {
@@ -259,6 +275,7 @@ function lineChartConfig(rows, label, color = '#3b82f6') {
 function doughnutChartConfig(rows, labelKey, valueKey) {
   const labels = rows.map((r) => r[labelKey]);
   const values = rows.map((r) => Number(r[valueKey]) || 0);
+  const total = values.reduce((a, b) => a + b, 0) || 1;
   const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   return {
@@ -275,7 +292,8 @@ function doughnutChartConfig(rows, labelKey, valueKey) {
       ],
     },
     options: {
-      ...chartBaseOptions(),
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: {
           position: 'bottom',
@@ -283,6 +301,151 @@ function doughnutChartConfig(rows, labelKey, valueKey) {
         },
       },
     },
+    plugins: [
+      {
+        id: 'doughnutPercentLabels',
+        afterDatasetsDraw(chart) {
+          const { ctx, data: chartData } = chart;
+          const dataset = chartData.datasets[0];
+          const meta = chart.getDatasetMeta(0);
+          ctx.save();
+          ctx.font = 'bold 14px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          for (let i = 0; i < dataset.data.length; i++) {
+            const value = dataset.data[i];
+            if (value === 0) continue;
+            const pct = Math.round((value / total) * 100);
+            const arc = meta.data[i];
+            const { x, y } = arc.tooltipPosition(true);
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 3;
+            ctx.fillText(`${pct}%`, x, y);
+            ctx.shadowBlur = 0;
+          }
+          ctx.restore();
+        },
+      },
+    ],
+  };
+}
+
+function horizontalBarChartConfig(rows, labelKey, valueKey) {
+  const names = rows.map((r) => r[labelKey] || 'Unknown');
+  const values = rows.map((r) => Number(r[valueKey]) || 0);
+  const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#a855f7', '#ec4899', '#84cc16', '#f97316'];
+
+  return {
+    type: 'bar',
+    data: {
+      labels: names,
+      datasets: [
+        {
+          label: 'Earnings (INR)',
+          data: values,
+          backgroundColor: names.map((_, i) => colors[i % colors.length]),
+          borderColor: 'rgba(0,0,0,0.2)',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+      },
+      scales: {
+        x: {
+          ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          beginAtZero: true,
+        },
+        y: {
+          ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 12 }, padding: 8 },
+          grid: { display: false },
+        },
+      },
+    },
+  };
+}
+
+function providerStatusChartConfig(rows) {
+  const providerLabels = [...new Set(rows.map((r) => r.provider))];
+  const statuses = [...new Set(rows.map((r) => r.status))];
+  const colorMap = { Successful: '#22c55e', Failed: '#ef4444', Other: '#f59e0b' };
+  const providerNameMap = { google_play: 'Google Play', razorpay: 'Razorpay' };
+
+  const dataMap = {};
+  for (const row of rows) {
+    if (!dataMap[row.status]) dataMap[row.status] = {};
+    dataMap[row.status][row.provider] = (dataMap[row.status][row.provider] || 0) + Number(row.count);
+  }
+
+  const datasets = statuses.map((status) => ({
+    label: status,
+    data: providerLabels.map((p) => dataMap[status]?.[p] || 0),
+    backgroundColor: colorMap[status] || '#8b5cf6',
+    borderColor: 'rgba(0,0,0,0.2)',
+    borderWidth: 1,
+  }));
+
+  return {
+    type: 'bar',
+    data: {
+      labels: providerLabels.map((p) => providerNameMap[p] || p),
+      datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: 'rgba(255,255,255,0.7)', padding: 16, font: { size: 12 } },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+        },
+        y: {
+          ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          beginAtZero: true,
+        },
+      },
+    },
+    plugins: [
+      {
+        id: 'barValueLabels',
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          ctx.save();
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = 'rgba(0,0,0,0.5)';
+          ctx.shadowBlur = 2;
+          for (const ds of chart.data.datasets) {
+            const meta = chart.getDatasetMeta(chart.data.datasets.indexOf(ds));
+            for (let i = 0; i < ds.data.length; i++) {
+              const value = ds.data[i];
+              if (!value) continue;
+              const { x, y } = meta.data[i];
+              ctx.fillText(value, x, y - 2);
+            }
+          }
+          ctx.shadowBlur = 0;
+          ctx.restore();
+        },
+      },
+    ],
   };
 }
 
