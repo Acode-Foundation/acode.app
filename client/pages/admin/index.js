@@ -11,18 +11,27 @@ import Ref from 'html-tag-js/ref';
 import { getLoggedInUser } from 'lib/helpers';
 import moment from 'moment';
 
-export default async function Admin() {
+export default async function Admin({ queries = {} }) {
   const usersList = Ref();
   const loggedInUser = await getLoggedInUser();
   if (!loggedInUser?.isAdmin) {
     return <div className='error'>Access denied</div>;
   }
 
+  const activeTab = queries.tab || 'dashboard';
+
+  const onTabChange = (tabId) => {
+    const url = new URL(window.location);
+    url.searchParams.set('tab', tabId);
+    history.replaceState(history.state, '', url);
+  };
+
   return (
     <section ref={usersList} id='admin'>
       <h1>Admin Panel</h1>
       <Tabs
-        defaultActive='dashboard'
+        defaultActive={activeTab}
+        onChange={onTabChange}
         tabs={[
           { id: 'dashboard', label: 'Dashboard', content: <Dashboard /> },
           { id: 'settings', label: 'Settings', content: <AppSettings /> },
@@ -31,6 +40,7 @@ export default async function Admin() {
           { id: 'payments', label: 'Payments', content: <Payments /> },
           { id: 'promotions', label: 'Promotions', content: <Promotions /> },
           { id: 'sponsors', label: 'Sponsors', content: <Sponsors /> },
+          { id: 'plugins', label: 'Plugins', content: <Plugins /> },
         ]}
       />
     </section>
@@ -146,6 +156,234 @@ function Sponsors() {
       }
     }
   }
+}
+
+function Plugins() {
+  const tblBody = Ref();
+  const summaryRef = Ref();
+  const prevBtn = Ref();
+  const nextBtn = Ref();
+  const currentPage = Reactive(1);
+  const totalPages = Reactive(0);
+  const totalCount = Reactive(0);
+  const limit = 10;
+  let abortController;
+  let debounceTimer;
+  let searchQuery = '';
+  let statusFilter = '';
+
+  const onSearchInput = (e) => {
+    searchQuery = e.target.value;
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => fetchPlugins(1), 400);
+  };
+
+  const onStatusFilter = (e) => {
+    statusFilter = e.target.value;
+    fetchPlugins(1);
+  };
+
+  tblBody.onref = () => fetchPlugins(1);
+
+  async function fetchPlugins(page) {
+    if (!tblBody.el) return;
+    if (abortController) abortController.abort();
+    abortController = new AbortController();
+
+    tblBody.el.innerHTML = '<tr><td colspan="6" class="loading-cell">Loading...</td></tr>';
+
+    let url = `/api/admin/plugins?page=${page}&limit=${limit}`;
+    if (statusFilter !== '') {
+      url += `&status=${encodeURIComponent(statusFilter)}`;
+    }
+    if (searchQuery) {
+      url += `&search=${encodeURIComponent(searchQuery)}`;
+    }
+
+    try {
+      const res = await fetch(url, { signal: abortController.signal });
+      if (!res.ok) throw new Error(`Server error (${res.status})`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      const { plugins, pages, total } = data;
+      currentPage.value = page;
+      totalPages.value = pages;
+      totalCount.value = total;
+      updatePaginationButtons();
+
+      if (summaryRef.el) {
+        const start = total === 0 ? 0 : (page - 1) * limit + 1;
+        const end = Math.min(page * limit, total);
+        summaryRef.el.textContent = `Showing ${start}–${end} of ${total} plugins`;
+      }
+
+      if (!total) {
+        tblBody.el.innerHTML = '<tr><td colspan="6" class="empty-cell">No plugins found</td></tr>';
+        return;
+      }
+
+      const statusLabels = ['Pending', 'Approved', 'Rejected', 'Deleted'];
+
+      tblBody.el.innerHTML = '';
+      tblBody.el.append(
+        ...plugins.map((p) => (
+          <tr id={`plugin-${p.id}`}>
+            <td>
+              <a href={`/plugin/${p.id}`} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', textAlign: 'left', margin: 0 }}>
+                {p.name}
+                <span>{p.id}</span>
+                <span>
+                  {Number(p.price) > 0 && <span className='plugin-price'>&#8377;{Number(p.price).toLocaleString()}</span>}
+                  <span className='icon download'></span> {Number(p.downloads).toLocaleString()}
+                </span>
+              </a>
+            </td>
+            <td>{p.author}</td>
+            <td>
+              <span className={`status-badge status-${p.status_text}`} data-action='update-status' data-plugin-id={p.id} data-status={p.status}>
+                {statusLabels[p.status] || p.status_text} <span className='chevron' />
+              </span>
+            </td>
+            <td>
+              <span className='editor-badge' data-action='update-editor' data-plugin-id={p.id} data-editor={p.supported_editor}>
+                {p.supported_editor} <span className='chevron' />
+              </span>
+            </td>
+            <td>{moment(p.created_at).format('DD-MM-YY')}</td>
+            <td style={{ textAlign: 'center' }}>
+              <span data-action='delete' data-plugin-id={p.id} className='icon delete' />
+            </td>
+          </tr>
+        )),
+      );
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      currentPage.value = 1;
+      totalPages.value = 0;
+      totalCount.value = 0;
+      updatePaginationButtons();
+      if (summaryRef.el) summaryRef.el.textContent = '';
+      tblBody.el.innerHTML = '<tr><td colspan="6" class="error-cell"></td></tr>';
+      tblBody.el.querySelector('.error-cell').textContent = err.message || 'Failed to load plugins';
+    }
+  }
+
+  function updatePaginationButtons() {
+    if (prevBtn.el) prevBtn.el.disabled = currentPage.value <= 1 || totalPages.value < 1;
+    if (nextBtn.el) nextBtn.el.disabled = currentPage.value >= totalPages.value || totalPages.value < 1;
+  }
+
+  const rowClickHandler = async (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    const { action, pluginId } = target.dataset;
+
+    if (action === 'update-status') {
+      e.stopPropagation();
+      const currentStatus = target.dataset.status;
+      try {
+        const statusValue = await select('Change Status', ['Pending', 'Approved', 'Rejected', 'Deleted']);
+        if (!statusValue) return;
+        const statusMap = { Pending: 0, Approved: 1, Rejected: 2, Deleted: 3 };
+        const newStatus = statusMap[statusValue];
+        if (String(newStatus) === currentStatus) return;
+
+        const res = await fetch('/api/admin/plugin', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: pluginId, status: newStatus }),
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        fetchPlugins(currentPage.value);
+      } catch (err) {
+        alert('ERROR', err.message || err);
+      }
+      return;
+    }
+
+    if (action === 'update-editor') {
+      e.stopPropagation();
+      const currentEditor = target.dataset.editor;
+      try {
+        const editorValue = await select('Change Editor', ['ace', 'cm', 'all']);
+        if (!editorValue) return;
+        if (editorValue === currentEditor) return;
+
+        const res = await fetch('/api/admin/plugin', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: pluginId, supported_editor: editorValue }),
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        fetchPlugins(currentPage.value);
+      } catch (err) {
+        alert('ERROR', err.message || err);
+      }
+      return;
+    }
+
+    if (action === 'delete') {
+      const confirmation = await confirm('WARNING', 'Are you sure you want to delete this plugin?');
+      if (!confirmation) return;
+      try {
+        const res = await fetch(`/api/plugin/${pluginId}?mode=hard`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        fetchPlugins(currentPage.value);
+      } catch (err) {
+        alert('ERROR', err.message || err);
+      }
+    }
+  };
+
+  const goTo = (page) => {
+    if (page < 1 || (totalPages.value > 0 && page > totalPages.value)) return;
+    if (totalPages.value < 1) return;
+    fetchPlugins(page);
+  };
+
+  return (
+    <div className='admin-plugins'>
+      <div className='table-container'>
+        <table className='info plugins-table'>
+          <thead>
+            <tr>
+              <th>
+                <input className='search-input' type='search' placeholder='Search by name...' oninput={onSearchInput} />
+              </th>
+              <th>Author</th>
+              <th>
+                <select className='status-filter' onchange={onStatusFilter}>
+                  <option value=''>All Status</option>
+                  <option value='0'>Pending</option>
+                  <option value='1'>Approved</option>
+                  <option value='2'>Rejected</option>
+                  <option value='3'>Deleted</option>
+                </select>
+              </th>
+              <th>Editor</th>
+              <th>Date</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody ref={tblBody} onclick={rowClickHandler} />
+        </table>
+      </div>
+      <small ref={summaryRef} className='summary-text'>
+        Loading...
+      </small>
+      <div className='pagination'>
+        <button ref={prevBtn} type='button' on:click={() => goTo(currentPage.value - 1)} title='Previous page' className='icon navigate_before' />
+        <span>
+          {currentPage}/{totalPages}
+        </span>
+        <button ref={nextBtn} type='button' on:click={() => goTo(currentPage.value + 1)} title='Next page' className='icon navigate_next' />
+      </div>
+    </div>
+  );
 }
 
 function Dashboard() {
@@ -1093,12 +1331,6 @@ function Payments() {
           <span className='icon search' />
           <input className='search-input' type='search' placeholder='Search by name or email...' oninput={onSearchInput} />
         </div>
-        <select className='status-filter' onchange={onStatusFilter}>
-          <option value='all'>All Status</option>
-          <option value='paid'>Paid</option>
-          <option value='initiated'>Initiated</option>
-          <option value='none'>None</option>
-        </select>
       </div>
       <div className='table-container'>
         <table className='info payments-table'>
@@ -1108,7 +1340,14 @@ function Payments() {
               <th>User</th>
               <th>Email</th>
               <th>Amount</th>
-              <th>Status</th>
+              <th>
+                <select className='status-filter' onchange={onStatusFilter}>
+                  <option value='all'>All Status</option>
+                  <option value='paid'>Paid</option>
+                  <option value='initiated'>Initiated</option>
+                  <option value='none'>None</option>
+                </select>
+              </th>
               <th>Date</th>
             </tr>
           </thead>

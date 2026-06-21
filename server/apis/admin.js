@@ -395,4 +395,64 @@ router.get('/sponsors', async (req, res) => {
   });
 });
 
+router.get('/plugins', async (req, res) => {
+  const { page = 1, limit = 10, search, status } = req.query;
+  const pageNum = parseInt(page, 10) || 1;
+  const limitNum = Math.min(parseInt(limit, 10) || 10, 100);
+
+  const where = [];
+
+  if (search) {
+    where.push([plugin.NAME, search, 'LIKE']);
+  }
+  if (status !== undefined && status !== null && status !== '') {
+    where.push([plugin.STATUS, parseInt(status, 10)]);
+  }
+
+  const total = await plugin.count(where);
+  const plugins = await plugin.get(['*'], where, {
+    page: pageNum,
+    limit: limitNum,
+  });
+
+  res.send({
+    pages: Math.ceil(total / limitNum),
+    plugins,
+    total,
+  });
+});
+
+router.patch('/plugin', async (req, res) => {
+  try {
+    const { id, status, supported_editor } = req.body;
+
+    if (!id) {
+      res.status(400).send({ error: 'Plugin ID is required' });
+      return;
+    }
+
+    if (status !== undefined && status !== null && status !== '') {
+      const statusInt = parseInt(status, 10);
+      if (![plugin.STATUS_PENDING, plugin.STATUS_APPROVED, plugin.STATUS_REJECTED, plugin.STATUS_DELETED].includes(statusInt)) {
+        res.status(400).send({ error: 'Invalid status' });
+        return;
+      }
+      await plugin.update([plugin.STATUS, statusInt], [plugin.ID, id]);
+    }
+
+    if (supported_editor) {
+      if (!['cm', 'ace', 'all'].includes(supported_editor)) {
+        res.status(400).send({ error: 'Invalid editor type. Must be cm, ace, or all' });
+        return;
+      }
+      await plugin.update([plugin.SUPPORTED_EDITOR, supported_editor], [plugin.ID, id]);
+    }
+
+    const [updated] = await plugin.get(['*'], [plugin.ID, id]);
+    res.send(updated);
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+});
+
 module.exports = router;

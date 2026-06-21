@@ -847,4 +847,102 @@
       width: calc(100% - 10px);
     }
   }
+
+  .admin-plugins {
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.78em;
+      font-weight: 600;
+      text-transform: capitalize;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+
+      .chevron {
+        display: inline-block;
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 5px solid currentColor;
+        opacity: 0.7;
+        transition: opacity 0.15s, transform 0.15s;
+      }
+
+      &:hover {
+        transform: scale(1.08);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+        .chevron {
+          opacity: 1;
+        }
+      }
+
+      &:active {
+        transform: scale(0.95);
+      }
+
+      &.status-approved {
+        background-color: rgba(76, 175, 80, 0.18);
+        color: #4caf50;
+      }
+
+      &.status-pending {
+        background-color: rgba(255, 152, 0, 0.18);
+        color: #ff9800;
+      }
+
+      &.status-rejected {
+        background-color: rgba(244, 67, 54, 0.18);
+        color: #f44336;
+      }
+
+      &.status-deleted {
+        background-color: rgba(158, 158, 158, 0.18);
+        color: #9e9e9e;
+      }
+    }
+
+    .editor-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.78em;
+      font-weight: 600;
+      text-transform: capitalize;
+      cursor: pointer;
+      background-color: rgba(139, 92, 246, 0.18);
+      color: #8b5cf6;
+      transition: transform 0.15s, box-shadow 0.15s;
+
+      .chevron {
+        display: inline-block;
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 5px solid currentColor;
+        opacity: 0.7;
+        transition: opacity 0.15s, transform 0.15s;
+      }
+
+      &:hover {
+        transform: scale(1.08);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+        .chevron {
+          opacity: 1;
+        }
+      }
+
+      &:active {
+        transform: scale(0.95);
+      }
+    }
+  }
 }
