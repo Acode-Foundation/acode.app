@@ -310,7 +310,6 @@ router.get('{/:pluginId}', async (req, res) => {
           }
           if (modePluginIds.length) {
             where.push([Plugin.ID, modePluginIds, 'IN']);
-            where.push([Plugin.STATUS, Plugin.STATUS_DELETED, '<>']);
           } else {
             where.push([1, 2]);
           }
