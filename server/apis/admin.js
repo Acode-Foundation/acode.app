@@ -407,6 +407,11 @@ router.put('/modes', async (req, res) => {
         return;
       }
     }
+    const modeNames = modes.map((m) => m.mode);
+    if (new Set(modeNames).size !== modeNames.length) {
+      res.status(400).json({ error: 'Duplicate mode names are not allowed' });
+      return;
+    }
     const allIds = [...new Set(modes.flatMap((m) => m.pluginIds))];
     if (allIds.length) {
       const existing = await plugin.get([plugin.ID], [plugin.ID, allIds, 'IN']);
@@ -452,8 +457,8 @@ router.get('/plugins/search', async (req, res) => {
     }
     const rows = await plugin.get([plugin.ID, plugin.NAME], [[plugin.ID, q, 'LIKE'], 'OR', [plugin.NAME, q, 'LIKE']], { limit: 10, page: 1 });
     res.json(rows.map((r) => ({ id: r.id, name: r.name })));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch {
+    res.status(500).json({ error: 'Failed to search plugins' });
   }
 });
 

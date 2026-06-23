@@ -1470,9 +1470,8 @@ function Modes() {
   const listRef = Ref();
   const statusRef = Ref();
 
-  let searchTimer;
-
   function attachAutocomplete(input) {
+    let searchTimer;
     let dropdown;
     let abortController;
 
