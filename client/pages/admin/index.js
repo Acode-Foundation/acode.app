@@ -41,6 +41,7 @@ export default async function Admin({ queries = {} }) {
           { id: 'promotions', label: 'Promotions', content: <Promotions /> },
           { id: 'sponsors', label: 'Sponsors', content: <Sponsors /> },
           { id: 'plugins', label: 'Plugins', content: <Plugins /> },
+          { id: 'modes', label: 'Modes', content: <Modes /> },
         ]}
       />
     </section>
@@ -1457,6 +1458,221 @@ function Promotions() {
           + Add Promotion
         </button>
         <button type='button' onclick={onSave} className='promo-save-btn'>
+          Save All
+        </button>
+        <span ref={statusRef} className='status' />
+      </div>
+    </div>
+  );
+}
+
+function Modes() {
+  const listRef = Ref();
+  const statusRef = Ref();
+
+  let searchTimer;
+
+  function attachAutocomplete(input) {
+    let dropdown;
+    let abortController;
+
+    const text = (s) => document.createTextNode(s);
+
+    const hideDropdown = () => {
+      if (dropdown) {
+        dropdown.remove();
+        dropdown = null;
+      }
+    };
+
+    const showDropdown = (items) => {
+      hideDropdown();
+      dropdown = document.createElement('div');
+      dropdown.className = 'mode-autocomplete';
+      for (const item of items) {
+        const el = document.createElement('div');
+        el.className = 'mode-autocomplete-item';
+        el.append(text(item.id), text(' — '), text(item.name));
+        el.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          const val = input.value;
+          const lastComma = val.lastIndexOf(',');
+          const ids = val
+            .slice(0, lastComma + 1)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+          ids.push(item.id);
+          input.value = ids.join(', ');
+          hideDropdown();
+          input.focus();
+        });
+        dropdown.append(el);
+      }
+      const rect = input.getBoundingClientRect();
+      dropdown.style.top = `${rect.bottom + window.scrollY}px`;
+      dropdown.style.left = `${rect.left + window.scrollX}px`;
+      dropdown.style.minWidth = `${rect.width}px`;
+      document.body.append(dropdown);
+    };
+
+    input.addEventListener('input', () => {
+      const val = input.value;
+      const lastComma = val.lastIndexOf(',');
+      const segment = val.slice(lastComma + 1).trim();
+      if (segment.length < 2) {
+        hideDropdown();
+        return;
+      }
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(async () => {
+        if (abortController) abortController.abort();
+        abortController = new AbortController();
+        try {
+          const res = await fetch(`/api/admin/plugins/search?q=${encodeURIComponent(segment)}`, { signal: abortController.signal });
+          const items = await res.json();
+          if (items.length) showDropdown(items);
+          else hideDropdown();
+        } catch {
+          // aborted
+        }
+      }, 300);
+    });
+
+    input.addEventListener('blur', () => {
+      setTimeout(hideDropdown, 150);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (!dropdown) return;
+      const items = dropdown.querySelectorAll('.mode-autocomplete-item');
+      const active = dropdown.querySelector('.mode-autocomplete-item.active');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (active) {
+          active.classList.remove('active');
+          const next = active.nextElementSibling || items[0];
+          next.classList.add('active');
+        } else {
+          items[0]?.classList.add('active');
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (active) {
+          active.classList.remove('active');
+          const prev = active.previousElementSibling || items[items.length - 1];
+          prev.classList.add('active');
+        } else {
+          items[items.length - 1]?.classList.add('active');
+        }
+      } else if (e.key === 'Enter') {
+        if (active) {
+          e.preventDefault();
+          active.dispatchEvent(new Event('mousedown', { bubbles: true }));
+        }
+      } else if (e.key === 'Escape') {
+        hideDropdown();
+      }
+    });
+  }
+
+  const createFormRow = (modeItem = {}) => {
+    const inputRef = Ref();
+    const row = (
+      <div className='mode-form-row'>
+        <input type='text' placeholder='Mode (e.g. csv, python)' value={modeItem.mode || ''} className='mode-name' />
+        <input
+          ref={inputRef}
+          type='text'
+          placeholder='Search & add plugin IDs...'
+          value={Array.isArray(modeItem.pluginIds) ? modeItem.pluginIds.join(', ') : ''}
+          className='mode-plugins'
+        />
+        <button
+          type='button'
+          className='icon delete mode-delete'
+          onclick={(e) => {
+            e.target.closest('.mode-form-row').remove();
+          }}
+        />
+      </div>
+    );
+    inputRef.onref = (el) => {
+      if (el) attachAutocomplete(el);
+    };
+    return row;
+  };
+
+  (async () => {
+    try {
+      const res = await fetch('/api/admin/modes');
+      if (!res.ok) {
+        if (statusRef.el) statusRef.el.textContent = 'Failed to load modes';
+        return;
+      }
+      const json = await res.json();
+      if (Array.isArray(json)) {
+        for (const m of json) {
+          const row = createFormRow(m);
+          listRef.el.append(row);
+        }
+      }
+    } catch {
+      if (statusRef.el) statusRef.el.textContent = 'Failed to load modes';
+    }
+  })();
+
+  const onAdd = () => {
+    const row = createFormRow();
+    listRef.el.append(row);
+  };
+
+  const onSave = async () => {
+    const rows = listRef.el.querySelectorAll('.mode-form-row');
+    const modes = [];
+    for (const row of rows) {
+      const mode = row.querySelector('.mode-name').value.trim();
+      const pluginIdsRaw = row.querySelector('.mode-plugins').value.trim();
+      if (!mode) {
+        alert('ERROR', 'Mode name is required for each entry');
+        return;
+      }
+      const pluginIds = pluginIdsRaw
+        ? pluginIdsRaw
+            .split(',')
+            .map((id) => id.trim())
+            .filter(Boolean)
+        : [];
+      modes.push({ mode, pluginIds });
+    }
+    try {
+      const res = await fetch('/api/admin/modes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modes }),
+      });
+      const json = await res.json();
+      if (json.error) {
+        alert('ERROR', json.error);
+      } else {
+        statusRef.el.textContent = 'Saved!';
+        setTimeout(() => {
+          if (statusRef.el) statusRef.el.textContent = '';
+        }, 2000);
+      }
+    } catch {
+      alert('ERROR', 'Failed to save modes');
+    }
+  };
+
+  return (
+    <div className='modes'>
+      <div ref={listRef} className='mode-list' />
+      <div className='mode-actions'>
+        <button type='button' onclick={onAdd} className='mode-add-btn'>
+          + Add Mode
+        </button>
+        <button type='button' onclick={onSave} className='mode-save-btn'>
           Save All
         </button>
         <span ref={statusRef} className='status' />
