@@ -35,6 +35,18 @@ const validLicenses = [
   'Proprietary',
 ];
 
+/**
+ * Score a mode entry against a search keyword.
+ * Returns 0 for no match, higher = better.
+ * Exact match > prefix match > substring match.
+ */
+function matchScore(mode, keyword) {
+  if (mode === keyword) return 100;
+  if (mode.startsWith(keyword)) return 80 - keyword.length;
+  if (mode.includes(keyword)) return 50 + keyword.length;
+  return 0;
+}
+
 router.get('/owned/:sku', async (req, res) => {
   try {
     const { sku } = req.params;
@@ -272,7 +284,38 @@ router.get('{/:pluginId}', async (req, res) => {
       }
 
       if (name) {
-        where.push([Plugin.NAME, name, 'LIKE']);
+        if (name.startsWith('mode:') && name.length > 5) {
+          const modeKeyword = name.slice(5).toLowerCase();
+          const modeFile = path.resolve(__dirname, '../../data/mode-plugins.json');
+          let modePluginIds = [];
+          try {
+            const raw = await fs.promises.readFile(modeFile, 'utf8');
+            const data = JSON.parse(raw);
+            const modes = data.modes || [];
+            const scored = modes
+              .map((m) => ({ m, score: matchScore(m.mode.toLowerCase(), modeKeyword) }))
+              .filter((s) => s.score > 0)
+              .sort((a, b) => b.score - a.score);
+            const allIds = new Set();
+            for (const s of scored) {
+              for (const id of s.m.pluginIds || []) {
+                allIds.add(id);
+              }
+            }
+            modePluginIds = [...allIds];
+          } catch (err) {
+            if (err.code !== 'ENOENT') {
+              console.error('Failed to read mode-plugins.json:', err.message);
+            }
+          }
+          if (modePluginIds.length) {
+            where.push([Plugin.ID, modePluginIds, 'IN']);
+          } else {
+            where.push([1, 2]);
+          }
+        } else {
+          where.push([Plugin.NAME, name, 'LIKE']);
+        }
       }
 
       if (status && loggedInUser?.isAdmin) {

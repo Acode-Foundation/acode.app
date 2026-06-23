@@ -566,6 +566,8 @@
       }
 
       .promo-delete {
+        margin: 0;
+        background-color: transparent;
         flex-shrink: 0;
         cursor: pointer;
         opacity: 0.5;
@@ -626,6 +628,140 @@
       }
 
       .promo-save-btn {
+        background-color: var(--primary-color);
+        color: #fff;
+
+        &:hover {
+          opacity: 0.9;
+        }
+      }
+
+      .status {
+        color: lightgreen;
+        font-size: 0.88em;
+      }
+
+      @media (max-width: 500px) {
+        flex-direction: column;
+        align-items: stretch;
+
+        button {
+          width: 100%;
+        }
+      }
+    }
+  }
+
+  .modes {
+    h2 {
+      margin: 0 0 16px;
+    }
+
+    .mode-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 900px;
+    }
+
+    .mode-form-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background-color: var(--secondary-color);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 14px;
+      border-radius: 10px;
+      flex-wrap: wrap;
+
+      input[type='text'] {
+        padding: 9px 12px;
+        border-radius: 7px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background-color: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        font-size: 0.88em;
+        min-width: 0;
+
+        &:focus {
+          outline: none;
+          border-color: var(--primary-color);
+        }
+
+        &.mode-name {
+          flex: 1;
+          min-width: 120px;
+        }
+
+        &.mode-plugins {
+          flex: 2;
+          min-width: 160px;
+        }
+      }
+
+      .mode-delete {
+        margin: 0;
+        background: transparent;
+        flex-shrink: 0;
+        cursor: pointer;
+        opacity: 0.5;
+        font-size: 1.1em;
+        padding: 4px;
+        transition: opacity 0.2s, color 0.2s;
+
+        &:hover {
+          opacity: 1;
+          color: #f44336;
+        }
+      }
+
+      @media (max-width: 600px) {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        padding: 12px;
+
+        input[type='text'] {
+          width: 100%;
+          flex: none !important;
+          min-width: 0 !important;
+        }
+
+        .mode-delete {
+          align-self: flex-end;
+          margin-top: -4px;
+        }
+      }
+    }
+
+    .mode-actions {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      button {
+        padding: 9px 22px;
+        border-radius: 8px;
+        border: none;
+        font-size: 0.9em;
+        font-weight: 500;
+        cursor: pointer;
+      }
+
+      .mode-add-btn {
+        background-color: var(--secondary-color);
+        color: inherit;
+        border: 1px dashed rgba(255, 255, 255, 0.3);
+
+        &:hover {
+          border-color: var(--primary-color);
+          color: var(--primary-color);
+        }
+      }
+
+      .mode-save-btn {
         background-color: var(--primary-color);
         color: #fff;
 
@@ -943,6 +1079,33 @@
       &:active {
         transform: scale(0.95);
       }
+    }
+  }
+}
+
+.mode-autocomplete {
+  position: absolute;
+  z-index: 1000;
+  background-color: #1e1e2e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+  .mode-autocomplete-item {
+    padding: 8px 12px;
+    font-size: 0.85em;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover,
+    &.active {
+      background-color: var(--primary-color);
+      color: #fff;
     }
   }
 }

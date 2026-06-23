@@ -378,6 +378,59 @@ router.put('/promotions', async (req, res) => {
   }
 });
 
+const modePluginsFile = path.resolve(__dirname, '../../data/mode-plugins.json');
+
+router.get('/modes', async (_req, res) => {
+  try {
+    const raw = await fs.readFile(modePluginsFile, 'utf8');
+    const data = JSON.parse(raw);
+    res.json(data.modes || []);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      res.json([]);
+      return;
+    }
+    res.status(500).json({ error: 'Failed to read mode plugins' });
+  }
+});
+
+router.put('/modes', async (req, res) => {
+  try {
+    const { modes } = req.body;
+    if (!Array.isArray(modes)) {
+      res.status(400).json({ error: 'modes must be an array' });
+      return;
+    }
+    for (const m of modes) {
+      if (!m.mode || !Array.isArray(m.pluginIds)) {
+        res.status(400).json({ error: 'Each mode must have mode (string) and pluginIds (array)' });
+        return;
+      }
+    }
+    const modeNames = modes.map((m) => m.mode);
+    if (new Set(modeNames).size !== modeNames.length) {
+      res.status(400).json({ error: 'Duplicate mode names are not allowed' });
+      return;
+    }
+    const allIds = [...new Set(modes.flatMap((m) => m.pluginIds))];
+    if (allIds.length) {
+      const existing = await plugin.get([plugin.ID], [plugin.ID, allIds, 'IN']);
+      const existingIds = new Set(existing.map((r) => String(r.id)));
+      const invalid = allIds.filter((id) => !existingIds.has(String(id)));
+      if (invalid.length) {
+        res.status(400).json({ error: `Plugin(s) not found: ${invalid.join(', ')}` });
+        return;
+      }
+    }
+    const tmpFile = `${modePluginsFile}.tmp`;
+    await fs.writeFile(tmpFile, JSON.stringify({ modes }, null, 2));
+    await fs.rename(tmpFile, modePluginsFile);
+    res.json({ message: 'success', modes });
+  } catch {
+    res.status(500).json({ error: 'Failed to save mode plugins' });
+  }
+});
+
 router.get('/sponsors', async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
@@ -393,6 +446,20 @@ router.get('/sponsors', async (req, res) => {
     pages: Math.ceil(total / limit),
     sponsors,
   });
+});
+
+router.get('/plugins/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 2) {
+      res.json([]);
+      return;
+    }
+    const rows = await plugin.get([plugin.ID, plugin.NAME], [[plugin.ID, q, 'LIKE'], 'OR', [plugin.NAME, q, 'LIKE']], { limit: 10, page: 1 });
+    res.json(rows.map((r) => ({ id: r.id, name: r.name })));
+  } catch {
+    res.status(500).json({ error: 'Failed to search plugins' });
+  }
 });
 
 router.get('/plugins', async (req, res) => {
