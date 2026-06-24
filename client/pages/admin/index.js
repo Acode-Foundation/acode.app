@@ -50,9 +50,9 @@ export default async function Admin({ queries = {} }) {
 
 function Sponsors() {
   const currentPage = Reactive(1);
-  const totalPages = Reactive(-1);
+  const totalPages = Reactive(0);
   const limit = 10;
-  const ref = Ref(goTo.bind(null, 1));
+  const ref = Ref(() => goTo(1));
 
   return (
     <div className='sponsors'>
@@ -73,24 +73,17 @@ function Sponsors() {
         </table>
       </div>
       <div className='pagination'>
-        <button type='button' on:click={() => goTo(--currentPage.value)} title='previous page' className='icon navigate_before' /> {currentPage}/
-        {totalPages} <button type='button' on:click={() => goTo(++currentPage.value)} title='next page' className='icon navigate_next' />
+        <button type='button' onclick={() => goTo(currentPage.value - 1)} title='previous page' className='icon navigate_before' /> {currentPage}/
+        {totalPages} <button type='button' onclick={() => goTo(currentPage.value + 1)} title='next page' className='icon navigate_next' />
       </div>
     </div>
   );
 
   async function goTo(page) {
-    if (totalPages.value === 0) {
-      currentPage.value = 0;
-      return;
-    }
-
     if (page < 1) {
       page = 1;
-      currentPage.value = 1;
     } else if (totalPages.value > 0 && page > totalPages.value) {
-      currentPage.value = totalPages.value;
-      return;
+      page = totalPages.value;
     }
 
     const res = await fetch(`/api/admin/sponsors?page=${page}&limit=${limit}`);
@@ -103,9 +96,10 @@ function Sponsors() {
       ref.innerHTML = 'Failed to load sponsors';
       return;
     }
-    totalPages.value = pages || 0;
+    const pageCount = pages || 0;
+    totalPages.value = pageCount;
 
-    if (pages === 0) {
+    if (pageCount === 0) {
       currentPage.value = 0;
       ref.innerHTML = '';
       return;
@@ -377,11 +371,11 @@ function Plugins() {
         Loading...
       </small>
       <div className='pagination'>
-        <button ref={prevBtn} type='button' on:click={() => goTo(currentPage.value - 1)} title='Previous page' className='icon navigate_before' />
+        <button ref={prevBtn} type='button' onclick={() => goTo(currentPage.value - 1)} title='Previous page' className='icon navigate_before' />
         <span>
           {currentPage}/{totalPages}
         </span>
-        <button ref={nextBtn} type='button' on:click={() => goTo(currentPage.value + 1)} title='Next page' className='icon navigate_next' />
+        <button ref={nextBtn} type='button' onclick={() => goTo(currentPage.value + 1)} title='Next page' className='icon navigate_next' />
       </div>
     </div>
   );
@@ -885,10 +879,10 @@ function AppSettings() {
 }
 
 function Users() {
-  const currentPage = Reactive(0);
-  const totalPages = Reactive(1);
+  const currentPage = Reactive(1);
+  const totalPages = Reactive(0);
   const limit = 10;
-  const ref = Ref(goTo.bind(null, currentPage.value));
+  const ref = Ref(() => goTo(1));
   let debounceTimer;
   let name = '';
   let email = '';
@@ -925,8 +919,8 @@ function Users() {
         </table>
       </div>
       <div className='pagination'>
-        <button type='button' on:click={() => goTo(currentPage.value - 1)} title='previous page' className='icon navigate_before' /> {currentPage}/
-        {totalPages} <button type='button' on:click={() => goTo(currentPage.value + 1)} title='next page' className='icon navigate_next' />
+        <button type='button' onclick={() => goTo(currentPage.value - 1)} title='previous page' className='icon navigate_before' /> {currentPage}/
+        {totalPages} <button type='button' onclick={() => goTo(currentPage.value + 1)} title='next page' className='icon navigate_next' />
       </div>
     </div>
   );
@@ -939,26 +933,29 @@ function Users() {
   async function goTo(page) {
     if (page < 1) {
       page = 1;
-      currentPage.value = 1;
-    } else if (totalPages.value !== -1 && page > totalPages.value) {
+    } else if (totalPages.value > 0 && page > totalPages.value) {
       page = totalPages.value;
-      currentPage.value = totalPages.value;
-      return;
     }
 
     let apiUrl = `api/admin/users?page=${page}&limit=${limit}`;
 
     if (name) {
-      apiUrl += `&name=${name}`;
+      apiUrl += `&name=${encodeURIComponent(name)}`;
     }
     if (email) {
-      apiUrl += `&email=${email}`;
+      apiUrl += `&email=${encodeURIComponent(email)}`;
     }
 
     const res = await fetch(apiUrl);
     const { users, pages } = await res.json();
-    totalPages.value = pages;
+    const pageCount = pages || 0;
+    totalPages.value = pageCount;
+    currentPage.value = pageCount === 0 ? 0 : page;
     ref.innerHTML = '';
+    if (!Array.isArray(users) || users.length === 0) {
+      ref.innerHTML = '<tr><td colspan="5" class="empty-cell">No users found</td></tr>';
+      return;
+    }
     ref.append(
       ...users.map((user) => (
         <tr id={`user-${user.id}`}>
@@ -1359,11 +1356,11 @@ function Payments() {
         Loading...
       </small>
       <div className='pagination'>
-        <button ref={prevBtn} type='button' on:click={() => goTo(currentPage.value - 1)} title='Previous page' className='icon navigate_before' />
+        <button ref={prevBtn} type='button' onclick={() => goTo(currentPage.value - 1)} title='Previous page' className='icon navigate_before' />
         <span>
           {currentPage}/{totalPages}
         </span>
-        <button ref={nextBtn} type='button' on:click={() => goTo(currentPage.value + 1)} title='Next page' className='icon navigate_next' />
+        <button ref={nextBtn} type='button' onclick={() => goTo(currentPage.value + 1)} title='Next page' className='icon navigate_next' />
       </div>
     </div>
   );
@@ -1577,9 +1574,10 @@ function Modes() {
 
   const createFormRow = (modeItem = {}) => {
     const inputRef = Ref();
+    const regex = modeItem.regex || modeItem.mode || '';
     const row = (
       <div className='mode-form-row'>
-        <input type='text' placeholder='Mode (e.g. csv, python)' value={modeItem.mode || ''} className='mode-name' />
+        <input type='text' placeholder='Extension regex (e.g. ^(csv|tsv)$)' value={regex} className='mode-regex' />
         <input
           ref={inputRef}
           type='text'
@@ -1630,10 +1628,16 @@ function Modes() {
     const rows = listRef.el.querySelectorAll('.mode-form-row');
     const modes = [];
     for (const row of rows) {
-      const mode = row.querySelector('.mode-name').value.trim();
+      const regex = row.querySelector('.mode-regex').value.trim();
       const pluginIdsRaw = row.querySelector('.mode-plugins').value.trim();
-      if (!mode) {
-        alert('ERROR', 'Mode name is required for each entry');
+      if (!regex) {
+        alert('ERROR', 'Extension regex is required for each entry');
+        return;
+      }
+      try {
+        new RegExp(regex);
+      } catch (err) {
+        alert('ERROR', `Invalid regex "${regex}": ${err.message}`);
         return;
       }
       const pluginIds = pluginIdsRaw
@@ -1642,7 +1646,7 @@ function Modes() {
             .map((id) => id.trim())
             .filter(Boolean)
         : [];
-      modes.push({ mode, pluginIds });
+      modes.push({ regex, pluginIds });
     }
     try {
       const res = await fetch('/api/admin/modes', {

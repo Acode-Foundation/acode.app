@@ -283,6 +283,12 @@
       white-space: nowrap;
     }
 
+    th:first-child,
+    td:first-child {
+      width: 1%;
+      white-space: nowrap;
+    }
+
     tbody tr:hover {
       background-color: rgba(255, 255, 255, 0.03);
     }
@@ -688,7 +694,7 @@
           border-color: var(--primary-color);
         }
 
-        &.mode-name {
+        &.mode-regex {
           flex: 1;
           min-width: 120px;
         }

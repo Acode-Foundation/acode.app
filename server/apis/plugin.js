@@ -13,6 +13,7 @@ const { getLoggedInUser, getPluginSKU, detectUserCurrency, formatAmount } = requ
 const getRazorpay = require('../lib/razorpay');
 const sendEmail = require('../lib/sendEmail');
 const { convertPrice } = require('../lib/exchangeRates');
+const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
 
 const androidpublisher = google.androidpublisher('v3');
 
@@ -35,16 +36,56 @@ const validLicenses = [
   'Proprietary',
 ];
 
-/**
- * Score a mode entry against a search keyword.
- * Returns 0 for no match, higher = better.
- * Exact match > prefix match > substring match.
- */
-function matchScore(mode, keyword) {
+function legacyModeScore(mode, keyword) {
   if (mode === keyword) return 100;
   if (mode.startsWith(keyword)) return 80 - keyword.length;
   if (mode.includes(keyword)) return 50 + keyword.length;
   return 0;
+}
+
+/**
+ * Score a mode entry against a search keyword.
+ * Returns 0 for no match, higher = better.
+ * Supports the new regex field and keeps legacy mode strings working.
+ */
+function matchScore(entry, keyword) {
+  const rawKeyword = String(keyword || '').trim();
+  if (!rawKeyword || !isModeKeywordSafe(rawKeyword)) return 0;
+
+  if (!entry.regex) return legacyModeScore(String(entry.mode || '').toLowerCase(), rawKeyword.toLowerCase());
+
+  const regexValidation = validateModeRegex(entry.regex);
+  if (!regexValidation.valid) return 0;
+
+  try {
+    const match = rawKeyword.match(new RegExp(entry.regex));
+    if (!match) return 0;
+
+    const matchedText = match[0];
+    const exact = matchedText === rawKeyword ? 10000 : 0;
+    const anchored = match.index === 0 ? 1000 : 0;
+    return exact + anchored + matchedText.length * 100 - match.index;
+  } catch {
+    return 0;
+  }
+}
+
+function getMatchingModeEntries(modes, keyword) {
+  return modes
+    .map((m, index) => ({ m, index, score: matchScore(m, keyword) }))
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map((s) => s.m);
+}
+
+function getModePluginIds(modes, keyword) {
+  const allIds = new Set();
+  for (const entry of getMatchingModeEntries(modes, keyword)) {
+    for (const id of entry.pluginIds || []) {
+      allIds.add(id);
+    }
+  }
+  return [...allIds];
 }
 
 router.get('/owned/:sku', async (req, res) => {
@@ -285,24 +326,14 @@ router.get('{/:pluginId}', async (req, res) => {
 
       if (name) {
         if (name.startsWith('mode:') && name.length > 5) {
-          const modeKeyword = name.slice(5).toLowerCase();
+          const modeKeyword = name.slice(5);
           const modeFile = path.resolve(__dirname, '../../data/mode-plugins.json');
           let modePluginIds = [];
           try {
             const raw = await fs.promises.readFile(modeFile, 'utf8');
             const data = JSON.parse(raw);
             const modes = data.modes || [];
-            const scored = modes
-              .map((m) => ({ m, score: matchScore(m.mode.toLowerCase(), modeKeyword) }))
-              .filter((s) => s.score > 0)
-              .sort((a, b) => b.score - a.score);
-            const allIds = new Set();
-            for (const s of scored) {
-              for (const id of s.m.pluginIds || []) {
-                allIds.add(id);
-              }
-            }
-            modePluginIds = [...allIds];
+            modePluginIds = getModePluginIds(modes, modeKeyword);
           } catch (err) {
             if (err.code !== 'ENOENT') {
               console.error('Failed to read mode-plugins.json:', err.message);
@@ -1248,3 +1279,6 @@ function isVersionGreater(newV, oldV) {
 module.exports = router;
 module.exports.registerSKU = registerSKU;
 module.exports.isValidPrice = isValidPrice;
+module.exports.matchScore = matchScore;
+module.exports.getMatchingModeEntries = getMatchingModeEntries;
+module.exports.getModePluginIds = getModePluginIds;
