@@ -13,6 +13,7 @@ const { getLoggedInUser, getPluginSKU, detectUserCurrency, formatAmount } = requ
 const getRazorpay = require('../lib/razorpay');
 const sendEmail = require('../lib/sendEmail');
 const { convertPrice } = require('../lib/exchangeRates');
+const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
 
 const androidpublisher = google.androidpublisher('v3');
 
@@ -48,21 +49,20 @@ function legacyModeScore(mode, keyword) {
  * Supports the new regex field and keeps legacy mode strings working.
  */
 function matchScore(entry, keyword) {
-  const normalizedKeyword = String(keyword || '')
-    .trim()
-    .toLowerCase();
-  if (!normalizedKeyword) return 0;
-  if (!entry.regex) return legacyModeScore(String(entry.mode || '').toLowerCase(), normalizedKeyword);
+  const rawKeyword = String(keyword || '').trim();
+  if (!rawKeyword || !isModeKeywordSafe(rawKeyword)) return 0;
 
-  const pattern = entry.regex;
-  if (!pattern) return 0;
+  if (!entry.regex) return legacyModeScore(String(entry.mode || '').toLowerCase(), rawKeyword.toLowerCase());
+
+  const regexValidation = validateModeRegex(entry.regex);
+  if (!regexValidation.valid) return 0;
 
   try {
-    const match = normalizedKeyword.match(new RegExp(pattern, 'i'));
+    const match = rawKeyword.match(new RegExp(entry.regex));
     if (!match) return 0;
 
-    const matchedText = match[0].toLowerCase();
-    const exact = matchedText === normalizedKeyword ? 10000 : 0;
+    const matchedText = match[0];
+    const exact = matchedText === rawKeyword ? 10000 : 0;
     const anchored = match.index === 0 ? 1000 : 0;
     return exact + anchored + matchedText.length * 100 - match.index;
   } catch {
@@ -326,7 +326,7 @@ router.get('{/:pluginId}', async (req, res) => {
 
       if (name) {
         if (name.startsWith('mode:') && name.length > 5) {
-          const modeKeyword = name.slice(5).toLowerCase();
+          const modeKeyword = name.slice(5);
           const modeFile = path.resolve(__dirname, '../../data/mode-plugins.json');
           let modePluginIds = [];
           try {

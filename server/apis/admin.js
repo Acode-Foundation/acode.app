@@ -15,6 +15,7 @@ const RazorpayOrder = require('../entities/razorpayOrder');
 const Sponsor = require('../entities/sponsor');
 const downloadSalesReportCsv = require('../lib/downloadSalesCsv');
 const sendEmail = require('../lib/sendEmail');
+const { validateModeRegex } = require('../lib/modeRegex');
 
 const router = Router();
 
@@ -411,10 +412,9 @@ router.put('/modes', async (req, res) => {
         res.status(400).json({ error: 'Each mode must have regex (string) and pluginIds (array)' });
         return;
       }
-      try {
-        new RegExp(regex);
-      } catch (err) {
-        res.status(400).json({ error: `Invalid regex "${regex}": ${err.message}` });
+      const regexValidation = validateModeRegex(regex);
+      if (!regexValidation.valid) {
+        res.status(400).json({ error: `Invalid regex "${regex}": ${regexValidation.error}` });
         return;
       }
       normalizedModes.push({

@@ -1,6 +1,7 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const { getMatchingModeEntries, getModePluginIds, isValidPrice, matchScore } = require('../../server/apis/plugin');
+const { validateModeRegex } = require('../../server/lib/modeRegex');
 
 describe('plugin schema', () => {
   it('price field has correct bounds', () => {
@@ -39,9 +40,17 @@ describe('mode plugin matching', () => {
   });
 
   it('keeps legacy mode strings working', () => {
+    expect(matchScore({ mode: 'csv' }, 'CSV')).toBeGreaterThan(0);
     expect(matchScore({ mode: 'csv' }, 'csv')).toBeGreaterThan(0);
     expect(matchScore({ mode: 'csv' }, 'json')).toBe(0);
     expect(matchScore({ mode: 'c' }, 'csv')).toBe(0);
+  });
+
+  it('respects case-sensitive regex patterns', () => {
+    const entry = { regex: '^[A-Z]{2}$', pluginIds: ['uppercase.plugin'] };
+
+    expect(matchScore(entry, 'JS')).toBeGreaterThan(0);
+    expect(matchScore(entry, 'js')).toBe(0);
   });
 
   it('orders matching mode entries by score', () => {
@@ -60,5 +69,22 @@ describe('mode plugin matching', () => {
     ];
 
     expect(getModePluginIds(modes, 'csv')).toEqual(['table.plugin', 'shared.plugin', 'c.plugin']);
+  });
+
+  it('rejects unsafe mode regex patterns', () => {
+    expect(validateModeRegex('(a+)+$').valid).toBe(false);
+    expect(validateModeRegex('(x|x)+$').valid).toBe(false);
+    expect(validateModeRegex('(a|aa)+$').valid).toBe(false);
+  });
+
+  it('accepts long extension alternation lists', () => {
+    const pattern =
+      '^(ahk|ah1|ah2|ahk1|ahk2|zig|zon|gitignore|ignore|exclude|bib|ex|exs|eex|heex|leex|gs|graphql|graphqls|gql|dot|gv|hcl|tf|tfvars|ijs|janet|pkl|svelte|wgsl)$';
+
+    expect(validateModeRegex(pattern).valid).toBe(true);
+  });
+
+  it('does not match overly long mode keywords', () => {
+    expect(matchScore({ regex: '^a+$' }, 'a'.repeat(129))).toBe(0);
   });
 });
