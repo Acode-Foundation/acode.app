@@ -1,6 +1,6 @@
 const path = require('node:path');
 const fs = require('node:fs');
-const { isValidPrice } = require('../../server/apis/plugin');
+const { getMatchingModeEntries, getModePluginIds, isValidPrice, matchScore } = require('../../server/apis/plugin');
 
 describe('plugin schema', () => {
   it('price field has correct bounds', () => {
@@ -26,5 +26,39 @@ describe('isValidPrice', () => {
 
   it('rejects values above MAX_PRICE', () => {
     expect(isValidPrice(10001)).toBe(false);
+  });
+});
+
+describe('mode plugin matching', () => {
+  it('matches multiple extensions with regex entries', () => {
+    const entry = { regex: '^(csv|tsv)$', pluginIds: ['table.plugin'] };
+
+    expect(matchScore(entry, 'csv')).toBeGreaterThan(0);
+    expect(matchScore(entry, 'tsv')).toBeGreaterThan(0);
+    expect(matchScore(entry, 'json')).toBe(0);
+  });
+
+  it('keeps legacy mode strings working', () => {
+    expect(matchScore({ mode: 'csv' }, 'csv')).toBeGreaterThan(0);
+    expect(matchScore({ mode: 'csv' }, 'json')).toBe(0);
+    expect(matchScore({ mode: 'c' }, 'csv')).toBe(0);
+  });
+
+  it('orders matching mode entries by score', () => {
+    const modes = [
+      { regex: 'c', pluginIds: ['c.plugin'] },
+      { regex: '^(csv|tsv)$', pluginIds: ['table.plugin'] },
+    ];
+
+    expect(getMatchingModeEntries(modes, 'csv').map((entry) => entry.pluginIds[0])).toEqual(['table.plugin', 'c.plugin']);
+  });
+
+  it('includes plugins from every matching mode entry', () => {
+    const modes = [
+      { regex: 'c', pluginIds: ['c.plugin', 'shared.plugin'] },
+      { regex: '^(csv|tsv)$', pluginIds: ['table.plugin', 'shared.plugin'] },
+    ];
+
+    expect(getModePluginIds(modes, 'csv')).toEqual(['table.plugin', 'shared.plugin', 'c.plugin']);
   });
 });

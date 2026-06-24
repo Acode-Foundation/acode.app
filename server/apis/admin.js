@@ -175,8 +175,9 @@ router.get('/reports/:year/:month', async (req, res) => {
 });
 
 router.get('/users', async (req, res) => {
-  const { page, limit, name, email } = req.query;
-  const count = await User.count();
+  const { page = 1, limit = 10, name, email } = req.query;
+  const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+  const limitNum = Math.max(Math.min(parseInt(limit, 10) || 10, 100), 1);
   const where = [];
 
   if (name) {
@@ -186,13 +187,15 @@ router.get('/users', async (req, res) => {
     where.push([User.EMAIL, email, 'LIKE']);
   }
 
+  const count = await User.count(where);
   const users = await User.get(User.safeColumns, where, {
-    page,
-    limit,
+    page: pageNum,
+    limit: limitNum,
   });
   res.send({
-    pages: Math.ceil(count / limit),
+    pages: Math.ceil(count / limitNum),
     users,
+    total: count,
   });
 });
 
@@ -401,18 +404,30 @@ router.put('/modes', async (req, res) => {
       res.status(400).json({ error: 'modes must be an array' });
       return;
     }
+    const normalizedModes = [];
     for (const m of modes) {
-      if (!m.mode || !Array.isArray(m.pluginIds)) {
-        res.status(400).json({ error: 'Each mode must have mode (string) and pluginIds (array)' });
+      const regex = String(m.regex || m.mode || '').trim();
+      if (!regex || !Array.isArray(m.pluginIds)) {
+        res.status(400).json({ error: 'Each mode must have regex (string) and pluginIds (array)' });
         return;
       }
+      try {
+        new RegExp(regex);
+      } catch (err) {
+        res.status(400).json({ error: `Invalid regex "${regex}": ${err.message}` });
+        return;
+      }
+      normalizedModes.push({
+        regex,
+        pluginIds: [...new Set(m.pluginIds.map((id) => String(id).trim()).filter(Boolean))],
+      });
     }
-    const modeNames = modes.map((m) => m.mode);
-    if (new Set(modeNames).size !== modeNames.length) {
-      res.status(400).json({ error: 'Duplicate mode names are not allowed' });
+    const regexes = normalizedModes.map((m) => m.regex);
+    if (new Set(regexes).size !== regexes.length) {
+      res.status(400).json({ error: 'Duplicate mode regexes are not allowed' });
       return;
     }
-    const allIds = [...new Set(modes.flatMap((m) => m.pluginIds))];
+    const allIds = [...new Set(normalizedModes.flatMap((m) => m.pluginIds))];
     if (allIds.length) {
       const existing = await plugin.get([plugin.ID], [plugin.ID, allIds, 'IN']);
       const existingIds = new Set(existing.map((r) => String(r.id)));
@@ -423,9 +438,9 @@ router.put('/modes', async (req, res) => {
       }
     }
     const tmpFile = `${modePluginsFile}.tmp`;
-    await fs.writeFile(tmpFile, JSON.stringify({ modes }, null, 2));
+    await fs.writeFile(tmpFile, JSON.stringify({ modes: normalizedModes }, null, 2));
     await fs.rename(tmpFile, modePluginsFile);
-    res.json({ message: 'success', modes });
+    res.json({ message: 'success', modes: normalizedModes });
   } catch {
     res.status(500).json({ error: 'Failed to save mode plugins' });
   }
