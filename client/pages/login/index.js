@@ -121,33 +121,48 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
   }
 
   async function getAppRedirectUrl() {
-    if (!usesAppCodeFlow || !appLoginState || !appAuthChallenge) {
-      throw new Error('Invalid app login request');
+    if (usesAppCodeFlow) {
+      if (!appLoginState || !appAuthChallenge) {
+        throw new Error('Invalid app login request');
+      }
+
+      const res = await fetch('/api/user/app-auth-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          state: appLoginState,
+          challenge: appAuthChallenge,
+          appVersionCode,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await getResponseError(res, 'Failed to create app auth code'));
+      }
+
+      const data = await res.json();
+      if (!data.code) {
+        throw new Error('Failed to create app auth code');
+      }
+
+      const callback = new URL('acode://auth/callback');
+      callback.searchParams.set('code', data.code);
+      callback.searchParams.set('state', appLoginState);
+      return callback.toString();
     }
 
-    const res = await fetch('/api/user/app-auth-code', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        state: appLoginState,
-        challenge: appAuthChallenge,
-        appVersionCode,
-      }),
-    });
+    const res = await fetch('/api/user/app-token', { method: 'POST' });
 
     if (!res.ok) {
-      throw new Error(await getResponseError(res, 'Failed to create app auth code'));
+      throw new Error(await getResponseError(res, 'Failed to create token'));
     }
 
     const data = await res.json();
-    if (!data.code) {
-      throw new Error('Failed to create app auth code');
+    if (!data.token) {
+      throw new Error('Failed to create token');
     }
 
-    const callback = new URL('acode://auth/callback');
-    callback.searchParams.set('code', data.code);
-    callback.searchParams.set('state', appLoginState);
-    return callback.toString();
+    return `acode://user/login/${data.token}`;
   }
 
   async function redirectAfterDone() {

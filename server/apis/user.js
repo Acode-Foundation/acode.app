@@ -33,6 +33,41 @@ function safeCompareHex(a, b) {
   return crypto.timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
 }
 
+route.post('/app-token', appTokenRateLimit, async (req, res) => {
+  try {
+    const loggedInUser = await getWebLoggedInUser(req);
+    if (!loggedInUser) {
+      res.status(401).send({ error: 'User not logged in' });
+      return;
+    }
+
+    const [loginRow] = await login.get(login.columns, [
+      [login.USER_ID, loggedInUser.id],
+      [login.TYPE, 'app'],
+    ]);
+
+    const token = crypto.randomBytes(64).toString('hex');
+    const expiredAt = moment().add(150, 'day').format('YYYY-MM-DD HH:mm:ss.sss');
+
+    if (loginRow) {
+      await login.update(
+        [
+          [login.TOKEN, token],
+          [login.EXPIRED_AT, expiredAt],
+        ],
+        [login.ID, loginRow.id],
+      );
+    } else {
+      await login.insert([login.USER_ID, loggedInUser.id], [login.TOKEN, token], [login.EXPIRED_AT, expiredAt], [login.TYPE, 'app']);
+    }
+
+    res.send({ token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: 'Failed to get app token' });
+  }
+});
+
 route.post('/app-auth-code', appTokenRateLimit, async (req, res) => {
   try {
     const loggedInUser = await getWebLoggedInUser(req);
