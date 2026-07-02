@@ -1,8 +1,8 @@
 const { Router } = require('express');
 const moment = require('moment');
 const crypto = require('node:crypto');
-const { encryptPassword } = require('../password');
-const { getLoggedInUser, areSameUser, getToken } = require('../lib/helpers');
+const { encryptPassword, isValidPassword } = require('../password');
+const { getWebLoggedInUser, areSameUser } = require('../lib/helpers');
 const Comment = require('../entities/comment');
 const Otp = require('../entities/otp');
 const User = require('../entities/user');
@@ -13,35 +13,96 @@ const calcEarnings = require('../lib/calcEarnings');
 const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
 const AppConfig = require('../entities/appConfig');
 const login = require('../entities/login');
+const AppAuthCode = require('../entities/appAuthCode');
 
 const route = Router();
 
 const appTokenRateLimit = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
+const hexPattern = /^[a-f0-9]+$/i;
 
-route.post('/app-token', appTokenRateLimit, async (req, res) => {
+function isHex(value, minLength, maxLength = minLength) {
+  return typeof value === 'string' && value.length >= minLength && value.length <= maxLength && hexPattern.test(value);
+}
+
+function sha256(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function safeCompareHex(a, b) {
+  if (!isHex(a, 64) || !isHex(b, 64)) return false;
+  return crypto.timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
+}
+
+route.post('/app-auth-code', appTokenRateLimit, async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
-    if (!user) {
-      res.status(401).send('User not logged in');
+    const loggedInUser = await getWebLoggedInUser(req);
+    if (!loggedInUser) {
+      res.status(401).send({ error: 'User not logged in' });
       return;
     }
 
-    const userToken = getToken(req);
-
-    if (!userToken) {
-      res.status(401).send('User not logged in');
+    const { state, challenge, appVersionCode } = req.body || {};
+    if (!isHex(state, 16, 128)) {
+      res.status(400).send({ error: 'Invalid login state' });
       return;
     }
 
-    const [userLoginRow] = await login.get(login.columns, [login.TOKEN, userToken]);
-
-    if (userLoginRow?.type !== 'web') {
-      res.status(401).send('You are not authorized to generate tokens');
+    if (!isHex(challenge, 64)) {
+      res.status(400).send({ error: 'Invalid app auth challenge' });
       return;
     }
 
-    const [loginRow] = await login.get(login.columns, [
-      [login.USER_ID, user.id],
+    const code = crypto.randomBytes(32).toString('hex');
+    const expiredAt = moment().add(5, 'minutes').format('YYYY-MM-DD HH:mm:ss.sss');
+    const parsedVersionCode = Number.parseInt(appVersionCode, 10);
+
+    await AppAuthCode.insert(
+      [AppAuthCode.USER_ID, loggedInUser.id],
+      [AppAuthCode.CODE, code],
+      [AppAuthCode.STATE, state],
+      [AppAuthCode.CHALLENGE, challenge],
+      [AppAuthCode.APP_VERSION_CODE, Number.isFinite(parsedVersionCode) ? parsedVersionCode : null],
+      [AppAuthCode.EXPIRED_AT, expiredAt],
+    );
+
+    res.send({ code });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: 'Failed to create app auth code' });
+  }
+});
+
+route.post('/app-token/exchange', appTokenRateLimit, async (req, res) => {
+  try {
+    const { code, state, verifier } = req.body || {};
+    if (!isHex(code, 64) || !isHex(state, 16, 128) || !isHex(verifier, 64)) {
+      res.status(400).send({ error: 'Invalid app auth exchange payload' });
+      return;
+    }
+
+    const [authCode] = await AppAuthCode.for('internal').get(AppAuthCode.columns, [
+      [AppAuthCode.CODE, code],
+      [AppAuthCode.STATE, state],
+      [AppAuthCode.USED, 0],
+    ]);
+
+    if (!authCode?.challenge || moment().isAfter(moment(authCode.expired_at))) {
+      res.status(400).send({ error: 'Invalid or expired app auth code' });
+      return;
+    }
+
+    if (!safeCompareHex(sha256(verifier), authCode.challenge)) {
+      res.status(400).send({ error: 'Invalid app auth verifier' });
+      return;
+    }
+
+    if (!AppAuthCode.markUsed(authCode.id)) {
+      res.status(400).send({ error: 'Invalid or expired app auth code' });
+      return;
+    }
+
+    const [loginRow] = await login.for('internal').get(login.columns, [
+      [login.USER_ID, authCode.user_id],
       [login.TYPE, 'app'],
     ]);
 
@@ -57,13 +118,13 @@ route.post('/app-token', appTokenRateLimit, async (req, res) => {
         [login.ID, loginRow.id],
       );
     } else {
-      await login.insert([login.USER_ID, user.id], [login.TOKEN, token], [login.EXPIRED_AT, expiredAt], [login.TYPE, 'app']);
+      await login.insert([login.USER_ID, authCode.user_id], [login.TOKEN, token], [login.EXPIRED_AT, expiredAt], [login.TYPE, 'app']);
     }
 
     res.send({ token });
   } catch (error) {
     console.error(error);
-    res.status(500).send('Failed to get app token');
+    res.status(500).send({ error: 'Failed to exchange app auth code' });
   }
 });
 
@@ -186,7 +247,7 @@ route.get('/payment-method', async (req, res) => {
 
 route.get('/comment/:pluginId', async (req, res) => {
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser) {
       res.status(401).send({ error: 'Not logged in' });
       return;
@@ -223,7 +284,7 @@ route.get('/payments{/:year}', async (req, res) => {
 
 route.get('/receipt/:paymentId', async (req, res) => {
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     const { paymentId } = req.params;
     const [payment] = await Payment.get([Payment.ID, paymentId]);
 
@@ -260,7 +321,7 @@ route.get('/receipt/:paymentId', async (req, res) => {
 
 route.delete('/link/github', async (req, res) => {
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser) {
       return res.status(401).send({ error: 'Not logged in' });
     }
@@ -289,7 +350,7 @@ route.delete('/link/github', async (req, res) => {
 
 route.delete('/link/google', async (req, res) => {
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser) {
       return res.status(401).send({ error: 'Not logged in' });
     }
@@ -332,7 +393,7 @@ route.get('/:idOrEmail', async (req, res) => {
 
 route.patch('/verify{/:type}/:userId', async (req, res) => {
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser?.isAdmin) {
       res.status(401).send({ error: 'Not authorized' });
       return;
@@ -349,7 +410,7 @@ route.patch('/verify{/:type}/:userId', async (req, res) => {
 
 route.post('/payment-method', async (req, res) => {
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser) {
       res.status(401).send({ error: 'Not logged in' });
       return;
@@ -426,6 +487,11 @@ route.post('/', async (req, res) => {
     return;
   }
 
+  if (!isValidPassword(password)) {
+    res.status(400).send({ error: 'Invalid password' });
+    return;
+  }
+
   if (!sentOtp) {
     res.status(400).send({ error: 'Missing OTP' });
     return;
@@ -472,7 +538,7 @@ route.put('/', async (req, res) => {
   const { email, name, github, website, x, linkedin, otp: sentOtp } = req.body;
 
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
 
     if (!loggedInUser) {
       res.status(401).send({ error: 'Not logged in' });
@@ -538,7 +604,7 @@ route.put('/', async (req, res) => {
 
 route.patch('/payment-method/update-default/:id', async (req, res) => {
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser) {
       res.status(401).send({ error: 'Not logged in' });
       return;
@@ -575,7 +641,7 @@ route.patch('/payment-method/update-default/:id', async (req, res) => {
 
 route.delete('/payment-method/:id', async (req, res) => {
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser) {
       res.status(401).send({ error: 'Not logged in' });
       return;
@@ -661,7 +727,7 @@ function isValidXId(id) {
 async function getAuthorizedUser(req) {
   const { user: userId } = req.query;
   const error = new Error('User not found');
-  const loggedInUser = await getLoggedInUser(req);
+  const loggedInUser = await getWebLoggedInUser(req);
 
   if (!userId) {
     error.message = 'No user id specified';

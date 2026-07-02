@@ -8,7 +8,7 @@ const User = require('../entities/user');
 const Payment = require('../entities/payment');
 const PaymentMethod = require('../entities/paymentMethod');
 const AppConfig = require('../entities/appConfig');
-const { getLoggedInUser } = require('../lib/helpers');
+const { getWebLoggedInUser } = require('../lib/helpers');
 const purchaseOrder = require('../entities/purchaseOrder');
 const plugin = require('../entities/plugin');
 const RazorpayOrder = require('../entities/razorpayOrder');
@@ -20,7 +20,7 @@ const { validateModeRegex } = require('../lib/modeRegex');
 const router = Router();
 
 router.use('/', async (req, res, next) => {
-  const loggedInUser = await getLoggedInUser(req);
+  const loggedInUser = await getWebLoggedInUser(req);
   if (!loggedInUser?.isAdmin) {
     res.status(401).send({ error: 'Unauthorized' });
     return;

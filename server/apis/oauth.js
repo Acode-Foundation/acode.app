@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const user = require('../entities/user');
-const { getLoggedInUser } = require('../lib/helpers');
+const { getWebLoggedInUser } = require('../lib/helpers');
 const {
   getGitHubAuthURL,
   getGitHubToken,
@@ -115,7 +115,7 @@ route.get('/google/callback', async (req, res) => {
 });
 
 async function handleLink(provider, oauthUser, req, res) {
-  const loggedInUser = await getLoggedInUser(req);
+  const loggedInUser = await getWebLoggedInUser(req);
 
   if (!loggedInUser) {
     return res.redirect(`/login?error=${encodeURIComponent('You must be logged in to link an account')}`);

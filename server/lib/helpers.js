@@ -15,26 +15,42 @@ const geoip = require('geoip-lite');
  * @param {import('express').Request} req
  * @returns {Promise<LoggedInUser & User>}
  */
-async function getLoggedInUser(req) {
-  if (req.user) {
-    return req.user;
+async function getLoginSession(req) {
+  if (req.authSession) {
+    return req.authSession;
   }
 
   const token = getToken(req);
 
   if (!token) return null;
 
-  const loginRow = await login.get([login.TOKEN, token]);
+  const loginRow = await login.for('internal').get(login.columns, [login.TOKEN, token]);
 
   if (!loginRow.length) {
     return null;
   }
 
-  const { user_id: userId, expired_at: expiredAt } = loginRow[0];
+  const session = loginRow[0];
+  const { expired_at: expiredAt } = session;
 
   if (expiredAt && moment().isAfter(moment(expiredAt))) {
     return null;
   }
+
+  req.authSession = session;
+  return session;
+}
+
+async function getLoggedInUser(req) {
+  if (req.user) {
+    return req.user;
+  }
+
+  const session = await getLoginSession(req);
+
+  if (!session) return null;
+
+  const { user_id: userId } = session;
 
   const userRow = await user.get(user.safeColumns, [user.ID, userId]);
 
@@ -48,8 +64,19 @@ async function getLoggedInUser(req) {
     loggedInUser.isAdmin = true;
   }
 
+  loggedInUser.authType = session.type || 'web';
   req.user = loggedInUser;
   return loggedInUser;
+}
+
+async function getWebLoggedInUser(req) {
+  const session = await getLoginSession(req);
+
+  if (session?.type !== 'web') {
+    return null;
+  }
+
+  return getLoggedInUser(req);
 }
 
 function getToken(req) {
@@ -189,7 +216,9 @@ function formatAmount(amount, currency) {
 
 module.exports = {
   areSameUser,
+  getLoginSession,
   getLoggedInUser,
+  getWebLoggedInUser,
   getPluginSKU,
   getToken,
   getDbTime,

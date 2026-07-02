@@ -14,21 +14,18 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
   const successText = Reactive('');
   const button = Ref();
   const canvas = Ref();
+  const search = new URLSearchParams(window.location.search);
+  const appLoginState = search.get('state');
+  const appAuthChallenge = search.get('challenge');
+  const appAuthFlow = search.get('authFlow');
+  const appVersionCode = search.get('appVersionCode');
+  const usesAppCodeFlow = redirect === 'app' && appAuthFlow === 'app-code';
+  const oauthRedirect = usesAppCodeFlow ? `${location.pathname}${location.search}` : redirect;
 
   try {
     const user = await getLoggedInUser();
     if (user) {
-      const res = await fetch('/api/user/app-token', { method: 'POST' });
-
-      if (!res.ok) {
-        return <div className='error'>Failed to create token, something went wrong.</div>;
-      }
-
-      const data = await res.json();
-      if (!data.token) {
-        return <div className='error'>Failed to create token, something went wrong.</div>;
-      }
-      redirectAfterDone(data.token);
+      redirectAfterDone();
       return (
         <section id='user-login'>
           <div className='redirect-message'>
@@ -42,7 +39,6 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
     return <div>{error.message}</div>;
   }
 
-  const search = new URLSearchParams(window.location.search);
   const linkError = search.get('error');
   if (linkError) {
     alert('Error', linkError, () => {
@@ -86,8 +82,8 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
             <span>or continue with</span>
           </div>
           <div className='oauth-buttons'>
-            <OAuthButton provider='github' redirectUrl={redirect} />
-            <OAuthButton provider='google' redirectUrl={redirect} />
+            <OAuthButton provider='github' redirectUrl={oauthRedirect} />
+            <OAuthButton provider='google' redirectUrl={oauthRedirect} />
           </div>
         </div>
         <div style={{ margin: 'auto' }}>
@@ -113,26 +109,75 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
       return;
     }
 
-    redirectAfterDone(data.token);
+    redirectAfterDone();
   }
 
   function onerror(error) {
-    button.el.disabled = false;
+    if (button.el) {
+      button.el.disabled = false;
+    }
+    successText.value = '';
     errorText.value = error;
   }
 
-  function redirectAfterDone(token) {
-    successText.value = 'Login successful. Redirecting...';
+  async function getAppRedirectUrl() {
+    if (!usesAppCodeFlow || !appLoginState || !appAuthChallenge) {
+      throw new Error('Invalid app login request');
+    }
 
+    const res = await fetch('/api/user/app-auth-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        state: appLoginState,
+        challenge: appAuthChallenge,
+        appVersionCode,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(await getResponseError(res, 'Failed to create app auth code'));
+    }
+
+    const data = await res.json();
+    if (!data.code) {
+      throw new Error('Failed to create app auth code');
+    }
+
+    const callback = new URL('acode://auth/callback');
+    callback.searchParams.set('code', data.code);
+    callback.searchParams.set('state', appLoginState);
+    return callback.toString();
+  }
+
+  async function redirectAfterDone() {
     if (button.el) {
       button.el.disabled = true;
     }
 
-    setTimeout(() => {
+    try {
       if (redirect === 'app') {
-        redirect = `acode://user/login/${token}`;
+        redirect = await getAppRedirectUrl();
       }
+    } catch (error) {
+      onerror(error.message);
+      return;
+    }
+
+    errorText.value = '';
+    successText.value = 'Login successful. Redirecting...';
+
+    setTimeout(() => {
       window.location.replace(redirect || '/');
     }, 1000);
+  }
+}
+
+async function getResponseError(response, fallback) {
+  try {
+    const data = await response.json();
+    return data.error || fallback;
+  } catch {
+    return fallback;
   }
 }

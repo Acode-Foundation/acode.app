@@ -9,7 +9,7 @@ const User = require('../entities/user');
 const Order = require('../entities/purchaseOrder');
 const Download = require('../entities/download');
 const badWords = require('../badWords.json');
-const { getLoggedInUser, getPluginSKU, detectUserCurrency, formatAmount } = require('../lib/helpers');
+const { getLoggedInUser, getWebLoggedInUser, getPluginSKU, detectUserCurrency, formatAmount } = require('../lib/helpers');
 const getRazorpay = require('../lib/razorpay');
 const sendEmail = require('../lib/sendEmail');
 const { convertPrice } = require('../lib/exchangeRates');
@@ -198,7 +198,7 @@ router.get('/download/:id', async (req, res) => {
 router.get('/orders/:pluginId/:year/:month', async (req, res) => {
   try {
     const { pluginId, year, month } = req.params;
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser) {
       res.status(403).send({ error: 'Forbidden' });
       return;
@@ -240,7 +240,10 @@ router.get('/check-update/:id/:version', async (req, res) => {
       return;
     }
 
-    res.send({ update: row.version !== version });
+    res.send({
+      update: isVersionGreater(row.version, version),
+      version: row.version,
+    });
   } catch (error) {
     res.status(500).send({ error: error.message });
   }
@@ -526,7 +529,7 @@ router.post('/order', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
@@ -653,7 +656,7 @@ router.post('/', async (req, res) => {
 
 router.put('/', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     let savePluginZip = false;
 
     if (!user) {
@@ -772,7 +775,7 @@ router.put('/', async (req, res) => {
 router.patch('/', async (req, res) => {
   try {
     const { id, status, reason } = req.body;
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
 
     if (!user.isAdmin) {
       res.status(401).send({ error: 'Unauthorized' });
@@ -822,7 +825,7 @@ router.patch('/:id/supported-editor', async (req, res) => {
       res.status(400).send({ error: 'Invalid editor type. Must be cm or all' });
       return;
     }
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
 
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
@@ -851,7 +854,7 @@ router.patch('/:id/supported-editor', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     const { mode } = req.query;
 
     if (!user) {
@@ -1279,6 +1282,7 @@ function isVersionGreater(newV, oldV) {
 module.exports = router;
 module.exports.registerSKU = registerSKU;
 module.exports.isValidPrice = isValidPrice;
+module.exports.isVersionGreater = isVersionGreater;
 module.exports.matchScore = matchScore;
 module.exports.getMatchingModeEntries = getMatchingModeEntries;
 module.exports.getModePluginIds = getModePluginIds;

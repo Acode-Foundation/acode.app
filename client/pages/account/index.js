@@ -41,6 +41,8 @@ export default async function Profile({ mode = 'register', redirect }) {
     }
   }
 
+  email = user.email || '';
+
   canvas.onref = () => background(canvas.el);
 
   if (!isRegister) {
@@ -99,24 +101,20 @@ export default async function Profile({ mode = 'register', redirect }) {
         )}
         <Input value={user?.name} type='text' name='name' label='Name' placeholder='e.g. John Doe' />
 
-        <div>
+        <div className='email-otp-group'>
           <fieldset>
             <Input
               value={user.email}
               autocomplete={isRegister ? 'new-email' : 'email'}
               onchange={(e) => {
                 email = e.target.value;
+                updateEmailOtpUi();
               }}
               oninput={(e) => {
                 if (isRegister) return;
 
-                if (e.target.value !== user?.email) {
-                  otpInput.style.removeProperty('display');
-                  sendOtpBtn.style.removeProperty('display');
-                } else {
-                  otpInput.style.display = 'none';
-                  sendOtpBtn.style.display = 'none';
-                }
+                email = e.target.value;
+                updateEmailOtpUi();
               }}
               type='email'
               name='email'
@@ -125,7 +123,7 @@ export default async function Profile({ mode = 'register', redirect }) {
             />
             <Input ref={otpInput} style={{ width: '140px' }} type='number' name='otp' label='OTP' placeholder='e.g. 1234' />
           </fieldset>
-          <SendOtp ref={sendOtpBtn} errorText={errorText} getEmail={() => email} />
+          <SendOtp ref={sendOtpBtn} className='otp-send-action' errorText={errorText} getEmail={() => email} />
         </div>
 
         {mode === 'edit' && (
@@ -199,6 +197,24 @@ export default async function Profile({ mode = 'register', redirect }) {
   function onerror(error) {
     errorText.value = error;
   }
+
+  function updateEmailOtpUi() {
+    if (isRegister) return;
+
+    if (normalizeEmail(email) === normalizeEmail(user?.email)) {
+      otpInput.style.display = 'none';
+      sendOtpBtn.style.display = 'none';
+      return;
+    }
+
+    otpInput.style.removeProperty('display');
+    sendOtpBtn.style.removeProperty('display');
+    sendOtpBtn.refresh?.();
+  }
+}
+
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
 }
 
 /**

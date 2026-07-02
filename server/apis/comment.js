@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { getLoggedInUser } = require('../lib/helpers');
+const { getWebLoggedInUser } = require('../lib/helpers');
 const Comment = require('../entities/comment');
 const Plugin = require('../entities/plugin');
 const user = require('../entities/user');
@@ -23,7 +23,7 @@ router.get('/:id', async (req, res) => {
       return;
     }
 
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     const [plugin] = await Plugin.get([Plugin.USER_ID], [Plugin.ID, id]);
 
     if (!plugin) {
@@ -52,7 +52,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     // message to be sent as notification to plugin author
     let voteMessage = '';
     let commentMessage = '';
@@ -165,7 +165,7 @@ router.post('/', async (req, res) => {
 
 router.patch('/toggle-flag/:id', async (req, res) => {
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
@@ -212,7 +212,7 @@ router.post('/:commentId/reply', async (req, res) => {
   try {
     const { commentId } = req.params;
     const { reply } = req.body;
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
 
     if (!loggedInUser) {
       res.status(401).send({ error: 'Unauthorized' });
@@ -256,7 +256,7 @@ router.post('/:commentId/reply', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
 
     if (!loggedInUser) {
       res.status(401).send({ error: 'Unauthorized' });

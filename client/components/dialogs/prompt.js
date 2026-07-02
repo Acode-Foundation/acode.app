@@ -5,7 +5,7 @@ import DialogBox from './dialogBox';
  *
  * @param {string} title
  * @param {object} [options]
- * @param {'text'|'number'|'tel'|'textarea'} [options.type]
+ * @param {'text'|'number'|'tel'|'password'|'textarea'} [options.type]
  * @param {string} [options.defaultValue]
  * @param {string} [options.placeholder]
  * @param {boolean} [options.required]
@@ -17,12 +17,31 @@ export default function prompt(title, options = {}) {
   return new Promise((resolve) => {
     const $error = <div className='error' />;
     let $input;
+    let body;
 
     if (type === 'textarea') {
       $input = <textarea placeholder={placeholder} defaultValue={defaultValue} />;
       autosize($input);
+      body = (
+        <div className='prompt-body'>
+          {$input}
+          {$error}
+        </div>
+      );
     } else {
-      $input = <input type={type} placeholder={placeholder} defaultValue={defaultValue} />;
+      const label = placeholder || title;
+      $input = <input type={type} placeholder={label} defaultValue={defaultValue} autocomplete={type === 'password' ? 'current-password' : 'off'} />;
+      body = (
+        <div className='prompt-body'>
+          <div className={`prompt-input ${type}`}>
+            <label>
+              {$input}
+              <span className='label'>{label}</span>
+            </label>
+          </div>
+          {$error}
+        </div>
+      );
     }
 
     $input.onchange = $error.remove.bind($error);
@@ -30,12 +49,7 @@ export default function prompt(title, options = {}) {
     const $box = (
       <DialogBox
         title={title}
-        body={
-          <div>
-            {$input}
-            {$error}
-          </div>
-        }
+        body={body}
         oncancel={(hide) => {
           resolve(null);
           hide();

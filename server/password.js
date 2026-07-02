@@ -8,7 +8,12 @@ function comparePassword(password, encryptedPassword) {
   return encryptPassword(password) === encryptedPassword;
 }
 
+function isValidPassword(password) {
+  return typeof password === 'string' && password.trim().length >= 6;
+}
+
 module.exports = {
   encryptPassword,
   comparePassword,
+  isValidPassword,
 };
