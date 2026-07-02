@@ -6,7 +6,7 @@ const table = `create table if not exists app_auth_code (
   user_id integer not null,
   code text not null unique,
   state text not null,
-  challenge text not null,
+  challenge text,
   app_version_code integer,
   used boolean default false,
   created_at timestamp default current_timestamp,
@@ -43,6 +43,10 @@ class AppAuthCode extends Entity {
   markUsed(id) {
     const result = db.prepare(`UPDATE ${this.table} SET used = 1 WHERE id = ? AND used = 0`).run(id);
     return result.changes === 1;
+  }
+
+  cleanupStaleRows() {
+    return db.prepare(`DELETE FROM ${this.table} WHERE used = 1 OR expired_at < datetime('now')`).run();
   }
 }
 

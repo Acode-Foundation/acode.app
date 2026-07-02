@@ -91,6 +91,7 @@ route.post('/app-auth-code', appTokenRateLimit, async (req, res) => {
     const expiredAt = moment().add(5, 'minutes').format('YYYY-MM-DD HH:mm:ss.sss');
     const parsedVersionCode = Number.parseInt(appVersionCode, 10);
 
+    AppAuthCode.cleanupStaleRows();
     await AppAuthCode.insert(
       [AppAuthCode.USER_ID, loggedInUser.id],
       [AppAuthCode.CODE, code],
@@ -156,6 +157,7 @@ route.post('/app-token/exchange', appTokenRateLimit, async (req, res) => {
       await login.insert([login.USER_ID, authCode.user_id], [login.TOKEN, token], [login.EXPIRED_AT, expiredAt], [login.TYPE, 'app']);
     }
 
+    AppAuthCode.cleanupStaleRows();
     res.send({ token });
   } catch (error) {
     console.error(error);
