@@ -214,7 +214,9 @@ export default async function Profile({ mode = 'register', redirect }) {
 }
 
 function normalizeEmail(email) {
-  return String(email || '').trim().toLowerCase();
+  return String(email || '')
+    .trim()
+    .toLowerCase();
 }
 
 /**
