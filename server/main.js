@@ -22,6 +22,43 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const ALLOWED_ORIGINS = new Set(['https://localhost', 'https://acode.app']);
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const LEGACY_NATIVE_CSRF_EXEMPT_PATHS = new Set(['/api/plugin/order', '/api/plugin/refund', '/api/sponsor', '/api/login']);
+
+function isSameOriginRequest(req) {
+  const host = req.headers.host;
+  if (!host) return false;
+
+  const requestHost = host.toLowerCase();
+  const origin = req.headers.origin;
+  if (origin && hasMatchingHost(origin, requestHost)) return true;
+
+  const referer = req.headers.referer;
+  return Boolean(referer && hasMatchingHost(referer, requestHost));
+}
+
+function hasMatchingHost(value, requestHost) {
+  try {
+    return new URL(value).host.toLowerCase() === requestHost;
+  } catch {
+    return false;
+  }
+}
+
+function isLegacyNativeRequest(req) {
+  return LEGACY_NATIVE_CSRF_EXEMPT_PATHS.has(req.path) && isNativeWebViewOrigin(req.headers.origin) && isNativeWebViewOrigin(req.headers.referer);
+}
+
+function isNativeWebViewOrigin(value) {
+  if (!value || value === 'null') return true;
+
+  try {
+    const { protocol, hostname } = new URL(value);
+    return protocol === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  } catch {
+    return false;
+  }
+}
 
 async function main() {
   app.set('trust proxy', 1);
@@ -53,12 +90,17 @@ async function main() {
   // Browsers won't send custom headers on cross-origin form submissions
   // Skip for webhooks (Razorpay sends raw JSON without custom headers)
   app.use((req, res, next) => {
-    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    if (SAFE_METHODS.has(req.method)) {
       next();
       return;
     }
     // Skip webhook endpoint (receives callbacks from Razorpay servers)
     if (req.path === '/api/razorpay/webhook') {
+      next();
+      return;
+    }
+    // Older native app builds do not send browser Origin/Referer or CSRF headers.
+    if (isLegacyNativeRequest(req)) {
       next();
       return;
     }
@@ -74,9 +116,7 @@ async function main() {
       return;
     }
     // For form submissions (multipart/urlencoded), verify Origin/Referer is same-site
-    const origin = req.headers.origin || req.headers.referer || '';
-    const host = req.headers.host || '';
-    if (origin && (origin.includes(host) || origin.includes('localhost'))) {
+    if (isSameOriginRequest(req)) {
       next();
       return;
     }

@@ -5,7 +5,7 @@ const Sponsor = require('../entities/sponsor');
 const { resolve } = require('node:path');
 const { existsSync } = require('node:fs');
 const { google } = require('googleapis');
-const { getLoggedInUser } = require('../lib/helpers');
+const { getWebLoggedInUser } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
 
 const router = Router();
@@ -133,7 +133,7 @@ router.post('/', async (req, res) => {
 });
 
 router.delete('/:id', async (req, res) => {
-  const loggedInUser = await getLoggedInUser(req);
+  const loggedInUser = await getWebLoggedInUser(req);
 
   if (!loggedInUser) {
     return res.status(401).json({ error: 'Unauthorized' });

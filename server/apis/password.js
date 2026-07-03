@@ -1,8 +1,8 @@
 const { Router } = require('express');
 const User = require('../entities/user');
 const Otp = require('../entities/otp');
-const { getLoggedInUser } = require('../lib/helpers');
-const { comparePassword, encryptPassword } = require('../password');
+const { getWebLoggedInUser } = require('../lib/helpers');
+const { comparePassword, encryptPassword, isValidPassword } = require('../password');
 
 const router = Router();
 
@@ -16,7 +16,7 @@ router.put('/reset', async (req, res) => {
       return;
     }
 
-    if (!password || password.length < 6) {
+    if (!isValidPassword(password)) {
       res.status(400).send({ error: 'Invalid password' });
       return;
     }
@@ -36,7 +36,7 @@ router.put('/reset', async (req, res) => {
 
 router.put('/', async (req, res) => {
   try {
-    const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser) {
       res.status(401).send({ error: 'Not logged in' });
       return;
@@ -45,6 +45,11 @@ router.put('/', async (req, res) => {
     const { oldPassword, password } = req.body;
     if (!oldPassword || !password) {
       res.status(400).send({ error: 'Missing password' });
+      return;
+    }
+
+    if (!isValidPassword(password)) {
+      res.status(400).send({ error: 'Invalid password' });
       return;
     }
 

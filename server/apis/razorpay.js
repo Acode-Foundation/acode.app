@@ -8,7 +8,7 @@ const User = require('../entities/user');
 const RazorpayOrder = require('../entities/razorpayOrder');
 const AppConfig = require('../entities/appConfig');
 const Sponsor = require('../entities/sponsor');
-const { getLoggedInUser, parseDbTime, detectUserCurrency, formatAmount } = require('../lib/helpers');
+const { getLoggedInUser, getWebLoggedInUser, parseDbTime, detectUserCurrency, formatAmount } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
 const { REFUND_WINDOW_MS } = require('../../constants.mjs');
 const getRazorpay = require('../lib/razorpay');
@@ -45,7 +45,7 @@ function purchaseStateToStatus(state) {
  */
 router.post('/create-order', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Please log in to purchase plugins' });
       return;
@@ -236,7 +236,7 @@ router.post('/create-order', async (req, res) => {
  */
 router.post('/verify', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
@@ -353,7 +353,7 @@ router.post('/verify', async (req, res) => {
  */
 router.get('/check-ownership/:pluginId', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.send({ owned: false });
       return;
@@ -385,7 +385,7 @@ router.get('/check-ownership/:pluginId', async (req, res) => {
 router.get('/my-purchases{/:pluginId}', async (req, res) => {
   try {
     const { pluginId } = req.params;
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
@@ -457,7 +457,7 @@ router.get('/my-purchases{/:pluginId}', async (req, res) => {
  */
 router.get('/orders', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
@@ -614,7 +614,7 @@ router.get('/orders', async (req, res) => {
  */
 router.get('/orders/:orderId', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
@@ -958,7 +958,7 @@ router.post('/webhook', async (req, res) => {
  */
 router.get('/payment-status/:paymentId', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
@@ -1074,7 +1074,7 @@ router.get('/sponsor-prices', async (req, res) => {
  */
 router.post('/create-pro-order', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Please log in to purchase Acode Pro' });
       return;
@@ -1237,7 +1237,7 @@ router.post('/create-pro-order', async (req, res) => {
  */
 router.post('/verify-pro', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
@@ -1360,7 +1360,7 @@ router.post('/verify-pro', async (req, res) => {
  */
 router.post('/create-sponsor-order', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Please log in to sponsor Acode' });
       return;
@@ -1653,7 +1653,7 @@ router.post('/create-sponsor-order', async (req, res) => {
  */
 router.post('/verify-sponsor', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
@@ -1758,7 +1758,7 @@ router.post('/verify-sponsor', async (req, res) => {
  */
 router.post('/refund-pro', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
@@ -1850,7 +1850,7 @@ router.post('/refund-pro', async (req, res) => {
  */
 router.post('/refund-plugin', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
@@ -1981,7 +1981,7 @@ router.get('/currencies', (_req, res) => {
 
 router.post('/cancel-order', async (req, res) => {
   try {
-    const user = await getLoggedInUser(req);
+    const user = await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;

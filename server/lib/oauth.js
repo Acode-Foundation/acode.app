@@ -127,6 +127,7 @@ async function issueTokenAndLogin(userId, res) {
   res.cookie('token', token, {
     secure: true,
     httpOnly: true,
+    sameSite: 'lax',
     maxAge: 1000 * 60 * 60 * 24 * 30,
   });
 

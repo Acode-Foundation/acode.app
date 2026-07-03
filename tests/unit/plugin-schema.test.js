@@ -1,6 +1,6 @@
 const path = require('node:path');
 const fs = require('node:fs');
-const { getMatchingModeEntries, getModePluginIds, isValidPrice, matchScore } = require('../../server/apis/plugin');
+const { getMatchingModeEntries, getModePluginIds, isValidPrice, isVersionGreater, matchScore } = require('../../server/apis/plugin');
 const { validateModeRegex } = require('../../server/lib/modeRegex');
 
 describe('plugin schema', () => {
@@ -27,6 +27,19 @@ describe('isValidPrice', () => {
 
   it('rejects values above MAX_PRICE', () => {
     expect(isValidPrice(10001)).toBe(false);
+  });
+});
+
+describe('isVersionGreater', () => {
+  it('only treats newer semantic versions as updates', () => {
+    expect(isVersionGreater('1.1.2', '1.1.1')).toBe(true);
+    expect(isVersionGreater('1.2.0', '1.1.9')).toBe(true);
+    expect(isVersionGreater('2.0.0', '1.9.9')).toBe(true);
+  });
+
+  it('does not treat equal or older semantic versions as updates', () => {
+    expect(isVersionGreater('1.1.1', '1.1.1')).toBe(false);
+    expect(isVersionGreater('1.0.0', '1.1.1')).toBe(false);
   });
 });
 

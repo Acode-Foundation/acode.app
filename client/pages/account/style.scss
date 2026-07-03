@@ -89,15 +89,26 @@
     fieldset {
       display: flex;
       gap: 12px;
+      align-items: flex-start;
       border: none;
       padding: 0;
       margin: 0;
 
-      .input-wrapper {
+      .custom-input {
+        margin-bottom: 0;
+
         &:first-child {
           flex: 1;
+          min-width: 0;
         }
       }
+    }
+
+    .otp-send-action {
+      display: inline-block;
+      min-height: 20px;
+      margin: 6px 0 0;
+      font-size: 0.9rem;
     }
   }
 

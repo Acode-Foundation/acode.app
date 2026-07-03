@@ -8,6 +8,7 @@ import './style.scss';
  * @param {string} [props.className]
  * @param {(any)=>void} props.onloadend
  * @param {(any)=>void} props.onerror
+ * @param {(formData: FormData, form: HTMLFormElement)=>boolean|void|Promise<boolean|void>} props.onbeforesubmit
  * @param {()=>void} props.loading
  * @param {()=>void} props.loadingEnd
  * @param {string} props.contentType
@@ -15,7 +16,7 @@ import './style.scss';
  * @returns
  */
 export default function AjaxForm(
-  { ref, className, onloadend, onerror, loading, loadingEnd, autofill = true, method, action, encoding, contentType },
+  { ref, className, onloadend, onerror, onbeforesubmit, loading, loadingEnd, autofill = true, method, action, encoding, contentType },
   children,
 ) {
   const actionUrl = typeof action === 'function' ? '#' : action;
@@ -29,6 +30,15 @@ export default function AjaxForm(
     event.preventDefault();
 
     const formData = new FormData(form);
+
+    try {
+      const shouldSubmit = await onbeforesubmit?.(formData, form);
+      if (shouldSubmit === false) return;
+    } catch (error) {
+      onerror?.(error);
+      return;
+    }
+
     let body = formData;
     const jsonData = {};
 
