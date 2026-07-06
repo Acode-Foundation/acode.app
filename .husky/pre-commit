@@ -1,1 +1,43 @@
-npx biome check
+#!/bin/sh
+set -e
+
+case "$(uname -s):$(uname -m)" in
+  Darwin:arm64)
+    candidates="./node_modules/@biomejs/cli-darwin-arm64/biome"
+    ;;
+  Darwin:x86_64)
+    candidates="./node_modules/@biomejs/cli-darwin-x64/biome"
+    ;;
+  Linux:aarch64 | Linux:arm64)
+    candidates="./node_modules/@biomejs/cli-linux-arm64/biome ./node_modules/@biomejs/cli-linux-arm64-musl/biome"
+    ;;
+  Linux:x86_64)
+    candidates="./node_modules/@biomejs/cli-linux-x64/biome ./node_modules/@biomejs/cli-linux-x64-musl/biome"
+    ;;
+  MINGW*:ARM64 | MSYS*:ARM64 | CYGWIN*:ARM64)
+    candidates="./node_modules/@biomejs/cli-win32-arm64/biome.exe"
+    ;;
+  MINGW*:x86_64 | MSYS*:x86_64 | CYGWIN*:x86_64)
+    candidates="./node_modules/@biomejs/cli-win32-x64/biome.exe"
+    ;;
+  *)
+    candidates=""
+    ;;
+esac
+
+for biome_bin in $candidates; do
+  if [ -x "$biome_bin" ]; then
+    exec "$biome_bin" check
+  fi
+done
+
+if command -v biome >/dev/null 2>&1; then
+  exec biome check
+fi
+
+if [ -x ./node_modules/.bin/biome ]; then
+  exec ./node_modules/.bin/biome check
+fi
+
+echo "Unable to find a local Biome binary. Run npm install before committing." >&2
+exit 127

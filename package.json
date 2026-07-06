@@ -6,12 +6,12 @@
   "author": "Ajit Kumar",
   "license": "MIT",
   "engines": {
-    "node": ">= 20.16.1"
+    "node": "^22.18.0 || >=24.11.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.28.0",
-    "@babel/plugin-transform-runtime": "^7.28.0",
-    "@babel/preset-env": "^7.28.0",
+    "@babel/core": "^8.0.1",
+    "@babel/plugin-transform-runtime": "^8.0.1",
+    "@babel/preset-env": "^8.0.2",
     "@biomejs/biome": "^2.1.4",
     "autoprefixer": "^10.4.21",
     "babel-loader": "^10.0.0",
@@ -35,7 +35,7 @@
     "webpack-cli": "^7.0.3"
   },
   "dependencies": {
-    "@babel/runtime": "^7.29.2",
+    "@babel/runtime": "^8.0.0",
     "@google-cloud/storage": "^7.16.0",
     "autosize": "^6.0.1",
     "better-sqlite3": "^12.6.2",

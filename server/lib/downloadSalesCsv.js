@@ -44,7 +44,7 @@ async function downloadSalesReportCsv(year, month, type = 'sales', dir = default
   const fileName = `${type}-${year}-${month}.csv`;
   const file = path.join(dir, fileName);
   if (!fileSystem.existsSync(dir)) {
-    fileSystem.mkdirSync(dir);
+    fileSystem.mkdirSync(dir, { recursive: true });
   }
 
   fileSystem.writeFileSync(file, csv);

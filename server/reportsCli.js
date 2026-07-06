@@ -1,7 +1,12 @@
 /* eslint-disable no-console */
+const path = require('node:path');
+const os = require('node:os');
 const downloadGrCsv = require('./lib/downloadSalesCsv');
 
 const args = process.argv.slice(2);
+const documentsDirectory = `${os.homedir()}/Documents`;
+const defaultReportsDirectory = path.resolve(documentsDirectory, 'Acode-reports');
+const dateFolderMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 // Month name mappings (short and full)
 const monthNames = {
@@ -42,8 +47,16 @@ function parseMonth(input) {
   return null;
 }
 
-// Show help if -h or --help is passed
-if (args.includes('-h') || args.includes('--help')) {
+function formatDateFolderName(date = new Date()) {
+  const monthName = dateFolderMonths[date.getMonth()];
+  return `${date.getDate()}-${monthName}-${date.getFullYear()}`;
+}
+
+function getReportsOutputDirectory(date = new Date(), reportsDirectory = defaultReportsDirectory) {
+  return path.join(reportsDirectory, formatDateFolderName(date));
+}
+
+function showHelp() {
   console.log(`
 Reports CLI - Download sales or earnings reports
 
@@ -58,6 +71,10 @@ ARGUMENTS:
 OPTIONS:
   -h, --help    Show this help message
 
+OUTPUT:
+  Reports are saved inside a folder for the current date under:
+  ${defaultReportsDirectory}
+
 MONTH NAMES:
   Short: jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec
   Full:  january, february, march, april, may, june, july,
@@ -69,32 +86,55 @@ EXAMPLES:
   node reportsCli.js 01 2025            # Same as above (using number)
   node reportsCli.js dec 2025 earnings  # Download earnings report for December 2025
 `);
-  process.exit(0);
 }
 
-const monthInput = args[0];
-const year = args[1];
-const type = args[2] || 'sales';
+function run(args) {
+  // Show help if -h or --help is passed
+  if (args.includes('-h') || args.includes('--help')) {
+    showHelp();
+    return Promise.resolve();
+  }
 
-if (!monthInput || !year) {
-  console.error('Usage: node reportsCli.js <month> <year> [type]');
-  console.error('Run with -h or --help for more information.');
-  process.exit(1);
-}
+  const monthInput = args[0];
+  const year = args[1];
+  const type = args[2] || 'sales';
 
-const month = parseMonth(monthInput);
-if (!month) {
-  console.error(`Invalid month: "${monthInput}"`);
-  console.error('Use a number (1-12) or name (jan, january, feb, february, etc.)');
-  process.exit(1);
-}
+  if (!monthInput || !year) {
+    console.error('Usage: node reportsCli.js <month> <year> [type]');
+    console.error('Run with -h or --help for more information.');
+    process.exitCode = 1;
+    return Promise.resolve();
+  }
 
-downloadGrCsv(Number(year), month, type)
-  .then((filePath) => {
+  const month = parseMonth(monthInput);
+  if (!month) {
+    console.error(`Invalid month: "${monthInput}"`);
+    console.error('Use a number (1-12) or name (jan, january, feb, february, etc.)');
+    process.exitCode = 1;
+    return Promise.resolve();
+  }
+
+  const outputDirectory = getReportsOutputDirectory();
+
+  return downloadGrCsv(Number(year), month, type, outputDirectory).then((filePath) => {
     console.log(`Report downloaded to ${filePath}`);
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
   });
+}
+
+if (require.main === module) {
+  run(args)
+    .then(() => {
+      process.exit(process.exitCode || 0);
+    })
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
+}
+
+module.exports = {
+  formatDateFolderName,
+  getReportsOutputDirectory,
+  parseMonth,
+  run,
+};
