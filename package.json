@@ -69,6 +69,7 @@
     "start": "node ./server/main",
     "sitemap": "npx --yes -p puppeteer@latest node dev/generate-sitemap.js",
     "reports": "node ./server/reportsCli",
+    "repair:razorpay-earnings": "node ./scripts/repair-razorpay-earnings.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.mjs"

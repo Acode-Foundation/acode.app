@@ -3,6 +3,7 @@ const Plugin = require('../entities/plugin');
 const Download = require('../entities/download');
 const UserEarnings = require('../entities/userEarnings');
 const PurchaseOrder = require('../entities/purchaseOrder');
+const RazorpayOrder = require('../entities/razorpayOrder');
 
 /**
  * Calculate earnings from paid plugins
@@ -20,6 +21,23 @@ async function fromPaidPlugins(year, month, user, report) {
     [PurchaseOrder.CREATED_AT, [monthStart, monthEnd], 'BETWEEN'],
   ]);
 
+  const razorpayOrderIds = orders
+    .filter(({ provider, order_id: orderId }) => provider === PurchaseOrder.PROVIDER_RAZORPAY && orderId)
+    .map(({ order_id: orderId }) => orderId);
+  const razorpayAmountsInr = new Map();
+  if (razorpayOrderIds.length) {
+    const razorpayOrders = await RazorpayOrder.for('internal').get(
+      [RazorpayOrder.RAZORPAY_ORDER_ID, RazorpayOrder.AMOUNT_INR],
+      [RazorpayOrder.RAZORPAY_ORDER_ID, razorpayOrderIds, 'IN'],
+    );
+    for (const order of razorpayOrders) {
+      const amountInr = Number(order.amount_inr);
+      if (Number.isFinite(amountInr) && amountInr > 0) {
+        razorpayAmountsInr.set(String(order.razorpay_order_id), amountInr);
+      }
+    }
+  }
+
   const amounts = await Promise.all(
     orders.map(async ({ id: rowId, order_id: orderId, amount, state, provider }) => {
       state = Number.parseInt(state, 10);
@@ -28,8 +46,11 @@ async function fromPaidPlugins(year, month, user, report) {
       }
 
       try {
-        if (provider === 'razorpay') {
-          return amount * 0.7;
+        if (provider === PurchaseOrder.PROVIDER_RAZORPAY) {
+          // Keep purchase_order in the buyer's charged currency. Developer
+          // earnings use the immutable INR value captured when the order was created.
+          const accountingAmount = razorpayAmountsInr.get(String(orderId)) ?? amount;
+          return accountingAmount * 0.7;
         }
 
         if (report) {
