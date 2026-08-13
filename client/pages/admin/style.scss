@@ -125,6 +125,17 @@
       height: 280px;
       min-height: 0;
 
+      &.chart-container--error {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .chart-error {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.85em;
+      }
+
       &.chart-container--small {
         height: 230px;
       }
