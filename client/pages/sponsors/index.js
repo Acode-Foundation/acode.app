@@ -1,18 +1,22 @@
 import './style.scss';
+import { fetchSponsorMix } from 'lib/sponsors';
 import getSponsorTiers, { TIER_ORDER } from 'lib/sponsorTiers';
 
 export default async function Sponsors() {
   const sponsors = await fetchSponsors();
   const { tiers } = await getSponsorTiers();
+  const allSponsorsExpired = sponsors.length > 0 && sponsors.every((sponsor) => sponsor.expired);
 
   return (
     <section id='sponsors-page'>
       <div className='sponsors-hero'>
         <h1>
-          Our <span className='highlight'>Sponsors</span>
+          {allSponsorsExpired ? 'Previous ' : 'Our '}
+          <span className='highlight'>Sponsors</span>
         </h1>
         <p className='subtitle'>
-          These amazing people and companies support <span className='highlight'>Acode</span>.
+          {allSponsorsExpired ? 'These people and companies previously supported ' : 'These amazing people and companies support '}
+          <span className='highlight'>Acode</span>.
         </p>
       </div>
 
@@ -50,7 +54,7 @@ export default async function Sponsors() {
 }
 
 function renderSponsorCard(sponsor) {
-  const { id, name, tier, tagline, website, image } = sponsor;
+  const { id, name, tier, tagline, website, image, expired } = sponsor;
   const initials = name
     .split(/\s+/)
     .map((w) => w[0])
@@ -62,7 +66,8 @@ function renderSponsorCard(sponsor) {
   const hasWebsite = ['silver', 'gold', 'platinum', 'titanium'].includes(tier);
 
   return (
-    <div key={id} className={`sponsor-card sponsor-card-${tier}`}>
+    <div key={id} className={`sponsor-card sponsor-card-${tier}${expired ? ' sponsor-card-expired' : ''}`}>
+      {expired && <span className='previous-sponsor-badge'>Previous</span>}
       {hasImage && (
         <div className='sponsor-avatar'>
           {image ? <img src={`/sponsor/image/${image}`} alt={name} loading='lazy' /> : <span className='avatar-fallback'>{initials}</span>}
@@ -88,12 +93,7 @@ function renderSponsorCard(sponsor) {
 }
 
 async function fetchSponsors() {
-  try {
-    const res = await fetch('/api/sponsors');
-    return await res.json();
-  } catch {
-    return [];
-  }
+  return fetchSponsorMix({ expiredLimit: 12 });
 }
 
 function ensureAbsoluteUrl(url) {

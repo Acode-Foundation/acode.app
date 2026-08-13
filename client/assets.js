@@ -9,7 +9,6 @@ import 'res/animated_icons/thumbs-up.gif';
 import 'res/animated_icons/reviews.gif';
 import 'res/logo-512.png';
 import 'res/manifest.json';
-import 'res/og-image.png';
 import 'res/fonts/CascadiaCode.ttf';
 import 'res/fonts/CourierNew-Regular.woff2';
 import 'res/fonts/JetBrainsMono-Bold.ttf';

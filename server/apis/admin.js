@@ -16,6 +16,9 @@ const Sponsor = require('../entities/sponsor');
 const downloadSalesReportCsv = require('../lib/downloadSalesCsv');
 const sendEmail = require('../lib/sendEmail');
 const { validateModeRegex } = require('../lib/modeRegex');
+const { createDashboardAnalytics, createDashboardStats } = require('../lib/adminDashboardContract');
+const { getAdminExchangeRateResponse } = require('../lib/adminExchangeRate');
+const { getPluginSalesInr } = require('../lib/adminDashboardMetrics');
 
 const router = Router();
 
@@ -33,15 +36,14 @@ router.get('/', async (_req, res) => {
   const users = await User.count();
   const plugins = await plugin.count();
   const [{ total: pluginDownloads }] = await plugin.get(['SUM(downloads) as total'], []);
-  const [{ total: pluginSales }] = await purchaseOrder.get(['SUM(amount) as total'], []);
+  const { total: pluginSales } = await getPluginSalesInr();
   const [{ total: amountPaid }] = await Payment.get(['SUM(amount) as total'], [Payment.STATUS, Payment.STATUS_PAID]);
-  res.send({
-    users,
-    plugins,
-    amountPaid,
-    pluginSales,
-    pluginDownloads,
-  });
+  res.send(createDashboardStats({ users, plugins, amountPaid, pluginSales, pluginDownloads }));
+});
+
+router.get('/exchange-rate/usd', async (_req, res) => {
+  const response = await getAdminExchangeRateResponse('USD');
+  res.status(response.status).send(response.body);
 });
 
 router.get('/analytics', async (_req, res) => {
@@ -151,14 +153,7 @@ router.get('/analytics', async (_req, res) => {
       return { provider, status, count };
     });
 
-    res.send({
-      monthlyRevenue,
-      monthlyPayments,
-      paymentStatus,
-      editorDistribution,
-      topDevelopers,
-      providerStatus,
-    });
+    res.send(createDashboardAnalytics({ monthlyRevenue, monthlyPayments, paymentStatus, editorDistribution, topDevelopers, providerStatus }));
   } catch (err) {
     res.status(500).send({ error: err.message });
   }

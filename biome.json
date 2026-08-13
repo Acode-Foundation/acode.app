@@ -88,7 +88,7 @@
       }
     },
     {
-      "includes": ["**/server/**", "**/webpack.config.js", "**/cron-jobs/**", "**/dev/**", "**/postcss.config.js"],
+      "includes": ["**/server/**", "**/shared/**", "**/webpack.config.js", "**/cron-jobs/**", "**/dev/**", "**/postcss.config.js"],
       "linter": {
         "rules": {
           "nursery": {},

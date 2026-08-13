@@ -7,6 +7,7 @@ const { existsSync } = require('node:fs');
 const { google } = require('googleapis');
 const { getWebLoggedInUser } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
+const { getSponsorQueryOptions, getSponsorScope, getSponsorWhereClause } = require('../lib/sponsorScope');
 
 const router = Router();
 const androidpublisher = google.androidpublisher('v3');
@@ -17,11 +18,11 @@ router.get('/{:top}', async (req, res) => {
   let limit;
   const param = req.params.top;
   const isTop = param === 'top';
-  const whereClause = [
-    [Sponsor.STATUS, Sponsor.STATE_PURCHASED],
-    [Sponsor.PUBLIC, 1],
-    [Sponsor.EXPIRES_AT, new Date().toISOString(), '>'],
-  ];
+  const scope = param ? 'active' : getSponsorScope(req.query.scope);
+  if (!scope) {
+    return res.status(400).json({ error: 'Invalid sponsor scope' });
+  }
+  const whereClause = getSponsorWhereClause(Sponsor, scope);
 
   if (!param) {
     page = req.query.page;
@@ -38,7 +39,8 @@ router.get('/{:top}', async (req, res) => {
     return res.status(404).json({ error: 'Not found' });
   }
 
-  const rows = await Sponsor.get(Sponsor.safeColumns, whereClause, { page, limit });
+  const options = getSponsorQueryOptions(Sponsor, scope, { page, limit });
+  const rows = await Sponsor.get(Sponsor.safeColumns, whereClause, options);
 
   if (isTop) {
     if (!rows.length) {
