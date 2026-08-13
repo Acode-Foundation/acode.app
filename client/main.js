@@ -6,6 +6,7 @@ import './common.scss';
 import 'res/icons/style.css';
 
 import { getLoggedInUser, hideLoading, invalidateLoggedInUser, showLoading } from 'lib/helpers';
+import { applyRouteMetadata } from 'lib/pageMetadata';
 import Router from 'lib/Router';
 import Theme from 'lib/theme';
 import dark from 'themes/dark';
@@ -88,6 +89,8 @@ window.onload = async () => {
     main.content = <div className='error'>Cannot get '{window.location.pathname}'</div>;
   });
 
+  applyRouteMetadata(window.location.pathname);
+  Router.on('navigate', () => applyRouteMetadata(window.location.pathname));
   Router.listen();
 
   Router.on('navigate', () => {

@@ -1,0 +1,48 @@
+{
+  "fallback": {
+    "title": "Acode — Code Editor with Linux Terminal & AI Coding",
+    "description": "Acode is a code editor with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Build with Node.js, React, Next.js, Python, Git, and 250+ plugins. Open source with 3.6M+ downloads."
+  },
+  "routes": {
+    "/": {
+      "title": "Acode — Code Editor with Linux Terminal & AI Coding",
+      "description": "Acode is a code editor with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Build with Node.js, React, Next.js, Python, Git, and 250+ plugins. Open source with 3.6M+ downloads."
+    },
+    "/plugins": {
+      "title": "Acode Plugins — {{count}} Community Extensions",
+      "description": "Browse {{count}} community plugins for Acode. Find language support, themes, AI assistants, build tools, and more."
+    },
+    "/faqs": {
+      "title": "Frequently Asked Questions — Acode Code Editor",
+      "description": "Find answers about Acode, including AI coding, Linux terminal setup, web development, Git, SSH, plugins, and pricing."
+    },
+    "/sponsors": {
+      "title": "Sponsors — Support Acode Development",
+      "description": "Meet the people and companies supporting Acode, the open-source Android code editor with Linux terminal and AI coding capabilities."
+    },
+    "/pro": {
+      "title": "Acode Pro — Premium Code Editor Features",
+      "description": "Unlock premium features in Acode, the Android code editor with a Linux terminal and AI coding support."
+    },
+    "/policy": {
+      "title": "Privacy Policy — Acode Code Editor",
+      "description": "Read the privacy policy for Acode, the open-source Android code editor."
+    },
+    "/terms": {
+      "title": "Terms of Service — Acode Code Editor",
+      "description": "Read the terms of service for Acode, the open-source Android code editor."
+    },
+    "/refund": {
+      "title": "Refund Policy — Acode Code Editor",
+      "description": "Read the refund policy for Acode Pro and plugin purchases."
+    },
+    "/contact": {
+      "title": "Contact Us — Acode Code Editor",
+      "description": "Contact the Acode team for support, feedback, and business inquiries."
+    },
+    "/about": {
+      "title": "About Us — Acode Code Editor",
+      "description": "Learn about Acode and the team at Foxbiz Software building a powerful mobile development environment."
+    }
+  }
+}

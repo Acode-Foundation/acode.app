@@ -8,6 +8,7 @@ import Input from 'components/input';
 import Tabs from 'components/tabs';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
+import { convertInrToUsd, formatCompactNumber, formatCompactUsd, formatExactNumber, formatExactUsd } from 'lib/formatNumber';
 import { getLoggedInUser } from 'lib/helpers';
 import moment from 'moment';
 
@@ -386,9 +387,16 @@ function Dashboard() {
 
   (async () => {
     try {
-      const [statsRes, analyticsRes] = await Promise.all([fetch('api/admin/'), fetch('api/admin/analytics')]);
+      const [statsRes, analyticsRes, usdRateRes] = await Promise.all([
+        fetch('api/admin/'),
+        fetch('api/admin/analytics'),
+        fetch('api/admin/exchange-rate/usd').catch(() => null),
+      ]);
       const stats = await statsRes.json();
       const analytics = await analyticsRes.json();
+      const usdRateData = usdRateRes?.ok ? await usdRateRes.json() : null;
+      const usdRate = Number(usdRateData?.rate);
+      const validUsdRate = Number.isFinite(usdRate) && usdRate > 0 ? usdRate : null;
 
       const revenueCanvas = Ref();
       const paymentsCanvas = Ref();
@@ -399,10 +407,10 @@ function Dashboard() {
 
       ref.append(
         <div className='dashboard-grid'>
-          <Card title='Total Users' text={stats.users} />
-          <Card title='Amount Paid' text={stats.amountPaid || 0} />
-          <Card title='Plugin Sales' text={stats.pluginSales || 0} />
-          <Card title='Plugin Downloads' text={stats.pluginDownloads || 0} />
+          <Card title='Total Users' value={stats.users} />
+          <Card title='Amount Paid' value={stats.amountPaid || 0} currency={true} usdRate={validUsdRate} />
+          <Card title='Plugin Sales' value={stats.pluginSales || 0} currency={true} usdRate={validUsdRate} />
+          <Card title='Plugin Downloads' value={stats.pluginDownloads || 0} />
           <Card title='Download Report' icon='download' onclick={openReportDialog} />
         </div>,
         <div className='charts-grid'>
@@ -420,7 +428,7 @@ function Dashboard() {
           </div>
           <div className='chart-card'>
             <h3>Top Developers (INR)</h3>
-            <div className='chart-container'>
+            <div className='chart-container chart-container--tall'>
               <canvas ref={topDevCanvas} />
             </div>
           </div>
@@ -445,8 +453,8 @@ function Dashboard() {
         </div>,
       );
 
-      initChart(revenueCanvas, lineChartConfig(analytics.monthlyRevenue, 'Revenue (INR)', '#22c55e'));
-      initChart(paymentsCanvas, lineChartConfig(analytics.monthlyPayments, 'Payments (INR)', '#3b82f6'));
+      initChart(revenueCanvas, lineChartConfig(analytics.monthlyRevenue, 'Revenue (INR)', '#22c55e', true));
+      initChart(paymentsCanvas, lineChartConfig(analytics.monthlyPayments, 'Payments (INR)', '#3b82f6', true));
       initChart(topDevCanvas, horizontalBarChartConfig(analytics.topDevelopers, 'name', 'total'));
       initChart(providerStatusCanvas, providerStatusChartConfig(analytics.providerStatus));
       initChart(paymentStatusCanvas, doughnutChartConfig(analytics.paymentStatus, 'status', 'count'));
@@ -467,7 +475,7 @@ function initChart(canvasRef, config) {
   };
 }
 
-function lineChartConfig(rows, label, color = '#3b82f6') {
+function lineChartConfig(rows, label, color = '#3b82f6', currency = false) {
   const months = [];
   const now = new Date();
   for (let i = 11; i >= 0; i--) {
@@ -501,7 +509,7 @@ function lineChartConfig(rows, label, color = '#3b82f6') {
         },
       ],
     },
-    options: chartBaseOptions(),
+    options: chartBaseOptions({ currency }),
   };
 }
 
@@ -530,9 +538,15 @@ function doughnutChartConfig(rows, labelKey, valueKey) {
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { color: 'rgba(255,255,255,0.7)', padding: 16, font: { size: 12 } },
+          labels: chartLegendLabels(),
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.label}: ${formatExactNumber(context.raw)}`,
+          },
         },
       },
+      resizeDelay: 100,
     },
     plugins: [
       {
@@ -590,10 +604,21 @@ function horizontalBarChartConfig(rows, labelKey, valueKey) {
       maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${formatExactNumber(context.raw, { currency: true })}`,
+          },
+        },
       },
+      resizeDelay: 100,
       scales: {
         x: {
-          ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
+          ticks: {
+            color: 'rgba(255,255,255,0.5)',
+            font: { size: 11 },
+            callback: (value) => formatCompactNumber(value, { currency: true }),
+            maxTicksLimit: 6,
+          },
           grid: { color: 'rgba(255,255,255,0.06)' },
           beginAtZero: true,
         },
@@ -638,16 +663,27 @@ function providerStatusChartConfig(rows) {
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { color: 'rgba(255,255,255,0.7)', padding: 16, font: { size: 12 } },
+          labels: chartLegendLabels(),
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${formatExactNumber(context.raw)}`,
+          },
         },
       },
+      resizeDelay: 100,
       scales: {
         x: {
-          ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
+          ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 }, maxTicksLimit: 6 },
           grid: { color: 'rgba(255,255,255,0.06)' },
         },
         y: {
-          ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
+          ticks: {
+            color: 'rgba(255,255,255,0.5)',
+            font: { size: 11 },
+            callback: (value) => formatCompactNumber(value),
+            maxTicksLimit: 6,
+          },
           grid: { color: 'rgba(255,255,255,0.06)' },
           beginAtZero: true,
         },
@@ -671,7 +707,7 @@ function providerStatusChartConfig(rows) {
               const value = ds.data[i];
               if (!value) continue;
               const { x, y } = meta.data[i];
-              ctx.fillText(value, x, y - 2);
+              ctx.fillText(formatCompactNumber(value), x, y - 2);
             }
           }
           ctx.shadowBlur = 0;
@@ -682,24 +718,46 @@ function providerStatusChartConfig(rows) {
   };
 }
 
-function chartBaseOptions() {
+function chartBaseOptions({ currency = false } = {}) {
   return {
     responsive: true,
     maintainAspectRatio: false,
+    resizeDelay: 100,
     plugins: {
       legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (context) => `${context.dataset.label}: ${formatExactNumber(context.raw, { currency })}`,
+        },
+      },
     },
     scales: {
       x: {
-        ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
+        ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 }, maxTicksLimit: 6, autoSkip: true },
         grid: { color: 'rgba(255,255,255,0.06)' },
       },
       y: {
-        ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
+        ticks: {
+          color: 'rgba(255,255,255,0.5)',
+          font: { size: 11 },
+          callback: (value) => formatCompactNumber(value, { currency }),
+          maxTicksLimit: 6,
+        },
         grid: { color: 'rgba(255,255,255,0.06)' },
         beginAtZero: true,
       },
     },
+  };
+}
+
+function chartLegendLabels() {
+  const compact = window.matchMedia('(max-width: 420px)').matches;
+  return {
+    color: 'rgba(255,255,255,0.7)',
+    padding: compact ? 8 : 14,
+    font: { size: compact ? 10 : 12 },
+    boxWidth: compact ? 10 : 14,
+    boxHeight: compact ? 10 : 14,
   };
 }
 
@@ -771,14 +829,29 @@ function openReportDialog() {
  * Card component to display title and content
  * @param {object} props
  * @param {string} props.title
- * @param {string} [props.text]
+ * @param {number|string} [props.value]
+ * @param {boolean} [props.currency]
+ * @param {number|null} [props.usdRate]
  * @param {string} [props.icon]
  * @param {()=>{}} [props.onclick]
  */
-function Card({ title, text, icon, onclick }) {
+function Card({ title, value, currency = false, usdRate = null, icon, onclick }) {
+  const compactValue = formatCompactNumber(value, { currency });
+  const exactValue = formatExactNumber(value, { currency });
+  const usdValue = currency ? convertInrToUsd(value, usdRate) : null;
+  const compactUsdValue = usdValue === null ? null : formatCompactUsd(usdValue);
+  const exactUsdValue = usdValue === null ? null : formatExactUsd(usdValue);
+  const tooltip = exactUsdValue ? `${title}: ${exactValue} (≈ ${exactUsdValue} USD)` : `${title}: ${exactValue}`;
   return (
     <div className='card' onclick={onclick}>
-      {icon ? <span className={`content icon ${icon}`} /> : <span className='content'>{text?.toLocaleString()}</span>}
+      {icon ? (
+        <span className={`content icon ${icon}`} />
+      ) : (
+        <span className='content card-values' title={tooltip}>
+          <span className='primary-value'>{compactValue}</span>
+          {compactUsdValue && <span className='secondary-currency'>≈ {compactUsdValue}</span>}
+        </span>
+      )}
       <span className='title'>{title}</span>
     </div>
   );

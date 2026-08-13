@@ -16,6 +16,7 @@ import YearSelect from 'components/YearSelect';
 import hilightjs from 'highlight.js';
 import Ref from 'html-tag-js/ref';
 import { calcRating, getLoggedInUser, gravatar, hideLoading, showLoading, since } from 'lib/helpers';
+import { applyPluginMetadata } from 'lib/pageMetadata';
 import Router from 'lib/Router';
 import { marked } from 'marked';
 import moment from 'moment/moment';
@@ -55,6 +56,8 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     author_verified: authorVerified,
     supported_editor: supportedEditor,
   } = plugin;
+
+  applyPluginMetadata(plugin);
 
   const user = await getLoggedInUser();
   const userComment = await getUserComment(pluginId);
@@ -341,6 +344,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
           defaultActive={section}
           onChange={(tabId) => {
             Router.setUrl(`/plugin/${pluginId}/${tabId}`);
+            applyPluginMetadata(plugin);
           }}
           tabs={[
             { id: 'description', label: 'Description', content: $description },

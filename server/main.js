@@ -2,13 +2,14 @@
 require('dotenv').config();
 
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const path = require('node:path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const fileUpload = require('express-fileupload');
 const Handlebars = require('handlebars');
-const markdownToText = require('markdown-to-txt');
 const defaultOg = require('./defaultOg.json');
+const { pluginRevision } = require('../shared/ogImage.json');
 const { getMetadata, getPluginsMetadata, getFaqsMetadata, FALLBACK_TITLE } = require('./routeMetadata');
 const Plugin = require('./entities/plugin');
 const { getLoggedInUser } = require('./lib/helpers');
@@ -16,6 +17,8 @@ const apis = require('./routes/apis');
 const oauth = require('./apis/oauth');
 const setAuth = require('./lib/gapis');
 const migrationRunner = require('./lib/migrationRunner');
+const { renderDefaultOgImage, renderPluginOgImage } = require('./lib/ogImage');
+const { createMetadataContext, createPluginDescription, getPublicOrigin, localizeStructuredData, publicUrl } = require('./lib/publicMetadata');
 
 const app = express();
 
@@ -24,6 +27,9 @@ const PORT = process.env.PORT || 3000;
 const ALLOWED_ORIGINS = new Set(['https://localhost', 'https://acode.app']);
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const LEGACY_NATIVE_CSRF_EXEMPT_PATHS = new Set(['/api/plugin/order', '/api/plugin/refund', '/api/sponsor', '/api/login']);
+const PLUGIN_ICONS = path.resolve(__dirname, '../data/icons');
+const OG_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
+const PUBLIC_ORIGIN = getPublicOrigin();
 
 function isSameOriginRequest(req) {
   const host = req.headers.host;
@@ -82,7 +88,10 @@ async function main() {
 
   // Inject Link headers for AI crawler and sitemap discovery
   app.use((_req, res, next) => {
-    res.setHeader('Link', ['<https://acode.app/llms.txt>; rel="llms.txt"', '<https://acode.app/sitemap.xml>; rel="sitemap"'].join(', '));
+    res.setHeader(
+      'Link',
+      [`<${publicUrl('/llms.txt', PUBLIC_ORIGIN)}>; rel="llms.txt"`, `<${publicUrl('/sitemap.xml', PUBLIC_ORIGIN)}>; rel="sitemap"`].join(', '),
+    );
     next();
   });
 
@@ -155,6 +164,55 @@ async function main() {
   app.get('/llms.txt', (_req, res) => {
     res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
     res.sendFile('llms.txt', { root: process.cwd() });
+  });
+
+  app.get('/og/default.png', async (req, res, next) => {
+    try {
+      const etag = createEtag('acode-default-og-v1');
+      if (req.headers['if-none-match'] === etag) {
+        res.status(304).end();
+        return;
+      }
+      const image = await renderDefaultOgImage();
+      sendOgImage(res, image, etag);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/og/plugin/:id.png', async (req, res, next) => {
+    try {
+      const id = req.params.id;
+      const [plugin] = await Plugin.for('internal').get(
+        [Plugin.ID, Plugin.NAME, Plugin.AUTHOR, Plugin.STATUS, Plugin.UPDATED_AT, Plugin.PACKAGE_UPDATED_AT],
+        [
+          [Plugin.ID, id],
+          [Plugin.STATUS, Plugin.STATUS_APPROVED],
+        ],
+      );
+      if (!plugin) {
+        res.status(404).send({ error: 'Plugin not found' });
+        return;
+      }
+
+      const version = plugin.package_updated_at || plugin.updated_at || 'latest';
+      const etag = createEtag(`plugin-og:${pluginRevision}:${plugin.id}:${plugin.name}:${plugin.author}:${version}`);
+      if (req.headers['if-none-match'] === etag) {
+        res.status(304).end();
+        return;
+      }
+
+      const image = await renderPluginOgImage({
+        id: plugin.id,
+        name: plugin.name,
+        author: plugin.author,
+        iconPath: getPluginIconPath(plugin.id),
+        version,
+      });
+      sendOgImage(res, image, etag);
+    } catch (error) {
+      next(error);
+    }
   });
 
   app.use('/api', apis);
@@ -250,7 +308,7 @@ async function main() {
     res.status(404).send({ error: 'Plugin not found' });
   });
 
-  app.get('/plugin/:id', async (req, res, next) => {
+  app.get(['/plugin/:id', '/plugin/:id/:section'], async (req, res, next) => {
     try {
       const [plugin] = await Plugin.get([Plugin.ID, req.params.id]);
       if (!plugin) {
@@ -274,18 +332,21 @@ async function main() {
       const template = path.resolve(__dirname, './index.hbs');
       const source = fs.readFileSync(template, 'utf8');
       const templateScript = Handlebars.compile(source);
-      const pageDesc = markdownToText.default(plugin.description);
+      const canonicalPath = `/plugin/${plugin.id}`;
+      const pageDesc = createPluginDescription(plugin.description, `${plugin.name} is a plugin for Acode.`);
+      const imagePath =
+        plugin.status === Plugin.STATUS_APPROVED
+          ? `/og/plugin/${encodeURIComponent(plugin.id)}.png?v=${encodeURIComponent(plugin.package_updated_at || plugin.updated_at || plugin.version || 'latest')}&r=${pluginRevision}`
+          : defaultOg.image_path;
 
       res.header('Content-Type', 'text/html;charset=utf-8');
       res.send(
         templateScript({
-          title: `${plugin.name} - Acode`,
+          ...createMetadataContext(defaultOg, { canonicalPath, imagePath, origin: PUBLIC_ORIGIN }),
+          title: `${plugin.name} — Acode Plugin`,
           description: pageDesc,
-          icon: `plugin-icon/${plugin.id}`,
-          ogUrl: `plugin/${plugin.id}`,
-          canonicalPath: `/plugin/${plugin.id}`,
-          icon_alt: `${plugin.name} icon`,
-          site_name: `Acode - ${plugin.name}`,
+          image_alt: `${plugin.name} plugin for Acode`,
+          site_name: 'Acode',
           robots: 'index, follow',
           pageSchema: safeSchema(
             JSON.stringify({
@@ -295,7 +356,7 @@ async function main() {
               applicationCategory: 'DeveloperApplication',
               operatingSystem: 'Android',
               description: pageDesc,
-              url: `https://acode.app/plugin/${plugin.id}`,
+              url: publicUrl(canonicalPath, PUBLIC_ORIGIN),
             }),
           ),
           orgSchema: null,
@@ -339,12 +400,14 @@ async function main() {
       const landingTemplate = path.resolve(__dirname, './landing.hbs');
       const source = fs.readFileSync(landingTemplate, 'utf8');
       const templateScript = Handlebars.compile(source);
+      const canonicalPath = `/${landingPath}`;
 
       res.header('Content-Type', 'text/html;charset=utf-8');
       res.send(
         templateScript({
+          ...createMetadataContext(defaultOg, { canonicalPath, origin: PUBLIC_ORIGIN }),
           ...pageData,
-          canonicalPath: `/${landingPath}`,
+          pageSchema: pageData.pageSchema ? safeSchema(localizeStructuredData(pageData.pageSchema, PUBLIC_ORIGIN)) : null,
         }),
       );
     });
@@ -362,13 +425,10 @@ async function main() {
     res.header('Content-Type', 'text/html;charset=utf-8');
     res.send(
       templateScript({
-        ...defaultOg,
+        ...createMetadataContext(defaultOg, { canonicalPath: '/plugins', origin: PUBLIC_ORIGIN }),
         title: pluginsMeta.title,
         description: pluginsMeta.description,
-        icon: metadata?.icon || defaultOg.icon,
-        icon_alt: pluginsMeta.title,
-        ogUrl: 'plugins',
-        canonicalPath: '/plugins',
+        image_alt: pluginsMeta.title,
         robots: 'index, follow',
         pageSchema: metadata?.schema ? safeSchema(JSON.stringify(metadata.schema)) : null,
         orgSchema: null,
@@ -387,11 +447,9 @@ async function main() {
     res.header('Content-Type', 'text/html;charset=utf-8');
     res.send(
       templateScript({
-        ...defaultOg,
+        ...createMetadataContext(defaultOg, { canonicalPath: '/faqs', origin: PUBLIC_ORIGIN }),
         title: faqMeta.title,
         description: faqMeta.description,
-        ogUrl: 'faqs',
-        canonicalPath: '/faqs',
         robots: 'index, follow',
         pageSchema: faqMeta.schema ? safeSchema(JSON.stringify(faqMeta.schema)) : null,
         orgSchema: null,
@@ -404,25 +462,20 @@ async function main() {
     const source = fs.readFileSync(template, 'utf8');
     const templateScript = Handlebars.compile(source);
 
-    const metadata = getMetadata(req.path);
+    const metadata = getMetadata(req.path, PUBLIC_ORIGIN);
     const context = metadata
       ? {
-          ...defaultOg,
+          ...createMetadataContext(defaultOg, { canonicalPath: req.path, origin: PUBLIC_ORIGIN }),
           title: metadata.title,
           description: metadata.description,
-          icon: metadata.icon || defaultOg.icon,
-          icon_alt: metadata.iconAlt || metadata.title || defaultOg.icon_alt,
-          ogUrl: req.path.replace(/^\//, ''),
-          canonicalPath: req.path,
+          image_alt: metadata.iconAlt || metadata.title || defaultOg.image_alt,
           robots: 'index, follow',
           pageSchema: metadata.schema ? safeSchema(JSON.stringify(metadata.schema)) : null,
           orgSchema: metadata.orgSchema ? JSON.stringify(metadata.orgSchema) : null,
         }
       : {
-          ...defaultOg,
+          ...createMetadataContext(defaultOg, { canonicalPath: req.path, origin: PUBLIC_ORIGIN }),
           title: FALLBACK_TITLE,
-          ogUrl: req.path.replace(/^\//, ''),
-          canonicalPath: req.path,
           robots: 'index, follow',
           orgSchema: null,
           pageSchema: null,
@@ -460,6 +513,24 @@ async function start() {
 function safeSchema(jsonString) {
   if (!jsonString) return null;
   return jsonString.replace(/<\//g, '<\\/');
+}
+
+function createEtag(value) {
+  return `"${crypto.createHash('sha256').update(value).digest('base64url')}"`;
+}
+
+function getPluginIconPath(id) {
+  const iconPath = path.resolve(PLUGIN_ICONS, `${id}.png`);
+  if (!iconPath.startsWith(`${PLUGIN_ICONS}${path.sep}`) || !fs.existsSync(iconPath)) return null;
+  return iconPath;
+}
+
+function sendOgImage(res, image, etag) {
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', OG_CACHE_CONTROL);
+  res.setHeader('ETag', etag);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.send(image);
 }
 
 start();

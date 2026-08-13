@@ -621,6 +621,16 @@
       text-align: left;
       transition: all 0.3s ease;
 
+      &.sponsor-card-expired {
+        opacity: 0.48;
+        filter: saturate(0.55);
+
+        &:hover {
+          opacity: 0.68;
+          transform: none;
+        }
+      }
+
       &:hover {
         background: rgba(255, 255, 255, 0.06);
         border-color: rgba(245, 158, 11, 0.3);
@@ -668,7 +678,7 @@
         position: absolute;
         top: -1px;
         right: -1px;
-        font-size: 0.55rem;
+        font-size: 0.52rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.06em;

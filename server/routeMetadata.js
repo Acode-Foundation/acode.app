@@ -10,10 +10,11 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const sharedMetadata = require('../shared/routeMetadata.json');
+const { getPublicOrigin, publicUrl } = require('./lib/publicMetadata');
 
-const FALLBACK_TITLE = 'Acode — Code Editor with Linux Terminal & AI Coding';
-const FALLBACK_DESC =
-  'Acode is an Code Editor with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Node.js, React, Next.js, Python, Git, and 250+ plugins. Open source. 3.6M+ downloads.';
+const FALLBACK_TITLE = sharedMetadata.fallback.title;
+const FALLBACK_DESC = sharedMetadata.fallback.description;
 
 /**
  * Explicit route → metadata map.
@@ -21,86 +22,14 @@ const FALLBACK_DESC =
  * All other paths are handled dynamically by getMetadata().
  */
 const namedRoutes = {
-  '/': {
-    title: 'Acode — Code Editor with Linux Terminal & AI Coding',
-    description: FALLBACK_DESC,
-    schema: {
-      '@context': 'https://schema.org',
-      '@type': 'SoftwareApplication',
-      name: 'Acode',
-      applicationCategory: 'DeveloperApplication',
-      operatingSystem: 'Android',
-      description: FALLBACK_DESC,
-      url: 'https://acode.app',
-      image: 'https://acode.app/og-image.png',
-      author: { '@type': 'Organization', name: 'Foxbiz Software Pvt. Ltd.', url: 'https://acode.app' },
-      offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
-      aggregateRating: { '@type': 'AggregateRating', ratingValue: '4.1', reviewCount: '13347' },
-    },
-    orgSchema: {
-      '@context': 'https://schema.org',
-      '@type': 'Organization',
-      name: 'Foxbiz Software Pvt. Ltd.',
-      url: 'https://acode.app',
-      logo: 'https://acode.app/logo-512.png',
-      sameAs: [
-        'https://github.com/Acode-Foundation/Acode',
-        'https://play.google.com/store/apps/details?id=com.foxdebug.acodefree',
-        'https://t.me/foxdebug_acode',
-      ],
-    },
-  },
-
-  '/plugins': {
-    title: 'Acode Plugins — {{count}} Community Extensions',
-    description:
-      'Browse {{count}} community plugins for Acode. Language support, themes, AI assistants, build tools, and more. Extend your Code Editor with JavaScript and TypeScript plugins.',
-  },
+  ...sharedMetadata.routes,
+  '/': sharedMetadata.routes['/'],
 
   '/faqs': {
-    title: 'Frequently Asked Questions — Acode Code Editor',
-    description:
-      '150+ answers about Acode, the Code Editor. Learn about AI coding (Claude Code, Codex, OpenCode), Linux terminal setup, web development (Node.js, React, Next.js, Python), Git, SSH, plugin installation, pricing, comparisons with Termux/VS Code/Cursor, and more.',
+    ...sharedMetadata.routes['/faqs'],
     _buildFaqSchema() {
       return buildFaqSchema();
     },
-  },
-
-  '/sponsors': {
-    title: 'Sponsors — Support Acode Development',
-    description:
-      'Support the development of Acode — the open-source Code Editor with a Linux terminal and AI coding capabilities. See our sponsors and learn how to become one.',
-  },
-
-  '/pro': {
-    title: 'Acode Pro — Premium Code Editor Features',
-    description: 'Unlock premium features in Acode, the Code Editor with a Linux terminal and AI coding support.',
-  },
-
-  '/policy': {
-    title: 'Privacy Policy — Acode Code Editor',
-    description: 'Read the privacy policy for Acode, the open-source Code Editor.',
-  },
-
-  '/terms': {
-    title: 'Terms of Service — Acode Code Editor',
-    description: 'Read the terms of service for Acode, the open-source Code Editor with Linux terminal and AI coding capabilities.',
-  },
-
-  '/refund': {
-    title: 'Refund Policy — Acode Code Editor',
-    description: 'Read the refund policy for Acode Pro and in-app purchases.',
-  },
-
-  '/contact': {
-    title: 'Contact Us — Acode Code Editor',
-    description: 'Get in touch with the Acode team. Support, feedback, and business inquiries.',
-  },
-
-  '/about': {
-    title: 'About Us — Acode Code Editor',
-    description:
-      'Learn about Acode — the powerful Android code editor with Linux terminal and AI coding. Meet the team at Foxbiz Software Pvt. Ltd. building the future of mobile development.',
   },
 };
 
@@ -120,9 +49,9 @@ function pathToTitle(segment) {
  * so new front-end SPA routes get reasonable SEO automatically.
  *
  * @param {string} pathname — URL path (e.g. '/plugins')
- * @returns {{ title: string, description: string, schema?: object, orgSchema?: object, icon?: string, iconAlt?: string } | null}
+ * @returns {{ title: string, description: string, schema?: object, orgSchema?: object } | null}
  */
-function getMetadata(pathname) {
+function getMetadata(pathname, origin = getPublicOrigin()) {
   const clean = pathname.replace(/\/$/, '') || '/';
 
   if (namedRoutes[clean]) {
@@ -133,6 +62,7 @@ function getMetadata(pathname) {
       entry.schema = entry._buildFaqSchema();
       entry._buildFaqSchema = undefined;
     }
+    if (clean === '/') Object.assign(entry, getHomeSchemas(origin));
     return entry;
   }
 
@@ -169,11 +99,42 @@ function getMetadata(pathname) {
     const pageName = pathToTitle(lastSegment);
     return {
       title: `${pageName} — Acode`,
-      description: `${pageName} — Acode is an Code Editor with a full Alpine Linux terminal, AI coding support, and 250+ plugins.`,
+      description: `${pageName} — Acode is a code editor with a full Alpine Linux terminal, AI coding support, and 250+ plugins.`,
     };
   }
 
   return null;
+}
+
+function getHomeSchemas(origin) {
+  const publicOrigin = getPublicOrigin(origin);
+  return {
+    schema: {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Acode',
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'Android',
+      description: FALLBACK_DESC,
+      url: publicOrigin,
+      image: publicUrl('/og/default.png', publicOrigin),
+      author: { '@type': 'Organization', name: 'Foxbiz Software Pvt. Ltd.', url: publicOrigin },
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
+      aggregateRating: { '@type': 'AggregateRating', ratingValue: '4.1', reviewCount: '13347' },
+    },
+    orgSchema: {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'Foxbiz Software Pvt. Ltd.',
+      url: publicOrigin,
+      logo: publicUrl('/logo-512.png', publicOrigin),
+      sameAs: [
+        'https://github.com/Acode-Foundation/Acode',
+        'https://play.google.com/store/apps/details?id=com.foxdebug.acodefree',
+        'https://t.me/foxdebug_acode',
+      ],
+    },
+  };
 }
 
 /**

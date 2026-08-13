@@ -4,6 +4,7 @@ import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import background from 'lib/background';
 import { hideLoading, showLoading } from 'lib/helpers';
+import { fetchSponsorMix } from 'lib/sponsors';
 import { TIER_ORDER } from 'lib/sponsorTiers';
 import phoneImageJpg from 'res/phone.jpg';
 import phoneImageWebp from 'res/phone.webp';
@@ -43,13 +44,15 @@ export default async function home() {
 
   let sponsors = [];
   try {
-    sponsors = await (await fetch('/api/sponsors')).json();
+    sponsors = await fetchSponsorMix({ totalLimit: 6, expiredLimit: 6 });
   } catch (_error) {
     // ignore
   }
 
   canvas.onref = () => background(canvas.el);
   hideLoading();
+  const allSponsorsExpired = sponsors.length > 0 && sponsors.every((sponsor) => sponsor.expired);
+  sponsors.sort((a, b) => Number(a.expired) - Number(b.expired) || TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier));
 
   return (
     <section id='home'>
@@ -109,7 +112,7 @@ export default async function home() {
 
       <div className='sponsors-section'>
         <div className='section-header'>
-          <h2>Our Sponsors</h2>
+          <h2>{allSponsorsExpired ? 'Previous Sponsors' : 'Our Sponsors'}</h2>
           <a href='/sponsors' className='see-all'>
             View all <span className='icon chevron-right' />
           </a>
@@ -119,9 +122,7 @@ export default async function home() {
             No sponsors yet. <a href='/become-sponsor'>Be the first!</a>
           </p>
         ) : (
-          <div className='sponsors-grid'>
-            {sponsors.sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier)).map(renderSponsorCard)}
-          </div>
+          <div className='sponsors-grid'>{sponsors.map(renderSponsorCard)}</div>
         )}
       </div>
     </section>
@@ -156,7 +157,7 @@ function ensureAbsoluteUrl(url) {
 }
 
 function renderSponsorCard(sponsor) {
-  const { id, name, tier, tagline, website, image } = sponsor;
+  const { id, name, tier, tagline, website, image, expired } = sponsor;
   const initials = name
     .split(/\s+/)
     .map((w) => w[0])
@@ -173,10 +174,10 @@ function renderSponsorCard(sponsor) {
     <Tag
       key={id}
       {...(website ? { href: ensureAbsoluteUrl(website), target: '_blank', rel: 'noopener' } : {})}
-      className={`sponsor-card sponsor-card-${tier}`}
-      title={tierLabel}
+      className={`sponsor-card sponsor-card-${tier}${expired ? ' sponsor-card-expired' : ''}`}
+      title={`${tierLabel}${expired ? ' · Previous sponsor' : ''}`}
     >
-      <span className={`sponsor-tier-badge sponsor-tier-badge-${tier}`}>{tierLabel}</span>
+      <span className={`sponsor-tier-badge sponsor-tier-badge-${tier}`}>{expired ? `${tierLabel} · Previous` : tierLabel}</span>
       {hasImage && (
         <div className='sponsor-avatar'>
           {image ? <img src={`/sponsor/image/${image}`} alt={name} loading='lazy' /> : <span className='avatar-fallback'>{initials}</span>}
