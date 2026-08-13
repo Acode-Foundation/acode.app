@@ -8,6 +8,7 @@ import Input from 'components/input';
 import Tabs from 'components/tabs';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
+import { createChartSafely, drawBarValueLabels, drawDoughnutPercentLabels } from 'lib/dashboardCharts';
 import { convertInrToUsd, formatCompactNumber, formatCompactUsd, formatExactNumber, formatExactUsd } from 'lib/formatNumber';
 import { getLoggedInUser } from 'lib/helpers';
 import moment from 'moment';
@@ -453,13 +454,14 @@ function Dashboard() {
         </div>,
       );
 
-      initChart(revenueCanvas, lineChartConfig(analytics.monthlyRevenue, 'Revenue (INR)', '#22c55e', true));
-      initChart(paymentsCanvas, lineChartConfig(analytics.monthlyPayments, 'Payments (INR)', '#3b82f6', true));
-      initChart(topDevCanvas, horizontalBarChartConfig(analytics.topDevelopers, 'name', 'total'));
-      initChart(providerStatusCanvas, providerStatusChartConfig(analytics.providerStatus));
-      initChart(paymentStatusCanvas, doughnutChartConfig(analytics.paymentStatus, 'status', 'count'));
-      initChart(editorCanvas, doughnutChartConfig(analytics.editorDistribution, 'editor', 'count'));
-    } catch {
+      initChart(revenueCanvas, () => lineChartConfig(analytics.monthlyRevenue, 'Revenue (INR)', '#22c55e', true), 'Monthly Revenue');
+      initChart(paymentsCanvas, () => lineChartConfig(analytics.monthlyPayments, 'Payments (INR)', '#3b82f6', true), 'Monthly Payments');
+      initChart(topDevCanvas, () => horizontalBarChartConfig(analytics.topDevelopers, 'name', 'total'), 'Top Developers');
+      initChart(providerStatusCanvas, () => providerStatusChartConfig(analytics.providerStatus), 'Orders by Provider and Status');
+      initChart(paymentStatusCanvas, () => doughnutChartConfig(analytics.paymentStatus, 'status', 'count'), 'Payment Status');
+      initChart(editorCanvas, () => doughnutChartConfig(analytics.editorDistribution, 'editor', 'count'), 'Editor Distribution');
+    } catch (error) {
+      console.error('Failed to load dashboard data', error);
       ref.innerHTML = '<div class="error">Failed to load dashboard data</div>';
     }
   })();
@@ -467,12 +469,29 @@ function Dashboard() {
   return <div ref={ref} className='admin-dashboard' />;
 }
 
-function initChart(canvasRef, config) {
+function initChart(canvasRef, createConfig, label) {
   let instance = null;
   canvasRef.onref = () => {
-    if (instance) instance.destroy();
-    instance = new Chart(canvasRef.el, config);
+    instance = createChartSafely({
+      previousChart: instance,
+      createChart: () => new Chart(canvasRef.el, createConfig()),
+      onError: (error) => {
+        console.error(`Failed to render ${label} chart`, error);
+        showChartFallback(canvasRef.el);
+      },
+    });
   };
+}
+
+function showChartFallback(canvas) {
+  const container = canvas?.parentElement;
+  if (!container) return;
+
+  const message = document.createElement('div');
+  message.className = 'chart-error';
+  message.textContent = 'Chart unavailable';
+  container.classList.add('chart-container--error');
+  container.replaceChildren(message);
 }
 
 function lineChartConfig(rows, label, color = '#3b82f6', currency = false) {
@@ -552,26 +571,7 @@ function doughnutChartConfig(rows, labelKey, valueKey) {
       {
         id: 'doughnutPercentLabels',
         afterDatasetsDraw(chart) {
-          const { ctx, data: chartData } = chart;
-          const dataset = chartData.datasets[0];
-          const meta = chart.getDatasetMeta(0);
-          ctx.save();
-          ctx.font = 'bold 14px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          for (let i = 0; i < dataset.data.length; i++) {
-            const value = dataset.data[i];
-            if (value === 0) continue;
-            const pct = Math.round((value / total) * 100);
-            const arc = meta.data[i];
-            const { x, y } = arc.tooltipPosition(true);
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = 'rgba(0,0,0,0.6)';
-            ctx.shadowBlur = 3;
-            ctx.fillText(`${pct}%`, x, y);
-            ctx.shadowBlur = 0;
-          }
-          ctx.restore();
+          drawDoughnutPercentLabels(chart, total);
         },
       },
     ],
@@ -693,25 +693,7 @@ function providerStatusChartConfig(rows) {
       {
         id: 'barValueLabels',
         afterDatasetsDraw(chart) {
-          const { ctx } = chart;
-          ctx.save();
-          ctx.font = 'bold 11px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'bottom';
-          ctx.fillStyle = '#ffffff';
-          ctx.shadowColor = 'rgba(0,0,0,0.5)';
-          ctx.shadowBlur = 2;
-          for (const ds of chart.data.datasets) {
-            const meta = chart.getDatasetMeta(chart.data.datasets.indexOf(ds));
-            for (let i = 0; i < ds.data.length; i++) {
-              const value = ds.data[i];
-              if (!value) continue;
-              const { x, y } = meta.data[i];
-              ctx.fillText(formatCompactNumber(value), x, y - 2);
-            }
-          }
-          ctx.shadowBlur = 0;
-          ctx.restore();
+          drawBarValueLabels(chart, formatCompactNumber);
         },
       },
     ],
