@@ -81,6 +81,34 @@ describe('server-rendered metadata', () => {
     expect(localized.publisher.logo).toBe('https://dev.acode.app/logo-512.png');
     expect(localized.external).toBe(schema.external);
   });
+
+  it('rewrites only exact Acode origins while preserving parsed URL components', () => {
+    const schema = {
+      root: 'https://acode.app',
+      url: 'https://acode.app/plugin/example?tab=comments#latest',
+      nested: ['https://acode.app/logo-512.png?v=2#image'],
+    };
+    const localized = JSON.parse(localizeStructuredData(schema, 'https://dev.acode.app'));
+
+    expect(localized).toEqual({
+      root: 'https://dev.acode.app',
+      url: 'https://dev.acode.app/plugin/example?tab=comments#latest',
+      nested: ['https://dev.acode.app/logo-512.png?v=2#image'],
+    });
+  });
+
+  it.each([
+    'https://acode.app.evil/plugin/example',
+    'https://acode.app@evil.example/plugin/example',
+    'https://user:password@acode.app/plugin/example',
+    'http://acode.app/plugin/example',
+    'https://github.com/Acode-Foundation/Acode',
+    'not a valid URL',
+  ])('does not rewrite an untrusted structured-data URL: %s', (url) => {
+    const localized = JSON.parse(localizeStructuredData({ url }, 'https://dev.acode.app'));
+
+    expect(localized.url).toBe(url);
+  });
 });
 
 describe('plugin metadata descriptions', () => {

@@ -30,6 +30,8 @@ const LEGACY_NATIVE_CSRF_EXEMPT_PATHS = new Set(['/api/plugin/order', '/api/plug
 const PLUGIN_ICONS = path.resolve(__dirname, '../data/icons');
 const OG_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
 const PUBLIC_ORIGIN = getPublicOrigin();
+const renderIndexTemplate = compileTemplate('index.hbs');
+const renderLandingTemplate = compileTemplate('landing.hbs');
 
 function isSameOriginRequest(req) {
   const host = req.headers.host;
@@ -329,9 +331,6 @@ async function main() {
         return;
       }
 
-      const template = path.resolve(__dirname, './index.hbs');
-      const source = fs.readFileSync(template, 'utf8');
-      const templateScript = Handlebars.compile(source);
       const canonicalPath = `/plugin/${plugin.id}`;
       const pageDesc = createPluginDescription(plugin.description, `${plugin.name} is a plugin for Acode.`);
       const imagePath =
@@ -341,7 +340,7 @@ async function main() {
 
       res.header('Content-Type', 'text/html;charset=utf-8');
       res.send(
-        templateScript({
+        renderIndexTemplate({
           ...createMetadataContext(defaultOg, { canonicalPath, imagePath, origin: PUBLIC_ORIGIN }),
           title: `${plugin.name} — Acode Plugin`,
           description: pageDesc,
@@ -397,14 +396,11 @@ async function main() {
         return;
       }
       const pageData = JSON.parse(fs.readFileSync(pageFile, 'utf8'));
-      const landingTemplate = path.resolve(__dirname, './landing.hbs');
-      const source = fs.readFileSync(landingTemplate, 'utf8');
-      const templateScript = Handlebars.compile(source);
       const canonicalPath = `/${landingPath}`;
 
       res.header('Content-Type', 'text/html;charset=utf-8');
       res.send(
-        templateScript({
+        renderLandingTemplate({
           ...createMetadataContext(defaultOg, { canonicalPath, origin: PUBLIC_ORIGIN }),
           ...pageData,
           pageSchema: pageData.pageSchema ? safeSchema(localizeStructuredData(pageData.pageSchema, PUBLIC_ORIGIN)) : null,
@@ -415,16 +411,12 @@ async function main() {
 
   // Plugins page — dynamic count from DB
   app.get('/plugins', async (_req, res) => {
-    const template = path.resolve(__dirname, './index.hbs');
-    const source = fs.readFileSync(template, 'utf8');
-    const templateScript = Handlebars.compile(source);
-
     const pluginsMeta = await getPluginsMetadata();
     const metadata = getMetadata('/plugins');
 
     res.header('Content-Type', 'text/html;charset=utf-8');
     res.send(
-      templateScript({
+      renderIndexTemplate({
         ...createMetadataContext(defaultOg, { canonicalPath: '/plugins', origin: PUBLIC_ORIGIN }),
         title: pluginsMeta.title,
         description: pluginsMeta.description,
@@ -438,15 +430,11 @@ async function main() {
 
   // FAQs page — dynamic schema from data/faqs.json
   app.get('/faqs', (_req, res) => {
-    const template = path.resolve(__dirname, './index.hbs');
-    const source = fs.readFileSync(template, 'utf8');
-    const templateScript = Handlebars.compile(source);
-
     const faqMeta = getFaqsMetadata();
 
     res.header('Content-Type', 'text/html;charset=utf-8');
     res.send(
-      templateScript({
+      renderIndexTemplate({
         ...createMetadataContext(defaultOg, { canonicalPath: '/faqs', origin: PUBLIC_ORIGIN }),
         title: faqMeta.title,
         description: faqMeta.description,
@@ -458,10 +446,6 @@ async function main() {
   });
 
   app.get('*path', (req, res) => {
-    const template = path.resolve(__dirname, './index.hbs');
-    const source = fs.readFileSync(template, 'utf8');
-    const templateScript = Handlebars.compile(source);
-
     const metadata = getMetadata(req.path, PUBLIC_ORIGIN);
     const context = metadata
       ? {
@@ -482,7 +466,7 @@ async function main() {
         };
 
     res.header('Content-Type', 'text/html;charset=utf-8');
-    res.send(templateScript(context));
+    res.send(renderIndexTemplate(context));
   });
 
   // eslint-disable-next-line no-unused-vars
@@ -513,6 +497,11 @@ async function start() {
 function safeSchema(jsonString) {
   if (!jsonString) return null;
   return jsonString.replace(/<\//g, '<\\/');
+}
+
+function compileTemplate(filename) {
+  const templatePath = path.resolve(__dirname, filename);
+  return Handlebars.compile(fs.readFileSync(templatePath, 'utf8'));
 }
 
 function createEtag(value) {

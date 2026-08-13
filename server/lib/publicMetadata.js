@@ -42,10 +42,22 @@ function rewriteUrls(value, publicOrigin) {
   if (value && typeof value === 'object') {
     return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, rewriteUrls(item, publicOrigin)]));
   }
-  if (typeof value === 'string' && value.startsWith(DEFAULT_PUBLIC_ORIGIN)) {
-    return `${publicOrigin}${value.slice(DEFAULT_PUBLIC_ORIGIN.length)}`;
+  return rewritePublicUrl(value, publicOrigin);
+}
+
+function rewritePublicUrl(value, publicOrigin) {
+  if (typeof value !== 'string') return value;
+
+  try {
+    const url = new URL(value);
+    if (url.origin !== DEFAULT_PUBLIC_ORIGIN || url.username || url.password) return value;
+
+    const suffix = `${url.pathname}${url.search}${url.hash}`;
+    const localizedSuffix = suffix === '/' && !value.endsWith('/') ? '' : suffix;
+    return `${publicOrigin}${localizedSuffix}`;
+  } catch {
+    return value;
   }
-  return value;
 }
 
 module.exports = {
