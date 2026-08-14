@@ -1,5 +1,7 @@
+const crypto = require('node:crypto');
 const path = require('node:path');
 const { config } = require('dotenv');
+const db = require('../lib/db');
 const { encryptPassword } = require('../password');
 const Entity = require('./entity');
 
@@ -57,6 +59,8 @@ class User extends Entity {
   X = 'x';
   LINKEDIN = 'linkedin';
 
+  ROLE_DELETED = 'deleted';
+
   constructor() {
     super(table);
     this.init();
@@ -76,13 +80,74 @@ class User extends Entity {
     }
   }
 
-  async delete(where, operator = 'AND') {
-    const [row] = await this.get(this.allColumns, where, operator);
+  async delete(where) {
+    const [column, id, comparison = '='] = Array.isArray(where) ? where : [];
+    const isExactIdCondition = column === this.ID && id != null && !Array.isArray(id) && comparison === '=' && where.length <= 3;
+    if (!isExactIdCondition) throw new Error('User deletion requires an exact ID condition');
+
+    const [row] = await this.get(this.allColumns, [this.ID, id]);
     if (!row) {
       throw new Error('User not found');
     }
+    if (row.role === this.ROLE_DELETED) return [];
+    if (row.role === 'admin') {
+      throw new Error('Admin accounts cannot be deleted');
+    }
 
-    return super.delete(where, operator);
+    const email = `deleted-user-${row.id}-${crypto.randomUUID()}@acode.invalid`;
+    const password = encryptPassword(crypto.randomBytes(32).toString('hex'));
+    const anonymize = db.transaction(() => {
+      db.prepare('DELETE FROM login WHERE user_id = ?').run(row.id);
+      db.prepare('DELETE FROM app_auth_code WHERE user_id = ?').run(row.id);
+      db.prepare('DELETE FROM otp WHERE email = ?').run(row.email);
+      db.prepare(
+        `UPDATE payment_method
+         SET paypal_email = NULL,
+             bank_name = NULL,
+             bank_ifsc_code = NULL,
+             bank_swift_code = NULL,
+             bank_account_number = NULL,
+             bank_account_holder = NULL,
+             bank_account_type = NULL,
+             wallet_address = NULL,
+             wallet_type = NULL,
+             is_default = 0,
+             is_deleted = 1
+         WHERE user_id = ?`,
+      ).run(row.id);
+      db.prepare(
+        `UPDATE sponsor
+         SET name = 'Deleted User',
+             email = ?,
+             website = NULL,
+             image = NULL,
+             tagline = NULL,
+             public = 0
+         WHERE user_id = ?`,
+      ).run(email, row.id);
+      db.prepare(
+        `UPDATE user
+         SET name = 'Deleted User',
+             email = ?,
+             role = ?,
+             password = ?,
+             github = NULL,
+             website = NULL,
+             verified = 0,
+             acode_pro = 0,
+             pro_purchase_token = NULL,
+             github_id = NULL,
+             google_id = NULL,
+             avatar_url = NULL,
+             x = NULL,
+             linkedin = NULL,
+             primary_auth = NULL
+         WHERE id = ?`,
+      ).run(email, this.ROLE_DELETED, password, row.id);
+    });
+
+    anonymize();
+    return [];
   }
 
   getUsersByFilter(filter) {
@@ -91,20 +156,20 @@ class User extends Entity {
       case 'with_plugins':
         sql = `SELECT DISTINCT u.name, u.email FROM user u
           INNER JOIN plugin p ON u.id = p.user_id
-          WHERE u.role != 'admin' AND p.status != 3`;
+          WHERE u.role NOT IN ('admin', 'deleted') AND p.status != 3`;
         break;
       case 'with_paid_plugins':
         sql = `SELECT DISTINCT u.name, u.email FROM user u
           INNER JOIN plugin p ON u.id = p.user_id
-          WHERE u.role != 'admin' AND p.price > 0 AND p.status != 3`;
+          WHERE u.role NOT IN ('admin', 'deleted') AND p.price > 0 AND p.status != 3`;
         break;
       case 'with_payment':
         sql = `SELECT DISTINCT u.name, u.email FROM user u
           INNER JOIN payment pay ON u.id = pay.user_id
-          WHERE u.role != 'admin' AND pay.status = 1`;
+          WHERE u.role NOT IN ('admin', 'deleted') AND pay.status = 1`;
         break;
       default:
-        sql = `SELECT name, email FROM user WHERE role != 'admin'`;
+        sql = `SELECT name, email FROM user WHERE role NOT IN ('admin', 'deleted')`;
     }
     return Entity.execSql(sql, [], this);
   }
@@ -115,20 +180,20 @@ class User extends Entity {
       case 'with_plugins':
         sql = `SELECT COUNT(DISTINCT u.id) as count FROM user u
           INNER JOIN plugin p ON u.id = p.user_id
-          WHERE u.role != 'admin' AND p.status != 3`;
+          WHERE u.role NOT IN ('admin', 'deleted') AND p.status != 3`;
         break;
       case 'with_paid_plugins':
         sql = `SELECT COUNT(DISTINCT u.id) as count FROM user u
           INNER JOIN plugin p ON u.id = p.user_id
-          WHERE u.role != 'admin' AND p.price > 0 AND p.status != 3`;
+          WHERE u.role NOT IN ('admin', 'deleted') AND p.price > 0 AND p.status != 3`;
         break;
       case 'with_payment':
         sql = `SELECT COUNT(DISTINCT u.id) as count FROM user u
           INNER JOIN payment pay ON u.id = pay.user_id
-          WHERE u.role != 'admin' AND pay.status = 1`;
+          WHERE u.role NOT IN ('admin', 'deleted') AND pay.status = 1`;
         break;
       default:
-        sql = `SELECT COUNT(*) as count FROM user WHERE role != 'admin'`;
+        sql = `SELECT COUNT(*) as count FROM user WHERE role NOT IN ('admin', 'deleted')`;
     }
     const [{ count }] = await Entity.execSql(sql, [], this);
     return count;
