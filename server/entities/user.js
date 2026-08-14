@@ -1,5 +1,7 @@
+const crypto = require('node:crypto');
 const path = require('node:path');
 const { config } = require('dotenv');
+const db = require('../lib/db');
 const { encryptPassword } = require('../password');
 const Entity = require('./entity');
 
@@ -57,6 +59,8 @@ class User extends Entity {
   X = 'x';
   LINKEDIN = 'linkedin';
 
+  ROLE_DELETED = 'deleted';
+
   constructor() {
     super(table);
     this.init();
@@ -77,12 +81,73 @@ class User extends Entity {
   }
 
   async delete(where, operator = 'AND') {
+    if (!Entity.isValidWhere(where)) {
+      throw new Error('Missing user delete condition');
+    }
+
     const [row] = await this.get(this.allColumns, where, operator);
     if (!row) {
       throw new Error('User not found');
     }
+    if (row.role === this.ROLE_DELETED) return [];
+    if (row.role === 'admin') {
+      throw new Error('Admin accounts cannot be deleted');
+    }
 
-    return super.delete(where, operator);
+    const email = `deleted-user-${row.id}-${crypto.randomUUID()}@acode.invalid`;
+    const password = encryptPassword(crypto.randomBytes(32).toString('hex'));
+    const anonymize = db.transaction(() => {
+      db.prepare('DELETE FROM login WHERE user_id = ?').run(row.id);
+      db.prepare('DELETE FROM app_auth_code WHERE user_id = ?').run(row.id);
+      db.prepare('DELETE FROM otp WHERE email = ?').run(row.email);
+      db.prepare(
+        `UPDATE payment_method
+         SET paypal_email = NULL,
+             bank_name = NULL,
+             bank_ifsc_code = NULL,
+             bank_swift_code = NULL,
+             bank_account_number = NULL,
+             bank_account_holder = NULL,
+             bank_account_type = NULL,
+             wallet_address = NULL,
+             wallet_type = NULL,
+             is_default = 0,
+             is_deleted = 1
+         WHERE user_id = ?`,
+      ).run(row.id);
+      db.prepare(
+        `UPDATE sponsor
+         SET name = 'Deleted User',
+             email = ?,
+             website = NULL,
+             image = NULL,
+             tagline = NULL,
+             public = 0
+         WHERE user_id = ?`,
+      ).run(email, row.id);
+      db.prepare(
+        `UPDATE user
+         SET name = 'Deleted User',
+             email = ?,
+             role = ?,
+             password = ?,
+             github = NULL,
+             website = NULL,
+             verified = 0,
+             acode_pro = 0,
+             pro_purchase_token = NULL,
+             github_id = NULL,
+             google_id = NULL,
+             avatar_url = NULL,
+             x = NULL,
+             linkedin = NULL,
+             primary_auth = NULL
+         WHERE id = ?`,
+      ).run(email, this.ROLE_DELETED, password, row.id);
+    });
+
+    anonymize();
+    return [];
   }
 
   getUsersByFilter(filter) {

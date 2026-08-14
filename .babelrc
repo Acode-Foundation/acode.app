@@ -7,5 +7,5 @@
     "html-tag-js/jsx/syntax-parser.js",
     "@babel/transform-runtime"
   ],
-  "compact": true
+  "compact": false
 }
