@@ -38,7 +38,7 @@ function createDatabase() {
       bank_ifsc_code TEXT, bank_swift_code TEXT, bank_account_number TEXT, bank_account_holder TEXT,
       bank_account_type TEXT, wallet_address TEXT, wallet_type TEXT, is_default INTEGER, is_deleted INTEGER
     );
-    CREATE TABLE plugin (id TEXT PRIMARY KEY, user_id INTEGER REFERENCES user(id), name TEXT);
+    CREATE TABLE plugin (id TEXT PRIMARY KEY, user_id INTEGER REFERENCES user(id), name TEXT, price REAL, status INTEGER);
     CREATE TABLE comment (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id), plugin_id TEXT REFERENCES plugin(id), comment TEXT);
     CREATE TABLE sponsor (
       id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id), name TEXT, email TEXT, website TEXT,
@@ -46,7 +46,10 @@ function createDatabase() {
     );
     CREATE TABLE purchase_order (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id), plugin_id TEXT REFERENCES plugin(id));
     CREATE TABLE razorpay_order (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id));
-    CREATE TABLE payment (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id), payment_method_id INTEGER REFERENCES payment_method(id));
+    CREATE TABLE payment (
+      id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id),
+      payment_method_id INTEGER REFERENCES payment_method(id), status INTEGER
+    );
     CREATE TABLE user_earnings (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id), payment_id INTEGER REFERENCES payment(id));
 
     INSERT INTO user (
@@ -62,12 +65,12 @@ function createDatabase() {
     INSERT INTO otp VALUES (1, 'normal@example.com', '123456');
     INSERT INTO payment_method VALUES
       (1, 2, 'paypal@example.com', 'Bank', 'IFSC', 'SWIFT', '1234', 'Normal User', 'Savings', 'wallet', 'btc', 1, 0);
-    INSERT INTO plugin VALUES ('plugin.one', 2, 'Plugin One');
+    INSERT INTO plugin VALUES ('plugin.one', 2, 'Plugin One', 10, 0);
     INSERT INTO comment VALUES (1, 2, 'plugin.one', 'Keep me');
     INSERT INTO sponsor VALUES (1, 2, 'Sponsor', 'sponsor@example.com', 'https://sponsor.example.com', 'identity.png', 'Tagline', 1, 'token');
     INSERT INTO purchase_order VALUES (1, 2, 'plugin.one');
     INSERT INTO razorpay_order VALUES (1, 2);
-    INSERT INTO payment VALUES (1, 2, 1);
+    INSERT INTO payment VALUES (1, 2, 1, 1);
     INSERT INTO user_earnings VALUES (1, 2, 1);
   `);
   db.prepare('UPDATE user SET password = ? WHERE id IN (2, 65421)').run(encryptPassword('original-password'));
@@ -90,7 +93,7 @@ describe('User.delete anonymization', () => {
   it('fixes the reported two-session foreign-key failure and keeps the anonymized user queryable', async () => {
     expect(db.prepare('SELECT COUNT(*) count FROM login WHERE user_id = 65421').get().count).toBe(2);
 
-    await User.delete([User.ID, 65421]);
+    await User.delete([User.ID, 65421, '=']);
 
     expect(db.prepare('SELECT COUNT(*) count FROM login WHERE user_id = 65421').get().count).toBe(0);
     const [deletedUser] = await User.get([User.ID, 65421]);
@@ -99,12 +102,8 @@ describe('User.delete anonymization', () => {
     expect(comparePassword('original-password', deletedUser.password)).toBe(false);
     expect(await User.get([User.EMAIL, 'reported@example.com'])).toEqual([]);
     expect(await User.count()).toBe(3);
-    expect(await User.getUsersByFilter()).toEqual(
-      expect.arrayContaining([
-        { name: 'Normal User', email: 'normal@example.com' },
-        { name: 'Deleted User', email: deletedUser.email },
-      ]),
-    );
+    expect(await User.getUsersByFilter()).toEqual([{ name: 'Normal User', email: 'normal@example.com' }]);
+    expect(await User.countUsersByFilter()).toBe(1);
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
   });
 
@@ -138,13 +137,12 @@ describe('User.delete anonymization', () => {
     expect(db.prepare('SELECT COUNT(*) count FROM login WHERE user_id = 2').get().count).toBe(0);
     expect(db.prepare('SELECT COUNT(*) count FROM app_auth_code WHERE user_id = 2').get().count).toBe(0);
     expect(db.prepare("SELECT COUNT(*) count FROM otp WHERE email = 'normal@example.com'").get().count).toBe(0);
-    expect(await User.getUsersByFilter()).toEqual(
-      expect.arrayContaining([
-        { name: 'Deleted User', email: row.email },
-        { name: 'Axch1l13s', email: 'reported@example.com' },
-      ]),
-    );
-    expect(await User.countUsersByFilter()).toBe(2);
+    expect(await User.getUsersByFilter()).toEqual([{ name: 'Axch1l13s', email: 'reported@example.com' }]);
+    expect(await User.countUsersByFilter()).toBe(1);
+    for (const filter of ['with_plugins', 'with_paid_plugins', 'with_payment']) {
+      expect(await User.getUsersByFilter(filter)).toEqual([]);
+      expect(await User.countUsersByFilter(filter)).toBe(0);
+    }
     for (const table of ['plugin', 'comment', 'sponsor', 'purchase_order', 'razorpay_order', 'payment', 'user_earnings']) {
       expect(db.prepare(`SELECT COUNT(*) count FROM ${table}`).get().count).toBe(1);
     }
@@ -157,6 +155,22 @@ describe('User.delete anonymization', () => {
 
     await User.insert([User.NAME, 'Replacement User'], [User.EMAIL, 'normal@example.com'], [User.PASSWORD, encryptPassword('replacement-password')]);
     expect(db.prepare("SELECT COUNT(*) count FROM user WHERE email = 'normal@example.com'").get().count).toBe(1);
+  });
+
+  it('rejects broad deletion conditions without changing matching users', async () => {
+    await expect(User.delete([User.ROLE, 'user'])).rejects.toThrow('User deletion requires an exact ID condition');
+    await expect(
+      User.delete([
+        [User.ID, 2],
+        [User.ID, 65421],
+      ]),
+    ).rejects.toThrow('User deletion requires an exact ID condition');
+
+    expect(db.prepare("SELECT id, name, role FROM user WHERE role = 'user' ORDER BY id").all()).toEqual([
+      { id: 2, name: 'Normal User', role: 'user' },
+      { id: 65421, name: 'Axch1l13s', role: 'user' },
+    ]);
+    expect(db.prepare('SELECT COUNT(*) count FROM login').get().count).toBe(3);
   });
 
   it('protects admins and rolls back all changes on failure', async () => {
