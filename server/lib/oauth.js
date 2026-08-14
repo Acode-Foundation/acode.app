@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const moment = require('moment');
 const login = require('../entities/login');
+const user = require('../entities/user');
 const { encryptPassword } = require('../password');
 
 function generateState() {
@@ -119,6 +120,11 @@ async function getGoogleUser(accessToken) {
 }
 
 async function issueTokenAndLogin(userId, res) {
+  const [activeUser] = await user.getActive([user.ID], [user.ID, userId]);
+  if (!activeUser) {
+    throw new Error('User account is unavailable');
+  }
+
   const token = crypto.randomBytes(64).toString('hex');
   const expiredAt = moment().add(30, 'day').format('YYYY-MM-DD HH:mm:ss.sss');
 

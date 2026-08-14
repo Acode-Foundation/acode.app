@@ -1,6 +1,7 @@
 const path = require('node:path');
 const { config } = require('dotenv');
 const { encryptPassword } = require('../password');
+const buildActiveWhere = require('../lib/buildActiveWhere');
 const Entity = require('./entity');
 
 config({ path: path.resolve(__dirname, '../../.env') });
@@ -25,7 +26,8 @@ const table = `create table if not exists user (
   linkedin text,
   primary_auth text default 'email',
   created_at timestamp default current_timestamp,
-  updated_at timestamp default current_timestamp
+  updated_at timestamp default current_timestamp,
+  deleted_at timestamp
 );
 
 create trigger if not exists user_updated_at
@@ -54,6 +56,7 @@ class User extends Entity {
   PRO_PURCHASED_AT = 'pro_purchased_at';
   CREATED_AT = 'created_at';
   UPDATED_AT = 'updated_at';
+  DELETED_AT = 'deleted_at';
   X = 'x';
   LINKEDIN = 'linkedin';
 
@@ -76,13 +79,25 @@ class User extends Entity {
     }
   }
 
-  async delete(where, operator = 'AND') {
-    const [row] = await this.get(this.allColumns, where, operator);
-    if (!row) {
-      throw new Error('User not found');
-    }
+  async delete() {
+    throw new Error('Hard-deleting users is disabled. Use the user anonymization service.');
+  }
 
-    return super.delete(where, operator);
+  activeWhere(where = [], operator = 'AND') {
+    return buildActiveWhere(this.DELETED_AT, where, operator);
+  }
+
+  getActive(columns, where = [], options) {
+    const operator = typeof options === 'string' ? options : options?.operator;
+    return this.get(columns, this.activeWhere(where, operator), options);
+  }
+
+  countActive(where = [], options = 'AND') {
+    return this.count(this.activeWhere(where, options), options);
+  }
+
+  updateActive(columns, where = [], operator = 'AND') {
+    return this.update(columns, this.activeWhere(where, operator), operator);
   }
 
   getUsersByFilter(filter) {
@@ -91,20 +106,20 @@ class User extends Entity {
       case 'with_plugins':
         sql = `SELECT DISTINCT u.name, u.email FROM user u
           INNER JOIN plugin p ON u.id = p.user_id
-          WHERE u.role != 'admin' AND p.status != 3`;
+          WHERE u.role != 'admin' AND u.deleted_at IS NULL AND p.status != 3`;
         break;
       case 'with_paid_plugins':
         sql = `SELECT DISTINCT u.name, u.email FROM user u
           INNER JOIN plugin p ON u.id = p.user_id
-          WHERE u.role != 'admin' AND p.price > 0 AND p.status != 3`;
+          WHERE u.role != 'admin' AND u.deleted_at IS NULL AND p.price > 0 AND p.status != 3`;
         break;
       case 'with_payment':
         sql = `SELECT DISTINCT u.name, u.email FROM user u
           INNER JOIN payment pay ON u.id = pay.user_id
-          WHERE u.role != 'admin' AND pay.status = 1`;
+          WHERE u.role != 'admin' AND u.deleted_at IS NULL AND pay.status = 1`;
         break;
       default:
-        sql = `SELECT name, email FROM user WHERE role != 'admin'`;
+        sql = `SELECT name, email FROM user WHERE role != 'admin' AND deleted_at IS NULL`;
     }
     return Entity.execSql(sql, [], this);
   }
@@ -115,20 +130,20 @@ class User extends Entity {
       case 'with_plugins':
         sql = `SELECT COUNT(DISTINCT u.id) as count FROM user u
           INNER JOIN plugin p ON u.id = p.user_id
-          WHERE u.role != 'admin' AND p.status != 3`;
+          WHERE u.role != 'admin' AND u.deleted_at IS NULL AND p.status != 3`;
         break;
       case 'with_paid_plugins':
         sql = `SELECT COUNT(DISTINCT u.id) as count FROM user u
           INNER JOIN plugin p ON u.id = p.user_id
-          WHERE u.role != 'admin' AND p.price > 0 AND p.status != 3`;
+          WHERE u.role != 'admin' AND u.deleted_at IS NULL AND p.price > 0 AND p.status != 3`;
         break;
       case 'with_payment':
         sql = `SELECT COUNT(DISTINCT u.id) as count FROM user u
           INNER JOIN payment pay ON u.id = pay.user_id
-          WHERE u.role != 'admin' AND pay.status = 1`;
+          WHERE u.role != 'admin' AND u.deleted_at IS NULL AND pay.status = 1`;
         break;
       default:
-        sql = `SELECT COUNT(*) as count FROM user WHERE role != 'admin'`;
+        sql = `SELECT COUNT(*) as count FROM user WHERE role != 'admin' AND deleted_at IS NULL`;
     }
     const [{ count }] = await Entity.execSql(sql, [], this);
     return count;

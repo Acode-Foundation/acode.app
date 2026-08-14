@@ -122,7 +122,7 @@ async function handleLink(provider, oauthUser, req, res) {
   }
 
   const idCol = ID_COL[provider];
-  const existingById = await user.for('internal').get([idCol, oauthUser.id]);
+  const existingById = await user.for('internal').getActive(['*'], [idCol, oauthUser.id]);
 
   if (existingById.length && existingById[0].id !== loggedInUser.id) {
     return res.redirect(`/profile/edit?error=${encodeURIComponent(`This ${provider} account is already linked to another user.`)}`);
@@ -150,7 +150,7 @@ async function handleLink(provider, oauthUser, req, res) {
     updates.push([user.WEBSITE, oauthUser.website]);
   }
 
-  await user.update(updates, [user.ID, loggedInUser.id]);
+  await user.updateActive(updates, [user.ID, loggedInUser.id]);
 
   return res.redirect(`/profile?linked=${provider}`);
 }
@@ -159,11 +159,11 @@ async function handleLogin(provider, oauthUser, res, redirect) {
   const idCol = ID_COL[provider];
   let userRow;
 
-  const existingById = await user.for('internal').get([idCol, oauthUser.id]);
+  const existingById = await user.for('internal').getActive(['*'], [idCol, oauthUser.id]);
   if (existingById.length) {
     userRow = existingById[0];
   } else {
-    const existingByEmail = await user.for('internal').get([user.EMAIL, oauthUser.email]);
+    const existingByEmail = await user.for('internal').getActive(['*'], [user.EMAIL, oauthUser.email]);
     if (existingByEmail.length) {
       return res.redirect(
         `/login?error=${encodeURIComponent(`User already exists, please login to link to ${provider === 'github' ? 'Github' : 'Google'} account.`)}`,
@@ -194,7 +194,7 @@ async function handleLogin(provider, oauthUser, res, redirect) {
       }
 
       await user.insert(...insertCols);
-      const [created] = await user.for('internal').get([user.EMAIL, oauthUser.email]);
+      const [created] = await user.for('internal').getActive(['*'], [user.EMAIL, oauthUser.email]);
       userRow = created;
     }
   }

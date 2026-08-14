@@ -17,7 +17,7 @@ route.post('/', async (req, res) => {
   const otp = Math.floor(100000 + Math.random() * 900000);
 
   try {
-    const user = await User.get([User.EMAIL, email]);
+    const user = await User.getActive(['*'], [User.EMAIL, email]);
 
     if (type === 'reset' && !user.length) {
       res.status(400).send({ error: 'Email not registered' });

@@ -9,7 +9,12 @@ const router = Router();
 router.put('/reset', async (req, res) => {
   try {
     const { otp, password, email } = req.body;
-    const [user] = await User.get([User.EMAIL, email]);
+    const [user] = await User.getActive(['*'], [User.EMAIL, email]);
+
+    if (!user) {
+      res.status(400).send({ error: 'User not found' });
+      return;
+    }
 
     if (!otp) {
       res.status(400).send({ error: 'Missing OTP' });
@@ -27,7 +32,7 @@ router.put('/reset', async (req, res) => {
       return;
     }
 
-    await User.update([User.PASSWORD, encryptPassword(password)], [User.ID, user.id]);
+    await User.updateActive([User.PASSWORD, encryptPassword(password)], [User.ID, user.id]);
     res.send({ message: 'Password changed successfully' });
   } catch (error) {
     res.status(500).send({ error: error.message });
@@ -59,7 +64,7 @@ router.put('/', async (req, res) => {
       return;
     }
 
-    await User.update([User.PASSWORD, encryptPassword(password)], [User.ID, loggedInUser.id]);
+    await User.updateActive([User.PASSWORD, encryptPassword(password)], [User.ID, loggedInUser.id]);
     res.send({ message: 'Password changed successfully' });
   } catch (error) {
     res.status(500).send({ error: error.message });

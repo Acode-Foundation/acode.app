@@ -45,9 +45,9 @@ async function ensurePurchaseOwnership(orderId, paymentId) {
       console.warn(`Pro price mismatch in webhook: notes ${orderInrPrice} vs config ${expectedPrice}. Accepting.`);
     }
 
-    const [existingUser] = await User.get(User.safeColumns, [User.ID, userId]);
+    const [existingUser] = await User.getActive(User.safeColumns, [User.ID, userId]);
     if (existingUser && existingUser.acode_pro !== 1 && existingUser.acode_pro !== true) {
-      await User.update(
+      await User.updateActive(
         [
           [User.ACODE_PRO, 1],
           [User.PRO_PURCHASE_TOKEN, paymentId],

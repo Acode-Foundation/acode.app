@@ -112,7 +112,7 @@ async function syncRefundsOnPaidOrders() {
             [Order.TOKEN, order.razorpay_payment_id],
           );
 
-          await User.update(
+          await User.updateActive(
             [
               [User.ACODE_PRO, 0],
               [User.PRO_PURCHASE_TOKEN, null],

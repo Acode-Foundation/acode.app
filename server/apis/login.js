@@ -31,7 +31,7 @@ route.post('/', async (req, res) => {
     return;
   }
 
-  const userRow = await user.get([user.EMAIL, email]);
+  const userRow = await user.getActive(['*'], [user.EMAIL, email]);
   const ERROR = 'Email or Password is incorrect.';
 
   if (!userRow.length) {

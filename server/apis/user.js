@@ -137,6 +137,12 @@ route.post('/app-token/exchange', appTokenRateLimit, async (req, res) => {
       return;
     }
 
+    const [activeUser] = await User.getActive([User.ID], [User.ID, authCode.user_id]);
+    if (!activeUser) {
+      res.status(400).send({ error: 'Invalid or expired app auth code' });
+      return;
+    }
+
     const [loginRow] = await login.for('internal').get(login.columns, [
       [login.USER_ID, authCode.user_id],
       [login.TYPE, 'app'],
@@ -371,7 +377,7 @@ route.delete('/link/github', async (req, res) => {
       return res.status(400).send({ error: 'Cannot unlink your primary login method' });
     }
 
-    await User.update(
+    await User.updateActive(
       [
         [User.GITHUB_ID, null],
         [User.GITHUB, null],
@@ -400,7 +406,7 @@ route.delete('/link/google', async (req, res) => {
       return res.status(400).send({ error: 'Cannot unlink your primary login method' });
     }
 
-    await User.update([[User.GOOGLE_ID, null]], [User.ID, loggedInUser.id]);
+    await User.updateActive([[User.GOOGLE_ID, null]], [User.ID, loggedInUser.id]);
 
     res.send({ message: 'Google account unlinked' });
   } catch (error) {
@@ -411,7 +417,7 @@ route.delete('/link/google', async (req, res) => {
 route.get('/:idOrEmail', async (req, res) => {
   const { idOrEmail } = req.params;
 
-  const [row] = await User.get(
+  const [row] = await User.getActive(
     [User.safeColumns],
     [
       [User.ID, idOrEmail],
@@ -437,7 +443,13 @@ route.patch('/verify{/:type}/:userId', async (req, res) => {
     }
 
     const { userId } = req.params;
-    await User.update([User.VERIFIED, req.params.type === 'revoke' ? 0 : 1], [User.ID, userId]);
+    const [activeUser] = await User.getActive([User.ID], [User.ID, userId]);
+    if (!activeUser) {
+      res.status(404).send({ error: 'User not found' });
+      return;
+    }
+
+    await User.updateActive([User.VERIFIED, req.params.type === 'revoke' ? 0 : 1], [User.ID, userId]);
 
     res.send({ message: 'User verified' });
   } catch (error) {
@@ -621,7 +633,7 @@ route.put('/', async (req, res) => {
       }
     }
 
-    await User.update(
+    await User.updateActive(
       [
         [User.X, x],
         [User.NAME, name],
@@ -784,7 +796,7 @@ async function getAuthorizedUser(req) {
     throw error;
   }
 
-  const [user] = await User.get([User.ID, userId]);
+  const [user] = await User.getActive(['*'], [User.ID, userId]);
   if (!user) {
     error.message = 'User not found';
     error.code = 404;

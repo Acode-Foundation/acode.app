@@ -34,7 +34,7 @@ async function notifyPurchase(paymentId, knownUser) {
 
   let user = knownUser;
   if (!user) {
-    const [fetched] = await User.get([User.EMAIL, User.NAME], [User.ID, order.user_id]);
+    const [fetched] = await User.getActive([User.EMAIL, User.NAME], [User.ID, order.user_id]);
     user = fetched;
   }
   if (!user) return;

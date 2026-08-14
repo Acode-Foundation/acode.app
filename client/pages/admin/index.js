@@ -1022,6 +1022,10 @@ function Users() {
     const res = await fetch(apiUrl);
     const { users, pages } = await res.json();
     const pageCount = pages || 0;
+    if (pageCount > 0 && page > pageCount) {
+      await goTo(pageCount);
+      return;
+    }
     totalPages.value = pageCount;
     currentPage.value = pageCount === 0 ? 0 : page;
     ref.innerHTML = '';
@@ -1039,27 +1043,26 @@ function Users() {
           <td>{user.email}</td>
           <td>{moment(user.created_at).format('DD-MM-YY')}</td>
           <td style={{ textAlign: 'center' }}>
-            <span data-action='delete' data-user-id={user.id} className='icon delete' />
+            {user.role !== 'admin' && <span data-action='delete' data-user-id={user.id} className='icon delete' />}
           </td>
         </tr>
       )),
     );
   }
-}
 
-/**
- * Click event handler
- * @param {MouseEvent} e
- */
-async function clickHandler(e) {
-  const { target } = e;
-  const { action } = target.dataset;
-  if (action === 'delete') {
-    const { userId } = e.target.dataset;
-    const confirmation = await confirm('WARNING', 'Are you sure you want to delete this user?');
-    if (confirmation) {
-      await deleteUser(userId);
-      app.get(`#user-${userId}`)?.remove();
+  /**
+   * @param {MouseEvent} e
+   */
+  async function clickHandler(e) {
+    const { action, userId } = e.target.dataset;
+    if (action !== 'delete') return;
+
+    const confirmation = await confirm(
+      'WARNING',
+      "This will permanently revoke access and anonymize the user's personal data. Plugins and financial history will be retained. Continue?",
+    );
+    if (confirmation && (await deleteUser(userId))) {
+      await goTo(currentPage.value || 1);
     }
   }
 }
@@ -1069,14 +1072,20 @@ async function clickHandler(e) {
  * @param {string} id
  */
 async function deleteUser(id) {
-  const res = await fetch(`api/admin/user/${id}`, {
-    method: 'DELETE',
-  });
-  const json = await res.json();
-  if (json.error) {
-    alert('ERROR', json.error);
-  } else {
+  try {
+    const res = await fetch(`api/admin/user/${id}`, {
+      method: 'DELETE',
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) {
+      alert('ERROR', json.error || `Failed to delete user (${res.status})`);
+      return false;
+    }
     alert('Success', 'User deleted successfully');
+    return true;
+  } catch (error) {
+    alert('ERROR', error.message || 'Failed to delete user');
+    return false;
   }
 }
 

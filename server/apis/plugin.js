@@ -793,7 +793,9 @@ router.patch('/', async (req, res) => {
 
     try {
       const [{ user_id: userId, name: pluginName, id: pluginID }] = await Plugin.get([Plugin.USER_ID, Plugin.ID, Plugin.NAME], [Plugin.ID, id]);
-      const [{ email, name }] = await User.get([User.EMAIL, User.NAME], [User.ID, userId]);
+      const [recipient] = await User.getActive([User.EMAIL, User.NAME], [User.ID, userId]);
+      if (!recipient) return;
+      const { email, name } = recipient;
       const subject = status === 'approve' ? 'Plugin Approved' : 'Plugin Rejected';
       let message = `Your <a href='https://acode.app/plugin/${pluginID}'><strong>${pluginName}</strong></a> plugin for Acode editor`;
 

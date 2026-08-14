@@ -52,7 +52,7 @@ async function getLoggedInUser(req) {
 
   const { user_id: userId } = session;
 
-  const userRow = await user.get(user.safeColumns, [user.ID, userId]);
+  const userRow = await user.getActive(user.safeColumns, [user.ID, userId]);
 
   if (!userRow.length) {
     return null;

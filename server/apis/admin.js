@@ -5,6 +5,7 @@ const { Router } = require('express');
 const moment = require('moment');
 const Entity = require('../entities/entity');
 const User = require('../entities/user');
+const db = require('../lib/db');
 const Payment = require('../entities/payment');
 const PaymentMethod = require('../entities/paymentMethod');
 const AppConfig = require('../entities/appConfig');
@@ -19,6 +20,7 @@ const { validateModeRegex } = require('../lib/modeRegex');
 const { createDashboardAnalytics, createDashboardStats } = require('../lib/adminDashboardContract');
 const { getAdminExchangeRateResponse } = require('../lib/adminExchangeRate');
 const { getPluginSalesInr } = require('../lib/adminDashboardMetrics');
+const { anonymizeUser } = require('../lib/anonymizeUser');
 
 const router = Router();
 
@@ -33,7 +35,7 @@ router.use('/', async (req, res, next) => {
 });
 
 router.get('/', async (_req, res) => {
-  const users = await User.count();
+  const users = await User.countActive();
   const plugins = await plugin.count();
   const [{ total: pluginDownloads }] = await plugin.get(['SUM(downloads) as total'], []);
   const { total: pluginSales } = await getPluginSalesInr();
@@ -183,8 +185,8 @@ router.get('/users', async (req, res) => {
     where.push([User.EMAIL, email, 'LIKE']);
   }
 
-  const count = await User.count(where);
-  const users = await User.get(User.safeColumns, where, {
+  const count = await User.countActive(where);
+  const users = await User.getActive(User.safeColumns, where, {
     page: pageNum,
     limit: limitNum,
   });
@@ -242,7 +244,8 @@ router.patch('/payment', async (req, res) => {
   res.send(row);
 
   if (statusInt !== Payment.STATUS_PAID) return;
-  const [user] = await User.get([User.ID, row.user_id]);
+  const [user] = await User.getActive(['*'], [User.ID, row.user_id]);
+  if (!user) return;
   // last month of current year
   const lastMonth = moment().subtract(1, 'month').format('MM-YYYY');
   const message = `Your payment for ${lastMonth} has been sent.`;
@@ -252,13 +255,19 @@ router.patch('/payment', async (req, res) => {
 
 router.delete('/user/:id', async (req, res) => {
   const { id } = req.params;
-  const [user] = await User.get([User.ID, id]);
-  if (!user) {
+  const result = anonymizeUser(db, id);
+
+  if (result.status === 'not_found') {
     res.status(404).send({ error: 'User not found' });
     return;
   }
-  await User.delete([User.ID, id]);
-  res.send(user);
+
+  if (result.status === 'admin') {
+    res.status(409).send({ error: 'Admin accounts cannot be deleted' });
+    return;
+  }
+
+  res.send({ id: result.id, anonymized: true });
 });
 
 const ALLOWED_FILTERS = ['all', 'with_plugins', 'with_paid_plugins', 'with_payment'];

@@ -567,7 +567,7 @@ router.get('/orders', async (req, res) => {
     }));
 
     if (user.acode_pro === 1 || user.acode_pro === true) {
-      const [fullUser] = await User.get([User.PRO_PURCHASE_TOKEN, User.PRO_PURCHASED_AT], [User.ID, user.id]);
+      const [fullUser] = await User.getActive([User.PRO_PURCHASE_TOKEN, User.PRO_PURCHASED_AT], [User.ID, user.id]);
       if (fullUser?.pro_purchase_token && !rzpPaymentIds.has(fullUser.pro_purchase_token)) {
         const proPrice = Number(await AppConfig.getValue('acode_pro_price'));
         const proCurrency = 'INR';
@@ -820,7 +820,7 @@ router.post('/webhook', async (req, res) => {
         );
 
         if (failedRzpOrder) {
-          const [failedUser] = await User.get([User.EMAIL, User.NAME], [User.ID, failedRzpOrder.user_id]);
+          const [failedUser] = await User.getActive([User.EMAIL, User.NAME], [User.ID, failedRzpOrder.user_id]);
           if (failedUser) {
             let itemName = 'your purchase';
             if (failedRzpOrder.product_type === 'acode_pro') {
@@ -921,7 +921,7 @@ router.post('/webhook', async (req, res) => {
             [Order.TOKEN, paymentId],
           );
 
-          await User.update(
+          await User.updateActive(
             [
               [User.ACODE_PRO, 0],
               [User.PRO_PURCHASE_TOKEN, null],
@@ -1319,14 +1319,18 @@ router.post('/verify-pro', async (req, res) => {
 
     // Re-check Pro status right before activation to close TOCTOU race
     // (webhook may have already activated Pro between our initial check and now)
-    const [freshUser] = await User.get([User.ACODE_PRO], [User.ID, user.id]);
+    const [freshUser] = await User.getActive([User.ACODE_PRO], [User.ID, user.id]);
+    if (!freshUser) {
+      res.status(409).send({ error: 'User account is unavailable' });
+      return;
+    }
     if (freshUser?.acode_pro === 1 || freshUser?.acode_pro === true) {
       res.send({ success: true, message: 'Acode Pro already activated' });
       return;
     }
 
     // Activate Acode Pro for the user
-    await User.update(
+    await User.updateActive(
       [
         [User.ACODE_PRO, 1],
         [User.PRO_PURCHASE_TOKEN, razorpay_payment_id],
@@ -1770,7 +1774,7 @@ router.post('/refund-pro', async (req, res) => {
     }
 
     // Fetch the purchase token (not included in safeColumns)
-    const [fullUser] = await User.get([User.PRO_PURCHASE_TOKEN, User.PRO_PURCHASED_AT], [User.ID, user.id]);
+    const [fullUser] = await User.getActive([User.PRO_PURCHASE_TOKEN, User.PRO_PURCHASED_AT], [User.ID, user.id]);
     const purchaseToken = fullUser?.pro_purchase_token;
     const purchasedAt = fullUser?.pro_purchased_at;
 
@@ -1792,7 +1796,7 @@ router.post('/refund-pro', async (req, res) => {
 
     // Reset pro status first so user can't use Pro while refund is processing.
     // If the Razorpay refund call fails, we restore Pro status.
-    await User.update(
+    await User.updateActive(
       [
         [User.ACODE_PRO, 0],
         [User.PRO_PURCHASE_TOKEN, null],
@@ -1820,7 +1824,7 @@ router.post('/refund-pro', async (req, res) => {
 
       // Razorpay refund failed — restore Pro status so user isn't left in limbo
       console.error('Razorpay refund API failed, restoring Pro status:', refundErr);
-      await User.update(
+      await User.updateActive(
         [
           [User.ACODE_PRO, 1],
           [User.PRO_PURCHASE_TOKEN, purchaseToken],

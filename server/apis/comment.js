@@ -243,8 +243,10 @@ router.post('/:commentId/reply', async (req, res) => {
     res.send({ message: 'Reply added successfully' });
 
     try {
-      const [commenter] = await user.get([user.NAME, user.EMAIL], [user.ID, comment.user_id]);
-      sendEmail(commenter.email, commenter.name, `Reply to your comment on Acode plugin - ${plugin.name}.`, `<p>${reply}</p>`);
+      const [commenter] = await user.getActive([user.NAME, user.EMAIL], [user.ID, comment.user_id]);
+      if (commenter) {
+        sendEmail(commenter.email, commenter.name, `Reply to your comment on Acode plugin - ${plugin.name}.`, `<p>${reply}</p>`);
+      }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error(error);
