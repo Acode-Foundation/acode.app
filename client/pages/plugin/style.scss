@@ -53,26 +53,27 @@
       align-items: center;
       gap: 8px;
       padding: 10px 20px;
-      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-      color: white;
-      border-radius: 8px;
+      background: #f4f6f8;
+      color: #111216;
+      border-radius: 10px;
       font-weight: 600;
       text-decoration: none;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+      transition: transform 0.2s ease, background-color 0.2s ease;
+      box-shadow: none;
 
       &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        transform: translateY(-1px);
+        background: #fff;
+        box-shadow: none;
       }
     }
 
     .buy-button {
-      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-      color: white;
+      background: #f4f6f8;
+      color: #111216;
       border: none;
       padding: 10px 20px;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;

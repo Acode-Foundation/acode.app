@@ -1,20 +1,33 @@
 #publish-plugin {
+  table {
+    td {
+      padding: 14px 12px;
+      vertical-align: middle;
+    }
+
+    th {
+      padding: 14px 12px;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    select {
+      margin: 0;
+      min-width: 160px;
+      height: 40px;
+    }
+  }
+
   .update-banner {
     position: relative;
     margin: 20px auto 30px;
     padding: 24px 28px;
     max-width: 800px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--page-surface, rgba(255, 255, 255, 0.035));
+    border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
     border-radius: 16px;
-    box-shadow:
-      0 4px 24px rgba(102, 126, 234, 0.25),
-      0 8px 48px rgba(118, 75, 162, 0.2);
+    box-shadow: none;
     overflow: hidden;
-    animation: fadeInScale 0.5s ease-out;
-
-    // Animated background gradient
-    background-size: 200% 200%;
-    animation: fadeInScale 0.5s ease-out, gradientShift 8s ease infinite;
 
     // Decorative elements
     &::before {
@@ -48,19 +61,17 @@
 
       .icon {
         font-size: 24px;
-        color: rgba(255, 255, 255, 0.95);
+        color: var(--page-text, #f1f2f4);
       }
     }
 
     p {
       position: relative;
       margin: 0 0 16px;
-      color: #ffffff;
+      color: var(--page-muted, rgba(241, 242, 244, 0.64));
       font-size: 16px;
       line-height: 1.6;
       font-weight: 400;
-      letter-spacing: 0.3px;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 
       strong {
         display: inline-flex;
@@ -82,7 +93,7 @@
       align-items: center;
       gap: 8px;
       padding: 12px 24px;
-      color: #667eea;
+      color: #3499fe;
       background: #ffffff;
       text-decoration: none;
       font-weight: 600;
@@ -120,7 +131,7 @@
       margin-left: 12px;
       padding: 4px 12px;
       background: rgba(255, 255, 255, 0.95);
-      color: #764ba2;
+      color: #6ea8ff;
       font-size: 12px;
       font-weight: 600;
       text-transform: uppercase;

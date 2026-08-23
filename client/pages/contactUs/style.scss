@@ -1,21 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap');
-
 #contact-us {
   max-width: 900px;
   margin: 0 auto;
   padding: 60px 24px 60px;
 
   h1 {
-    font-family: 'Lexend', sans-serif;
-    font-size: clamp(2rem, 5vw, 3.2rem);
-    font-weight: 800;
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 500;
     line-height: 1.1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.05em;
     text-align: center;
-    background: linear-gradient(135deg, #00d4ff 0%, #3399ff 50%, #a78bfa 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #fff;
     margin-bottom: 16px;
   }
 
@@ -48,7 +42,7 @@
       inset: 0;
       border-radius: 16px;
       background: radial-gradient(circle at top right,
-          rgba(0, 212, 255, 0.06),
+          rgba(52, 153, 254), 0.06),
           transparent 60%);
       opacity: 0;
       transition: opacity 0.4s ease;
@@ -56,7 +50,7 @@
 
     &:hover {
       background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(0, 212, 255, 0.2);
+      border-color: rgba(52, 153, 254), 0.2);
       transform: translateY(-4px);
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 
@@ -67,7 +61,7 @@
 
     .icon.email {
       font-size: 1.8rem;
-      color: #00d4ff;
+      color: #3499fe;
       flex-shrink: 0;
       position: relative;
       z-index: 1;
@@ -80,7 +74,7 @@
       z-index: 1;
 
       h2 {
-        font-family: 'Lexend', sans-serif;
+        font-family: inherit;
         font-size: 0.75rem;
         font-weight: 500;
         text-transform: uppercase;
@@ -90,7 +84,7 @@
       }
 
       a {
-        font-family: 'Lexend', sans-serif;
+        font-family: inherit;
         font-size: 1.2rem;
         font-weight: 600;
         color: #ffffff;
@@ -98,7 +92,7 @@
         transition: color 0.2s ease;
 
         &:hover {
-          color: #00d4ff;
+          color: #3499fe;
         }
       }
 
@@ -119,19 +113,19 @@
     }
 
     .section-label {
-      font-family: 'Lexend', sans-serif;
+      font-family: inherit;
       font-size: 0.8rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: #00d4ff;
+      color: #3499fe;
       margin-bottom: 12px;
     }
 
     h2 {
-      font-family: 'Lexend', sans-serif;
+      font-family: inherit;
       font-size: 2rem;
-      font-weight: 700;
+      font-weight: 500;
       color: #ffffff;
       margin-bottom: 24px;
       letter-spacing: -0.02em;
@@ -154,7 +148,7 @@
     border-radius: 12px;
     color: rgba(255, 255, 255, 0.6);
     text-decoration: none;
-    font-family: 'Lexend', sans-serif;
+    font-family: inherit;
     font-size: 0.85rem;
     font-weight: 500;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -167,8 +161,8 @@
 
     &:hover {
       background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(0, 212, 255, 0.2);
-      color: #00d4ff;
+      border-color: rgba(52, 153, 254), 0.2);
+      color: #3499fe;
       transform: translateY(-2px);
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 

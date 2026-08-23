@@ -5,13 +5,18 @@
   h1 {
     margin: 0;
     padding: 10px 0;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    color: #fff;
   }
 
   .admin-tabs {
     display: flex;
     gap: 4px;
     padding: 6px;
-    background-color: var(--secondary-color);
+    background-color: var(--page-surface, rgba(255, 255, 255, 0.035));
+    border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
     border-radius: 12px;
     margin: 12px 0 0;
     overflow-x: auto;
@@ -37,9 +42,9 @@
       transition: all 0.2s ease;
 
       &.active {
-        background-color: var(--primary-color);
+        background-color: rgba(255, 255, 255, 0.08);
         color: #fff;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        box-shadow: none;
       }
 
       &:not(.active):hover {
@@ -102,9 +107,9 @@
   }
 
   .chart-card {
-    background-color: var(--secondary-color);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
+    background-color: var(--page-surface, rgba(255, 255, 255, 0.035));
+    border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
+    border-radius: 16px;
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -218,7 +223,7 @@
         background-color: rgba(255, 255, 255, 0.04);
         color: inherit;
         font-size: 0.9em;
-        appearance: auto;
+        appearance: none;
 
         &:focus {
           outline: none;
@@ -531,7 +536,7 @@
         font-size: 0.95em;
         line-height: 1.5;
         height: auto;
-        appearance: auto;
+        appearance: none;
 
         &:focus {
           outline: none;
@@ -938,7 +943,7 @@
         line-height: 1.5;
         min-width: 150px;
         cursor: pointer;
-        appearance: auto;
+        appearance: none;
         flex-shrink: 0;
         height: fit-content;
 

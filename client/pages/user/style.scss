@@ -8,8 +8,9 @@
   .profile {
     width: 100%;
     display: flex;
-    background-color: var(--secondary-color);
-    border-radius: 4px;
+    background-color: var(--page-surface, rgba(255, 255, 255, 0.035));
+    border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
+    border-radius: 16px;
 
     h1 {
       text-align: left;
@@ -45,8 +46,8 @@
           border-radius: 9px;
           margin-left: 5px;
           padding: 2.5px 10px;
-          background-color: #00d4ff;
-          color: black;
+          background-color: #3499fe;
+          color: #fff;
           text-decoration: none;
 
           &.pro-tag {
@@ -101,8 +102,8 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      background-color: var(--primary-color);
-      border-bottom: solid 1px #ccc;
+      background-color: var(--page-surface, rgba(255, 255, 255, 0.035));
+      border-bottom: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
 
       h1 {
         margin-top: 0;
@@ -148,11 +149,12 @@
       flex-direction: column;
       height: calc(100% - 20px);
       width: 180px;
-      background-color: var(--primary-color);
+      background-color: rgba(255, 255, 255, 0.05);
       color: var(--primary-text-color);
       padding: 5px;
       margin: 5px;
-      border-radius: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
       font-size: 0.8rem;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
@@ -251,14 +253,15 @@
     a {
       height: 30px;
       width: 30px;
-      background-color: white;
-      color: var(--primary-color);
+      background-color: rgba(255, 255, 255, 0.06);
+      color: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
       margin: 5px;
       text-decoration: none;
-      border-radius: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
 
       .icon {
         font-size: 20px;

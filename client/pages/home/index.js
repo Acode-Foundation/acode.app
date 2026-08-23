@@ -237,25 +237,28 @@ async function loadPlugins(mount, pluginCount) {
   try {
     const { count } = await (await fetch('/api/plugins/count')).json();
     pluginCount.value = count.toLocaleString();
-    const pluginIds = await (await fetch('/api/plugins?limit=4&sort=downloads&supported_editor=cm')).json();
+    const pluginIds = await (await fetch('/api/plugins?limit=12&orderBy=downloads')).json();
     if (!Array.isArray(pluginIds) || pluginIds.length === 0) return;
 
     attach(
       mount,
       <div className='featured-plugins'>
-        <div className='section-header'>
-          <h2>
-            <span>{pluginCount}</span> plugins
-          </h2>
+        <div className='featured-plugins__intro'>
+          <div>
+            <h2>Growing plugin ecosystem</h2>
+            <p>Language servers, themes, formatters, and tools — or write your own.</p>
+          </div>
           <a href='/plugins' className='see-all'>
-            Browse all <span className='icon chevron-right' />
+            View all plugins <span className='icon chevron-right' />
           </a>
         </div>
-        <ul className='featured-plugins__list'>
-          {pluginIds.map((plugin) => (
-            <Plugin data={plugin} />
-          ))}
-        </ul>
+        <div className='featured-plugins__fade'>
+          <ul className='featured-plugins__list'>
+            {pluginIds.map((plugin) => (
+              <Plugin data={plugin} />
+            ))}
+          </ul>
+        </div>
       </div>,
     );
   } catch {
@@ -391,16 +394,26 @@ function renderSponsorCard(sponsor) {
   );
 }
 
+function formatDownloads(value) {
+  const count = Number(value) || 0;
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (count >= 1000) return `${(count / 1000).toFixed(count >= 10_000 ? 0 : 1).replace(/\.0$/, '')}k`;
+  return `${count}`;
+}
+
 function Plugin({ data }) {
-  const { name, icon, downloads, id } = data;
+  const { name, downloads, id, author } = data;
 
   return (
     <li>
       <a href={`/plugin/${id}`}>
-        <img src={icon} alt='' />
+        <img src={`/plugin-icon/${id}`} alt='' width='28' height='28' />
         <span className='plugin-meta'>
-          <span className='plugin-name'>{name}</span>
-          <small>{downloads?.toLocaleString()} downloads</small>
+          <span className='plugin-top'>
+            <span className='plugin-name'>{name}</span>
+            <span className='plugin-downloads'>↓ {formatDownloads(downloads)}</span>
+          </span>
+          {author ? <span className='plugin-author'>{author}</span> : null}
         </span>
       </a>
     </li>

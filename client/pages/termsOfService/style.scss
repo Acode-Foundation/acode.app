@@ -1,4 +1,6 @@
 #terms-of-service {
+  padding-top: clamp(2.5rem, 6vw, 4.5rem);
+
   h1,
   h2,
   h3 {
@@ -6,7 +8,10 @@
   }
 
   h1 {
-    font-size: 2.5rem;
+    font-size: clamp(2.2rem, 5vw, 3.2rem);
+    font-weight: 500;
+    letter-spacing: -0.05em;
+    color: #fff;
     margin-bottom: 1rem;
   }
 }

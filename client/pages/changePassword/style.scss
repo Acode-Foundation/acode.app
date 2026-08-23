@@ -7,7 +7,12 @@
   min-height: calc(100% - 50px - var(--announcement-height));
   width: 100%;
   max-width: unset !important;
-  z-index: 0;
+  z-index: 1;
+  padding: 48px 16px;
+
+  canvas#background {
+    display: none;
+  }
 
   .email-otp-group {
     margin-bottom: 16px;

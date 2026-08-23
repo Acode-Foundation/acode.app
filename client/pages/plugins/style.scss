@@ -1,4 +1,8 @@
 #plugins {
+  max-width: 1120px;
+  width: calc(100% - 48px);
+  padding-top: clamp(2.5rem, 6vw, 4.5rem);
+
   &::after {
     content: '';
     display: block;
@@ -12,13 +16,11 @@
 
     h1 {
       margin-bottom: 32px;
-      font-size: 2.5rem;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      font-weight: 700;
-      letter-spacing: -0.5px;
+      font-size: clamp(2.2rem, 5vw, 3.4rem);
+      font-weight: 500;
+      letter-spacing: -0.05em;
+      color: #fff;
+      line-height: 1.1;
     }
 
     .controls-wrapper {
@@ -73,24 +75,20 @@
           font-size: 1rem;
           font-weight: 500;
           height: 40px;
-          border-radius: 4px;
+          color: var(--page-text, #f1f2f4);
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          appearance: none;
-          background-image: url(data:image/svg+xml,%3Csvg%20width%3D%2212%22%20height%3D%228%22%20viewBox%3D%220%200%2012%208%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201L6%206L11%201%22%20stroke%3D%22%23667eea%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E);
-          background-repeat: no-repeat;
-          background-position: right 12px center;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
           padding-right: 40px;
 
           &:hover {
-            border-color: #667eea;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+            border-color: rgba(255, 255, 255, 0.16);
+            box-shadow: none;
           }
 
           &:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--page-accent);
+            box-shadow: 0 0 0 3px rgba(52, 153, 254, 0.15);
           }
 
           optgroup {
@@ -106,31 +104,11 @@
         }
 
         .filter-select {
-          border-color: #10b981;
-
-          &:hover {
-            border-color: #10b981;
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
-          }
-
-          &:focus {
-            border-color: #10b981;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-          }
+          border-color: var(--page-line);
         }
 
         .sort-select {
-          border-color: #8b5cf6;
-
-          &:hover {
-            border-color: #8b5cf6;
-            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
-          }
-
-          &:focus {
-            border-color: #8b5cf6;
-            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
-          }
+          border-color: var(--page-line);
         }
       }
     }

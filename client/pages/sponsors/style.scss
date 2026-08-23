@@ -4,10 +4,7 @@
   padding: 60px 24px 40px;
 
   .highlight {
-    background: linear-gradient(135deg, #f59e0b, #f97316);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #3499fe;
   }
 
   .section-heading {
@@ -38,11 +35,12 @@
     margin-bottom: 60px;
 
     h1 {
-      font-size: clamp(2rem, 5vw, 3rem);
-      font-weight: 800;
+      font-size: clamp(2.2rem, 5vw, 3.4rem);
+      font-weight: 500;
       line-height: 1.1;
       margin-bottom: 16px;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.05em;
+      color: #fff;
     }
   }
 
@@ -50,20 +48,21 @@
     display: inline-block;
     margin-top: 32px;
     padding: 14px 36px;
-    background: linear-gradient(135deg, #f59e0b, #f97316);
-    color: #000;
+    background: #f4f6f8;
+    color: #111216;
     border: none;
-    border-radius: 12px;
-    font-size: 1rem;
-    font-weight: 700;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
     text-decoration: none;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    box-shadow: none;
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 28px rgba(245, 158, 11, 0.4);
+      transform: translateY(-1px);
+      background: #fff;
+      box-shadow: none;
     }
 
     &:active {
