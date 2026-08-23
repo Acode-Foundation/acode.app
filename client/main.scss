@@ -1,8 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  font-family: 'Lato', sans-serif;
-  --announcement-height: 60px;
+  font-family: 'Instrument Sans', 'Montserrat', sans-serif;
+  --announcement-height: 40px;
 }
 
 body,
@@ -11,11 +11,9 @@ html {
   width: 100%;
   overflow: hidden;
   margin: 0;
-  background: linear-gradient(135deg,
-      #141824 0%,
-      #1f232f 25%);
+  background: #12141a;
   color: var(--primary-text-color);
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Instrument Sans', 'Montserrat', sans-serif;
 }
 
 #app {
@@ -217,18 +215,18 @@ header {
   display: flex;
   position: sticky;
   align-items: center;
-  transition: all 1s ease-in-out;
-  background-color: rgba(0, 0, 0, 0);
+  height: 52px;
+  padding: 0 16px;
+  background-color: rgba(12, 13, 17, 0);
   backdrop-filter: blur(0px);
-  box-shadow: rgba(0, 0, 0, 0) 0px 2px 5px;
-  transition: background-color 0.3s, backdrop-filter 0.3s, box-shadow 0.3s;
-
+  border-bottom: 1px solid transparent;
+  transition: background-color 0.25s ease, backdrop-filter 0.25s ease, border-color 0.25s ease;
 
   .user-avatar {
     height: fit-content;
     overflow: hidden;
     padding: 0;
-    margin: 0 10px;
+    margin: 0 6px;
     cursor: pointer;
 
     &:hover {
@@ -236,27 +234,27 @@ header {
     }
 
     img {
-      height: 38px;
-      width: 38px;
+      height: 30px;
+      width: 30px;
       border-radius: 50%;
       object-fit: cover;
     }
   }
 
   >.icon {
-    height: 60px;
-    width: 60px;
+    height: 40px;
+    width: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     margin: 0;
     padding: 0;
-    border-radius: 4px;
+    border-radius: 8px;
 
     &:hover {
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgba(255, 255, 255, 0.06);
     }
   }
 
@@ -264,7 +262,13 @@ header {
     display: none;
   }
 
-  @media screen and (max-width: 700px) {
+  @media screen and (max-width: 760px) {
+    .get-pro-btn {
+      padding: 0 10px !important;
+      margin: 0 4px 0 0 !important;
+      font-size: 0.75rem !important;
+    }
+
     label[for='nav-menu-toggler']:not(.mask) {
       display: flex;
       height: 40px;
@@ -284,29 +288,32 @@ header {
     #nav-menu-toggler:checked~.mask {
       z-index: unset;
       pointer-events: all;
-      background-color: rgba($color: #000000, $alpha: 0.2);
+      background-color: rgba(0, 0, 0, 0.45);
     }
 
     nav:nth-of-type(2) {
       flex-direction: column;
+      align-items: stretch;
       position: fixed;
       top: 0;
       left: 0;
       transform: translateX(-100%);
-      width: 40%;
-      min-width: 200px;
-      max-width: 250px;
-      height: 100vh;
-      z-index: 1;
-      background-color: var(--secondary-color);
-      transition: all 0.3s ease-in-out;
+      width: min(80vw, 280px);
+      height: 100dvh;
+      padding: 64px 12px 24px;
+      z-index: 2;
+      background-color: #16181e;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      transition: transform 0.25s ease;
 
       label,
       a {
-        margin-left: 0;
-        width: 100%;
-        box-sizing: border-box;
         margin: 0;
+        width: 100%;
+        height: 44px;
+        padding: 0 12px;
+        box-sizing: border-box;
+        border-radius: 8px;
       }
     }
   }
@@ -323,19 +330,22 @@ header {
 
     label,
     a {
-      color: var(--secondary-text-color);
+      color: rgba(241, 242, 244, 0.72);
       display: inline-flex;
       text-decoration: none;
-      border-radius: 4px;
-      height: 30px;
+      border-radius: 8px;
+      height: 32px;
       padding: 0 10px;
       align-items: center;
       z-index: 1;
+      font-size: 0.9rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
 
       .icon {
         height: fit-content;
         width: fit-content;
-        margin-right: 10px;
+        margin-right: 8px;
       }
 
       &.play-button {
@@ -349,41 +359,46 @@ header {
       &.logo {
         display: flex;
         align-items: center;
+        color: #fff;
+        padding-left: 4px;
 
         img {
-          height: 30px;
-          margin-right: 10px;
+          height: 26px;
+          margin-right: 8px;
         }
 
         .text {
-          font-size: 1.15rem;
+          font-size: 1.05rem;
           line-height: 1;
-          font-weight: 700;
+          font-weight: 600;
+          letter-spacing: -0.03em;
         }
       }
 
-      &:not(.logo):hover {
-        background-color: rgba(0, 0, 0, 0.5);
+      &:not(.logo):not(.get-pro-btn):hover {
+        color: #fff;
+        background-color: rgba(255, 255, 255, 0.06);
       }
 
       &.get-pro-btn {
-        background: linear-gradient(135deg, #f59e0b, #f97316);
-        color: #000;
-        font-weight: 700;
-        font-size: 0.85rem;
-        border-radius: 20px;
-        padding: 0 14px;
+        background: #f59e0b;
+        color: #111216;
+        font-weight: 600;
+        font-size: 0.8rem;
+        border-radius: 999px;
+        padding: 0 12px;
         gap: 4px;
-        margin: 0 6px;
+        margin: 0 8px 0 4px;
         justify-content: center;
+        height: 30px;
 
         .icon {
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           margin: 0;
         }
 
         &:hover {
-          background: linear-gradient(135deg, #fbbf24, #fb923c);
+          background: #fbbf24;
         }
       }
     }
@@ -598,15 +613,12 @@ code {
 }
 
 footer {
-  background: linear-gradient(180deg,
-      rgba(0, 0, 0, 0.05) 0%,
-      rgba(0, 0, 0, 0.3) 100%);
-  backdrop-filter: blur(30px);
-  border-top: 1px solid rgba(51, 153, 255, 0.15);
+  background: #0e1014;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   position: relative;
   z-index: 0;
-  padding: 60px 20px 40px;
-  margin-top: 100px;
+  padding: 56px 24px 36px;
+  margin-top: 80px;
 
   .footer-content {
     max-width: 1000px;
@@ -637,12 +649,11 @@ footer {
     }
 
     h4 {
-      font-family: 'Lexend', sans-serif;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #fff;
+      letter-spacing: 0.08em;
+      color: rgba(255, 255, 255, 0.55);
       margin-bottom: 16px;
     }
 
@@ -675,13 +686,10 @@ footer {
         }
 
         span {
-          font-family: 'Lexend', sans-serif;
-          font-size: 1.2rem;
-          font-weight: 700;
-          background: linear-gradient(135deg, #3399ff, #66b3ff);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          font-size: 1.1rem;
+          font-weight: 600;
+          letter-spacing: -0.03em;
+          color: #fff;
         }
       }
 
@@ -706,10 +714,9 @@ footer {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
           &:hover {
-            background: rgba(51, 153, 255, 0.1);
-            border-color: rgba(51, 153, 255, 0.4);
-            color: #3399ff;
-            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #fff;
           }
         }
       }
@@ -796,17 +803,18 @@ footer {
   position: fixed;
   top: 100px;
   right: 0;
-  width: 150px;
+  width: 180px;
   flex-direction: column;
   z-index: 999;
-  background-color: var(--secondary-color);
-  color: var(--secondary-text-color);
-  border-radius: 4px;
+  background-color: #16181e;
+  color: #f1f2f4;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   overflow: hidden;
-  transform: scale(0.5);
+  transform: scale(0.96);
   transform-origin: top right;
   opacity: 0;
-  transition: all 0.15s ease;
+  transition: opacity 0.15s ease, transform 0.15s ease;
   pointer-events: none;
 
   .divider {
@@ -832,7 +840,7 @@ footer {
       position: absolute;
       height: 100%;
       width: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgba(255, 255, 255, 0.06);
       top: 0;
       left: 0;
       z-index: -1;

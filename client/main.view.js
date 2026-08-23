@@ -43,7 +43,7 @@ export default ({ routes }) => (
             <img src={logo} alt='Acode' />
             <span>Acode</span>
           </div>
-          <p className='footer-description'>Powerful, extensible, and open-source code editor for Android. Build anything, anywhere.</p>
+          <p className='footer-description'>An open-source code editor for Android, with a Linux terminal and AI agents.</p>
           <div className='footer-social'>
             <a href='https://github.com/acode-foundation/acode' target='_blank' rel='noreferrer' title='GitHub'>
               <svg width='20' height='20' viewBox='0 0 24 24' fill='currentColor'>
@@ -128,7 +128,7 @@ export default ({ routes }) => (
 
       <div className='footer-bottom'>
         <p>&copy; {new Date().getFullYear()} Foxbiz Software Pvt. Ltd. All rights reserved.</p>
-        <p className='footer-love'>Built with passion for developers</p>
+        <p className='footer-love'>Open source under the MIT License</p>
       </div>
     </footer>
 

@@ -30,7 +30,7 @@
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "rules": {
-      "preset": "recommended",
+      "recommended": true,
       "nursery": {},
       "correctness": {
         "noUnusedVariables": "error",

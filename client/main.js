@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
       appName='Acode'
       routes={[
         { href: '/faqs', text: 'FAQs' },
-        { href: 'https://docs.acode.app', text: 'Plugin Docs' },
+        { href: 'https://docs.acode.app', text: 'Docs' },
         { href: '/plugins', text: 'Plugins' },
         { href: '/sponsors', text: 'Sponsors' },
         { href: 'https://academy.acode.app', text: 'Learn' },
@@ -29,11 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
   );
 
   app.addEventListener('scroll', (e) => {
+    const depth = Math.min(e.target.scrollTop / 80, 1);
     app.get('#main-header').style.cssText = `
-      background-color: rgba(0, 0, 0, ${Math.min(e.target.scrollTop / 100, 0.5)});
-      backdrop-filter: blur(${Math.min(e.target.scrollTop / 10, 10)}px);
-      box-shadow: 0 2px 5px rgba(0, 0, 0, ${Math.min(e.target.scrollTop / 100, 0.2)});
-      transition: background-color 0.3s ease, backdrop-filter 0.3s ease, box-shadow 0.3s ease;
+      background-color: rgba(12, 13, 17, ${depth * 0.78});
+      backdrop-filter: blur(${depth * 16}px);
+      border-bottom-color: rgba(255, 255, 255, ${depth * 0.08});
     `;
     if (e.target.scrollTop > 0) {
       app.classList.add('scrolled');

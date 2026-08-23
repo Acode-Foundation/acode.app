@@ -91,11 +91,13 @@ export default function AnnouncementBanner() {
     clearInterval(intervalId);
     sessionStorage.setItem('announcement-banner-closed', 'true');
     $link.removeAttribute('data-visible');
+    document.documentElement.style.setProperty('--announcement-height', '0px');
   });
 
   // Check if banner was closed in this session
   if (sessionStorage.getItem('announcement-banner-closed') === 'true') {
     $link.classList.add('hidden');
+    document.documentElement.style.setProperty('--announcement-height', '0px');
   }
 
   const $content = $link.querySelector('.announcement-banner__content');
