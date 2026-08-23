@@ -54,7 +54,7 @@ export default function home() {
             {'ndroid.'}
           </span>
         </h1>
-        <p className='home-lede'>An open-source editor with a Linux terminal and AI agents — for the phone you already have.</p>
+        <p className='home-lede'>An extensible, powerful and open-source code editor for Android, with a Linux terminal and AI agents.</p>
         <div className='home-actions'>
           <a className='home-btn home-btn-primary' href={PLAY_URL} target='_blank' rel='noopener'>
             <span className='icon googleplay' />

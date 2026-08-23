@@ -43,7 +43,7 @@ export default ({ routes }) => (
             <img src={logo} alt='Acode' />
             <span>Acode</span>
           </div>
-          <p className='footer-description'>An open-source code editor for Android, with a Linux terminal and AI agents.</p>
+          <p className='footer-description'>An extensible, powerful and open-source code editor for Android.</p>
           <div className='footer-social'>
             <a href='https://github.com/acode-foundation/acode' target='_blank' rel='noreferrer' title='GitHub'>
               <svg width='20' height='20' viewBox='0 0 24 24' fill='currentColor'>

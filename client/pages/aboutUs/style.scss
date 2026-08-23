@@ -85,7 +85,7 @@
       inset: 0;
       border-radius: 16px;
       background: radial-gradient(circle at top right,
-          rgba(52, 153, 254), 0.06),
+          rgba(52, 153, 254, 0.06),
           transparent 60%);
       opacity: 0;
       transition: opacity 0.4s ease;
@@ -93,7 +93,7 @@
 
     &:hover {
       background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(52, 153, 254), 0.2);
+      border-color: rgba(52, 153, 254, 0.2);
       transform: translateY(-4px);
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
       z-index: 2;
@@ -104,7 +104,7 @@
 
       .team-avatar {
         transform: scale(1.05);
-        box-shadow: 0 0 0 3px rgba(52, 153, 254), 0.3);
+        box-shadow: 0 0 0 3px rgba(52, 153, 254, 0.3);
       }
     }
 
@@ -182,8 +182,8 @@
         }
 
         &:hover {
-          background: rgba(52, 153, 254), 0.12);
-          border-color: rgba(52, 153, 254), 0.25);
+          background: rgba(52, 153, 254, 0.12);
+          border-color: rgba(52, 153, 254, 0.25);
           color: #3499fe;
         }
       }
