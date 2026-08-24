@@ -72,18 +72,7 @@ export default function home() {
       </div>
 
       <div className='home-gallery'>
-        <Shot
-          className='home-gallery__stage'
-          webp={shotAgentWebp}
-          jpg={shotAgentJpg}
-          alt='Acode on a tablet running OpenCode beside the project file tree'
-          kicker='AI agents'
-          caption='OpenCode in a pane. The file tree stays in view.'
-          width={1800}
-          height={942}
-          priority={true}
-        />
-        <div className='home-gallery__devices'>
+        <div className='home-gallery__devices' role='group' aria-label='Acode mobile screenshots'>
           <Shot
             className='home-gallery__phone'
             webp={shotEditorWebp}
@@ -93,6 +82,7 @@ export default function home() {
             caption='Hover docs and completions.'
             width={720}
             height={1387}
+            priority={true}
           />
           <Shot
             className='home-gallery__phone'
@@ -127,6 +117,21 @@ export default function home() {
           </a>
         </li>
       </ul>
+
+      <div className='home-agent'>
+        <div className='home-agent__copy'>
+          <h2>AI agents</h2>
+          <p>OpenCode in a pane. The file tree stays in view.</p>
+        </div>
+        <Shot
+          className='home-agent__shot'
+          webp={shotAgentWebp}
+          jpg={shotAgentJpg}
+          alt='Acode on a tablet running OpenCode beside the project file tree'
+          width={1800}
+          height={942}
+        />
+      </div>
 
       <div className='home-panes'>
         <div className='home-panes__copy'>

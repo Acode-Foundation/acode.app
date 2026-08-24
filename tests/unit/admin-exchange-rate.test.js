@@ -26,14 +26,13 @@ describe('admin USD exchange rate', () => {
     });
   });
 
-  it.each([
-    async () => null,
-    async () => ({ rates: {} }),
-    async () => Promise.reject(new Error('offline')),
-  ])('returns 503 when no current or stale rate is available', async (getRatesFn) => {
-    await expect(getAdminExchangeRateResponse('USD', getRatesFn)).resolves.toEqual({
-      status: 503,
-      body: { error: 'USD exchange rate is unavailable' },
-    });
-  });
+  it.each([async () => null, async () => ({ rates: {} }), async () => Promise.reject(new Error('offline'))])(
+    'returns 503 when no current or stale rate is available',
+    async (getRatesFn) => {
+      await expect(getAdminExchangeRateResponse('USD', getRatesFn)).resolves.toEqual({
+        status: 503,
+        body: { error: 'USD exchange rate is unavailable' },
+      });
+    },
+  );
 });
