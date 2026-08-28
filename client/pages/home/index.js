@@ -2,16 +2,13 @@ import './style.scss';
 
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
+import Router from 'lib/Router';
 import { fetchSponsorMix } from 'lib/sponsors';
 import { TIER_ORDER } from 'lib/sponsorTiers';
-import shotAgentJpg from 'res/acode-shot-agent.jpg';
-import shotAgentWebp from 'res/acode-shot-agent.webp';
-import shotEditorJpg from 'res/acode-shot-editor.jpg';
-import shotEditorWebp from 'res/acode-shot-editor.webp';
-import shotPanesJpg from 'res/acode-shot-panes.jpg';
-import shotPanesWebp from 'res/acode-shot-panes.webp';
-import shotTerminalJpg from 'res/acode-shot-terminal.jpg';
-import shotTerminalWebp from 'res/acode-shot-terminal.webp';
+import FeatureSections from './featureSections';
+import { setupHomeInteractions } from './homeInteractions';
+import ScreenshotGallery from './screenshotGallery';
+import { heroScreenshots } from './screenshots';
 
 const PLAY_URL =
   'https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1';
@@ -42,7 +39,7 @@ export default function home() {
   loadSponsors(sponsorsMount);
   loadContributors(contributorsMount);
 
-  return (
+  const page = (
     <section id='home'>
       <div className='home-atmosphere' aria-hidden='true' />
 
@@ -71,31 +68,7 @@ export default function home() {
         </div>
       </div>
 
-      <div className='home-gallery'>
-        <div className='home-gallery__devices' role='group' aria-label='Acode mobile screenshots'>
-          <Shot
-            className='home-gallery__phone'
-            webp={shotEditorWebp}
-            jpg={shotEditorJpg}
-            alt='Acode editor showing TypeScript hover documentation'
-            kicker='Editor & LSP'
-            caption='Hover docs and completions.'
-            width={720}
-            height={1387}
-            priority={true}
-          />
-          <Shot
-            className='home-gallery__phone'
-            webp={shotTerminalWebp}
-            jpg={shotTerminalJpg}
-            alt='Acode Linux terminal installing npm packages'
-            kicker='Linux terminal'
-            caption='Alpine. apk, npm, git, python.'
-            width={720}
-            height={1387}
-          />
-        </div>
-      </div>
+      <ScreenshotGallery shots={heroScreenshots} />
 
       <ul className='home-proof'>
         <li>
@@ -118,63 +91,7 @@ export default function home() {
         </li>
       </ul>
 
-      <div className='home-agent'>
-        <div className='home-agent__copy'>
-          <h2>AI agents</h2>
-          <p>OpenCode in a pane. The file tree stays in view.</p>
-        </div>
-        <Shot
-          className='home-agent__shot'
-          webp={shotAgentWebp}
-          jpg={shotAgentJpg}
-          alt='Acode on a tablet running OpenCode beside the project file tree'
-          width={1800}
-          height={942}
-        />
-      </div>
-
-      <div className='home-panes'>
-        <div className='home-panes__copy'>
-          <h2>Split the workspace.</h2>
-          <p>Editors, config, and a Linux terminal in one view. Arrange panes the way you would on a desktop.</p>
-        </div>
-        <Shot
-          className='home-panes__shot'
-          webp={shotPanesWebp}
-          jpg={shotPanesJpg}
-          alt='Acode with four split panes: Dockerfile, JSON, config.xml, and an Alpine Linux terminal'
-          caption='Dockerfile · JSON · config.xml · Alpine terminal'
-          width={1800}
-          height={951}
-        />
-      </div>
-
-      <div className='home-capabilities'>
-        <article>
-          <h3>Linux terminal</h3>
-          <p>Alpine Linux on-device. apk, npm, git, python, node — the same CLI you use at a desk.</p>
-        </article>
-        <article>
-          <h3>SSH terminal</h3>
-          <p>A real shell on the remote box, in a pane beside the editor. Multiple sessions. The files stay on the server.</p>
-        </article>
-        <article>
-          <h3>File tree & LSP</h3>
-          <p>A project sidebar, not a file picker. Completions, go to definition, and diagnostics from language servers.</p>
-        </article>
-        <article>
-          <h3>AI agents</h3>
-          <p>Claude Code, Codex, and OpenCode inside the editor. Your repo, your terminal, your model.</p>
-        </article>
-        <article>
-          <h3>Change anything</h3>
-          <p>Keymaps, themes, extra keys, commands, the UI. Nothing is locked. If you can think it, you can wire it.</p>
-        </article>
-        <article>
-          <h3>Plugins</h3>
-          <p>Language servers, formatters, themes, tools — install them, or write them. The API is public.</p>
-        </article>
-      </div>
+      <FeatureSections />
 
       <div ref={contributorsMount} hidden />
       <div ref={pluginsMount} hidden />
@@ -202,6 +119,14 @@ export default function home() {
       </div>
     </section>
   );
+
+  const disposeInteractions = setupHomeInteractions(page);
+  const cleanup = () => {
+    disposeInteractions();
+    Router.off('navigate', cleanup);
+  };
+  Router.on('navigate', cleanup);
+  return page;
 }
 
 function LogoA() {
@@ -254,7 +179,7 @@ async function loadPlugins(mount, pluginCount) {
             <p>Language servers, themes, formatters, and tools — or write your own.</p>
           </div>
           <a href='/plugins' className='see-all'>
-            View all plugins <span className='icon chevron-right' />
+            View all plugins <span className='icon navigate_next' />
           </a>
         </div>
         <div className='featured-plugins__fade'>
@@ -285,7 +210,7 @@ async function loadSponsors(mount) {
         <div className='section-header'>
           <h2>{allExpired ? 'Previous sponsors' : 'Sponsors'}</h2>
           <a href='/sponsors' className='see-all'>
-            View all <span className='icon chevron-right' />
+            View all <span className='icon navigate_next' />
           </a>
         </div>
         <div className='sponsors-grid'>{sponsors.map(renderSponsorCard)}</div>
@@ -330,33 +255,6 @@ async function loadContributors(mount) {
 function avatarUrl(url) {
   if (!url) return '';
   return `${url}${url.includes('?') ? '&' : '?'}s=80`;
-}
-
-function Shot({ className, webp, jpg, alt, kicker, caption, width, height, priority }) {
-  return (
-    <figure className={className}>
-      <div className='home-shot-frame'>
-        <picture>
-          <source srcset={webp} type='image/webp' />
-          <img
-            src={jpg}
-            alt={alt}
-            width={width}
-            height={height}
-            decoding={priority ? 'sync' : 'async'}
-            fetchpriority={priority ? 'high' : 'low'}
-            loading={priority ? 'eager' : 'lazy'}
-          />
-        </picture>
-      </div>
-      {kicker || caption ? (
-        <figcaption>
-          {kicker ? <strong>{kicker}</strong> : null}
-          {caption ? <span>{caption}</span> : null}
-        </figcaption>
-      ) : null}
-    </figure>
-  );
 }
 
 function ensureAbsoluteUrl(url) {
