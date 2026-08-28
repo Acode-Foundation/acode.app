@@ -36,7 +36,8 @@
 .icon.news:before {
   content: '\e910';
 }
-.icon.mail:before {
+.icon.mail:before,
+.icon.email:before {
   content: '\e902';
 }
 .icon.earth:before {
@@ -108,7 +109,8 @@
 .icon.shopping_cart:before {
   content: '\e922';
 }
-.icon.shopping_bag:before {
+.icon.shopping_bag:before,
+.icon.store:before {
   content: '\e921';
 }
 .icon.keyboard_arrow_down:before {
@@ -153,7 +155,8 @@
 .icon.check_circle:before {
   content: '\e917';
 }
-.icon.navigate_next:before {
+.icon.navigate_next:before,
+.icon.chevron_right:before {
   content: '\e90a';
 }
 .icon.navigate_before:before {
@@ -174,7 +177,8 @@
 .icon.favorite:before {
   content: '\e908';
 }
-.icon.account_balance:before {
+.icon.account_balance:before,
+.icon.bank:before {
   content: '\e904';
 }
 .icon.warning:before {
@@ -216,10 +220,12 @@
 .icon.menu:before {
   content: '\eb58';
 }
-.icon.refresh:before {
+.icon.refresh:before,
+.icon.replay:before {
   content: '\eb5b';
 }
-.icon.person:before {
+.icon.person:before,
+.icon.account_circle:before {
   content: '\ebad';
 }
 .icon.share:before {
@@ -248,4 +254,27 @@
 }
 .icon.thumb_up_alt:before {
   content: '\ed08';
+}
+
+/* Icons used by the site that are not part of the original font subset. */
+.icon.search:before,
+.icon.image:before,
+.icon.save:before {
+  content: '';
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+.icon.search:before {
+  mask-image: url('./search.svg');
+}
+.icon.image:before {
+  mask-image: url('./image.svg');
+}
+.icon.save:before {
+  mask-image: url('./save.svg');
 }

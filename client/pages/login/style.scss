@@ -9,6 +9,11 @@
   max-width: unset;
   background-color: transparent;
   z-index: 1;
+  padding: 48px 16px;
+
+  canvas#background {
+    display: none;
+  }
 
   .login-profile {
     height: 150px;

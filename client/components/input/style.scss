@@ -1,7 +1,7 @@
 @mixin input-active($labelTop) {
   transform: translateY($labelTop) scale(0.8) !important;
-  background-color: var(--secondary-color) !important;
-  color: var(--secondary-text-color) !important;
+  background-color: #1c1f27 !important;
+  color: var(--page-muted, rgba(241, 242, 244, 0.64)) !important;
 }
 
 .custom-input:not(.radio):not(.checkbox) {
@@ -11,8 +11,9 @@
   margin: 10px 0;
   z-index: 0;
   font-size: 14px;
-  background-color: white;
-  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
   box-sizing: border-box;
 
   &.drop-effect {
@@ -26,7 +27,7 @@
     bottom: 0;
     left: 0;
     padding: 5px 10px;
-    color: var(--primary-color);
+    color: var(--page-muted, rgba(241, 242, 244, 0.64));
     z-index: 1;
     transition: all 0.2s ease-in-out;
     display: block;
@@ -62,6 +63,11 @@
     width: 100%;
     z-index: -1;
     margin: 0;
+    color: #fff;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    outline: none;
 
     &[type='file'] {
       opacity: 0;
@@ -70,17 +76,17 @@
     }
 
     &:disabled {
-      background-color: white;
+      background-color: transparent;
     }
 
     &::placeholder {
-      color: transparent;
+      color: transparent !important;
+      opacity: 0 !important;
     }
 
-    &:focus {
-      &::placeholder {
-        color: var(--text-color);
-      }
+    &:focus::placeholder {
+      color: var(--page-muted, rgba(241, 242, 244, 0.64)) !important;
+      opacity: 1 !important;
     }
   }
 }
@@ -121,7 +127,11 @@
   input,
   textarea {
     &::placeholder {
-      opacity: 0.5;
+      opacity: 0;
+    }
+
+    &:focus::placeholder {
+      opacity: 1;
     }
   }
 

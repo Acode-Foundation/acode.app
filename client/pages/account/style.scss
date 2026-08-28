@@ -7,7 +7,12 @@
   min-height: calc(100vh - 50px);
   width: 100%;
   max-width: unset !important;
-  z-index: 0;
+  z-index: 1;
+  padding: 48px 16px;
+
+  canvas#background {
+    display: none;
+  }
 
   .register-card {
     width: 100%;
@@ -42,29 +47,34 @@
 
   .social-link {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
+    gap: 0;
 
     .custom-input {
-      border-radius: 0 4px 4px 0;
+      flex: 1;
+      min-width: 0;
+      margin-top: 18px;
+      border-radius: 0 10px 10px 0;
     }
 
     .icon {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 40px;
-      width: 40px;
-      background-color: white;
-      font-size: 1.4rem;
-      color: #39f;
-      border-radius: 4px 0 0 4px;
+      height: 42px;
+      width: 42px;
+      margin-bottom: 10px;
+      background-color: rgba(255, 255, 255, 0.06);
+      font-size: 1.15rem;
+      color: #fff;
+      border-radius: 10px 0 0 10px;
+      border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
+      border-right: 0;
+      flex-shrink: 0;
 
-      &.x {
-        color: black;
-      }
-
+      &.x,
       &.github {
-        color: #232925;
+        color: #fff;
       }
     }
   }

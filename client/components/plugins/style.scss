@@ -1,27 +1,31 @@
 .plugins {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 0 -10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
 
   &:empty::after {
     content: attr(data-msg);
     display: block;
     text-align: center;
     width: 100%;
+    grid-column: 1 / -1;
     margin: 10px;
   }
 
   .plugin {
     position: relative;
-    width: calc(33% - 30px);
-    min-width: 250px;
-    margin: 10px 0 0 10px;
-    background-color: var(--secondary-color);
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    background-color: var(--page-surface, rgba(255, 255, 255, 0.035));
     color: var(--secondary-text-color);
-    padding: 10px;
+    padding: 14px;
     text-align: center;
-    border-radius: 4px;
+    border-radius: 16px;
+    border: 1px solid var(--page-line, transparent);
     text-decoration: none;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 
     .badge {
       position: absolute;
@@ -62,7 +66,7 @@
         width: auto;
         height: auto;
         padding: 2px 8px;
-        background-color: #7c3aed;
+        background-color: #3499fe;
         color: #fff;
         font-size: 11px;
         font-weight: 600;
@@ -74,15 +78,17 @@
     }
 
     @media screen and (max-width: 925px) {
-      width: calc(50% - 35px);
+      width: auto;
     }
 
     @media screen and (max-width: 600px) {
-      width: calc(100% - 40px);
+      width: auto;
     }
 
     &:hover {
-      box-shadow: -2px 2px 12px 2px rgba($color: #000000, $alpha: 0.4);
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.16);
+      box-shadow: 0 16px 40px rgba(8, 10, 16, 0.4);
     }
 
     .plugin-icon {
@@ -123,5 +129,13 @@
   .deleted,
   .rejected {
     color: #f33;
+  }
+
+  @media screen and (max-width: 925px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media screen and (max-width: 600px) {
+    grid-template-columns: 1fr;
   }
 }

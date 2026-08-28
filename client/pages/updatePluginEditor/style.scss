@@ -91,12 +91,13 @@
   }
 
   .info-banner {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #1a2433;
     color: white;
-    border-radius: 8px;
+    border-radius: 16px;
     padding: 20px 24px;
     margin-bottom: 30px;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
+    box-shadow: none;
 
     .icon-wrapper {
       display: flex;

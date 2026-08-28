@@ -1,13 +1,18 @@
 #faqs {
+  max-width: 800px;
+  padding-top: clamp(2.5rem, 6vw, 4.5rem);
+
   h1 {
-    margin: 20px;
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--primary-text-color);
+    margin: 0 20px 24px;
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 500;
+    letter-spacing: -0.05em;
+    line-height: 1.1;
+    color: #fff;
   }
 
   .faq-search {
-    margin: 0 20px 20px;
+    margin: 0 20px 28px;
 
     .custom-input {
       margin-bottom: 8px;
@@ -32,14 +37,14 @@
 
   .faq-category {
     margin-bottom: 12px;
-    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
-    border-radius: 8px;
-    background: var(--secondary-color, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
+    border-radius: 16px;
+    background: var(--page-surface, rgba(255, 255, 255, 0.035));
     overflow: hidden;
 
     &[open] {
-      border-color: var(--button-color, #4fa3e3);
-      background: var(--secondary-color, rgba(255, 255, 255, 0.04));
+      border-color: rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.04);
     }
   }
 
@@ -75,8 +80,8 @@
 
     .category-count {
       font-size: 0.8rem;
-      color: var(--secondary-text-color);
-      background: var(--primary-color, #1a1a2e);
+      color: var(--page-muted, rgba(241, 242, 244, 0.64));
+      background: rgba(255, 255, 255, 0.06);
       padding: 3px 10px;
       border-radius: 12px;
       white-space: nowrap;
@@ -211,10 +216,10 @@
     .category-select {
       width: 100%;
       padding: 8px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-      background: var(--primary-color, #1a1a2e);
-      color: var(--primary-text-color);
+      border-radius: 10px;
+      border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--page-text, #f1f2f4);
       font-size: 0.9rem;
     }
 

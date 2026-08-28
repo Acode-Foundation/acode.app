@@ -43,9 +43,10 @@
   }
 
   .dialog-box {
-    background-color: var(--secondary-color);
-    color: var(--secondary-text-color);
-    border-radius: 4px;
+    background-color: #1c1f27;
+    color: var(--page-text, #f1f2f4);
+    border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
+    border-radius: 16px;
     box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
     min-width: 200px;
     z-index: 1;
