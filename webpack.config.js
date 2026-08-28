@@ -5,6 +5,9 @@ const TerserPlugin = require('terser-webpack-plugin');
 const { EnvironmentPlugin } = require('webpack');
 
 const PUBLIC = path.resolve(__dirname, 'public');
+// Extracted CSS modules are concatenated. A Sass BOM in the middle of that
+// stylesheet invalidates the next rule (including the icon @font-face).
+const sassLoader = { loader: 'sass-loader', options: { sassOptions: { charset: false } } };
 
 module.exports = (_env, options) => {
   if (fs.existsSync(PUBLIC)) {
@@ -54,7 +57,7 @@ module.exports = (_env, options) => {
     },
     {
       test: /\.module.(sa|sc|c)ss$/,
-      use: ['raw-loader', 'postcss-loader', 'sass-loader'],
+      use: ['raw-loader', 'postcss-loader', sassLoader],
     },
     {
       test: /\.hbs$/,
@@ -73,7 +76,7 @@ module.exports = (_env, options) => {
         },
         'css-loader',
         'postcss-loader',
-        'sass-loader',
+        sassLoader,
       ],
     },
     {
