@@ -320,34 +320,6 @@
       img {
         object-fit: contain;
       }
-
-      &:hover .home-gallery__expand,
-      &:focus-visible .home-gallery__expand {
-        border-color: rgba(255, 255, 255, 0.24);
-        color: #fff;
-      }
-    }
-
-    &__expand {
-      position: absolute;
-      right: 8px;
-      bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 7px 9px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 7px;
-      background: rgba(18, 20, 26, 0.92);
-      color: var(--home-text);
-      font-size: 0.68rem;
-      line-height: 1;
-      transition: border-color 0.2s ease;
-
-      svg {
-        width: 13px;
-        height: 13px;
-      }
     }
 
     button.home-gallery__arrow,
@@ -776,7 +748,7 @@
 
       .home-gallery__viewport {
         width: 100%;
-        aspect-ratio: 1800 / 951;
+        aspect-ratio: 16 / 10;
         border-radius: 10px;
       }
     }

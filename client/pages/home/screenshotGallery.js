@@ -43,10 +43,6 @@ export default function ScreenshotGallery({
                       draggable={false}
                     />
                   </picture>
-                  <span className='home-gallery__expand' aria-hidden='true'>
-                    <GalleryIcon name='expand' />
-                    Expand
-                  </span>
                 </button>
               </div>
             ))}
@@ -125,7 +121,6 @@ function GalleryIcon({ name }) {
   const paths = {
     previous: 'm14 6-6 6 6 6',
     next: 'm10 6 6 6-6 6',
-    expand: 'M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7',
     close: 'm6 6 12 12M6 18 18 6',
     pause: 'M9 5v14M15 5v14',
     play: 'm9 5 10 7-10 7Z',
