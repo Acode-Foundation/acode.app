@@ -2,13 +2,17 @@ import metadataText from '../../shared/metadataText';
 import ogImageConfig from '../../shared/ogImage.json';
 import metadataConfig from '../../shared/routeMetadata.json';
 
-const { createPluginMetadataDescription } = metadataText;
+const { createPluginMetadataDescription, formatMilestoneCount } = metadataText;
 
 const DEFAULT_IMAGE_PATH = '/og/default.png';
 const IMAGE_WIDTH = 1200;
 const IMAGE_HEIGHT = 630;
 const SITE_NAME = 'Acode';
 const TWITTER_SITE = '@foxbiz_io';
+const PLUGINS_PATH = '/plugins';
+
+let latestRouteMetadataRequest = 0;
+let pluginCountRequest;
 
 function normalizePath(pathname) {
   if (!pathname || pathname === '/') return '/';
@@ -29,12 +33,31 @@ function resolveNamedRoute(pathname) {
   return null;
 }
 
+function getPluginCount() {
+  if (!pluginCountRequest) {
+    pluginCountRequest = fetch('/api/plugins/count')
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Unable to load plugin count.');
+
+        const { count } = await response.json();
+        if (formatMilestoneCount(count) === null) throw new Error('Invalid plugin count.');
+        return count;
+      })
+      .finally(() => {
+        pluginCountRequest = null;
+      });
+  }
+
+  return pluginCountRequest;
+}
+
 /**
  * Resolve browser metadata without changing route behavior.
  * @param {string} pathname
  * @param {string} [origin]
+ * @param {number} [pluginCount]
  */
-export function resolveRouteMetadata(pathname, origin = window.location.origin) {
+export function resolveRouteMetadata(pathname, origin = window.location.origin, pluginCount) {
   const path = normalizePath(pathname);
   const pluginMatch = /^\/plugin\/([^/]+)/i.exec(path);
   const namedRoute = resolveNamedRoute(path);
@@ -43,9 +66,13 @@ export function resolveRouteMetadata(pathname, origin = window.location.origin) 
   let description;
   let canonicalPath = path;
 
-  if (namedRoute) {
-    title = namedRoute.title.replace(/\{\{count\}\}/g, '250+');
-    description = namedRoute.description.replace(/\{\{count\}\}/g, '250+');
+  const pluginCountLabel = formatMilestoneCount(pluginCount);
+  if (path === PLUGINS_PATH && pluginCountLabel === null) {
+    ({ title, description } = metadataConfig.pluginsFallback);
+  } else if (namedRoute) {
+    const count = path === PLUGINS_PATH ? pluginCountLabel : '250+';
+    title = namedRoute.title.replace(/\{\{count\}\}/g, count);
+    description = namedRoute.description.replace(/\{\{count\}\}/g, count);
   } else if (pluginMatch) {
     title = 'Acode Plugin — Acode';
     description = 'Explore this plugin for Acode, the extensible Android code editor.';
@@ -150,8 +177,24 @@ export function applyPageMetadata(metadata, documentRef = document) {
   setMeta(documentRef, 'name', 'twitter:image:alt', metadata.imageAlt);
 }
 
-export function applyRouteMetadata(pathname = window.location.pathname) {
-  applyPageMetadata(resolveRouteMetadata(pathname));
+export async function applyRouteMetadata(pathname = window.location.pathname) {
+  const path = normalizePath(pathname);
+  const requestId = ++latestRouteMetadataRequest;
+
+  if (path !== PLUGINS_PATH) {
+    applyPageMetadata(resolveRouteMetadata(path));
+    return;
+  }
+
+  let pluginCount;
+  try {
+    pluginCount = await getPluginCount();
+  } catch (_error) {
+    // The route resolver supplies accurate count-free fallback metadata.
+  }
+
+  if (requestId !== latestRouteMetadataRequest || normalizePath(window.location.pathname) !== path) return;
+  applyPageMetadata(resolveRouteMetadata(path, window.location.origin, pluginCount));
 }
 
 export function applyPluginMetadata(plugin) {

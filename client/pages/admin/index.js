@@ -408,11 +408,12 @@ function Dashboard() {
 
       ref.append(
         <div className='dashboard-grid'>
-          <Card title='Total Users' value={stats.users} />
-          <Card title='Amount Paid' value={stats.amountPaid || 0} currency={true} usdRate={validUsdRate} />
-          <Card title='Plugin Sales' value={stats.pluginSales || 0} currency={true} usdRate={validUsdRate} />
-          <Card title='Plugin Downloads' value={stats.pluginDownloads || 0} />
-          <Card title='Download Report' icon='download' onclick={openReportDialog} />
+          <Card title='Total Users' value={stats.users} icon='person' />
+          <Card title='Total Plugins' value={stats.plugins || 0} icon='extension' />
+          <Card title='Total Sponsors' value={stats.sponsors || 0} icon='favorite' />
+          <Card title='Amount Paid' value={stats.amountPaid || 0} currency={true} usdRate={validUsdRate} icon='account_balance' />
+          <Card title='Plugin Sales' value={stats.pluginSales || 0} currency={true} usdRate={validUsdRate} icon='shopping_cart' />
+          <Card title='Plugin Downloads' value={stats.pluginDownloads || 0} icon='download' />
         </div>,
         <div className='charts-grid'>
           <div className='chart-card'>
@@ -745,68 +746,6 @@ function chartLegendLabels() {
 
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-function openReportDialog() {
-  const yearRef = Ref();
-  const monthRef = Ref();
-
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
-  const currentMonth = new Date().getMonth() + 1;
-
-  const dialogBody = (
-    <div className='report-dialog'>
-      <div className='form-row'>
-        <label>Year</label>
-        <select ref={yearRef}>
-          {years.map((y) => (
-            <option value={y} selected={y === currentYear}>
-              {y}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className='form-row'>
-        <label>Month</label>
-        <select ref={monthRef}>
-          {monthNames.map((m, i) => (
-            <option value={i + 1} selected={i + 1 === currentMonth}>
-              {m}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className='form-row'>
-        <label>Type</label>
-        <div className='radio-group'>
-          <label>
-            <input type='radio' name='reportType' value='sales' checked />
-            Sales (Orders)
-          </label>
-          <label>
-            <input type='radio' name='reportType' value='earnings' />
-            Earnings
-          </label>
-        </div>
-      </div>
-    </div>
-  );
-
-  const $dialog = DialogBox({
-    title: 'Download Report',
-    body: dialogBody,
-    onok: (hide, $box) => {
-      const year = yearRef.el.value;
-      const month = monthRef.el.value;
-      const type = $box.querySelector('input[name="reportType"]:checked')?.value || 'sales';
-      window.open(`api/admin/reports/${year}/${month}?type=${type}`);
-      hide();
-    },
-    oncancel: (hide) => hide(),
-  });
-
-  document.body.append($dialog);
-}
-
 /**
  * Card component to display title and content
  * @param {object} props
@@ -814,10 +753,9 @@ function openReportDialog() {
  * @param {number|string} [props.value]
  * @param {boolean} [props.currency]
  * @param {number|null} [props.usdRate]
- * @param {string} [props.icon]
- * @param {()=>{}} [props.onclick]
+ * @param {string} props.icon
  */
-function Card({ title, value, currency = false, usdRate = null, icon, onclick }) {
+function Card({ title, value, currency = false, usdRate = null, icon }) {
   const compactValue = formatCompactNumber(value, { currency });
   const exactValue = formatExactNumber(value, { currency });
   const usdValue = currency ? convertInrToUsd(value, usdRate) : null;
@@ -825,16 +763,15 @@ function Card({ title, value, currency = false, usdRate = null, icon, onclick })
   const exactUsdValue = usdValue === null ? null : formatExactUsd(usdValue);
   const tooltip = exactUsdValue ? `${title}: ${exactValue} (≈ ${exactUsdValue} USD)` : `${title}: ${exactValue}`;
   return (
-    <div className='card' onclick={onclick}>
-      {icon ? (
-        <span className={`content icon ${icon}`} />
-      ) : (
-        <span className='content card-values' title={tooltip}>
-          <span className='primary-value'>{compactValue}</span>
-          {compactUsdValue && <span className='secondary-currency'>≈ {compactUsdValue}</span>}
-        </span>
-      )}
-      <span className='title'>{title}</span>
+    <div className='card'>
+      <div className='card-header'>
+        <span className='title'>{title}</span>
+        <span className={`card-icon icon ${icon}`} aria-hidden='true' />
+      </div>
+      <span className='content card-values' title={tooltip}>
+        <span className='primary-value'>{compactValue}</span>
+        {compactUsdValue && <span className='secondary-currency'>≈ {compactUsdValue}</span>}
+      </span>
     </div>
   );
 }

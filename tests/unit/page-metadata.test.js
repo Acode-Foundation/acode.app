@@ -1,4 +1,4 @@
-import { applyPageMetadata, resolvePluginMetadata, resolveRouteMetadata } from '../../client/lib/pageMetadata';
+import { applyPageMetadata, applyRouteMetadata, resolvePluginMetadata, resolveRouteMetadata } from '../../client/lib/pageMetadata';
 import publicMetadata from '../../server/lib/publicMetadata';
 
 const { MAX_PLUGIN_DESCRIPTION_LENGTH, createPluginDescription } = publicMetadata;
@@ -43,6 +43,74 @@ function content(documentRef, selector) {
 
 describe('route metadata', () => {
   const origin = 'https://acode.app';
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('uses a reached plugin milestone across plugins page metadata', () => {
+    const documentRef = new FakeDocument();
+    const metadata = resolveRouteMetadata('/plugins', origin, 287);
+
+    applyPageMetadata(metadata, documentRef);
+
+    expect(metadata.title).toBe('Acode Plugins — 100+ Community Extensions');
+    expect(metadata.description).toBe(
+      'Browse 100+ community plugins for Acode. Find language support, themes, AI assistants, build tools, and more.',
+    );
+    expect(content(documentRef, 'meta[property="og:title"]')).toBe(metadata.title);
+    expect(content(documentRef, 'meta[name="twitter:description"]')).toBe(metadata.description);
+  });
+
+  it.each([
+    [99, '99'],
+    [100, '100+'],
+    [499, '100+'],
+    [500, '500+'],
+    [999, '500+'],
+    [1_000, '1K+'],
+    [6_789, '5K+'],
+    [12_345, '10K+'],
+  ])('formats plugin count %i as the reached %s milestone', (count, milestone) => {
+    expect(resolveRouteMetadata('/plugins', origin, count).title).toBe(`Acode Plugins — ${milestone} Community Extensions`);
+  });
+
+  it.each([undefined, -1, 1.5, Number.NaN, '287'])('uses count-free plugins metadata for invalid count %s', (count) => {
+    const metadata = resolveRouteMetadata('/plugins', origin, count);
+
+    expect(metadata.title).toBe('Acode Plugins — Community Extensions');
+    expect(metadata.description).toBe('Browse community plugins for Acode. Find language support, themes, AI assistants, build tools, and more.');
+    expect(`${metadata.title} ${metadata.description}`).not.toMatch(/250\+|\{\{count\}\}/);
+  });
+
+  it('coalesces plugin count requests and ignores their result after navigation', async () => {
+    const documentRef = new FakeDocument();
+    const location = { origin, pathname: '/plugins' };
+    let resolveResponse;
+    const fetchMock = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveResponse = resolve;
+        }),
+    );
+    vi.stubGlobal('window', { location });
+    vi.stubGlobal('document', documentRef);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const firstPluginsUpdate = applyRouteMetadata('/plugins');
+    const secondPluginsUpdate = applyRouteMetadata('/plugins');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    location.pathname = '/sponsors';
+    await applyRouteMetadata('/sponsors');
+    const sponsorsTitle = documentRef.title;
+
+    resolveResponse({ ok: true, json: async () => ({ count: 287 }) });
+    await Promise.all([firstPluginsUpdate, secondPluginsUpdate]);
+
+    expect(documentRef.title).toBe(sponsorsTitle);
+    expect(documentRef.title).toBe(resolveRouteMetadata('/sponsors', origin).title);
+  });
 
   it('resolves plugin sections without carrying the section into the canonical URL', () => {
     const metadata = resolveRouteMetadata('/plugin/example.plugin/comments', origin);
