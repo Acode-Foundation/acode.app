@@ -2,7 +2,7 @@ const { Router } = require('express');
 const moment = require('moment');
 const crypto = require('node:crypto');
 const { encryptPassword, isValidPassword } = require('../password');
-const { getWebLoggedInUser, areSameUser } = require('../lib/helpers');
+const { getLoggedInUser, getWebLoggedInUser, areSameUser } = require('../lib/helpers');
 const Comment = require('../entities/comment');
 const Otp = require('../entities/otp');
 const User = require('../entities/user');
@@ -284,7 +284,7 @@ route.get('/payment-method', async (req, res) => {
 
 route.get('/comment/:pluginId', async (req, res) => {
   try {
-    const loggedInUser = await getWebLoggedInUser(req);
+    const loggedInUser = await getLoggedInUser(req);
     if (!loggedInUser) {
       res.status(401).send({ error: 'Not logged in' });
       return;
