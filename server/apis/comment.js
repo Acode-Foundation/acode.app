@@ -1,5 +1,6 @@
 const { Router } = require('express');
-const { getWebLoggedInUser } = require('../lib/helpers');
+const { getLoggedInUser, getWebLoggedInUser } = require('../lib/helpers');
+const { canDeleteReview } = require('../lib/pluginReview');
 const Comment = require('../entities/comment');
 const Plugin = require('../entities/plugin');
 const user = require('../entities/user');
@@ -52,7 +53,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const loggedInUser = await getWebLoggedInUser(req);
+    const loggedInUser = await getLoggedInUser(req);
     // message to be sent as notification to plugin author
     let voteMessage = '';
     let commentMessage = '';
@@ -112,11 +113,9 @@ router.post('/', async (req, res) => {
 
     if (alreadyVoted) {
       const updates = [];
-      let isVoteChanged = false;
       if (alreadyVoted.vote !== vote) {
         voteMessage = `${loggedInUser.name} changed vote from ${Comment.getVoteString(alreadyVoted.vote)} to ${Comment.getVoteString(vote)}`;
         updates.push([Comment.VOTE, vote]);
-        isVoteChanged = true;
       }
 
       if (alreadyVoted.comment !== comment) {
@@ -127,9 +126,6 @@ router.post('/', async (req, res) => {
       if (updates.length) {
         await Comment.update(updates, [Comment.ID, alreadyVoted.id]);
         res.send({ message: 'Comment updated', id: alreadyVoted.id, comment, vote });
-        if (isVoteChanged) {
-          updateVoteInPlugin(vote, pluginId);
-        }
 
         sendEmail(plugin.author_email, plugin.author, `Review update for your Acode plugin - ${plugin.name}.`, getNotificationMessage());
 
@@ -141,10 +137,6 @@ router.post('/', async (req, res) => {
     }
 
     await Comment.insert([Comment.PLUGIN_ID, pluginId], [Comment.USER_ID, loggedInUser.id], [Comment.COMMENT, comment], [Comment.VOTE, vote]);
-
-    if (vote !== Comment.VOTE_NULL) {
-      updateVoteInPlugin(vote, pluginId);
-    }
 
     const [row] = await Comment.get(
       [Comment.ID, Comment.COMMENT, Comment.VOTE],
@@ -256,7 +248,7 @@ router.post('/:commentId/reply', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const loggedInUser = await getWebLoggedInUser(req);
+    const loggedInUser = await getLoggedInUser(req);
 
     if (!loggedInUser) {
       res.status(401).send({ error: 'Unauthorized' });
@@ -271,38 +263,16 @@ router.delete('/:id', async (req, res) => {
       return;
     }
 
-    const authorized = comment.user_id === loggedInUser.id || loggedInUser.isAdmin;
-    if (!authorized) {
+    if (!canDeleteReview(comment, loggedInUser)) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
     }
 
     await Comment.delete([Comment.ID, id]);
     res.send({ message: 'Comment deleted' });
-
-    try {
-      if (comment.vote === Comment.VOTE_UP) {
-        await Plugin.decrement(Plugin.VOTES_UP, 1, [Plugin.ID, comment.plugin_id]);
-      } else if (comment.vote === Comment.VOTE_DOWN) {
-        await Plugin.decrement(Plugin.VOTES_DOWN, 1, [Plugin.ID, comment.plugin_id]);
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error);
-    }
   } catch (error) {
     res.status(500).send({ error: error.message });
   }
 });
-
-async function updateVoteInPlugin(vote, pluginId) {
-  if (vote === Comment.VOTE_UP) {
-    // add 1 to plugin's votes_up
-    await Plugin.increment(Plugin.VOTES_UP, 1, [Plugin.ID, pluginId]);
-  } else if (vote === Comment.VOTE_DOWN) {
-    // add 1 to plugin's vote_down
-    await Plugin.increment(Plugin.VOTES_DOWN, 1, [Plugin.ID, pluginId]);
-  }
-}
 
 module.exports = router;
