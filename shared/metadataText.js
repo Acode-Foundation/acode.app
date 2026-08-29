@@ -44,9 +44,27 @@ function createPluginMetadataDescription(markdown, fallback = 'Explore this plug
   return truncateMetadataText(normalizedDescription || normalizedFallback);
 }
 
+/**
+ * Format a count using stable 1x/5x milestones without overstating it.
+ * Counts below the first milestone remain exact.
+ * @param {unknown} count
+ * @returns {string | null}
+ */
+function formatMilestoneCount(count) {
+  if (!Number.isSafeInteger(count) || count < 0) return null;
+  if (count < 100) return String(count);
+
+  const magnitude = 10 ** Math.floor(Math.log10(count));
+  const milestone = count >= magnitude * 5 ? magnitude * 5 : magnitude;
+  if (milestone >= 1_000_000) return `${milestone / 1_000_000}M+`;
+  if (milestone >= 1_000) return `${milestone / 1_000}K+`;
+  return `${milestone}+`;
+}
+
 module.exports = {
   PLUGIN_DESCRIPTION_MAX_LENGTH,
   createPluginMetadataDescription,
+  formatMilestoneCount,
   normalizeMetadataText,
   truncateMetadataText,
 };

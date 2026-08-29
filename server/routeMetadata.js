@@ -11,10 +11,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const sharedMetadata = require('../shared/routeMetadata.json');
+const { formatMilestoneCount } = require('../shared/metadataText');
 const { getPublicOrigin, publicUrl } = require('./lib/publicMetadata');
 
 const FALLBACK_TITLE = sharedMetadata.fallback.title;
 const FALLBACK_DESC = sharedMetadata.fallback.description;
+const PLUGINS_FALLBACK = sharedMetadata.pluginsFallback;
 
 /**
  * Explicit route → metadata map.
@@ -53,6 +55,8 @@ function pathToTitle(segment) {
  */
 function getMetadata(pathname, origin = getPublicOrigin()) {
   const clean = pathname.replace(/\/$/, '') || '/';
+
+  if (clean === '/plugins') return { ...PLUGINS_FALLBACK };
 
   if (namedRoutes[clean]) {
     const entry = { ...namedRoutes[clean] };
@@ -147,17 +151,16 @@ async function getPluginsMetadata() {
   const Plugin = require('./entities/plugin');
   try {
     const count = await Plugin.for('internal').count();
+    const countLabel = formatMilestoneCount(count);
+    if (countLabel === null) return { ...PLUGINS_FALLBACK };
+
     const entry = namedRoutes['/plugins'] || {};
     return {
-      title: (entry.title || '').replace(/\{\{count\}\}/g, String(count)),
-      description: (entry.description || '').replace(/\{\{count\}\}/g, String(count)),
+      title: (entry.title || '').replace(/\{\{count\}\}/g, countLabel),
+      description: (entry.description || '').replace(/\{\{count\}\}/g, countLabel),
     };
   } catch (_err) {
-    const entry = namedRoutes['/plugins'] || {};
-    return {
-      title: (entry.title || '').replace(/\{\{count\}\}/g, '250+'),
-      description: (entry.description || '').replace(/\{\{count\}\}/g, '250+'),
-    };
+    return { ...PLUGINS_FALLBACK };
   }
 }
 

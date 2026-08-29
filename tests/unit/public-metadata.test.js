@@ -69,6 +69,13 @@ describe('server-rendered metadata', () => {
     expect(metadata.orgSchema.logo).toBe('https://dev.acode.app/logo-512.png');
   });
 
+  it('uses count-free plugins metadata when a live count is unavailable', () => {
+    const metadata = getMetadata('/plugins');
+
+    expect(metadata.title).toBe('Acode Plugins — Community Extensions');
+    expect(metadata.description).toBe('Browse community plugins for Acode. Find language support, themes, AI assistants, build tools, and more.');
+  });
+
   it('localizes landing-page structured data without changing external URLs', () => {
     const schema = {
       url: 'https://acode.app/example',

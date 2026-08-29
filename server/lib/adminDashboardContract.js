@@ -1,7 +1,8 @@
-function createDashboardStats({ users, plugins, amountPaid, pluginSales, pluginDownloads }) {
+function createDashboardStats({ users, plugins, sponsors, amountPaid, pluginSales, pluginDownloads }) {
   return {
     users,
     plugins,
+    sponsors,
     amountPaid,
     pluginSales,
     pluginDownloads,

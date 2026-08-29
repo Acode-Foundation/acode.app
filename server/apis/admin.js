@@ -19,6 +19,7 @@ const { validateModeRegex } = require('../lib/modeRegex');
 const { createDashboardAnalytics, createDashboardStats } = require('../lib/adminDashboardContract');
 const { getAdminExchangeRateResponse } = require('../lib/adminExchangeRate');
 const { getPluginSalesInr } = require('../lib/adminDashboardMetrics');
+const { getSponsorWhereClause } = require('../lib/sponsorScope');
 
 const router = Router();
 
@@ -35,10 +36,16 @@ router.use('/', async (req, res, next) => {
 router.get('/', async (_req, res) => {
   const users = await User.count();
   const plugins = await plugin.count();
+  const sponsorCutoff = new Date().toISOString();
+  const [activeSponsors, expiredSponsors] = await Promise.all([
+    Sponsor.count(getSponsorWhereClause(Sponsor, 'active', sponsorCutoff)),
+    Sponsor.count(getSponsorWhereClause(Sponsor, 'expired', sponsorCutoff)),
+  ]);
+  const sponsors = activeSponsors + expiredSponsors;
   const [{ total: pluginDownloads }] = await plugin.get(['SUM(downloads) as total'], []);
   const { total: pluginSales } = await getPluginSalesInr();
   const [{ total: amountPaid }] = await Payment.get(['SUM(amount) as total'], [Payment.STATUS, Payment.STATUS_PAID]);
-  res.send(createDashboardStats({ users, plugins, amountPaid, pluginSales, pluginDownloads }));
+  res.send(createDashboardStats({ users, plugins, sponsors, amountPaid, pluginSales, pluginDownloads }));
 });
 
 router.get('/exchange-rate/usd', async (_req, res) => {

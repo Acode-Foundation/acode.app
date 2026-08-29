@@ -85,7 +85,7 @@
 
     .dashboard-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 16px;
 
       @media (max-width: 500px) {
@@ -196,147 +196,169 @@
     }
   }
 
-  .report-dialog {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    min-width: 320px;
-    padding: 8px 0;
-
-    .form-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-
-      label {
-        flex-shrink: 0;
-        font-weight: 500;
-        font-size: 0.9em;
-        min-width: 50px;
-      }
-
-      select {
-        flex: 1;
-        padding: 8px 12px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        background-color: rgba(255, 255, 255, 0.04);
-        color: inherit;
-        font-size: 0.9em;
-        appearance: none;
-
-        &:focus {
-          outline: none;
-          border-color: var(--primary-color);
-        }
-
-        option {
-          background-color: var(--secondary-color);
-          color: inherit;
-        }
-      }
-
-      .radio-group {
-        display: flex;
-        gap: 16px;
-        margin-left: 8px;
-
-        label {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          cursor: pointer;
-          font-size: 0.88em;
-          font-weight: 400;
-          min-width: auto;
-        }
-
-        input[type='radio'] {
-          accent-color: var(--primary-color);
-        }
-      }
-    }
-  }
-
   .card {
+    position: relative;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 150px;
-    background-color: var(--secondary-color);
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    min-width: 0;
+    min-height: 138px;
+    padding: 18px;
+    box-sizing: border-box;
+    overflow: hidden;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.022));
+    border-radius: 18px;
+    border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.055),
+      0 14px 32px rgba(8, 10, 16, 0.2);
     cursor: default;
-    transition: border-color 0.2s;
+    transition:
+      transform 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &::before {
+      content: '';
+      position: absolute;
+      z-index: -1;
+      top: -64px;
+      right: -42px;
+      width: 132px;
+      height: 132px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(52, 153, 254, 0.2) 0%, rgba(52, 153, 254, 0) 72%);
+      pointer-events: none;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 18px;
+      width: 44px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(52, 153, 254, 0), rgba(52, 153, 254, 0.95), rgba(52, 153, 254, 0));
+      pointer-events: none;
+    }
 
     &:hover {
-      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+      border-color: rgba(52, 153, 254, 0.28);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        0 18px 38px rgba(8, 10, 16, 0.32);
     }
 
-    &[onclick] {
-      cursor: pointer;
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-width: 0;
+    }
 
-      &:hover {
-        border-color: var(--primary-color);
-      }
+    .card-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 36px;
+      width: 36px;
+      height: 36px;
+      border-radius: 11px;
+      border: 1px solid rgba(52, 153, 254, 0.18);
+      background: rgba(52, 153, 254, 0.1);
+      color: #75baff;
+      font-size: 1.05rem;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
 
     .content {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.6em;
-      font-weight: 700;
-      letter-spacing: 2px;
-      margin: 4px;
-      flex: 1;
-
-      &.icon {
-        font-size: 2em;
-        letter-spacing: 0;
-      }
+      min-width: 0;
 
       &.card-values {
         flex-direction: column;
-        gap: 6px;
+        align-items: flex-start;
+        justify-content: flex-end;
+        gap: 5px;
+        margin-top: 16px;
         line-height: 1.1;
 
+        .primary-value {
+          max-width: 100%;
+          color: var(--page-text, #f1f2f4);
+          font-size: clamp(1.5rem, 2vw, 1.9rem);
+          font-weight: 700;
+          letter-spacing: -0.045em;
+          overflow-wrap: anywhere;
+        }
+
         .secondary-currency {
-          color: rgba(255, 255, 255, 0.58);
-          font-size: 0.58em;
+          color: var(--page-muted, rgba(241, 242, 244, 0.64));
+          font-size: 0.78rem;
           font-weight: 600;
-          letter-spacing: 0.2px;
+          letter-spacing: 0;
         }
       }
     }
 
     .title {
-      border-top: solid 1px rgba(255, 255, 255, 0.1);
-      line-height: 36px;
-      height: 36px;
-      width: 100%;
-      text-align: center;
-      font-size: 0.85em;
-      color: rgba(255, 255, 255, 0.6);
+      min-width: 0;
+      color: var(--page-muted, rgba(241, 242, 244, 0.64));
+      font-size: 0.84rem;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0.01em;
     }
 
     @media (max-width: 500px) {
-      height: 120px;
-      border-radius: 12px;
+      min-height: 116px;
+      padding: 14px;
+      border-radius: 15px;
+
+      &::after {
+        left: 14px;
+        width: 36px;
+      }
+
+      .card-header {
+        gap: 8px;
+      }
+
+      .card-icon {
+        flex-basis: 30px;
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        font-size: 0.9rem;
+      }
 
       .content {
-        font-size: 1.3em;
-
         &.card-values {
           gap: 4px;
+          margin-top: 14px;
+
+          .primary-value {
+            font-size: 1.3rem;
+          }
+
+          .secondary-currency {
+            font-size: 0.68rem;
+          }
         }
       }
 
       .title {
-        line-height: 30px;
-        height: 30px;
-        font-size: 0.78em;
+        font-size: 0.74rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: border-color 0.2s ease;
+
+      &:hover {
+        transform: none;
       }
     }
   }

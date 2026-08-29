@@ -5,6 +5,7 @@ describe('admin dashboard API contracts', () => {
     const source = {
       users: 12_345,
       plugins: 250,
+      sponsors: 42,
       amountPaid: 98_765.5,
       pluginSales: 54_321,
       pluginDownloads: 1_234_567,
