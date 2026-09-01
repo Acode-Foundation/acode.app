@@ -13,6 +13,7 @@ const PLUGINS_PATH = '/plugins';
 const DEFAULT_ROBOTS = 'index, follow';
 
 let latestRouteMetadataRequest = 0;
+let latestProfileMetadataRequest = 0;
 let pluginCountRequest;
 
 function normalizePath(pathname) {
@@ -227,8 +228,12 @@ export function applyPluginMetadata(plugin) {
   applyPageMetadata(resolvePluginMetadata(plugin));
 }
 
-export function applyProfileMetadata(user, expectedPathname = window.location.pathname) {
-  if (normalizePath(window.location.pathname) !== normalizePath(expectedPathname)) return false;
+export function beginProfileMetadataRequest(pathname = window.location.pathname) {
+  return { id: ++latestProfileMetadataRequest, pathname: normalizePath(pathname) };
+}
+
+export function applyProfileMetadata(user, request) {
+  if (request?.id !== latestProfileMetadataRequest || normalizePath(window.location.pathname) !== request.pathname) return false;
   applyPageMetadata(resolveProfileMetadata(user));
   return true;
 }

@@ -2,6 +2,7 @@ import {
   applyPageMetadata,
   applyProfileMetadata,
   applyRouteMetadata,
+  beginProfileMetadataRequest,
   resolvePluginMetadata,
   resolveProfileMetadata,
   resolveRouteMetadata,
@@ -178,7 +179,8 @@ describe('route metadata', () => {
     vi.stubGlobal('window', { location });
     vi.stubGlobal('document', documentRef);
 
-    expect(applyProfileMetadata({ id: 7, name: 'Deleted User', role: 'deleted' }, location.pathname)).toBe(true);
+    const request = beginProfileMetadataRequest();
+    expect(applyProfileMetadata({ id: 7, name: 'Deleted User', role: 'deleted' }, request)).toBe(true);
     expect(content(documentRef, 'meta[name="robots"]')).toBe('noindex, follow');
 
     location.pathname = '/sponsors';
@@ -190,20 +192,42 @@ describe('route metadata', () => {
   it('does not overwrite newer route metadata when a profile load finishes after navigation', () => {
     const documentRef = new FakeDocument();
     const location = { origin, pathname: '/profile/1' };
-    const expectedPathname = location.pathname;
     vi.stubGlobal('window', { location });
     vi.stubGlobal('document', documentRef);
+    const request = beginProfileMetadataRequest();
 
     location.pathname = '/sponsors';
     const sponsorsMetadata = resolveRouteMetadata(location.pathname, origin);
     applyPageMetadata(sponsorsMetadata, documentRef);
 
-    expect(applyProfileMetadata({ id: 1, name: 'Ajit Kumar' }, expectedPathname)).toBe(false);
+    expect(applyProfileMetadata({ id: 1, name: 'Ajit Kumar' }, request)).toBe(false);
     expect(documentRef.title).toBe(sponsorsMetadata.title);
     expect(documentRef.querySelector('link[rel="canonical"]').getAttribute('href')).toBe(sponsorsMetadata.canonicalUrl);
     expect(content(documentRef, 'meta[name="robots"]')).toBe('index, follow');
     expect(content(documentRef, 'meta[property="og:title"]')).toBe(sponsorsMetadata.title);
     expect(content(documentRef, 'meta[name="twitter:title"]')).toBe(sponsorsMetadata.title);
+  });
+
+  it('rejects an older profile response after navigating away and back to the same path', () => {
+    const documentRef = new FakeDocument();
+    const location = { origin, pathname: '/profile/1' };
+    vi.stubGlobal('window', { location });
+    vi.stubGlobal('document', documentRef);
+
+    const firstRequest = beginProfileMetadataRequest();
+    location.pathname = '/sponsors';
+    location.pathname = '/profile/1';
+    const latestRequest = beginProfileMetadataRequest();
+
+    expect(applyProfileMetadata({ id: 1, name: 'Current Name', role: 'user' }, latestRequest)).toBe(true);
+    const currentMetadata = resolveProfileMetadata({ id: 1, name: 'Current Name', role: 'user' }, origin);
+
+    expect(applyProfileMetadata({ id: 1, name: 'Deleted User', role: 'deleted' }, firstRequest)).toBe(false);
+    expect(documentRef.title).toBe(currentMetadata.title);
+    expect(documentRef.querySelector('link[rel="canonical"]').getAttribute('href')).toBe(currentMetadata.canonicalUrl);
+    expect(content(documentRef, 'meta[name="robots"]')).toBe('index, follow');
+    expect(content(documentRef, 'meta[property="og:title"]')).toBe(currentMetadata.title);
+    expect(content(documentRef, 'meta[name="twitter:title"]')).toBe(currentMetadata.title);
   });
 
   it('uses the same bounded plugin summary during SSR and SPA navigation', () => {
