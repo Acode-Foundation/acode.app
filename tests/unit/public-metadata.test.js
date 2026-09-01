@@ -3,6 +3,7 @@ const path = require('node:path');
 const Handlebars = require('handlebars');
 const defaultOg = require('../../server/defaultOg.json');
 const { getMetadata } = require('../../server/routeMetadata');
+const { createProfileMetadata } = require('../../shared/metadataText');
 const {
   MAX_PLUGIN_DESCRIPTION_LENGTH,
   createMetadataContext,
@@ -67,6 +68,27 @@ describe('server-rendered metadata', () => {
     expect(metadata.schema.url).toBe('https://dev.acode.app');
     expect(metadata.schema.image).toBe('https://dev.acode.app/og/default.png');
     expect(metadata.orgSchema.logo).toBe('https://dev.acode.app/logo-512.png');
+  });
+
+  it('renders user-name profile metadata with the canonical profile URL and default image', () => {
+    const profile = { id: 1, name: 'Ajit Kumar' };
+    const metadata = createProfileMetadata(profile.name);
+    const context = createMetadataContext(defaultOg, {
+      canonicalPath: `/profile/${profile.id}`,
+      origin: 'https://acode.app',
+    });
+    const source = fs.readFileSync(path.resolve(process.cwd(), 'server', 'index.hbs'), 'utf8');
+    const html = Handlebars.compile(source)({ ...context, ...metadata, image_alt: metadata.title, robots: 'index, follow' });
+
+    expect(metadata).toEqual({
+      title: 'Ajit Kumar — Acode',
+      description: "View Ajit Kumar's profile and published plugins on Acode.",
+    });
+    expect(html).toContain('<title>Ajit Kumar — Acode</title>');
+    expect(html).toContain('<link rel="canonical" href="https://acode.app/profile/1" />');
+    expect(html).toContain('<meta property="og:title" content="Ajit Kumar — Acode" />');
+    expect(html).toContain('<meta name="twitter:title" content="Ajit Kumar — Acode" />');
+    expect(html).toContain('<meta property="og:image" content="https://acode.app/og/default.png" />');
   });
 
   it('uses count-free plugins metadata when a live count is unavailable', () => {

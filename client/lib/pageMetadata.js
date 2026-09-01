@@ -2,7 +2,7 @@ import metadataText from '../../shared/metadataText';
 import ogImageConfig from '../../shared/ogImage.json';
 import metadataConfig from '../../shared/routeMetadata.json';
 
-const { createPluginMetadataDescription, formatMilestoneCount } = metadataText;
+const { createPluginMetadataDescription, createProfileMetadata, formatMilestoneCount } = metadataText;
 
 const DEFAULT_IMAGE_PATH = '/og/default.png';
 const IMAGE_WIDTH = 1200;
@@ -123,6 +123,29 @@ export function resolvePluginMetadata(plugin, origin = window.location.origin) {
   };
 }
 
+/**
+ * Build metadata for a loaded user profile.
+ * @param {object} user
+ * @param {string} [origin]
+ */
+export function resolveProfileMetadata(user, origin = window.location.origin) {
+  const { title, description } = createProfileMetadata(user.name);
+  const id = encodeURIComponent(String(user.id));
+
+  return {
+    title,
+    description,
+    canonicalUrl: absoluteUrl(`/profile/${id}`, origin),
+    imageUrl: absoluteUrl(DEFAULT_IMAGE_PATH, origin),
+    imageWidth: IMAGE_WIDTH,
+    imageHeight: IMAGE_HEIGHT,
+    imageType: 'image/png',
+    imageAlt: title,
+    siteName: SITE_NAME,
+    type: 'website',
+  };
+}
+
 function ensureMeta(documentRef, attribute, key) {
   let element = documentRef.querySelector(`meta[${attribute}="${key}"]`);
   if (!element) {
@@ -199,4 +222,8 @@ export async function applyRouteMetadata(pathname = window.location.pathname) {
 
 export function applyPluginMetadata(plugin) {
   applyPageMetadata(resolvePluginMetadata(plugin));
+}
+
+export function applyProfileMetadata(user) {
+  applyPageMetadata(resolveProfileMetadata(user));
 }

@@ -6,6 +6,7 @@ import Plugins from 'components/plugins';
 import Tabs from 'components/tabs';
 import Ref from 'html-tag-js/ref';
 import { getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers';
+import { applyProfileMetadata } from 'lib/pageMetadata';
 import Router from 'lib/Router';
 import moment from 'moment';
 import Earnings from 'pages/earnings';
@@ -35,6 +36,8 @@ export default async function User({ userId }) {
     Router.loadUrl('/login?redirect=/profile');
     return 'Redirecting...';
   }
+
+  applyProfileMetadata(user);
 
   const isSelf = loggedInUser && loggedInUser.id === user.id;
   const shouldShowSensitiveInfo = Boolean(isSelf || loggedInUser?.isAdmin);

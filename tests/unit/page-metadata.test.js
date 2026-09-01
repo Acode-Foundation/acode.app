@@ -1,4 +1,10 @@
-import { applyPageMetadata, applyRouteMetadata, resolvePluginMetadata, resolveRouteMetadata } from '../../client/lib/pageMetadata';
+import {
+  applyPageMetadata,
+  applyRouteMetadata,
+  resolvePluginMetadata,
+  resolveProfileMetadata,
+  resolveRouteMetadata,
+} from '../../client/lib/pageMetadata';
 import publicMetadata from '../../server/lib/publicMetadata';
 
 const { MAX_PLUGIN_DESCRIPTION_LENGTH, createPluginDescription } = publicMetadata;
@@ -142,6 +148,26 @@ describe('route metadata', () => {
     expect(content(documentRef, 'meta[property="og:title"]')).toBe(homeMetadata.title);
     expect(content(documentRef, 'meta[property="og:image"]')).toBe('https://acode.app/og/default.png');
     expect(documentRef.querySelector('link[rel="canonical"]').getAttribute('href')).toBe('https://acode.app/');
+  });
+
+  it('applies complete user-name metadata after a profile loads', () => {
+    const documentRef = new FakeDocument();
+    const metadata = resolveProfileMetadata({ id: 1, name: 'Ajit Kumar' }, origin);
+
+    applyPageMetadata(metadata, documentRef);
+
+    expect(metadata).toMatchObject({
+      title: 'Ajit Kumar — Acode',
+      description: "View Ajit Kumar's profile and published plugins on Acode.",
+      canonicalUrl: 'https://acode.app/profile/1',
+      imageUrl: 'https://acode.app/og/default.png',
+    });
+    expect(documentRef.title).toBe(metadata.title);
+    expect(documentRef.querySelector('link[rel="canonical"]').getAttribute('href')).toBe(metadata.canonicalUrl);
+    expect(content(documentRef, 'meta[property="og:title"]')).toBe(metadata.title);
+    expect(content(documentRef, 'meta[property="og:description"]')).toBe(metadata.description);
+    expect(content(documentRef, 'meta[name="twitter:title"]')).toBe(metadata.title);
+    expect(content(documentRef, 'meta[name="twitter:description"]')).toBe(metadata.description);
   });
 
   it('uses the same bounded plugin summary during SSR and SPA navigation', () => {
