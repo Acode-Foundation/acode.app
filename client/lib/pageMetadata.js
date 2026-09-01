@@ -10,6 +10,7 @@ const IMAGE_HEIGHT = 630;
 const SITE_NAME = 'Acode';
 const TWITTER_SITE = '@foxbiz_io';
 const PLUGINS_PATH = '/plugins';
+const DEFAULT_ROBOTS = 'index, follow';
 
 let latestRouteMetadataRequest = 0;
 let pluginCountRequest;
@@ -129,12 +130,13 @@ export function resolvePluginMetadata(plugin, origin = window.location.origin) {
  * @param {string} [origin]
  */
 export function resolveProfileMetadata(user, origin = window.location.origin) {
-  const { title, description } = createProfileMetadata(user);
+  const { title, description, robots } = createProfileMetadata(user);
   const id = encodeURIComponent(String(user.id));
 
   return {
     title,
     description,
+    robots,
     canonicalUrl: absoluteUrl(`/profile/${id}`, origin),
     imageUrl: absoluteUrl(DEFAULT_IMAGE_PATH, origin),
     imageWidth: IMAGE_WIDTH,
@@ -179,6 +181,7 @@ export function applyPageMetadata(metadata, documentRef = document) {
   documentRef.title = metadata.title;
   setCanonical(documentRef, metadata.canonicalUrl);
 
+  setMeta(documentRef, 'name', 'robots', metadata.robots ?? DEFAULT_ROBOTS);
   setMeta(documentRef, 'name', 'description', metadata.description);
   setMeta(documentRef, 'property', 'og:title', metadata.title);
   setMeta(documentRef, 'property', 'og:description', metadata.description);

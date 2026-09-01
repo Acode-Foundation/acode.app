@@ -160,6 +160,7 @@ describe('route metadata', () => {
     expect(metadata).toMatchObject({
       title: 'Ajit Kumar — Acode',
       description: "View Ajit Kumar's profile and published plugins on Acode.",
+      robots: 'index, follow',
       canonicalUrl: 'https://acode.app/profile/1',
       imageUrl: 'https://acode.app/og/default.png',
     });
@@ -169,6 +170,21 @@ describe('route metadata', () => {
     expect(content(documentRef, 'meta[property="og:description"]')).toBe(metadata.description);
     expect(content(documentRef, 'meta[name="twitter:title"]')).toBe(metadata.title);
     expect(content(documentRef, 'meta[name="twitter:description"]')).toBe(metadata.description);
+  });
+
+  it('updates robots metadata when navigating into and away from a deleted profile', async () => {
+    const documentRef = new FakeDocument();
+    const location = { origin, pathname: '/profile/7' };
+    vi.stubGlobal('window', { location });
+    vi.stubGlobal('document', documentRef);
+
+    expect(applyProfileMetadata({ id: 7, name: 'Deleted User', role: 'deleted' }, location.pathname)).toBe(true);
+    expect(content(documentRef, 'meta[name="robots"]')).toBe('noindex, follow');
+
+    location.pathname = '/sponsors';
+    await applyRouteMetadata(location.pathname);
+
+    expect(content(documentRef, 'meta[name="robots"]')).toBe('index, follow');
   });
 
   it('does not overwrite newer route metadata when a profile load finishes after navigation', () => {
@@ -185,6 +201,7 @@ describe('route metadata', () => {
     expect(applyProfileMetadata({ id: 1, name: 'Ajit Kumar' }, expectedPathname)).toBe(false);
     expect(documentRef.title).toBe(sponsorsMetadata.title);
     expect(documentRef.querySelector('link[rel="canonical"]').getAttribute('href')).toBe(sponsorsMetadata.canonicalUrl);
+    expect(content(documentRef, 'meta[name="robots"]')).toBe('index, follow');
     expect(content(documentRef, 'meta[property="og:title"]')).toBe(sponsorsMetadata.title);
     expect(content(documentRef, 'meta[name="twitter:title"]')).toBe(sponsorsMetadata.title);
   });
