@@ -45,16 +45,16 @@ function createPluginMetadataDescription(markdown, fallback = 'Explore this plug
 }
 
 /**
- * Build the profile title and description shared by server rendering and SPA
- * navigation.
- * @param {unknown} name
- * @returns {{ title: string, description: string }}
+ * Build profile metadata shared by server rendering and SPA navigation.
+ * @param {{ name?: unknown, role?: string }} user
+ * @returns {{ title: string, description: string, robots: string }}
  */
-function createProfileMetadata(name) {
-  const normalizedName = normalizeMetadataText(name) || 'Acode User';
+function createProfileMetadata(user) {
+  const normalizedName = normalizeMetadataText(user?.name) || 'Acode User';
   return {
     title: `${normalizedName} — Acode`,
     description: `View ${normalizedName}'s profile and published plugins on Acode.`,
+    robots: user?.role === 'deleted' ? 'noindex, follow' : 'index, follow',
   };
 }
 

@@ -453,13 +453,13 @@ async function main() {
       return;
     }
 
-    const [user] = await User.get([User.ID, User.NAME], [User.ID, req.params.userId]);
+    const [user] = await User.get([User.ID, User.NAME, User.ROLE], [User.ID, req.params.userId]);
     if (!user) {
       next();
       return;
     }
 
-    const profileMeta = createProfileMetadata(user.name);
+    const profileMeta = createProfileMetadata(user);
     res.header('Content-Type', 'text/html;charset=utf-8');
     res.send(
       renderIndexTemplate({
@@ -467,7 +467,7 @@ async function main() {
         title: profileMeta.title,
         description: profileMeta.description,
         image_alt: profileMeta.title,
-        robots: 'index, follow',
+        robots: profileMeta.robots,
         pageSchema: null,
         orgSchema: null,
       }),

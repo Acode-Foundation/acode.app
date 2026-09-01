@@ -129,7 +129,7 @@ export function resolvePluginMetadata(plugin, origin = window.location.origin) {
  * @param {string} [origin]
  */
 export function resolveProfileMetadata(user, origin = window.location.origin) {
-  const { title, description } = createProfileMetadata(user.name);
+  const { title, description } = createProfileMetadata(user);
   const id = encodeURIComponent(String(user.id));
 
   return {
@@ -224,6 +224,8 @@ export function applyPluginMetadata(plugin) {
   applyPageMetadata(resolvePluginMetadata(plugin));
 }
 
-export function applyProfileMetadata(user) {
+export function applyProfileMetadata(user, expectedPathname = window.location.pathname) {
+  if (normalizePath(window.location.pathname) !== normalizePath(expectedPathname)) return false;
   applyPageMetadata(resolveProfileMetadata(user));
+  return true;
 }

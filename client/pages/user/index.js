@@ -12,6 +12,7 @@ import moment from 'moment';
 import Earnings from 'pages/earnings';
 
 export default async function User({ userId }) {
+  const expectedPathname = window.location.pathname;
   const amount = Ref();
   const loggedInUser = await getLoggedInUser();
   /** @type {import('lib/helpers').User} */
@@ -37,7 +38,7 @@ export default async function User({ userId }) {
     return 'Redirecting...';
   }
 
-  applyProfileMetadata(user);
+  applyProfileMetadata(user, expectedPathname);
 
   const isSelf = loggedInUser && loggedInUser.id === user.id;
   const shouldShowSensitiveInfo = Boolean(isSelf || loggedInUser?.isAdmin);

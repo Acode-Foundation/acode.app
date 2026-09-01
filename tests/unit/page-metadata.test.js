@@ -1,5 +1,6 @@
 import {
   applyPageMetadata,
+  applyProfileMetadata,
   applyRouteMetadata,
   resolvePluginMetadata,
   resolveProfileMetadata,
@@ -168,6 +169,24 @@ describe('route metadata', () => {
     expect(content(documentRef, 'meta[property="og:description"]')).toBe(metadata.description);
     expect(content(documentRef, 'meta[name="twitter:title"]')).toBe(metadata.title);
     expect(content(documentRef, 'meta[name="twitter:description"]')).toBe(metadata.description);
+  });
+
+  it('does not overwrite newer route metadata when a profile load finishes after navigation', () => {
+    const documentRef = new FakeDocument();
+    const location = { origin, pathname: '/profile/1' };
+    const expectedPathname = location.pathname;
+    vi.stubGlobal('window', { location });
+    vi.stubGlobal('document', documentRef);
+
+    location.pathname = '/sponsors';
+    const sponsorsMetadata = resolveRouteMetadata(location.pathname, origin);
+    applyPageMetadata(sponsorsMetadata, documentRef);
+
+    expect(applyProfileMetadata({ id: 1, name: 'Ajit Kumar' }, expectedPathname)).toBe(false);
+    expect(documentRef.title).toBe(sponsorsMetadata.title);
+    expect(documentRef.querySelector('link[rel="canonical"]').getAttribute('href')).toBe(sponsorsMetadata.canonicalUrl);
+    expect(content(documentRef, 'meta[property="og:title"]')).toBe(sponsorsMetadata.title);
+    expect(content(documentRef, 'meta[name="twitter:title"]')).toBe(sponsorsMetadata.title);
   });
 
   it('uses the same bounded plugin summary during SSR and SPA navigation', () => {
