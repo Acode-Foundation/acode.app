@@ -91,6 +91,16 @@ describe('route metadata', () => {
     expect(`${metadata.title} ${metadata.description}`).not.toMatch(/250\+|\{\{count\}\}/);
   });
 
+  it.each([
+    ['/profile', 'noindex, follow'],
+    ['/profile/1', 'noindex, follow'],
+    ['/profile/edit', 'noindex, follow'],
+    ['/sponsors', 'index, follow'],
+    ['/plugin/example.plugin', 'index, follow'],
+  ])('resolves %s with the explicit robots policy %s', (pathname, robots) => {
+    expect(resolveRouteMetadata(pathname, origin).robots).toBe(robots);
+  });
+
   it('coalesces plugin count requests and ignores their result after navigation', async () => {
     const documentRef = new FakeDocument();
     const location = { origin, pathname: '/plugins' };
@@ -141,6 +151,7 @@ describe('route metadata', () => {
 
     applyPageMetadata(pluginMetadata, documentRef);
     expect(documentRef.title).toBe('Example Plugin — Acode Plugin');
+    expect(pluginMetadata.robots).toBe('index, follow');
     expect(content(documentRef, 'meta[property="og:image"]')).toContain('/og/plugin/example.plugin.png?v=1.2.3&r=2');
     expect(content(documentRef, 'meta[name="twitter:card"]')).toBe('summary_large_image');
 
@@ -152,11 +163,19 @@ describe('route metadata', () => {
     expect(documentRef.querySelector('link[rel="canonical"]').getAttribute('href')).toBe('https://acode.app/');
   });
 
-  it('applies complete user-name metadata after a profile loads', () => {
+  it('upgrades an unresolved route to complete indexable metadata after a normal profile loads', async () => {
     const documentRef = new FakeDocument();
-    const metadata = resolveProfileMetadata({ id: 1, name: 'Ajit Kumar' }, origin);
+    const location = { origin, pathname: '/profile/1' };
+    const user = { id: 1, name: 'Ajit Kumar', role: 'user' };
+    vi.stubGlobal('window', { location });
+    vi.stubGlobal('document', documentRef);
+    const request = beginProfileMetadataRequest();
 
-    applyPageMetadata(metadata, documentRef);
+    await applyRouteMetadata(location.pathname);
+    expect(content(documentRef, 'meta[name="robots"]')).toBe('noindex, follow');
+
+    const metadata = resolveProfileMetadata(user, origin);
+    expect(applyProfileMetadata(user, request)).toBe(true);
 
     expect(metadata).toMatchObject({
       title: 'Ajit Kumar — Acode',
@@ -171,6 +190,26 @@ describe('route metadata', () => {
     expect(content(documentRef, 'meta[property="og:description"]')).toBe(metadata.description);
     expect(content(documentRef, 'meta[name="twitter:title"]')).toBe(metadata.title);
     expect(content(documentRef, 'meta[name="twitter:description"]')).toBe(metadata.description);
+  });
+
+  it('keeps an unresolved profile non-indexable when loaded profile metadata never applies', async () => {
+    const documentRef = new FakeDocument();
+    const location = { origin, pathname: '/profile/7' };
+    vi.stubGlobal('window', { location });
+    vi.stubGlobal('document', documentRef);
+
+    await applyRouteMetadata(location.pathname);
+
+    expect(content(documentRef, 'meta[name="robots"]')).toBe('noindex, follow');
+  });
+
+  it('fails closed when a metadata object unexpectedly omits its robots policy', () => {
+    const documentRef = new FakeDocument();
+    const { robots: _robots, ...incompleteMetadata } = resolveRouteMetadata('/sponsors', origin);
+
+    applyPageMetadata(incompleteMetadata, documentRef);
+
+    expect(content(documentRef, 'meta[name="robots"]')).toBe('noindex, follow');
   });
 
   it('updates robots metadata when navigating into and away from a deleted profile', async () => {
