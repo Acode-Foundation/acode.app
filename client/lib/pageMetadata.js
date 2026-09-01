@@ -2,7 +2,7 @@ import metadataText from '../../shared/metadataText';
 import ogImageConfig from '../../shared/ogImage.json';
 import metadataConfig from '../../shared/routeMetadata.json';
 
-const { createPluginMetadataDescription, formatMilestoneCount } = metadataText;
+const { createPluginMetadataDescription, createProfileMetadata, formatMilestoneCount } = metadataText;
 
 const DEFAULT_IMAGE_PATH = '/og/default.png';
 const IMAGE_WIDTH = 1200;
@@ -10,13 +10,21 @@ const IMAGE_HEIGHT = 630;
 const SITE_NAME = 'Acode';
 const TWITTER_SITE = '@foxbiz_io';
 const PLUGINS_PATH = '/plugins';
+const INDEX_ROBOTS = 'index, follow';
+const NOINDEX_ROBOTS = 'noindex, follow';
+const PROFILE_PATH_PATTERN = /^\/profile(?:\/|$)/i;
 
 let latestRouteMetadataRequest = 0;
+let latestProfileMetadataRequest = 0;
 let pluginCountRequest;
 
 function normalizePath(pathname) {
   if (!pathname || pathname === '/') return '/';
   return `/${pathname.replace(/^\/+|\/+$/g, '')}`;
+}
+
+function isProfilePath(pathname) {
+  return PROFILE_PATH_PATTERN.test(normalizePath(pathname));
 }
 
 function absoluteUrl(pathname, origin) {
@@ -87,6 +95,7 @@ export function resolveRouteMetadata(pathname, origin = window.location.origin, 
   return {
     title,
     description,
+    robots: isProfilePath(path) ? NOINDEX_ROBOTS : INDEX_ROBOTS,
     canonicalUrl: absoluteUrl(canonicalPath, origin),
     imageUrl: absoluteUrl(DEFAULT_IMAGE_PATH, origin),
     imageWidth: IMAGE_WIDTH,
@@ -112,12 +121,37 @@ export function resolvePluginMetadata(plugin, origin = window.location.origin) {
   return {
     title: `${plugin.name} — Acode Plugin`,
     description,
+    robots: INDEX_ROBOTS,
     canonicalUrl: absoluteUrl(`/plugin/${encodeURIComponent(id)}`, origin),
     imageUrl: absoluteUrl(`/og/plugin/${encodeURIComponent(id)}.png?v=${version}&r=${ogImageConfig.pluginRevision}`, origin),
     imageWidth: IMAGE_WIDTH,
     imageHeight: IMAGE_HEIGHT,
     imageType: 'image/png',
     imageAlt: `${plugin.name} plugin for Acode`,
+    siteName: SITE_NAME,
+    type: 'website',
+  };
+}
+
+/**
+ * Build metadata for a loaded user profile.
+ * @param {object} user
+ * @param {string} [origin]
+ */
+export function resolveProfileMetadata(user, origin = window.location.origin) {
+  const { title, description, robots } = createProfileMetadata(user);
+  const id = encodeURIComponent(String(user.id));
+
+  return {
+    title,
+    description,
+    robots,
+    canonicalUrl: absoluteUrl(`/profile/${id}`, origin),
+    imageUrl: absoluteUrl(DEFAULT_IMAGE_PATH, origin),
+    imageWidth: IMAGE_WIDTH,
+    imageHeight: IMAGE_HEIGHT,
+    imageType: 'image/png',
+    imageAlt: title,
     siteName: SITE_NAME,
     type: 'website',
   };
@@ -156,6 +190,7 @@ export function applyPageMetadata(metadata, documentRef = document) {
   documentRef.title = metadata.title;
   setCanonical(documentRef, metadata.canonicalUrl);
 
+  setMeta(documentRef, 'name', 'robots', metadata.robots ?? NOINDEX_ROBOTS);
   setMeta(documentRef, 'name', 'description', metadata.description);
   setMeta(documentRef, 'property', 'og:title', metadata.title);
   setMeta(documentRef, 'property', 'og:description', metadata.description);
@@ -199,4 +234,14 @@ export async function applyRouteMetadata(pathname = window.location.pathname) {
 
 export function applyPluginMetadata(plugin) {
   applyPageMetadata(resolvePluginMetadata(plugin));
+}
+
+export function beginProfileMetadataRequest(pathname = window.location.pathname) {
+  return { id: ++latestProfileMetadataRequest, pathname: normalizePath(pathname) };
+}
+
+export function applyProfileMetadata(user, request) {
+  if (request?.id !== latestProfileMetadataRequest || normalizePath(window.location.pathname) !== request.pathname) return false;
+  applyPageMetadata(resolveProfileMetadata(user));
+  return true;
 }

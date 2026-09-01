@@ -6,11 +6,13 @@ import Plugins from 'components/plugins';
 import Tabs from 'components/tabs';
 import Ref from 'html-tag-js/ref';
 import { getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers';
+import { applyProfileMetadata, beginProfileMetadataRequest } from 'lib/pageMetadata';
 import Router from 'lib/Router';
 import moment from 'moment';
 import Earnings from 'pages/earnings';
 
 export default async function User({ userId }) {
+  const profileMetadataRequest = beginProfileMetadataRequest();
   const amount = Ref();
   const loggedInUser = await getLoggedInUser();
   /** @type {import('lib/helpers').User} */
@@ -35,6 +37,8 @@ export default async function User({ userId }) {
     Router.loadUrl('/login?redirect=/profile');
     return 'Redirecting...';
   }
+
+  applyProfileMetadata(user, profileMetadataRequest);
 
   const isSelf = loggedInUser && loggedInUser.id === user.id;
   const shouldShowSensitiveInfo = Boolean(isSelf || loggedInUser?.isAdmin);

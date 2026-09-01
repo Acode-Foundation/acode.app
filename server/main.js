@@ -10,8 +10,10 @@ const fileUpload = require('express-fileupload');
 const Handlebars = require('handlebars');
 const defaultOg = require('./defaultOg.json');
 const { pluginRevision } = require('../shared/ogImage.json');
+const { createProfileMetadata } = require('../shared/metadataText');
 const { getMetadata, getPluginsMetadata, getFaqsMetadata, FALLBACK_TITLE } = require('./routeMetadata');
 const Plugin = require('./entities/plugin');
+const User = require('./entities/user');
 const { getLoggedInUser } = require('./lib/helpers');
 const apis = require('./routes/apis');
 const oauth = require('./apis/oauth');
@@ -440,6 +442,33 @@ async function main() {
         description: faqMeta.description,
         robots: 'index, follow',
         pageSchema: faqMeta.schema ? safeSchema(JSON.stringify(faqMeta.schema)) : null,
+        orgSchema: null,
+      }),
+    );
+  });
+
+  app.get('/profile/:userId', async (req, res, next) => {
+    if (!/^\d+$/.test(req.params.userId)) {
+      next();
+      return;
+    }
+
+    const [user] = await User.get([User.ID, User.NAME, User.ROLE], [User.ID, req.params.userId]);
+    if (!user) {
+      next();
+      return;
+    }
+
+    const profileMeta = createProfileMetadata(user);
+    res.header('Content-Type', 'text/html;charset=utf-8');
+    res.send(
+      renderIndexTemplate({
+        ...createMetadataContext(defaultOg, { canonicalPath: `/profile/${user.id}`, origin: PUBLIC_ORIGIN }),
+        title: profileMeta.title,
+        description: profileMeta.description,
+        image_alt: profileMeta.title,
+        robots: profileMeta.robots,
+        pageSchema: null,
         orgSchema: null,
       }),
     );

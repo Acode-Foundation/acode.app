@@ -45,6 +45,20 @@ function createPluginMetadataDescription(markdown, fallback = 'Explore this plug
 }
 
 /**
+ * Build profile metadata shared by server rendering and SPA navigation.
+ * @param {{ name?: unknown, role?: string }} user
+ * @returns {{ title: string, description: string, robots: string }}
+ */
+function createProfileMetadata(user) {
+  const normalizedName = normalizeMetadataText(user?.name) || 'Acode User';
+  return {
+    title: `${normalizedName} — Acode`,
+    description: `View ${normalizedName}'s profile and published plugins on Acode.`,
+    robots: user?.role === 'deleted' ? 'noindex, follow' : 'index, follow',
+  };
+}
+
+/**
  * Format a count using stable 1x/5x milestones without overstating it.
  * Counts below the first milestone remain exact.
  * @param {unknown} count
@@ -64,6 +78,7 @@ function formatMilestoneCount(count) {
 module.exports = {
   PLUGIN_DESCRIPTION_MAX_LENGTH,
   createPluginMetadataDescription,
+  createProfileMetadata,
   formatMilestoneCount,
   normalizeMetadataText,
   truncateMetadataText,

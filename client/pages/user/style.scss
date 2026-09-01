@@ -277,4 +277,11 @@
     }
   }
 
+  > .profile + .plugins {
+    margin-top: 24px;
+
+    @media screen and (max-width: 600px) {
+      margin-top: 16px;
+    }
+  }
 }
