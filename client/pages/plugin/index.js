@@ -468,7 +468,7 @@ function Comment({
     dp.append(<div className='icon thumb_down danger' />);
   }
 
-  meta.append(<time datetime={createTime}>{createDuration} ago</time>);
+  meta.append(<time datetime={createTime}>{createDuration}</time>);
 
   if (userIsPluginAuthor) {
     let icon = 'outlined_flag';
