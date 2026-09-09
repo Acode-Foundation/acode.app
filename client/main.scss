@@ -293,14 +293,26 @@ header {
 
     label[for='nav-menu-toggler']:not(.mask) {
       display: flex;
+      flex-shrink: 0;
       height: 40px;
       width: 40px;
       align-items: center;
       justify-content: center;
     }
 
-    nav:first-of-type a.logo .text {
-      display: none;
+    nav:first-of-type {
+      flex: 1;
+      min-width: 0;
+
+      a.logo {
+        flex-shrink: 0;
+        width: max-content;
+        margin-inline: 0;
+      }
+    }
+
+    nav:last-of-type {
+      flex-shrink: 0;
     }
 
     #nav-menu-toggler:checked~nav:nth-of-type(2) {

@@ -79,7 +79,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   const $orders = <Order />;
   const shouldShowOrders = user && (user.id === userId || user.isAdmin) && !!plugin.price;
 
-  let canInstall = /android/i.test(navigator.userAgent);
+  const canInstall = user?.isAdmin || /android/i.test(navigator.userAgent);
   let userOwnsPlugin = false;
   let purchaseInfo = null;
 
@@ -103,10 +103,6 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     } catch {
       // Ignore
     }
-  }
-
-  if (user?.isAdmin && plugin.status_text !== 'approved') {
-    canInstall = false;
   }
 
   for (const code of $description.getAll('pre code')) {
@@ -309,12 +305,6 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
                 <img src='/thumbs-up.gif' alt='thumbs up' />
                 <span>{calcRating(votesUp, votesDown)}</span>
               </div>
-            )}
-            {user?.isAdmin && (
-              <button type='button' className='chip' onclick={() => window.open(`/api/plugin/download/${id}`)}>
-                <span className='icon download' />
-                <span>Download</span>
-              </button>
             )}
           </div>
           <div className='info'>
