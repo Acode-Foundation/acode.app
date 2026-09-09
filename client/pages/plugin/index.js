@@ -79,7 +79,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   const $orders = <Order />;
   const shouldShowOrders = user && (user.id === userId || user.isAdmin) && !!plugin.price;
 
-  const canInstall = user?.isAdmin || /android/i.test(navigator.userAgent);
+  const canInstall = /android/i.test(navigator.userAgent);
   let userOwnsPlugin = false;
   let purchaseInfo = null;
 
@@ -259,7 +259,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   }
 
   return (
-    <section ref={pluginSectionRef} id='plugin'>
+    <section ref={pluginSectionRef} id='plugin' className={user?.isAdmin && status_text ? 'has-status-actions' : ''}>
       <div className='row plugin-head'>
         <div className='plugin-logo'>
           <img src={`/plugin-icon/${id}`} alt={name} />
@@ -268,13 +268,13 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
               <span className='icon download' /> Install
             </button>
           )}
-          <PluginStatus status={status_text} id={id} style='button' />
         </div>
         <div className='info-container'>
-          <div className='info'>
+          <div className='plugin-title'>
             <strong>{name}</strong>
-            {updatedAt && <small>Updated {since(updatedAt)}</small>}
+            <PluginStatus status={status_text} id={id} name={name} style='page' />
           </div>
+          {updatedAt && <small>Updated {since(updatedAt)}</small>}
           <div className='info'>
             {supportedEditor && <EditorType type={supportedEditor} className='chip' />}
             <span className='chip'>v {version}</span>
