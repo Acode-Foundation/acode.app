@@ -79,7 +79,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   const $orders = <Order />;
   const shouldShowOrders = user && (user.id === userId || user.isAdmin) && !!plugin.price;
 
-  let canInstall = /android/i.test(navigator.userAgent);
+  const canInstall = /android/i.test(navigator.userAgent);
   let userOwnsPlugin = false;
   let purchaseInfo = null;
 
@@ -103,10 +103,6 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     } catch {
       // Ignore
     }
-  }
-
-  if (user?.isAdmin && plugin.status_text !== 'approved') {
-    canInstall = false;
   }
 
   for (const code of $description.getAll('pre code')) {
@@ -263,7 +259,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   }
 
   return (
-    <section ref={pluginSectionRef} id='plugin'>
+    <section ref={pluginSectionRef} id='plugin' className={user?.isAdmin && status_text ? 'has-status-actions' : ''}>
       <div className='row plugin-head'>
         <div className='plugin-logo'>
           <img src={`/plugin-icon/${id}`} alt={name} />
@@ -272,13 +268,13 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
               <span className='icon download' /> Install
             </button>
           )}
-          <PluginStatus status={status_text} id={id} style='button' />
         </div>
         <div className='info-container'>
-          <div className='info'>
+          <div className='plugin-title'>
             <strong>{name}</strong>
-            {updatedAt && <small>Updated {since(updatedAt)}</small>}
+            <PluginStatus status={status_text} id={id} name={name} style='page' />
           </div>
+          {updatedAt && <small>Updated {since(updatedAt)}</small>}
           <div className='info'>
             {supportedEditor && <EditorType type={supportedEditor} className='chip' />}
             <span className='chip'>v {version}</span>
@@ -309,12 +305,6 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
                 <img src='/thumbs-up.gif' alt='thumbs up' />
                 <span>{calcRating(votesUp, votesDown)}</span>
               </div>
-            )}
-            {user?.isAdmin && (
-              <button type='button' className='chip' onclick={() => window.open(`/api/plugin/download/${id}`)}>
-                <span className='icon download' />
-                <span>Download</span>
-              </button>
             )}
           </div>
           <div className='info'>

@@ -1,0 +1,217 @@
+.plugin-status-control {
+  display: inline-flex;
+  align-items: center;
+
+  .approved {
+    --status-color: #3f9;
+  }
+  .pending {
+    --status-color: #39f;
+  }
+  .rejected, .deleted {
+    --status-color: #f87171;
+  }
+
+  .plugin-status-badge {
+    padding: 5px 9px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--status-color);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  button.status-indicator {
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--status-color);
+    font: inherit;
+    height: auto;
+    width: auto;
+    min-height: 0;
+  }
+}
+
+.plugin-status-fab {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 12px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.plugin-status-control button:focus-visible,
+.plugin-status-dialog :focus-visible {
+  outline: 2px solid #79bbff;
+  outline-offset: 3px;
+}
+
+.plugin-status-dialog {
+  box-sizing: border-box;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--page-line);
+  border-radius: 16px;
+  background: #1c1f27;
+  color: var(--page-text);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.65);
+  }
+  [hidden] {
+    display: none !important;
+  }
+  form {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: 24px;
+  }
+  h2 {
+    margin: 0 0 6px;
+    font-size: 20px;
+  }
+  p {
+    margin: 10px 0;
+  }
+  .muted, small {
+    color: var(--page-muted);
+    font-size: 12px;
+  }
+  .plugin-status-name {
+    margin-top: 0;
+    overflow-wrap: anywhere;
+  }
+  .plugin-status-current {
+    padding: 10px 0;
+    font-size: 13px;
+  }
+  fieldset {
+    display: block;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  legend {
+    padding: 0;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .plugin-status-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 8px 0;
+    padding: 12px;
+    border: 1px solid var(--page-line);
+    border-radius: 10px;
+    cursor: pointer;
+
+    &:has(input:checked) {
+      border-color: #3499fe;
+      background: rgba(52, 153, 254, 0.08);
+    }
+    input {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      margin: 1px 0 0;
+      accent-color: #3499fe;
+    }
+    strong {
+      font-size: 14px;
+    }
+    small {
+      display: block;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+  }
+
+  .plugin-status-reason {
+    display: block;
+    margin-top: 16px;
+    font-size: 13px;
+
+    textarea {
+      display: block;
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 88px;
+      margin: 8px 0 4px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.15);
+      color: inherit;
+      font: inherit;
+      resize: vertical;
+    }
+  }
+
+  .plugin-status-error {
+    color: #f87171;
+    font-size: 13px;
+  }
+  .plugin-status-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+  }
+  button {
+    min-height: 44px;
+    margin: 0;
+    padding: 10px 16px;
+    border: 1px solid var(--page-line);
+    border-radius: 8px;
+  }
+  button[type='button'] {
+    background: transparent;
+    color: inherit;
+  }
+  .plugin-status-submit {
+    background: #2563eb;
+    color: #fff;
+  }
+  button[data-action='reject'] {
+    background: #b9364e;
+    color: #fff;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.plugin-status-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

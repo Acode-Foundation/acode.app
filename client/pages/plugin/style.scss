@@ -1,4 +1,16 @@
 #plugin {
+  &.has-status-actions {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+
+  .plugin-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    overflow-wrap: anywhere;
+  }
+
   &::after {
     content: '';
     display: block;

@@ -115,9 +115,9 @@ router.get('/download/:id', async (req, res) => {
 
     const clientIp = req.headers['x-forwarded-for'] || req.ip;
 
-    if (row.price) {
-      const loggedInUser = await getLoggedInUser(req);
+    const loggedInUser = row.price ? await getLoggedInUser(req) : null;
 
+    if (row.price && !loggedInUser?.isAdmin) {
       // Check for user-linked purchase (Razorpay or any provider)
       if (loggedInUser) {
         const [userOrder] = await Order.for('internal').get(
@@ -286,6 +286,7 @@ router.get('{/:pluginId}', async (req, res) => {
     const { pluginId } = req.params;
     const { user, name, status, page, limit, orderBy, supported_editor, owned } = req.query;
     const loggedInUser = await getLoggedInUser(req);
+    const isAppAdmin = loggedInUser?.isAdmin === true && loggedInUser.authType === 'app';
     const columns = Plugin.minColumns;
     const where = [];
     let userId;
@@ -411,7 +412,7 @@ router.get('{/:pluginId}', async (req, res) => {
     const paidPluginIds = rows.filter((r) => r.price).map((r) => r.id);
     let ownedIds = new Set();
 
-    if (loggedInUser) {
+    if (loggedInUser && !isAppAdmin) {
       if (paidPluginIds.length) {
         const ownedOrders = await Order.for('internal').get(
           [Order.PLUGIN_ID],
@@ -433,7 +434,7 @@ router.get('{/:pluginId}', async (req, res) => {
         row.currencySymbol = converted.symbol;
       }
 
-      row.owned = !row.price || ownedIds.has(String(row.id));
+      row.owned = isAppAdmin || !row.price || ownedIds.has(String(row.id));
     }
 
     if (pluginId) {

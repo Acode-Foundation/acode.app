@@ -108,7 +108,7 @@ function Plugin({
           <div title='Downloads counter'>
             {downloads.toLocaleString()} <span className='icon download' />
           </div>
-          <PluginStatus status={status_text} id={id} />
+          <PluginStatus status={status_text} id={id} name={name} />
           <div>{calcRating(upVotes, downVotes)}</div>
           {comments > 0 && (
             <div>
