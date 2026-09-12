@@ -78,7 +78,7 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const existingRow = await Sponsor.get([Sponsor.ID], [[Sponsor.TOKEN, purchaseToken]]);
+    const [existingRow] = await Sponsor.get([Sponsor.ID], [[Sponsor.TOKEN, purchaseToken]]);
 
     if (existingRow) {
       return res.status(400).json({
