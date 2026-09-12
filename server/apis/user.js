@@ -193,11 +193,13 @@ route.get('/earnings/:year/:month', async (req, res) => {
     }
 
     let earnings;
+    let estimated = false;
 
     const now = moment();
     const thisMonth = moment({ year: now.year(), month: now.month() });
     const targetMonth = moment({ year, month });
     if (thisMonth.isSame(targetMonth)) {
+      estimated = true;
       earnings = await calcEarnings.total(year, month, user);
     } else {
       const [row] = await UserEarnings.get([
@@ -206,11 +208,13 @@ route.get('/earnings/:year/:month', async (req, res) => {
         [UserEarnings.MONTH, month],
       ]);
 
-      earnings = row?.amount || 0;
+      estimated = row?.amount == null && thisMonth.clone().subtract(1, 'month').isSame(targetMonth, 'month');
+      earnings = row?.amount ?? (estimated ? await calcEarnings.total(year, month, user) : 0);
     }
 
     res.send({
       earnings,
+      estimated,
       month: moment().month(month).format('MMMM'),
       year,
     });
