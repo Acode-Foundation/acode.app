@@ -9,6 +9,9 @@ module.exports = async () => {
   for (const sponsor of sponsors) {
     const { package_name: packageName, token, tier } = sponsor;
 
+    // Website sponsors are verified through Razorpay.
+    if (packageName === 'web') continue;
+
     try {
       const { data: purchase } = await androidpublisher.purchases.products.get({
         token,

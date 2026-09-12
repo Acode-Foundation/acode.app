@@ -78,6 +78,14 @@ router.post('/', async (req, res) => {
   }
 
   try {
+    const [existingRow] = await Sponsor.get([Sponsor.ID], [[Sponsor.TOKEN, purchaseToken]]);
+
+    if (existingRow) {
+      return res.status(400).json({
+        error: 'Invalid request, token already consumed',
+      });
+    }
+
     const { data: purchase } = await androidpublisher.purchases.products.get({
       packageName,
       productId: tier,
