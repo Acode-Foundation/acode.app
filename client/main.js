@@ -5,6 +5,7 @@ import './main.scss';
 import './common.scss';
 import 'res/icons/style.css';
 
+import { observeAdUnits } from 'lib/adUnits';
 import { setupHeaderTitle } from 'lib/headerTitle';
 import { getLoggedInUser, hideLoading, invalidateLoggedInUser, showLoading } from 'lib/helpers';
 import { applyRouteMetadata } from 'lib/pageMetadata';
@@ -30,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   );
 
   setupHeaderTitle(app.get('#main-header'));
+  observeAdUnits(app.get('main'));
 
   app.addEventListener('scroll', (e) => {
     const depth = Math.min(e.target.scrollTop / 80, 1);

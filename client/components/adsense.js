@@ -23,12 +23,8 @@ const nameMap = {
  * @returns
  */
 export default function AdSense({ className = '', name = 'plugin', style = {}, ref }) {
-  setTimeout(() => {
-    window.adsbygoogle.push({});
-  }, 100);
-
   return (
-    <div className={className} style={{ zIndex: '1', ...style, minHeight: '100px' }} ref={ref}>
+    <div data-acode-ad='' className={className} style={{ zIndex: '1', ...style, minHeight: '100px' }} ref={ref}>
       <ins
         className='adsbygoogle'
         style={{ display: 'block', zIndex: 1, position: 'relative' }}
