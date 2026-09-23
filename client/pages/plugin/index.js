@@ -110,7 +110,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     // language bundle. Keep the readable code visible while it loads.
     import('highlight.js')
       .then(({ default: highlighter }) => {
-        for (const code of codeBlocks) highlighter.highlightElement(code);
+        for (const code of $description.getAll('pre code')) highlighter.highlightElement(code);
       })
       .catch((error) => console.error('Failed to load syntax highlighting:', error));
   }
