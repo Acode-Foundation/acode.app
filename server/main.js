@@ -345,6 +345,7 @@ async function main() {
         renderIndexTemplate({
           ...createMetadataContext(defaultOg, { canonicalPath, imagePath, origin: PUBLIC_ORIGIN }),
           title: `${plugin.name} — Acode Plugin`,
+          preload_image: `/plugin-icon/${encodeURIComponent(plugin.id)}`,
           description: pageDesc,
           image_alt: `${plugin.name} plugin for Acode`,
           site_name: 'Acode',

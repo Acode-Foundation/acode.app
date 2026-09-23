@@ -46,12 +46,18 @@ document.addEventListener('DOMContentLoaded', () => {
       app.classList.remove('scrolled');
     }
   });
-});
-
-window.onload = async () => {
-  const user = await getLoggedInUser();
-  updateAccountButton(user);
-  addProButton(user);
+  // Render routes as soon as the DOM is ready. Ads, images, and account lookup
+  // must not delay public content until the window load event.
+  getLoggedInUser()
+    .then((user) => {
+      updateAccountButton(user);
+      addProButton(user);
+    })
+    .catch((error) => {
+      console.error('Failed to load account controls:', error);
+      updateAccountButton();
+      addProButton();
+    });
 
   const main = app.get('main');
 
@@ -136,4 +142,4 @@ window.onload = async () => {
       }
     }
   }
-};
+});

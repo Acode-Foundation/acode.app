@@ -26,6 +26,8 @@ import userImage from 'res/user.svg';
 
 /** @type {User} */
 let loggedInUser = null;
+let loggedInUserRequest = null;
+let loggedInUserExpiresAt = 0;
 
 const on = {
   showloading: [],
@@ -71,27 +73,33 @@ export function capitalize(string) {
  * @returns {Promise<User>}
  */
 export async function getLoggedInUser() {
-  if (loggedInUser) {
+  if (Date.now() < loggedInUserExpiresAt) {
     return loggedInUser;
   }
 
-  const res = await fetch('/api/login');
-  const user = await res.json();
-  if (user.error) {
-    return null;
+  if (!loggedInUserRequest) {
+    const request = fetch('/api/login')
+      .then((res) => res.json())
+      .then((user) => {
+        // Logout can invalidate a lookup while it is still in flight.
+        if (loggedInUserRequest !== request) return null;
+        loggedInUser = user.error ? null : user;
+        loggedInUserExpiresAt = Date.now() + 5 * 1000;
+        return loggedInUser;
+      })
+      .finally(() => {
+        if (loggedInUserRequest === request) loggedInUserRequest = null;
+      });
+    loggedInUserRequest = request;
   }
 
-  loggedInUser = user;
-
-  setTimeout(() => {
-    loggedInUser = null;
-  }, 5 * 1000);
-
-  return user;
+  return loggedInUserRequest;
 }
 
 export function invalidateLoggedInUser() {
   loggedInUser = null;
+  loggedInUserExpiresAt = 0;
+  loggedInUserRequest = null;
 }
 
 /**

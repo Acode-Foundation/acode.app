@@ -13,7 +13,6 @@ import PluginStatus from 'components/pluginStatus';
 import BuyButton, { checkPluginOwnership } from 'components/razorpayCheckout';
 import Tabs from 'components/tabs';
 import YearSelect from 'components/YearSelect';
-import hilightjs from 'highlight.js';
 import Ref from 'html-tag-js/ref';
 import { calcRating, getLoggedInUser, gravatar, hideLoading, showLoading, since } from 'lib/helpers';
 import { applyPluginMetadata } from 'lib/pageMetadata';
@@ -60,7 +59,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   applyPluginMetadata(plugin);
 
   const user = await getLoggedInUser();
-  const userComment = await getUserComment(pluginId);
+  const userComment = user ? await getUserComment(pluginId) : null;
   const pluginSectionRef = Ref();
   const ordersList = Ref();
   const commentListRef = Ref();
@@ -105,8 +104,15 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     }
   }
 
-  for (const code of $description.getAll('pre code')) {
-    hilightjs.highlightElement(code);
+  const codeBlocks = $description.getAll('pre code');
+  if (codeBlocks.length) {
+    // Syntax highlighting should not hold the plugin content behind its large
+    // language bundle. Keep the readable code visible while it loads.
+    import('highlight.js')
+      .then(({ default: highlighter }) => {
+        for (const code of codeBlocks) highlighter.highlightElement(code);
+      })
+      .catch((error) => console.error('Failed to load syntax highlighting:', error));
   }
 
   renderComments(commentListRef, userId, user, pluginId, author);
@@ -262,7 +268,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     <section ref={pluginSectionRef} id='plugin' className={user?.isAdmin && status_text ? 'has-status-actions' : ''}>
       <div className='row plugin-head'>
         <div className='plugin-logo'>
-          <img src={`/plugin-icon/${id}`} alt={name} />
+          <img src={`/plugin-icon/${id}`} alt={name} attr-fetchpriority='high' />
           {canInstall && (
             <button type='button' onclick={() => window.open(`acode://plugin/install/${pluginId}`)}>
               <span className='icon download' /> Install
