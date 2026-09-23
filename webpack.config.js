@@ -2,7 +2,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
-const { EnvironmentPlugin } = require('webpack');
+const { EnvironmentPlugin, IgnorePlugin } = require('webpack');
 
 const PUBLIC = path.resolve(__dirname, 'public');
 // Extracted CSS modules are concatenated. A Sass BOM in the middle of that
@@ -39,6 +39,8 @@ module.exports = (_env, options) => {
       ],
     },
     plugins: [
+      // The site uses Moment's built-in English locale only.
+      new IgnorePlugin({ resourceRegExp: /^\.\/locale$/, contextRegExp: /moment$/ }),
       new MiniCssExtractPlugin({
         filename: '[name].css',
         chunkFilename: '[id].css',
