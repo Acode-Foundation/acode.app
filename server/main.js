@@ -26,7 +26,7 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-const ALLOWED_ORIGINS = new Set(['https://localhost', 'https://acode.app']);
+const ALLOWED_ORIGINS = new Set(['https://localhost', 'https://acode.app', 'acode://localhost']);
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const LEGACY_NATIVE_CSRF_EXEMPT_PATHS = new Set(['/api/plugin/order', '/api/plugin/refund', '/api/sponsor', '/api/login']);
 const PLUGIN_ICONS = path.resolve(__dirname, '../data/icons');
