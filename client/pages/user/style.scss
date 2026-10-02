@@ -26,7 +26,8 @@
   // Undo the global `a` margin/font-size for link-based UI on this page
   .profile :where(a),
   .dev-dashboard :where(a),
-  .plugin-manager :where(a) {
+  .plugin-manager :where(a),
+  .payment-methods-panel :where(a) {
     margin: 0;
     font-size: inherit;
   }
@@ -787,6 +788,18 @@
     .tabs-content {
       margin-top: 16px;
     }
+  }
+
+  .plugins-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .panel-hint {
+    margin: -4px 0 12px;
+    color: var(--dash-faint);
+    font-size: 0.82rem;
   }
 
   // ── Plugin manager ──────────────────────────────────────────

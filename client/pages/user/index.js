@@ -171,7 +171,17 @@ export default async function User({ userId }) {
         id: 'plugins',
         label: isSelf ? 'My plugins' : 'Plugins',
         icon: 'extension',
-        content: () => (stats ? <PluginManager plugins={stats.plugins} isSelf={isSelf} /> : Plugins({ user: user.id })),
+        content: () => {
+          const list = stats ? <PluginManager plugins={stats.plugins} isSelf={isSelf} /> : Plugins({ user: user.id });
+          if (isDeveloper) return list;
+          // Without the dashboard tab, payment methods still need a home.
+          return (
+            <div className='plugins-tab'>
+              {list}
+              <PaymentMethodsPanel />
+            </div>
+          );
+        },
       },
       { id: 'owned', label: 'Owned', icon: 'shopping_bag', visible: isSelf, content: () => Plugins({ owned: true }) },
     ];
@@ -192,6 +202,21 @@ export default async function User({ userId }) {
     const defaultActive = visibleTabs.some((tab) => tab.id === requested) ? requested : visibleTabs[0].id;
 
     return <Tabs className='profile-tabs' defaultActive={defaultActive} tabs={tabs} onChange={rememberTab} />;
+  }
+
+  function PaymentMethodsPanel() {
+    return (
+      <div className='panel payment-methods-panel'>
+        <div className='panel-head'>
+          <h3>Payment methods</h3>
+          <span className='panel-meta'>
+            <a href={`/earnings?user=${user.id}`}>Earnings</a>
+          </span>
+        </div>
+        {isSelf && <p className='panel-hint'>Add a bank account to get paid for your plugins.</p>}
+        {paymentMethodsList}
+      </div>
+    );
   }
 
   /**

@@ -29,7 +29,7 @@ const DAILY_DOWNLOADS_QUERY = `SELECT
   COUNT(*) AS count
 FROM download d
 JOIN plugin p ON p.id = d.plugin_id
-WHERE p.user_id = ? AND d.created_at >= ?
+WHERE p.user_id = ? AND p.status != 3 AND d.created_at >= ?
 GROUP BY day`;
 
 const MONTHLY_EARNINGS_QUERY = `SELECT year, month, amount, payment_id
@@ -126,16 +126,18 @@ async function buildMonthlyEarnings(user, [rows, [lifetimeRow]], now, estimateEa
     let amount = storedAmount;
     let estimated = false;
 
-    // Current month (and last month until it is finalized) are estimates.
+    // Current month (and last month until it is finalized) are estimates,
+    // unless the month has already been paid out.
+    const isSettled = Boolean(row?.payment_id);
     const isCurrent = date.isSame(thisMonth, 'month');
     const isPendingLast = !row && date.isSame(lastMonth, 'month');
-    if ((isCurrent || isPendingLast) && estimateEarnings) {
+    if ((isCurrent || isPendingLast) && !isSettled && estimateEarnings) {
       amount = Number(await estimateEarnings(year, month, user)) || 0;
       estimated = true;
       lifetime += amount - storedAmount;
     }
 
-    result.push({ year, month, amount: Math.round(amount * 100) / 100, estimated, paid: Boolean(row?.payment_id) });
+    result.push({ year, month, amount: Math.round(amount * 100) / 100, estimated, paid: isSettled });
   }
 
   return { rows: result, lifetime };

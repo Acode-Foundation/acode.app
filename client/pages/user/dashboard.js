@@ -300,7 +300,17 @@ function EmptyState({ isSelf }) {
 }
 
 async function renderCharts(stats, downloadsCanvas, earningsCanvas) {
-  const { default: Chart } = await import('chart.js/auto');
+  const showFallback = (canvas) => canvas.parentElement?.replaceChildren(<div className='chart-error'>Chart unavailable</div>);
+
+  let Chart;
+  try {
+    ({ default: Chart } = await import('chart.js/auto'));
+  } catch (error) {
+    console.error('Failed to load charts', error);
+    showFallback(downloadsCanvas);
+    showFallback(earningsCanvas);
+    return;
+  }
   Chart.defaults.font.family = "'Instrument Sans', 'Montserrat', sans-serif";
 
   const render = (canvas, config) =>
@@ -308,7 +318,7 @@ async function renderCharts(stats, downloadsCanvas, earningsCanvas) {
       createChart: () => new Chart(canvas, config),
       onError: (error) => {
         console.error('Failed to render chart', error);
-        canvas.parentElement?.replaceChildren(<div className='chart-error'>Chart unavailable</div>);
+        showFallback(canvas);
       },
     });
 

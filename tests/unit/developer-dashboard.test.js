@@ -76,6 +76,7 @@ describe('getDeveloperDashboard', () => {
     insertDownloads('a', '2026-09-10 08:00:00', 4); // previous window
     insertDownloads('a', '2026-07-01 08:00:00', 7); // outside both windows
     insertDownloads('other', '2026-10-20 08:00:00', 5);
+    insertDownloads('deleted', '2026-10-19 08:00:00', 8); // deleted plugins are excluded everywhere
 
     const result = await getDeveloperDashboard(user, { executeQuery, now });
 
@@ -97,6 +98,7 @@ describe('getDeveloperDashboard', () => {
     expect(result.daily.at(-1)).toEqual({ date: '2026-10-20', count: 3 });
     expect(result.daily.find((d) => d.date === '2026-10-01').count).toBe(2);
     expect(result.daily.reduce((sum, d) => sum + d.count, 0)).toBe(6);
+    expect(result.daily.find((d) => d.date === '2026-10-19').count).toBe(0);
   });
 
   it('builds 12 months of earnings with estimates for unsettled months', async () => {
@@ -112,5 +114,18 @@ describe('getDeveloperDashboard', () => {
     expect(result.monthly.at(-2)).toMatchObject({ year: 2026, month: 8, amount: 20, estimated: true });
     expect(result.monthly.at(-3)).toMatchObject({ year: 2026, month: 7, amount: 120, estimated: false, paid: true });
     expect(result.totals.lifetimeEarnings).toBe(650);
+  });
+
+  it('keeps the stored amount for a month that has already been paid out', async () => {
+    db.prepare('INSERT INTO user_earnings (user_id, amount, month, year, payment_id) VALUES (?, ?, ?, ?, ?)').run(1, 75, 9, 2026, 7);
+    const estimateEarnings = vi.fn(async () => 999);
+
+    const result = await getDeveloperDashboard(user, { executeQuery, now, estimateEarnings });
+
+    expect(result.monthly.at(-1)).toMatchObject({ year: 2026, month: 9, amount: 75, estimated: false, paid: true });
+    expect(estimateEarnings).not.toHaveBeenCalledWith(2026, 9, user);
+    // last month (September) has no row, so it is still estimated
+    expect(result.monthly.at(-2)).toMatchObject({ month: 8, amount: 999, estimated: true });
+    expect(result.totals.lifetimeEarnings).toBe(75 + 999);
   });
 });

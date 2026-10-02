@@ -34,7 +34,7 @@ export default function PluginManager({ plugins, isSelf }) {
             <input type='search' placeholder={`Search ${plugins.length} plugins`} aria-label='Search plugins' oninput={onSearch} />
           </label>
         )}
-        {isSelf && (
+        {isSelf && plugins.length > 0 && (
           <a className='action action--primary' href='/publish'>
             <span className='icon add' />
             New plugin
