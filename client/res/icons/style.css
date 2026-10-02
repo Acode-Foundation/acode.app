@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'acode';
-  src: url('acode.ttf?y9nnio') format('truetype');
+  src: url('acode.ttf?55vjs9') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -48,6 +48,13 @@
 }
 .icon.certificate:before {
   content: '\e90d';
+}
+.icon.ios:before {
+  content: '\e92a';
+}
+.icon.apple:before {
+  content: '\e929';
+  color: #999;
 }
 .icon.x:before {
   content: '\e91c';

@@ -200,6 +200,43 @@
     }
   }
 
+  .home-btn-ios {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    max-width: none;
+    font-family: inherit;
+
+    &:disabled {
+      opacity: 1;
+      cursor: default;
+      background: transparent;
+      border-color: var(--home-line);
+    }
+  }
+
+  .home-btn-ios-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .home-btn-ios-status {
+    position: absolute;
+    top: -7px;
+    right: 8px;
+    padding: 2px 6px;
+    border: 1px solid var(--home-accent);
+    border-radius: 999px;
+    background: var(--home-accent);
+    font-size: 0.65rem;
+    line-height: 1;
+    font-weight: 600;
+    color: var(--primary-color-dark);
+  }
+
   .home-btn-text {
     height: 46px;
     padding: 0 12px;
