@@ -144,12 +144,18 @@ function edit(e, id) {
  *
  * @param {MouseEvent} e
  * @param {string} id
- * @returns
  */
-async function deletePlugin(e, id) {
+function onDelete(e, id) {
   e.preventDefault();
   e.stopPropagation();
+  deletePlugin(id);
+}
 
+/**
+ * Ask for confirmation and delete a plugin, reloading the page on success.
+ * @param {string} id
+ */
+export async function deletePlugin(id) {
   const loggedInUser = await getLoggedInUser();
   let mode = 'soft';
   if (loggedInUser.isAdmin) {
@@ -185,7 +191,7 @@ async function deletePlugin(e, id) {
 
 function Actions({ user, pluginsUser, id, isAdmin }) {
   const $el = <small className='icon-buttons' />;
-  const $delete = <span title='delete plugin' className='link icon delete danger' onclick={(e) => deletePlugin(e, id)} />;
+  const $delete = <span title='delete plugin' className='link icon delete danger' onclick={(e) => onDelete(e, id)} />;
 
   if (user && user === pluginsUser) {
     $el.append(<span title='edit plugin' className='link icon create' onclick={(e) => edit(e, id)} />, $delete);

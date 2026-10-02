@@ -72,3 +72,26 @@ export function createChartSafely({ createChart, previousChart, onError }) {
     return null;
   }
 }
+
+export function drawCrosshair(chart, color = 'rgba(255,255,255,0.18)') {
+  const active = chart.tooltip?.getActiveElements?.();
+  if (!active?.length) return;
+
+  const { x } = active[0].element;
+  const { top, bottom } = chart.chartArea;
+  if (!Number.isFinite(x)) return;
+
+  const { ctx } = chart;
+  ctx.save();
+  try {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.stroke();
+  } finally {
+    ctx.restore();
+  }
+}

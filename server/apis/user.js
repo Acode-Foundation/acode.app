@@ -10,6 +10,7 @@ const Payment = require('../entities/payment');
 const PaymentMethod = require('../entities/paymentMethod');
 const UserEarnings = require('../entities/userEarnings');
 const calcEarnings = require('../lib/calcEarnings');
+const { getDeveloperDashboard } = require('../lib/developerDashboard');
 const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
 const AppConfig = require('../entities/appConfig');
 const login = require('../entities/login');
@@ -301,6 +302,16 @@ route.get('/comment/:pluginId', async (req, res) => {
     ]);
 
     res.send(comment || {});
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+route.get('/dashboard', async (req, res) => {
+  try {
+    const user = await getAuthorizedUser(req);
+    const dashboard = await getDeveloperDashboard(user, { estimateEarnings: calcEarnings.total });
+    res.send(dashboard);
   } catch (error) {
     handleError(res, error);
   }

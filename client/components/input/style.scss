@@ -21,6 +21,28 @@
     outline: solid 1px white;
   }
 
+  &:focus-within {
+    border-color: var(--page-accent, #3499fe);
+    box-shadow: 0 0 0 1px var(--page-accent, #3499fe);
+  }
+
+  // The global `input:not([type=checkbox]):not(...)` rule outranks the plain
+  // `input` selector below and would draw a second box inside the wrapper.
+  input:not([type='checkbox']):not([type='radio']):not([type='file']) {
+    box-sizing: border-box;
+    padding: 0 10px;
+    border: none;
+    border-radius: inherit;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+
+    &:focus {
+      border: none;
+      outline: none;
+    }
+  }
+
   .label {
     position: absolute;
     top: 0;
