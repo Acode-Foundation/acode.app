@@ -8,12 +8,11 @@ import Ref from 'html-tag-js/ref';
 import { getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers';
 import { applyProfileMetadata, beginProfileMetadataRequest } from 'lib/pageMetadata';
 import Router from 'lib/Router';
-import moment from 'moment';
-import Earnings from 'pages/earnings';
+import DeveloperDashboard from './dashboard';
+import PluginManager from './pluginManager';
 
 export default async function User({ userId }) {
   const profileMetadataRequest = beginProfileMetadataRequest();
-  const amount = Ref();
   const loggedInUser = await getLoggedInUser();
   /** @type {import('lib/helpers').User} */
   let user = null;
@@ -43,12 +42,23 @@ export default async function User({ userId }) {
   const isSelf = loggedInUser && loggedInUser.id === user.id;
   const shouldShowSensitiveInfo = Boolean(isSelf || loggedInUser?.isAdmin);
   const paymentMethods = Ref();
+  const paymentMethodsList = (
+    <div ref={paymentMethods} className='payment-methods'>
+      {isSelf && (
+        <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
+          <span className='icon add' />
+          <span>Add payment method</span>
+        </div>
+      )}
+    </div>
+  );
 
   if (shouldShowSensitiveInfo) {
-    renderEarnings();
     renderPaymentMethods();
   }
 
+  const stats = shouldShowSensitiveInfo ? await fetchDashboard() : null;
+  const isDeveloper = Boolean(stats && (stats.totals.plugins > 0 || stats.totals.lifetimeEarnings > 0));
   const params = new URLSearchParams(window.location.search);
   const linked = params.get('linked');
   if (linked) {
@@ -92,71 +102,149 @@ export default async function User({ userId }) {
               </div>
             </div>
           </h1>
-          {shouldShowSensitiveInfo && (
-            <>
-              <small className='link earnings' title='Your earnings for this month'>
-                <strong className='loading' ref={amount} />|<span>{moment().format('YYYY MMMM')}</span>
-              </small>
-              <div onwheel={onwheel} ref={paymentMethods} className='payment-methods'>
-                {isSelf && (
-                  <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
-                    <span className='icon add' />
-                    <span>Payment method</span>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-          <div className='socials' data-show-sensitive-info={String(shouldShowSensitiveInfo)}>
+          <div className='socials'>
             {user.website && (
-              <a href={user.website} target='_blank' rel='noopener'>
+              <a href={user.website} target='_blank' rel='noopener' title={user.website}>
                 <span className='icon earth' />
-                <span className='label'>{user.website}</span>
+                <span className='label'>{user.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
               </a>
             )}
             {user.github && (
-              <a href={`https://github.com/${user.github}`} target='_blank' rel='noopener'>
+              <a href={`https://github.com/${user.github}`} target='_blank' rel='noopener' title='GitHub'>
                 <span className='icon github' />
-                <span className='label'>@{user.github}</span>
+                <span className='label'>{user.github}</span>
               </a>
             )}
             {user.x && (
-              <a href={`https://x.com/@${user.x}`} target='_blank' rel='noopener'>
+              <a href={`https://x.com/@${user.x}`} target='_blank' rel='noopener' title='X'>
                 <span className='icon x' />
-                <span className='label'>@{user.x}</span>
+                <span className='label'>{user.x}</span>
               </a>
             )}
             {user.linkedin && (
-              <a href={`https://linkedin.com/in/${user.linkedin}`} target='_blank' rel='noopener'>
+              <a href={`https://linkedin.com/in/${user.linkedin}`} target='_blank' rel='noopener' title='LinkedIn'>
                 <span className='icon linkedin' />
                 <span className='label'>{user.linkedin}</span>
               </a>
             )}
           </div>
-          {isSelf && <a href='/publish'>Publish Plugin</a>}
         </div>
+        {isSelf && (
+          <div className='profile-actions'>
+            <a className='action action--primary' href='/publish'>
+              <span className='icon publish' />
+              Publish plugin
+            </a>
+            <a className='action' href='/profile/edit'>
+              <span className='icon create' />
+              Edit profile
+            </a>
+          </div>
+        )}
       </div>
-      {isSelf ? (
-        <Tabs
-          defaultActive='owned'
-          tabs={[
-            { id: 'owned', label: 'Owned', icon: 'shopping_bag', content: () => Plugins({ owned: true }) },
-            { id: 'published', label: 'Published', icon: 'publish', content: () => Plugins({ user: user.id }) },
-          ]}
-        />
-      ) : (
-        <Plugins user={user.id} />
-      )}
+      <ProfileContent />
     </section>
   );
 
   /**
-   * Scroll payment methods horizontally on mouse wheel
-   * @param {WheelEvent} e
+   * Tabs below the profile card. Developers land on their dashboard, everyone
+   * else on the plugins they own. The active tab is kept in `?tab=`.
    */
-  function onwheel(e) {
-    e.preventDefault();
-    this.scrollLeft += e.deltaY;
+  function ProfileContent() {
+    const tabs = [
+      {
+        id: 'dashboard',
+        label: 'Dashboard',
+        icon: 'dashboard',
+        visible: isDeveloper,
+        content: () => (
+          <DeveloperDashboard
+            user={user}
+            isSelf={isSelf}
+            stats={stats}
+            paymentMethods={paymentMethodsList}
+            onManagePlugins={() => selectTab('plugins')}
+          />
+        ),
+      },
+      {
+        id: 'plugins',
+        label: isSelf ? 'My plugins' : 'Plugins',
+        icon: 'extension',
+        content: () => {
+          const list = stats ? <PluginManager plugins={stats.plugins} isSelf={isSelf} /> : Plugins({ user: user.id });
+          if (isDeveloper) return list;
+          // Without the dashboard tab, payment methods still need a home.
+          return (
+            <div className='plugins-tab'>
+              {list}
+              <PaymentMethodsPanel />
+            </div>
+          );
+        },
+      },
+      { id: 'owned', label: 'Owned', icon: 'shopping_bag', visible: isSelf, content: () => Plugins({ owned: true }) },
+    ];
+
+    if (!shouldShowSensitiveInfo) {
+      return <Plugins user={user.id} />;
+    }
+
+    // Buyers mostly come here for their purchases, so put those first.
+    if (!isDeveloper) tabs.reverse();
+
+    const visibleTabs = tabs.filter((tab) => tab.visible !== false);
+    if (visibleTabs.length === 1) {
+      return visibleTabs[0].content();
+    }
+
+    const requested = params.get('tab');
+    const defaultActive = visibleTabs.some((tab) => tab.id === requested) ? requested : visibleTabs[0].id;
+
+    return <Tabs className='profile-tabs' defaultActive={defaultActive} tabs={tabs} onChange={rememberTab} />;
+  }
+
+  function PaymentMethodsPanel() {
+    return (
+      <div className='panel payment-methods-panel'>
+        <div className='panel-head'>
+          <h3>Payment methods</h3>
+          <span className='panel-meta'>
+            <a href={`/earnings?user=${user.id}`}>Earnings</a>
+          </span>
+        </div>
+        {isSelf && <p className='panel-hint'>Add a bank account to get paid for your plugins.</p>}
+        {paymentMethodsList}
+      </div>
+    );
+  }
+
+  /**
+   * @param {string} tabId
+   */
+  function selectTab(tabId) {
+    document.querySelector(`#user .profile-tabs .tab-btn[data-tab="${tabId}"]`)?.click();
+    document.querySelector('#user .profile-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /**
+   * Keep the active tab in the url so reloads and shared links land on it.
+   * @param {string} tabId
+   */
+  function rememberTab(tabId) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tabId);
+    history.replaceState(history.state, document.title, `${url.pathname}${url.search}`);
+  }
+
+  async function fetchDashboard() {
+    try {
+      const res = await fetch(`/api/user/dashboard?user=${user.id}`);
+      const json = await res.json();
+      return json.error ? null : json;
+    } catch {
+      return null;
+    }
   }
 
   function PaymentMethod({ id, bank_account_number: bankAccountNumber, bank_account_type: bankAccountType, is_default: isDefault }) {
@@ -174,6 +262,7 @@ export default async function User({ userId }) {
           <strong>{bankAccountType}</strong>
           <span>{bankAccountNumber}</span>
         </div>
+        {isDefault && <span className='default-pill'>Default</span>}
       </div>
     );
   }
@@ -248,29 +337,6 @@ export default async function User({ userId }) {
       paymentMethods.innerHTML = <div className='error'>{error.message}</div>;
     } finally {
       hideLoading();
-    }
-  }
-
-  async function renderEarnings() {
-    try {
-      const now = moment();
-      const res = await (await fetch(`/api/user/earnings/${now.year()}/${now.month()}?user=${user.id}`)).json();
-
-      if (res.error) {
-        amount.innerHTML = `<span class="error">${res.error}</span>`;
-        return;
-      }
-
-      amount.innerHTML = `&#8377; ${res.earnings?.toLocaleString() || 0}`;
-      amount.classList.remove('loading');
-      amount.el.parentElement.onclick = async () => {
-        Router.setUrl(`/earnings?user=${user.id}`);
-        showLoading();
-        tag.get('main').content = await Earnings({ user: user.id });
-        hideLoading();
-      };
-    } catch (error) {
-      amount.innerHTML = `<span class="error">${error.message}</span>`;
     }
   }
 

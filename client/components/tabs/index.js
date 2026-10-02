@@ -64,7 +64,27 @@ export default async function Tabs({ variant = 'pill', defaultActive, tabs, onCh
 
   setTimeout(() => initContent(), 0);
 
+  if (variant === 'pill') {
+    // Button widths change when web fonts load or the viewport resizes.
+    const nav = wrapper.querySelector('.tabs-nav');
+    if (typeof ResizeObserver === 'function') {
+      const observer = new ResizeObserver(() => updateIndicator());
+      for (const btn of nav.querySelectorAll('.tab-btn')) observer.observe(btn);
+    }
+    document.fonts?.ready.then(() => updateIndicator());
+  }
+
   return wrapper;
+
+  function updateIndicator() {
+    const nav = wrapper.querySelector('.tabs-nav');
+    const indicator = nav?.querySelector('.tabs-indicator');
+    const activeBtn = nav?.querySelector(`[data-tab="${activeTab.value}"]`);
+    if (!indicator || !activeBtn) return;
+    // offsetLeft and the indicator's `left: 0` share the nav's padding edge.
+    indicator.style.transform = `translateX(${activeBtn.offsetLeft}px)`;
+    indicator.style.width = `${activeBtn.offsetWidth}px`;
+  }
 
   async function switchTab(tabId) {
     if (!tabId) return;
@@ -79,13 +99,7 @@ export default async function Tabs({ variant = 'pill', defaultActive, tabs, onCh
       }
 
       if (variant === 'pill') {
-        const indicator = nav.querySelector('.tabs-indicator');
-        const activeBtn = nav.querySelector(`[data-tab="${tabId}"]`);
-        if (indicator && activeBtn) {
-          const navPadding = parseInt(getComputedStyle(nav).paddingLeft, 10) || 4;
-          indicator.style.transform = `translateX(${activeBtn.offsetLeft - navPadding}px)`;
-          indicator.style.width = `${activeBtn.offsetWidth}px`;
-        }
+        updateIndicator();
       }
     }
 
@@ -116,15 +130,7 @@ export default async function Tabs({ variant = 'pill', defaultActive, tabs, onCh
     if (content) el.append(content);
 
     if (variant === 'pill') {
-      const nav = wrapper.querySelector('.tabs-nav');
-      if (!nav) return;
-      const activeBtn = nav.querySelector(`[data-tab="${initialTab}"]`);
-      const indicator = nav.querySelector('.tabs-indicator');
-      if (indicator && activeBtn) {
-        const navPadding = parseInt(getComputedStyle(nav).paddingLeft, 10) || 4;
-        indicator.style.transform = `translateX(${activeBtn.offsetLeft - navPadding}px)`;
-        indicator.style.width = `${activeBtn.offsetWidth}px`;
-      }
+      updateIndicator();
     }
   }
 }

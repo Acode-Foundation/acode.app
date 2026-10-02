@@ -72,3 +72,61 @@ export function createChartSafely({ createChart, previousChart, onError }) {
     return null;
   }
 }
+
+export function drawCrosshair(chart, color = 'rgba(255,255,255,0.18)') {
+  const active = chart.tooltip?.getActiveElements?.();
+  if (!active?.length) return;
+
+  const { x } = active[0].element;
+  const { top, bottom } = chart.chartArea;
+  if (!Number.isFinite(x)) return;
+
+  const { ctx } = chart;
+  ctx.save();
+  try {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.stroke();
+  } finally {
+    ctx.restore();
+  }
+}
+
+/**
+ * Tracks the charts a page creates and destroys them once the router navigates
+ * away, since Chart.js keeps every instance alive until `destroy()` is called.
+ * @param {{ on: Function, off: Function }} router
+ */
+export function createChartLifecycle(router) {
+  const charts = [];
+  let disposed = false;
+
+  function dispose() {
+    // Router.off splices by index, so it must never run for an unknown listener.
+    if (disposed) return;
+    disposed = true;
+    router.off('navigate', dispose);
+    for (const chart of charts.splice(0)) chart.destroy();
+  }
+
+  router.on('navigate', dispose);
+
+  return {
+    get disposed() {
+      return disposed;
+    },
+    track(chart) {
+      if (!chart) return;
+      if (disposed) {
+        chart.destroy();
+        return;
+      }
+      charts.push(chart);
+    },
+    dispose,
+  };
+}
