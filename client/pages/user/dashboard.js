@@ -1,6 +1,7 @@
 import Ref from 'html-tag-js/ref';
-import { createChartSafely, drawCrosshair } from 'lib/dashboardCharts';
+import { createChartLifecycle, createChartSafely, drawCrosshair } from 'lib/dashboardCharts';
 import { formatCompactNumber, formatExactNumber } from 'lib/formatNumber';
+import Router from 'lib/Router';
 import moment from 'moment';
 
 const DOWNLOADS_COLOR = '#3499fe';
@@ -87,7 +88,7 @@ export default function DeveloperDashboard({ user, isSelf, stats, paymentMethods
 
   loadPayout();
   if (hasActivity) {
-    renderCharts(stats, downloadsCanvas.el, earningsCanvas.el);
+    renderCharts(stats, downloadsCanvas.el, earningsCanvas.el, createChartLifecycle(Router));
   }
 
   return $root;
@@ -169,6 +170,10 @@ function StatTile({ icon, label, value, title, sub, href }) {
 }
 
 function Delta({ current, previous }) {
+  if (previous === null) {
+    return <span className='delta delta--flat'>Not enough history to compare yet</span>;
+  }
+
   if (!previous) {
     return <span className='delta delta--flat'>{current ? 'New activity this period' : 'No downloads yet'}</span>;
   }
@@ -299,7 +304,13 @@ function EmptyState({ isSelf }) {
   );
 }
 
-async function renderCharts(stats, downloadsCanvas, earningsCanvas) {
+/**
+ * @param {object} stats
+ * @param {HTMLCanvasElement} downloadsCanvas
+ * @param {HTMLCanvasElement} earningsCanvas
+ * @param {ReturnType<typeof createChartLifecycle>} lifecycle
+ */
+async function renderCharts(stats, downloadsCanvas, earningsCanvas, lifecycle) {
   const showFallback = (canvas) => canvas.parentElement?.replaceChildren(<div className='chart-error'>Chart unavailable</div>);
 
   let Chart;
@@ -311,6 +322,9 @@ async function renderCharts(stats, downloadsCanvas, earningsCanvas) {
     showFallback(earningsCanvas);
     return;
   }
+
+  // The user may have left the profile while the chart chunk was loading.
+  if (lifecycle.disposed) return;
   Chart.defaults.font.family = "'Instrument Sans', 'Montserrat', sans-serif";
 
   const render = (canvas, config) =>
@@ -322,8 +336,8 @@ async function renderCharts(stats, downloadsCanvas, earningsCanvas) {
       },
     });
 
-  render(downloadsCanvas, downloadsChartConfig(stats.daily));
-  render(earningsCanvas, earningsChartConfig(stats.monthly));
+  lifecycle.track(render(downloadsCanvas, downloadsChartConfig(stats.daily)));
+  lifecycle.track(render(earningsCanvas, earningsChartConfig(stats.monthly)));
 }
 
 function downloadsChartConfig(daily) {

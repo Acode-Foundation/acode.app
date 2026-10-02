@@ -4,6 +4,13 @@ const Download = require('../entities/download');
 
 const DAILY_RANGE = 30;
 const MONTHLY_RANGE = 12;
+// Downloads are pruned by the daily cleanup cron. Keep enough for the dashboard's
+// current + previous 30-day windows and for the previous month's earnings, which
+// are calculated on the 16th.
+const DOWNLOAD_RETENTION_DAYS = DAILY_RANGE * 2 + 2;
+
+// Downloads are inserted in time order, so the lowest id is the oldest row we still have.
+const OLDEST_DOWNLOAD_QUERY = 'SELECT created_at FROM download ORDER BY id LIMIT 1';
 
 const PLUGIN_STATS_QUERY = `SELECT
   p.id AS id,
@@ -51,11 +58,16 @@ async function getDeveloperDashboard(user, { executeQuery = executeDashboardQuer
   const rangeStartSql = rangeStart.format('YYYY-MM-DD HH:mm:ss');
   const previousStartSql = previousStart.format('YYYY-MM-DD HH:mm:ss');
 
-  const [pluginRows, dailyRows, earningRows] = await Promise.all([
+  const [pluginRows, dailyRows, earningRows, [oldestDownload]] = await Promise.all([
     executeQuery(PLUGIN_STATS_QUERY, [rangeStartSql, rangeStartSql, previousStartSql, user.id]),
     executeQuery(DAILY_DOWNLOADS_QUERY, [user.id, rangeStartSql]),
     getEarningRows(user, now, executeQuery),
+    executeQuery(OLDEST_DOWNLOAD_QUERY, []),
   ]);
+
+  // If older downloads were pruned before the previous window started, the
+  // comparison would be against missing data, so report it as unavailable.
+  const hasPreviousWindow = Boolean(oldestDownload) && oldestDownload.created_at <= previousStartSql;
 
   const plugins = pluginRows.map((row) => ({
     id: row.id,
@@ -88,7 +100,7 @@ async function getDeveloperDashboard(user, { executeQuery = executeDashboardQuer
       paidPlugins: plugins.filter((p) => p.price > 0).length,
       downloads: plugins.reduce((sum, p) => sum + p.downloads, 0),
       recentDownloads: plugins.reduce((sum, p) => sum + p.recent, 0),
-      previousDownloads: plugins.reduce((sum, p) => sum + p.previous, 0),
+      previousDownloads: hasPreviousWindow ? plugins.reduce((sum, p) => sum + p.previous, 0) : null,
       votesUp: plugins.reduce((sum, p) => sum + p.votesUp, 0),
       votesDown: plugins.reduce((sum, p) => sum + p.votesDown, 0),
       lifetimeEarnings: Math.round(monthly.lifetime * 100) / 100,
@@ -147,4 +159,4 @@ function executeDashboardQuery(sql, values) {
   return Entity.execSql(sql, values, Download);
 }
 
-module.exports = { getDeveloperDashboard, DAILY_RANGE, MONTHLY_RANGE };
+module.exports = { getDeveloperDashboard, DAILY_RANGE, MONTHLY_RANGE, DOWNLOAD_RETENTION_DAYS };

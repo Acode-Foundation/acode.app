@@ -1,6 +1,6 @@
 const Database = require('better-sqlite3');
 const moment = require('moment');
-const { getDeveloperDashboard, DAILY_RANGE, MONTHLY_RANGE } = require('../../server/lib/developerDashboard');
+const { getDeveloperDashboard, DAILY_RANGE, DOWNLOAD_RETENTION_DAYS, MONTHLY_RANGE } = require('../../server/lib/developerDashboard');
 
 let db;
 const now = moment('2026-10-20 12:00:00');
@@ -70,13 +70,14 @@ describe('getDeveloperDashboard', () => {
     insertPlugin({ id: 'deleted', status: 3, downloads: 999 });
     insertPlugin({ id: 'other', userId: 2, downloads: 10 });
 
-    insertDownloads('a', '2026-10-20 08:00:00', 3);
-    insertDownloads('a', '2026-10-01 08:00:00', 2);
-    insertDownloads('b', '2026-09-25 08:00:00', 1);
-    insertDownloads('a', '2026-09-10 08:00:00', 4); // previous window
+    // inserted in time order, like the real table
     insertDownloads('a', '2026-07-01 08:00:00', 7); // outside both windows
-    insertDownloads('other', '2026-10-20 08:00:00', 5);
+    insertDownloads('a', '2026-09-10 08:00:00', 4); // previous window
+    insertDownloads('b', '2026-09-25 08:00:00', 1);
+    insertDownloads('a', '2026-10-01 08:00:00', 2);
     insertDownloads('deleted', '2026-10-19 08:00:00', 8); // deleted plugins are excluded everywhere
+    insertDownloads('a', '2026-10-20 08:00:00', 3);
+    insertDownloads('other', '2026-10-20 08:00:00', 5);
 
     const result = await getDeveloperDashboard(user, { executeQuery, now });
 
@@ -99,6 +100,30 @@ describe('getDeveloperDashboard', () => {
     expect(result.daily.find((d) => d.date === '2026-10-01').count).toBe(2);
     expect(result.daily.reduce((sum, d) => sum + d.count, 0)).toBe(6);
     expect(result.daily.find((d) => d.date === '2026-10-19').count).toBe(0);
+  });
+
+  it('reports no previous period when older downloads were already pruned', async () => {
+    insertPlugin({ id: 'a', downloads: 100 });
+    // oldest remaining row is inside the current window: the previous 30 days are gone
+    insertDownloads('a', '2026-10-05 08:00:00', 30);
+    insertDownloads('a', '2026-10-15 08:00:00', 1);
+
+    const result = await getDeveloperDashboard(user, { executeQuery, now });
+
+    expect(result.totals.recentDownloads).toBe(31);
+    expect(result.totals.previousDownloads).toBeNull();
+  });
+
+  it('reports no previous period when there are no downloads at all', async () => {
+    insertPlugin({ id: 'a' });
+
+    const result = await getDeveloperDashboard(user, { executeQuery, now });
+
+    expect(result.totals.previousDownloads).toBeNull();
+  });
+
+  it('keeps enough download history for the current and previous windows', () => {
+    expect(DOWNLOAD_RETENTION_DAYS).toBeGreaterThanOrEqual(DAILY_RANGE * 2);
   });
 
   it('builds 12 months of earnings with estimates for unsettled months', async () => {

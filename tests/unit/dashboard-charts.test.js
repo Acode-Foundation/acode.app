@@ -1,4 +1,4 @@
-import { createChartSafely, drawBarValueLabels, drawDoughnutPercentLabels } from '../../client/lib/dashboardCharts';
+import { createChartLifecycle, createChartSafely, drawBarValueLabels, drawDoughnutPercentLabels } from '../../client/lib/dashboardCharts';
 
 function createContext() {
   return {
@@ -141,5 +141,60 @@ describe('dashboard chart initialization', () => {
     expect(initializedChart).toBe(workingChart);
     expect(onError).toHaveBeenCalledOnce();
     expect(onError).toHaveBeenCalledWith(error);
+  });
+});
+
+describe('createChartLifecycle', () => {
+  function createRouter() {
+    const listeners = [];
+    return {
+      listeners,
+      on: vi.fn((_event, cb) => listeners.push(cb)),
+      // mirrors Router.off: splices by index, so an unknown callback removes the last listener
+      off: vi.fn((_event, cb) => listeners.splice(listeners.indexOf(cb), 1)),
+      navigate: () => {
+        for (const cb of [...listeners]) cb('/elsewhere');
+      },
+    };
+  }
+
+  it('destroys tracked charts when the router navigates away', () => {
+    const router = createRouter();
+    const other = vi.fn();
+    router.listeners.push(other);
+    const lifecycle = createChartLifecycle(router);
+    const charts = [{ destroy: vi.fn() }, { destroy: vi.fn() }];
+    for (const chart of charts) lifecycle.track(chart);
+
+    router.navigate();
+
+    expect(lifecycle.disposed).toBe(true);
+    for (const chart of charts) expect(chart.destroy).toHaveBeenCalledTimes(1);
+    expect(router.listeners).toEqual([other]);
+  });
+
+  it('only unsubscribes once and never removes other listeners', () => {
+    const router = createRouter();
+    const lifecycle = createChartLifecycle(router);
+    const other = vi.fn();
+    router.listeners.push(other);
+
+    lifecycle.dispose();
+    lifecycle.dispose();
+    router.navigate();
+
+    expect(router.off).toHaveBeenCalledTimes(1);
+    expect(router.listeners).toEqual([other]);
+  });
+
+  it('destroys charts created after disposal and ignores failed charts', () => {
+    const lifecycle = createChartLifecycle(createRouter());
+    lifecycle.dispose();
+    const late = { destroy: vi.fn() };
+
+    lifecycle.track(late);
+    lifecycle.track(null);
+
+    expect(late.destroy).toHaveBeenCalledTimes(1);
   });
 });

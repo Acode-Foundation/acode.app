@@ -5,24 +5,24 @@ const Login = require('../entities/login');
 const Download = require('../entities/download');
 const RazorpayOrder = require('../entities/razorpayOrder');
 const Order = require('../entities/purchaseOrder');
+const { DOWNLOAD_RETENTION_DAYS } = require('../lib/developerDashboard');
 
-const now = moment().format('YYYY-MM-DD');
-const today = moment(now).format('YYYY-MM-DD HH:mm:ss.sss');
-const currentTimestamp = moment().format('YYYY-MM-DD HH:mm:ss.sss');
-const oneMonthAgo = moment(now).subtract(1, 'month').format('YYYY-MM-DD HH:mm:ss.sss');
+const FORMAT = 'YYYY-MM-DD HH:mm:ss.sss';
 
+// Dates are computed per run: this module is loaded once by the long-running cron process.
 async function cleanOtp() {
-  await Otp.delete([Otp.CREATED_AT, today, '<']);
+  await Otp.delete([Otp.CREATED_AT, moment().startOf('day').format(FORMAT), '<']);
   console.log('Deleted expired otp');
 }
 
 async function cleanLogin() {
-  await Login.delete([Login.EXPIRED_AT, currentTimestamp, '<']);
+  await Login.delete([Login.EXPIRED_AT, moment().format(FORMAT), '<']);
   console.log('Deleted expired logins');
 }
 
 async function cleanDownload() {
-  await Download.delete([Download.CREATED_AT, oneMonthAgo, '<']);
+  const cutoff = moment().startOf('day').subtract(DOWNLOAD_RETENTION_DAYS, 'days').format(FORMAT);
+  await Download.delete([Download.CREATED_AT, cutoff, '<']);
   console.log('Deleted old downloads');
 }
 
