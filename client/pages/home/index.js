@@ -51,12 +51,15 @@ export default function home() {
             {'ndroid.'}
           </span>
         </h1>
-        <p className='home-lede'>An extensible, powerful and open-source code editor for Android, with a Linux terminal and AI agents.</p>
+        <p className='home-lede'>
+          An extensible, powerful and open-source code editor for Android, with a Linux terminal and AI agents. Coming soon to iOS.
+        </p>
         <div className='home-actions'>
           <a className='home-btn home-btn-primary' href={PLAY_URL} target='_blank' rel='noopener'>
             <span className='icon googleplay' />
             Google Play
           </a>
+          <IosInstallButton />
           <a className='home-btn home-btn-ghost' href={FDROID_URL} target='_blank' rel='noopener'>
             <span className='icon f-droid' />
             F-Droid
@@ -105,12 +108,13 @@ export default function home() {
             {'code'}
           </span>
         </h2>
-        <p>Free on Google Play and F-Droid. Open source.</p>
+        <p>Free on Google Play and F-Droid. Coming soon to iOS. Open source.</p>
         <div className='home-actions'>
           <a className='home-btn home-btn-primary' href={PLAY_URL} target='_blank' rel='noopener'>
             <span className='icon googleplay' />
             Google Play
           </a>
+          <IosInstallButton />
           <a className='home-btn home-btn-ghost' href={FDROID_URL} target='_blank' rel='noopener'>
             <span className='icon f-droid' />
             F-Droid
@@ -127,6 +131,18 @@ export default function home() {
   };
   Router.on('navigate', cleanup);
   return page;
+}
+
+function IosInstallButton() {
+  return (
+    <button type='button' className='home-btn home-btn-ghost home-btn-ios' disabled>
+      <span className='home-btn-ios-label'>
+        <span className='icon ios' aria-hidden='true' />
+        App Store
+      </span>
+      <span className='home-btn-ios-status'>soon</span>
+    </button>
+  );
 }
 
 function LogoA() {

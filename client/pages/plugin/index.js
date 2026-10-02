@@ -78,7 +78,8 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   const $orders = <Order />;
   const shouldShowOrders = user && (user.id === userId || user.isAdmin) && !!plugin.price;
 
-  const canInstall = /android/i.test(navigator.userAgent);
+  const canInstall =
+    /android|iphone|ipad|ipod/i.test(navigator.userAgent) || (/macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   let userOwnsPlugin = false;
   let purchaseInfo = null;
 
