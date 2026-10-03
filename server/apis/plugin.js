@@ -796,23 +796,22 @@ router.put('/', pluginUploadLimiter, async (req, res) => {
           return scanPublishedUpdate({ row: live, user, version, name, updates, zipBuffer: pluginZip.data, icon });
         }
 
-        // Unpublished plugins are reviewed as a whole on approval. Scan exactly these
-        // bytes for the reviewer, and record the scan only once the version is live.
+        // Unpublished plugins are reviewed as a whole on approval; scan exactly these
+        // bytes so the reviewer has a record of them.
         const uploadPath = await writeUpload(pluginId, pluginZip.data);
         try {
           const scan = await scanUpload({ uploadPath });
-          const published = await publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon });
-          await insertScanAfterPublish({
+          const record = {
             pluginId,
             userId: user.id,
             version,
             previousVersion: current.version,
             kind: PluginScan.KIND_UPDATE,
-            status: PluginScan.STATUS_APPLIED,
             scan,
             decision: decideUpdate(scan),
             zipBuffer: pluginZip.data,
-          });
+          };
+          const published = await publishWithScanRecord(record, () => publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon }));
           return { held: false, skuErrors: published };
         } finally {
           await fs.promises.rm(uploadPath, { force: true });
@@ -1263,8 +1262,7 @@ async function scanPublishedUpdate({ row, user, version, name, updates, zipBuffe
       return { held: true, decision, skuErrors: [] };
     }
 
-    const skuErrors = await publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon });
-    await insertScanAfterPublish({ ...base, status: PluginScan.STATUS_APPLIED });
+    const skuErrors = await publishWithScanRecord(base, () => publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon }));
     return { held: false, decision, skuErrors };
   } finally {
     await fs.promises.rm(uploadPath, { force: true });
@@ -1342,34 +1340,57 @@ async function applyPluginUpdate(pluginId, updates, name) {
   return skuErrors;
 }
 
-/** Record a scan for a version that is already live; never fails the request. */
-async function insertScanAfterPublish(row) {
+/**
+ * Publish with a durable scan record. The record is written before anything
+ * goes live (so a published version always has its scan), marked `applied`
+ * once the publish succeeds, and removed if the publish fails (so a failed
+ * upload never shows as published).
+ * @template T
+ * @param {object} record insertScan fields without `status`
+ * @param {() => Promise<T>} publish
+ * @returns {Promise<T>}
+ */
+async function publishWithScanRecord(record, publish) {
+  const scanId = insertScan({ ...record, status: PluginScan.STATUS_PUBLISHING });
+  let result;
   try {
-    await insertScan(row);
+    result = await publish();
   } catch (error) {
-    console.error(`Published ${row.pluginId} ${row.version} but could not record its scan:`, error);
+    db.prepare('DELETE FROM plugin_scan WHERE id = ? AND status = ?').run(scanId, PluginScan.STATUS_PUBLISHING);
+    throw error;
   }
+  // A single-row status change; if even this fails, the full report is still stored (as "publishing").
+  try {
+    transitionScan(db, scanId, PluginScan.STATUS_PUBLISHING, PluginScan.STATUS_APPLIED);
+  } catch (error) {
+    console.error(`Published ${record.pluginId} ${record.version} but could not mark its scan applied:`, error);
+  }
+  return result;
 }
 
-async function insertScan({ pluginId, userId, version, previousVersion = null, kind, status, scan, zipBuffer, decision, changes = null }) {
+/** Insert a scan row and return its id. */
+function insertScan({ pluginId, userId, version, previousVersion = null, kind, status, scan, zipBuffer, decision, changes = null }) {
   const fields = scanRowFields(scan, zipBuffer, decision);
-  await PluginScan.insert(
-    [PluginScan.PLUGIN_ID, pluginId],
-    [PluginScan.USER_ID, userId],
-    [PluginScan.VERSION, version],
-    [PluginScan.PREVIOUS_VERSION, previousVersion],
-    [PluginScan.KIND, kind],
-    [PluginScan.STATUS, status],
-    [PluginScan.RECOMMENDATION, fields.recommendation],
-    [PluginScan.RISK, fields.risk],
-    [PluginScan.REASONS, fields.reasons],
-    [PluginScan.ZIP_SHA256, fields.zip_sha256],
-    [PluginScan.SCANNER_VERSION, fields.scanner_version],
-    [PluginScan.RULES_VERSION, fields.rules_version],
-    [PluginScan.REPORT, fields.report],
-    [PluginScan.DIFF, fields.diff],
-    [PluginScan.CHANGES, changes],
-  );
+  const row = {
+    [PluginScan.PLUGIN_ID]: pluginId,
+    [PluginScan.USER_ID]: userId,
+    [PluginScan.VERSION]: version,
+    [PluginScan.PREVIOUS_VERSION]: previousVersion,
+    [PluginScan.KIND]: kind,
+    [PluginScan.STATUS]: status,
+    [PluginScan.RECOMMENDATION]: fields.recommendation,
+    [PluginScan.RISK]: fields.risk,
+    [PluginScan.REASONS]: fields.reasons,
+    [PluginScan.ZIP_SHA256]: fields.zip_sha256,
+    [PluginScan.SCANNER_VERSION]: fields.scanner_version,
+    [PluginScan.RULES_VERSION]: fields.rules_version,
+    [PluginScan.REPORT]: fields.report,
+    [PluginScan.DIFF]: fields.diff,
+    [PluginScan.CHANGES]: changes,
+  };
+  const columns = Object.keys(row);
+  const sql = `INSERT INTO plugin_scan (${columns.join(', ')}) VALUES (${columns.map((column) => `@${column}`).join(', ')})`;
+  return Number(db.prepare(sql).run(row).lastInsertRowid);
 }
 
 /**

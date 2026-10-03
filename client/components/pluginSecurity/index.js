@@ -13,6 +13,7 @@ const RECOMMENDATION_LABELS = {
 
 const STATUS_LABELS = {
   recorded: 'Scanned on submit',
+  publishing: 'Publishing…',
   applied: 'Published automatically',
   pending: 'Waiting for review',
   approved: 'Approved by admin',

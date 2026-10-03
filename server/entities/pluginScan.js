@@ -65,6 +65,8 @@ class PluginScan extends Entity {
 
   /** Scan of a new plugin; the plugin itself goes through normal approval. */
   STATUS_RECORDED = 'recorded';
+  /** Update passed the scan and is being published; becomes `applied` or is removed. */
+  STATUS_PUBLISHING = 'publishing';
   /** Update passed the scan and went live. */
   STATUS_APPLIED = 'applied';
   /** Update is held until an admin reviews it. */
