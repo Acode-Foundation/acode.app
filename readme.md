@@ -37,6 +37,24 @@ This repository is organized as follows:
 - `/dev`: Contains development scripts and tools.
 - `/cron-jobs/`: Includes scripts for scheduled tasks and maintenance.
 
+## Plugin security scanning
+
+Uploaded plugins are checked with [plugin_scanner](https://github.com/Acode-Foundation/plugin_scanner):
+
+- **New plugins** are scanned on upload. The verdict is stored and shown to admins on the plugin's **Security** tab. They still need admin approval as before.
+- **Updates to published plugins** go to `data/plugins/pending/` first, and the scanner compares them with the live zip. If nothing risky was added, the update goes live straight away. Otherwise it is held until an admin approves or rejects it under **Admin → Plugin updates**. Users keep the live version meanwhile, and the developer is emailed either way.
+- If the scanner is missing or fails, updates are held (fail closed).
+
+Install the scanner on the server and point `PLUGIN_SCANNER_BIN` at it (defaults to `plugin_scanner` on `PATH`):
+
+```sh
+git clone https://github.com/Acode-Foundation/plugin_scanner
+cd plugin_scanner && cargo build --release
+sudo install -m 755 target/release/plugin_scanner /usr/local/bin/plugin_scanner
+```
+
+Scan results are stored in the `plugin_scan` table, one row per upload.
+
 ## Contributing
 
 We welcome contributions to improve the Acode website. To contribute:

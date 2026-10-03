@@ -76,12 +76,14 @@ beforeEach(() => {
     '../entities/user': {},
     '../entities/purchaseOrder': order,
     '../entities/download': download,
+    '../entities/pluginScan': {},
     '../badWords.json': [],
     '../lib/helpers': helpers,
     '../lib/razorpay': () => ({ payments: { fetch: razorpayPayment } }),
     '../lib/sendEmail': vi.fn(),
     '../lib/exchangeRates': { convertPrice: async (amount) => ({ amount: amount / 10, currency: 'USD', symbol: '$' }) },
     '../lib/modeRegex': {},
+    '../lib/pluginScanner': {},
   };
   const module = { exports: {} };
   // Load the real routes, but prohibit any unmocked import from opening the app database or contacting a provider.

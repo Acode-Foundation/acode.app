@@ -8,12 +8,14 @@ const Plugin = require('../entities/plugin');
 const User = require('../entities/user');
 const Order = require('../entities/purchaseOrder');
 const Download = require('../entities/download');
+const PluginScan = require('../entities/pluginScan');
 const badWords = require('../badWords.json');
 const { getLoggedInUser, getWebLoggedInUser, getPluginSKU, detectUserCurrency, formatAmount } = require('../lib/helpers');
 const getRazorpay = require('../lib/razorpay');
 const sendEmail = require('../lib/sendEmail');
 const { convertPrice } = require('../lib/exchangeRates');
 const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
+const { scanUpload, decideUpdate, scanRowFields, serializeChanges, parseChanges, presentScan } = require('../lib/pluginScanner');
 
 const androidpublisher = google.androidpublisher('v3');
 
@@ -630,7 +632,7 @@ router.post('/', async (req, res) => {
 
     await Plugin.insert(...insert);
 
-    savePlugin(pluginId, pluginZip, icon);
+    await savePlugin(pluginId, pluginZip.data, icon);
 
     const response = { message: 'Plugin uploaded successfully' };
     if (skuErrors.length) {
@@ -639,16 +641,20 @@ router.post('/', async (req, res) => {
     }
     res.send(response);
 
-    User.get([User.EMAIL, User.NAME], [User.ROLE, 'admin']).then((rows) => {
-      for (const row of rows) {
-        sendEmail(
-          row.email,
-          row.name,
-          'New plugin waiting for approval',
-          `A new plugin <a href='https://acode.app/plugin/${pluginId}'><strong>${name}</strong></a> is waiting for approval.`,
-        );
-      }
+    // New plugins already wait for admin approval; the scan gives the reviewer evidence.
+    const decision = await recordScan({
+      pluginId,
+      userId: user.id,
+      version,
+      kind: PluginScan.KIND_PUBLISH,
+      status: PluginScan.STATUS_RECORDED,
+      uploadPath: livePath(pluginId),
+      zipBuffer: pluginZip.data,
     });
+    notifyAdmins(
+      'New plugin waiting for approval',
+      `A new plugin <a href='https://acode.app/plugin/${pluginId}'><strong>${escapeHtml(name)}</strong></a> is waiting for approval.${scanSummaryHtml(decision)}`,
+    );
   } catch (error) {
     console.error('Error uploading plugin:', error);
     res.status(500).send({ error: 'Unable to upload plugin, please try again later, if issue persists contact support.' });
@@ -658,14 +664,13 @@ router.post('/', async (req, res) => {
 router.put('/', async (req, res) => {
   try {
     const user = await getWebLoggedInUser(req);
-    let savePluginZip = false;
 
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
     }
 
-    const { plugin: pluginZip } = req.files;
+    const { plugin: pluginZip } = req.files || {};
 
     if (!pluginZip) {
       res.status(400).send({ error: 'Plugin file is required' });
@@ -691,7 +696,7 @@ router.put('/', async (req, res) => {
       return;
     }
 
-    const [row] = await Plugin.get([Plugin.ID, Plugin.USER_ID, Plugin.VERSION, Plugin.NAME, Plugin.PRICE], [Plugin.ID, pluginId]);
+    const [row] = await Plugin.get([Plugin.ID, Plugin.USER_ID, Plugin.VERSION, Plugin.NAME, Plugin.PRICE, Plugin.STATUS], [Plugin.ID, pluginId]);
     if (!row || row.user_id !== user.id) {
       res.status(404).send({ error: 'Plugin not found' });
       return;
@@ -731,7 +736,8 @@ router.put('/', async (req, res) => {
       updates.push([Plugin.SUPPORTED_EDITOR, req.body.supported_editor]);
     }
 
-    if (version !== row.version) {
+    const packageChanged = version !== row.version;
+    if (packageChanged) {
       if (!isVersionGreater(version, row.version)) {
         res.status(400).send({
           error: 'Version should be greater than the current version',
@@ -739,25 +745,36 @@ router.put('/', async (req, res) => {
         return;
       }
       updates.push([Plugin.VERSION, version]);
-      savePluginZip = true;
     }
 
     if (name !== row.name) {
       updates.push([Plugin.NAME, name]);
     }
 
-    let skuErrors = [];
     if (row.price !== price) {
-      if (price) {
-        skuErrors = await registerSKU(name, pluginId, price);
-      }
       updates.push([Plugin.PRICE, price]);
     }
 
-    await Plugin.update(updates, [Plugin.ID, pluginId]);
+    // Users install published plugins automatically, so new code for a published
+    // plugin is scanned before it replaces the live zip. Unpublished plugins are
+    // reviewed as a whole when an admin approves them.
+    if (packageChanged && row.status === Plugin.STATUS_APPROVED) {
+      const outcome = await scanPublishedUpdate({ row, user, version, updates, zipBuffer: pluginZip.data, icon });
+      if (outcome.held) {
+        res.send({
+          message: `Version ${version} was submitted for review and will go live once an admin approves it.`,
+          review: true,
+          reasons: outcome.decision.reasons,
+        });
+        notifyHeldUpdate({ pluginId, name, version, user, decision: outcome.decision });
+        return;
+      }
+    }
 
-    if (savePluginZip) {
-      savePlugin(pluginId, pluginZip, icon);
+    const skuErrors = await applyPluginUpdate(pluginId, updates, name);
+
+    if (packageChanged && row.status !== Plugin.STATUS_APPROVED) {
+      await savePlugin(pluginId, pluginZip.data, icon);
     }
 
     const response = { message: 'Plugin updated successfully' };
@@ -767,9 +784,152 @@ router.put('/', async (req, res) => {
       console.error('Google Play SKU registration had errors:', skuErrors);
     }
     res.send(response);
+
+    if (packageChanged && row.status !== Plugin.STATUS_APPROVED) {
+      await recordScan({
+        pluginId,
+        userId: user.id,
+        version,
+        previousVersion: row.version,
+        kind: PluginScan.KIND_UPDATE,
+        status: PluginScan.STATUS_APPLIED,
+        uploadPath: livePath(pluginId),
+        zipBuffer: pluginZip.data,
+      });
+    }
   } catch (error) {
     console.error('Error updating plugin:', error);
-    res.status(500).send({ error: 'Unable to update plugin, please try again later, if issue persists contact support.' });
+    if (!res.headersSent) {
+      res.status(500).send({ error: 'Unable to update plugin, please try again later, if issue persists contact support.' });
+    }
+  }
+});
+
+router.get('/scans/pending', async (req, res) => {
+  try {
+    const user = await getWebLoggedInUser(req);
+    if (!user?.isAdmin) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const rows = await PluginScan.get([PluginScan.STATUS, PluginScan.STATUS_PENDING], { orderBy: 'id ASC', limit: 200 });
+    const ids = [...new Set(rows.map((row) => row.plugin_id))];
+    const plugins = ids.length ? await Plugin.get([Plugin.ID, Plugin.NAME, Plugin.AUTHOR], [Plugin.ID, ids], { limit: ids.length }) : [];
+    const byId = new Map(plugins.map((plugin) => [plugin.id, plugin]));
+
+    res.send(
+      rows.map((row) => ({
+        ...presentScan(row, { isAdmin: true }),
+        pluginName: byId.get(row.plugin_id)?.name || row.plugin_id,
+        author: byId.get(row.plugin_id)?.author || '',
+      })),
+    );
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+router.get('/:id/scans', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await getWebLoggedInUser(req);
+    if (!user) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const [plugin] = await Plugin.get([Plugin.ID, Plugin.USER_ID], [Plugin.ID, id]);
+    if (!plugin || (!user.isAdmin && plugin.user_id !== user.id)) {
+      res.status(404).send({ error: 'Not found' });
+      return;
+    }
+
+    const columns = user.isAdmin ? ['*'] : PluginScan.summaryColumns;
+    const rows = await PluginScan.get(columns, [PluginScan.PLUGIN_ID, id], { orderBy: 'id DESC', limit: 10 });
+    const scans = rows.map((row) => presentScan(row, { isAdmin: user.isAdmin }));
+    res.send({
+      pending: scans.find((scan) => scan.status === PluginScan.STATUS_PENDING) || null,
+      scans,
+    });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+router.post('/scans/:scanId/review', async (req, res) => {
+  try {
+    const user = await getWebLoggedInUser(req);
+    if (!user?.isAdmin) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { action } = req.body || {};
+    const reason = String(req.body?.reason || '').trim();
+    if (!['approve', 'reject'].includes(action)) {
+      res.status(400).send({ error: 'Action must be approve or reject' });
+      return;
+    }
+
+    const [scan] = await PluginScan.get([PluginScan.ID, Number(req.params.scanId)]);
+    if (!scan || scan.status !== PluginScan.STATUS_PENDING) {
+      res.status(404).send({ error: 'No pending update found for this scan' });
+      return;
+    }
+
+    const pluginId = scan.plugin_id;
+    const [plugin] = await Plugin.get([Plugin.ID, Plugin.NAME, Plugin.USER_ID, Plugin.VERSION], [Plugin.ID, pluginId]);
+    if (!plugin) {
+      res.status(404).send({ error: 'Plugin not found' });
+      return;
+    }
+
+    const review = [
+      [PluginScan.REVIEWED_BY, user.id],
+      [PluginScan.REVIEWED_AT, moment().format('YYYY-MM-DD HH:mm:ss')],
+      [PluginScan.REVIEW_MESSAGE, reason || null],
+    ];
+
+    let skuErrors = [];
+    if (action === 'approve') {
+      if (!fs.existsSync(stagedZipPath(pluginId))) {
+        res.status(409).send({ error: 'The staged zip for this update is missing; ask the developer to upload it again.' });
+        return;
+      }
+      if (!isVersionGreater(scan.version, plugin.version)) {
+        await PluginScan.update([[PluginScan.STATUS, PluginScan.STATUS_SUPERSEDED], ...review], [PluginScan.ID, scan.id]);
+        res.status(409).send({ error: `The live version (${plugin.version}) is already newer than ${scan.version}.` });
+        return;
+      }
+
+      await promoteStaged(pluginId);
+      const changes = parseChanges(scan.changes);
+      const newName = changes.find(([column]) => column === Plugin.NAME)?.[1] || plugin.name;
+      skuErrors = await applyPluginUpdate(pluginId, changes, newName);
+      await PluginScan.update([[PluginScan.STATUS, PluginScan.STATUS_APPROVED], ...review], [PluginScan.ID, scan.id]);
+    } else {
+      await discardStaged(pluginId);
+      await PluginScan.update([[PluginScan.STATUS, PluginScan.STATUS_REJECTED], ...review], [PluginScan.ID, scan.id]);
+    }
+
+    res.send({
+      message: action === 'approve' ? `Version ${scan.version} is now live.` : `Version ${scan.version} was rejected.`,
+      ...(skuErrors.length && { warning: 'Google Play SKU sync had errors', skuErrors }),
+    });
+
+    notifyDeveloper(plugin.user_id, {
+      subject: action === 'approve' ? 'Plugin update approved' : 'Plugin update rejected',
+      html:
+        action === 'approve'
+          ? `Version ${escapeHtml(scan.version)} of <a href='https://acode.app/plugin/${pluginId}'><strong>${escapeHtml(plugin.name)}</strong></a> was approved and is now available.`
+          : `Version ${escapeHtml(scan.version)} of <a href='https://acode.app/plugin/${pluginId}'><strong>${escapeHtml(plugin.name)}</strong></a> was rejected after review.${
+              reason ? `<br><em><strong>Reason</strong> ${escapeHtml(reason)}</em>` : ''
+            }`,
+    });
+  } catch (error) {
+    console.error('Error reviewing plugin update:', error);
+    if (!res.headersSent) res.status(500).send({ error: error.message });
   }
 });
 
@@ -778,7 +938,7 @@ router.patch('/', async (req, res) => {
     const { id, status, reason } = req.body;
     const user = await getWebLoggedInUser(req);
 
-    if (!user.isAdmin) {
+    if (!user?.isAdmin) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
     }
@@ -865,6 +1025,8 @@ router.delete('/:id', async (req, res) => {
 
     if (mode === 'hard' && user.isAdmin) {
       await Plugin.deletePermanently([Plugin.ID, id]);
+      await PluginScan.delete([PluginScan.PLUGIN_ID, id]);
+      await discardStaged(id);
       try {
         fs.unlinkSync(path.join(__dirname, `../../data/plugins/${id}.zip`));
         fs.unlinkSync(path.join(__dirname, `../../data/icons/${id}.png`));
@@ -942,12 +1104,175 @@ async function exploreZip(file) {
   return { pluginJson, icon, readme, changelogs };
 }
 
-function savePlugin(id, file, icon) {
-  file.mv(path.resolve(__dirname, '../../data/plugins', `${id}.zip`));
-  fs.writeFile(path.resolve(__dirname, '../../data/icons', `${id}.png`), icon, 'base64', (err) => {
-    // eslint-disable-next-line no-console
-    if (err) console.log(err);
-  });
+const PLUGINS_DIR = path.resolve(__dirname, '../../data/plugins');
+const ICONS_DIR = path.resolve(__dirname, '../../data/icons');
+// Held updates wait here until an admin reviews them.
+const STAGING_DIR = path.join(PLUGINS_DIR, 'pending');
+
+const livePath = (id) => path.join(PLUGINS_DIR, `${id}.zip`);
+const stagedZipPath = (id) => path.join(STAGING_DIR, `${id}.zip`);
+const stagedIconPath = (id) => path.join(STAGING_DIR, `${id}.png`);
+
+async function savePlugin(id, zipBuffer, icon) {
+  await fs.promises.writeFile(livePath(id), zipBuffer);
+  await fs.promises.writeFile(path.join(ICONS_DIR, `${id}.png`), icon, 'base64');
+}
+
+/**
+ * Scan a new version of a published plugin against the live zip. A passing
+ * update replaces the live zip immediately; anything else (including a scanner
+ * failure) is staged and recorded as a pending update for admin review.
+ * @returns {Promise<{ held: boolean, decision: ReturnType<typeof decideUpdate> }>}
+ */
+async function scanPublishedUpdate({ row, user, version, updates, zipBuffer, icon }) {
+  const pluginId = row.id;
+  await fs.promises.mkdir(STAGING_DIR, { recursive: true });
+  // Unique name so a crash mid-request can't swap the zip behind an older pending row.
+  const uploadPath = path.join(STAGING_DIR, `${pluginId}.${process.pid}.${Date.now()}.upload.zip`);
+  await fs.promises.writeFile(uploadPath, zipBuffer);
+
+  try {
+    const scan = await scanUpload({ uploadPath, livePath: fs.existsSync(livePath(pluginId)) ? livePath(pluginId) : null });
+    const decision = decideUpdate(scan);
+    const base = {
+      pluginId,
+      userId: user.id,
+      version,
+      previousVersion: row.version,
+      kind: PluginScan.KIND_UPDATE,
+      scan,
+      zipBuffer,
+      decision,
+    };
+
+    // Whatever happens, an older pending update is replaced by this upload.
+    await PluginScan.update(
+      [PluginScan.STATUS, PluginScan.STATUS_SUPERSEDED],
+      [
+        [PluginScan.PLUGIN_ID, pluginId],
+        [PluginScan.STATUS, PluginScan.STATUS_PENDING],
+      ],
+    );
+
+    if (decision.hold) {
+      await fs.promises.rename(uploadPath, stagedZipPath(pluginId));
+      await fs.promises.writeFile(stagedIconPath(pluginId), icon, 'base64');
+      await insertScan({ ...base, status: PluginScan.STATUS_PENDING, changes: serializeChanges(updates) });
+      return { held: true, decision };
+    }
+
+    await fs.promises.rename(uploadPath, livePath(pluginId));
+    await fs.promises.writeFile(path.join(ICONS_DIR, `${pluginId}.png`), icon, 'base64');
+    await discardStaged(pluginId);
+    await insertScan({ ...base, status: PluginScan.STATUS_APPLIED });
+    return { held: false, decision };
+  } finally {
+    await fs.promises.rm(uploadPath, { force: true });
+  }
+}
+
+/** Move a held update's zip and icon into place. */
+async function promoteStaged(pluginId) {
+  await fs.promises.rename(stagedZipPath(pluginId), livePath(pluginId));
+  if (fs.existsSync(stagedIconPath(pluginId))) {
+    await fs.promises.rename(stagedIconPath(pluginId), path.join(ICONS_DIR, `${pluginId}.png`));
+  }
+}
+
+async function discardStaged(pluginId) {
+  await fs.promises.rm(stagedZipPath(pluginId), { force: true });
+  await fs.promises.rm(stagedIconPath(pluginId), { force: true });
+}
+
+/**
+ * Apply plugin column changes, registering the Play SKU when the price changed.
+ * @param {string} pluginId
+ * @param {Array<[string, any]>} updates
+ * @param {string} name plugin name to register the SKU under
+ */
+async function applyPluginUpdate(pluginId, updates, name) {
+  let skuErrors = [];
+  const priceChange = updates.find(([column]) => column === Plugin.PRICE);
+  if (priceChange?.[1]) {
+    skuErrors = await registerSKU(name, pluginId, priceChange[1]);
+  }
+  await Plugin.update(updates, [Plugin.ID, pluginId]);
+  return skuErrors;
+}
+
+async function insertScan({ pluginId, userId, version, previousVersion = null, kind, status, scan, zipBuffer, decision, changes = null }) {
+  const fields = scanRowFields(scan, zipBuffer, decision);
+  await PluginScan.insert(
+    [PluginScan.PLUGIN_ID, pluginId],
+    [PluginScan.USER_ID, userId],
+    [PluginScan.VERSION, version],
+    [PluginScan.PREVIOUS_VERSION, previousVersion],
+    [PluginScan.KIND, kind],
+    [PluginScan.STATUS, status],
+    [PluginScan.RECOMMENDATION, fields.recommendation],
+    [PluginScan.RISK, fields.risk],
+    [PluginScan.REASONS, fields.reasons],
+    [PluginScan.ZIP_SHA256, fields.zip_sha256],
+    [PluginScan.SCANNER_VERSION, fields.scanner_version],
+    [PluginScan.RULES_VERSION, fields.rules_version],
+    [PluginScan.REPORT, fields.report],
+    [PluginScan.DIFF, fields.diff],
+    [PluginScan.CHANGES, changes],
+  );
+}
+
+/**
+ * Scan a zip that is already in place and record the result. Used after the
+ * response is sent, so it never throws.
+ */
+async function recordScan({ uploadPath, ...row }) {
+  try {
+    const scan = await scanUpload({ uploadPath });
+    const decision = decideUpdate(scan);
+    await insertScan({ ...row, scan, decision });
+    return decision;
+  } catch (error) {
+    console.error('Failed to record plugin scan:', error);
+    return null;
+  }
+}
+
+function scanSummaryHtml(decision) {
+  if (!decision) return '<br><br>Security scan: not recorded.';
+  const reasons = decision.reasons.slice(0, 5).map((reason) => `<li>${escapeHtml(reason)}</li>`);
+  return `<br><br>Security scan: <strong>${escapeHtml(decision.recommendation)}</strong>${reasons.length ? `<ul>${reasons.join('')}</ul>` : ''}`;
+}
+
+function notifyAdmins(subject, html) {
+  User.get([User.EMAIL, User.NAME], [User.ROLE, 'admin'])
+    .then((rows) => {
+      for (const row of rows) sendEmail(row.email, row.name, subject, html);
+    })
+    .catch((error) => console.error('Failed to notify admins:', error));
+}
+
+function notifyDeveloper(userId, { subject, html }) {
+  User.get([User.EMAIL, User.NAME], [User.ID, userId])
+    .then(([row]) => row && sendEmail(row.email, row.name, subject, html))
+    .catch((error) => console.error('Failed to notify developer:', error));
+}
+
+function notifyHeldUpdate({ pluginId, name, version, user, decision }) {
+  const link = `<a href='https://acode.app/plugin/${pluginId}'><strong>${escapeHtml(name)}</strong></a>`;
+  notifyAdmins(
+    'Plugin update waiting for review',
+    `Version ${escapeHtml(version)} of ${link} was held by the security scan. Review it in the admin panel (Plugin updates).${scanSummaryHtml(decision)}`,
+  );
+  sendEmail(
+    user.email,
+    user.name,
+    'Plugin update submitted for review',
+    `Version ${escapeHtml(version)} of ${link} needs a manual review before it goes live. You will get an email when it is reviewed.${scanSummaryHtml(decision)}`,
+  );
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 }
 
 function validatePlugin(json, icon, readmeFile) {

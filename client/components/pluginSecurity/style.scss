@@ -1,0 +1,158 @@
+.plugin-security,
+.admin-plugin-updates {
+  text-align: left;
+
+  h3 {
+    margin: 16px 0 8px;
+    font-size: 1rem;
+  }
+
+  .muted {
+    opacity: 0.7;
+  }
+
+  code {
+    word-break: break-all;
+  }
+}
+
+.pending-update {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid rgba(51, 153, 255, 0.45);
+  border-radius: 8px;
+  background: rgba(51, 153, 255, 0.08);
+
+  .pending-update-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    font-weight: 600;
+
+    a {
+      margin: 0;
+    }
+  }
+
+  .pending-update-meta {
+    margin: 0 0 6px;
+    font-size: 0.85rem;
+  }
+}
+
+.scan-reasons {
+  margin: 8px 0;
+  padding-left: 20px;
+  font-size: 0.9rem;
+}
+
+.scan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    margin: 0;
+  }
+
+  .scan-reject {
+    background: #b91c1c;
+  }
+}
+
+.scan-details {
+  margin-top: 8px;
+}
+
+.scan-section {
+  margin: 8px 0;
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  ul {
+    margin: 6px 0;
+    padding-left: 18px;
+  }
+
+  li {
+    margin: 4px 0;
+  }
+}
+
+.scan-findings .scan-evidence {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.scan-hosts {
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+
+.scan-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .scan-version {
+    min-width: 56px;
+    font-weight: 600;
+  }
+}
+
+.scan-badge,
+.severity {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.scan-badge--pass {
+  color: #3f9;
+}
+.scan-badge--review {
+  color: #fbbf24;
+}
+.scan-badge--block,
+.scan-badge--error {
+  color: #f87171;
+}
+
+.severity--critical {
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
+}
+.severity--high {
+  background: rgba(251, 191, 36, 0.18);
+  color: #fbbf24;
+}
+.severity--medium {
+  color: #60a5fa;
+}
+
+.scan-warning {
+  color: #fbbf24;
+}
