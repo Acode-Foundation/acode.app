@@ -29,6 +29,7 @@ const {
   fileInDir,
   replaceWithRollback,
   createKeyedLock,
+  planLiveZipRepair,
   transitionScan,
   supersedePendingScans,
 } = require('../lib/pluginScanner');
@@ -1282,7 +1283,7 @@ async function publishUpdate(pluginId, updates, name, { zipFrom, icon, iconFrom 
   const skuErrors = await registerPriceChange(pluginId, updates, name);
   await replaceWithRollback({
     livePath: livePath(pluginId),
-    backupPath: fileInDir(PLUGINS_DIR, `${pluginId}.${crypto.randomUUID()}.previous`),
+    backupPath: fileInDir(PLUGINS_DIR, `${pluginId}.${Date.now()}.${crypto.randomUUID()}.previous`),
     fromPath: zipFrom,
     commit: async () => {
       // An UPDATE on a missing row "succeeds" with zero changes; refuse instead,
@@ -1319,7 +1320,8 @@ const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 // Exact name patterns: plugin ids contain dots, so a prefix like `foo.` would
 // also match files belonging to `foo.bar`.
 const stagedFilePattern = (pluginId) => new RegExp(`^${escapeRegExp(pluginId)}(-[0-9a-f]{64}\\.(zip|png)|\\.${UUID}\\.upload)$`);
-const backupFilePattern = (pluginId) => new RegExp(`^${escapeRegExp(pluginId)}\\.${UUID}\\.previous$`);
+// `{id}.{timestamp}.{uuid}.previous`; the timestamp orders backups without relying on file times.
+const backupFilePattern = (pluginId) => new RegExp(`^${escapeRegExp(pluginId)}\\.(\\d+)\\.${UUID}\\.previous$`);
 
 async function discardAllStaged(pluginId) {
   if (!fs.existsSync(STAGING_DIR)) return;
@@ -1331,50 +1333,89 @@ async function discardAllStaged(pluginId) {
 
 /**
  * Settle scans left in `publishing` because the server stopped mid-publish (or
- * the final status update failed). Runs at startup, before requests are served.
- * A publish sets the plugin's version only in its final database update, and
- * versions only ever increase, so the stored version tells whether it went live.
+ * the final status update failed). Runs at startup, before requests are served,
+ * one plugin at a time: the live zip and its backups belong to the plugin, not
+ * to any single scan.
  */
 async function reconcilePublishingScans() {
-  const rows = db.prepare('SELECT id, plugin_id, version, zip_sha256 FROM plugin_scan WHERE status = ?').all(PluginScan.STATUS_PUBLISHING);
-  for (const row of rows) {
+  const pluginIds = db
+    .prepare('SELECT DISTINCT plugin_id FROM plugin_scan WHERE status = ?')
+    .all(PluginScan.STATUS_PUBLISHING)
+    .map((row) => row.plugin_id);
+  for (const pluginId of pluginIds) {
     try {
-      await withPluginLock(row.plugin_id, () => reconcilePublishingScan(row));
+      await withPluginLock(pluginId, () => reconcilePlugin(pluginId));
     } catch (error) {
-      console.error(`Could not reconcile scan ${row.id} for ${row.plugin_id}:`, error);
+      console.error(`Could not reconcile interrupted publishes for ${pluginId}; leaving them for the next start:`, error);
     }
   }
 }
 
-async function reconcilePublishingScan(row) {
-  const pluginId = row.plugin_id;
+async function reconcilePlugin(pluginId) {
+  const rows = db
+    .prepare('SELECT id, version, zip_sha256 FROM plugin_scan WHERE plugin_id = ? AND status = ? ORDER BY id')
+    .all(pluginId, PluginScan.STATUS_PUBLISHING);
   const [plugin] = await Plugin.get([Plugin.VERSION], [Plugin.ID, pluginId]);
-  const backups = fs.existsSync(PLUGINS_DIR) ? (await fs.promises.readdir(PLUGINS_DIR)).filter((name) => backupFilePattern(pluginId).test(name)) : [];
-  const published = plugin && (plugin.version === row.version || isVersionGreater(plugin.version, row.version));
 
-  if (published) {
-    transitionScan(db, row.id, PluginScan.STATUS_PUBLISHING, PluginScan.STATUS_APPLIED);
-  } else {
-    // Stopped between swapping the zip in and updating the row: put the previous zip back.
+  // A publish sets the version only in its final row update, and versions only
+  // increase, so a stored version at or past a scan's means it went live.
+  const isLive = (row) => plugin && (plugin.version === row.version || isVersionGreater(plugin.version, row.version));
+  const published = rows.filter(isLive);
+  const unpublished = rows.filter((row) => !isLive(row));
+  const backups = await listBackups(pluginId);
+
+  // Repair files before touching rows or backups: if this fails, the next start retries with everything intact.
+  if (plugin) {
     const live = livePath(pluginId);
-    const liveHash = fs.existsSync(live) ? sha256(await fs.promises.readFile(live)) : null;
-    if (plugin && liveHash === row.zip_sha256 && backups.length) {
-      const newest = await newestFile(PLUGINS_DIR, backups);
-      await fs.promises.rename(fileInDir(PLUGINS_DIR, newest), live);
-      console.warn(`Restored the previous zip for ${pluginId}; version ${row.version} was not published.`);
+    const plan = planLiveZipRepair({
+      liveHash: fs.existsSync(live) ? sha256(await fs.promises.readFile(live)) : null,
+      expectedHash: expectedZipHash(pluginId, plugin.version, published),
+      strayHashes: new Set(unpublished.map((row) => row.zip_sha256)),
+      backups,
+    });
+    if (plan.action === 'stuck') throw new Error(`Cannot repair ${pluginId}: ${plan.reason}`);
+    if (plan.action === 'restore') {
+      await fs.promises.rename(fileInDir(PLUGINS_DIR, plan.name), live);
+      console.warn(`Restored the live zip for ${pluginId} (version ${plugin.version}) from ${plan.name}.`);
     }
-    db.prepare('DELETE FROM plugin_scan WHERE id = ? AND status = ?').run(row.id, PluginScan.STATUS_PUBLISHING);
   }
 
-  // Backups only exist during a publish; none should outlive it.
-  for (const name of backups) {
+  for (const row of published) transitionScan(db, row.id, PluginScan.STATUS_PUBLISHING, PluginScan.STATUS_APPLIED);
+  for (const row of unpublished) {
+    db.prepare('DELETE FROM plugin_scan WHERE id = ? AND status = ?').run(row.id, PluginScan.STATUS_PUBLISHING);
+  }
+  // Backups only exist during a publish; once the live zip is settled none are needed.
+  for (const { name } of backups) {
     await fs.promises.rm(fileInDir(PLUGINS_DIR, name), { force: true });
   }
 }
 
-async function newestFile(dir, names) {
-  const stats = await Promise.all(names.map(async (name) => ({ name, mtime: (await fs.promises.stat(fileInDir(dir, name))).mtimeMs })));
-  return stats.sort((a, b) => b.mtime - a.mtime)[0].name;
+/** Hash of the zip for the plugin's recorded version, when a scan captured it. */
+function expectedZipHash(pluginId, version, publishedRows) {
+  const fromInterrupted = publishedRows.filter((row) => row.version === version).at(-1)?.zip_sha256;
+  if (fromInterrupted) return fromInterrupted;
+  const recorded = db
+    .prepare(
+      `SELECT zip_sha256 FROM plugin_scan
+       WHERE plugin_id = ? AND version = ? AND zip_sha256 IS NOT NULL AND status IN ('applied', 'approved', 'recorded')
+       ORDER BY id DESC LIMIT 1`,
+    )
+    .get(pluginId, version);
+  return recorded?.zip_sha256 || null;
+}
+
+/** Backups of a plugin's live zip, newest first, with their hashes. */
+async function listBackups(pluginId) {
+  if (!fs.existsSync(PLUGINS_DIR)) return [];
+  const pattern = backupFilePattern(pluginId);
+  const backups = [];
+  for (const name of await fs.promises.readdir(PLUGINS_DIR)) {
+    const match = pattern.exec(name);
+    if (!match) continue;
+    const hash = sha256(await fs.promises.readFile(fileInDir(PLUGINS_DIR, name)));
+    backups.push({ name, time: Number(match[1]), hash });
+  }
+  return backups.sort((a, b) => b.time - a.time);
 }
 
 /** Register the Play SKU when the price changed and is non-zero. */

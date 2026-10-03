@@ -14,6 +14,7 @@ const {
   fileInDir,
   replaceWithRollback,
   createKeyedLock,
+  planLiveZipRepair,
   transitionScan,
   supersedePendingScans,
 } = require('../../server/lib/pluginScanner');
@@ -338,5 +339,39 @@ describe('createKeyedLock', () => {
     const withLock = createKeyedLock();
     await expect(withLock('p', () => Promise.reject(new Error('boom')))).rejects.toThrow('boom');
     await expect(withLock('p', async () => 'next')).resolves.toBe('next');
+  });
+});
+
+describe('planLiveZipRepair', () => {
+  const backups = [
+    { name: 'p.300.b.previous', hash: 'v2' },
+    { name: 'p.200.a.previous', hash: 'v1' },
+  ];
+
+  it('keeps a live zip that matches the recorded version', () => {
+    expect(planLiveZipRepair({ liveHash: 'v2', expectedHash: 'v2', strayHashes: new Set(['v3']), backups })).toEqual({ action: 'keep' });
+  });
+
+  it('restores the backup matching the recorded version, not just the newest', () => {
+    // An older publish left a backup behind; a later one crashed after swapping in v3.
+    const plan = planLiveZipRepair({ liveHash: 'v3', expectedHash: 'v1', strayHashes: new Set(['v3']), backups });
+    expect(plan).toEqual({ action: 'restore', name: 'p.200.a.previous' });
+  });
+
+  it('restores when a rollback stopped with no live zip in place', () => {
+    expect(planLiveZipRepair({ liveHash: null, expectedHash: 'v2', strayHashes: new Set(['v3']), backups })).toEqual({
+      action: 'restore',
+      name: 'p.300.b.previous',
+    });
+  });
+
+  it('falls back to the newest backup when the version has no recorded zip', () => {
+    expect(planLiveZipRepair({ liveHash: 'v3', strayHashes: new Set(['v3']), backups })).toEqual({ action: 'restore', name: 'p.300.b.previous' });
+    expect(planLiveZipRepair({ liveHash: 'v0', strayHashes: new Set(['v3']), backups })).toEqual({ action: 'keep' });
+  });
+
+  it('reports when nothing can be restored', () => {
+    expect(planLiveZipRepair({ liveHash: null, expectedHash: 'v9', strayHashes: new Set(), backups }).action).toBe('stuck');
+    expect(planLiveZipRepair({ liveHash: null, strayHashes: new Set(), backups: [] }).action).toBe('stuck');
   });
 });

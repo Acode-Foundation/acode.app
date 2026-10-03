@@ -228,6 +228,27 @@ function createKeyedLock() {
 }
 
 /**
+ * Decide how to repair a plugin's live zip after an interrupted publish.
+ * The live zip should be the one for the version the database records:
+ * - `expectedHash`: hash of that zip, when a scan recorded it,
+ * - `strayHashes`: zips of publishes that never committed (must not stay live),
+ * - `backups`: copies of the live zip taken before each swap, newest first.
+ * @param {{ liveHash: string | null, expectedHash?: string | null, strayHashes: Set<string>, backups: Array<{ name: string, hash: string }> }} state
+ * @returns {{ action: 'keep' } | { action: 'restore', name: string } | { action: 'stuck', reason: string }}
+ */
+function planLiveZipRepair({ liveHash, expectedHash = null, strayHashes, backups }) {
+  const liveIsRight = liveHash && (expectedHash ? liveHash === expectedHash : !strayHashes.has(liveHash));
+  if (liveIsRight) return { action: 'keep' };
+
+  const backup = expectedHash ? backups.find((candidate) => candidate.hash === expectedHash) : backups[0];
+  if (backup) return { action: 'restore', name: backup.name };
+  return {
+    action: 'stuck',
+    reason: liveHash ? 'the live zip belongs to an unpublished version and no backup matches' : 'the live zip is missing and no backup matches',
+  };
+}
+
+/**
  * Atomically move a scan from one status to another. Returns false if another
  * request changed it first, which is how approve, reject, and supersede avoid
  * acting on the same held update twice.
@@ -305,6 +326,7 @@ module.exports = {
   fileInDir,
   replaceWithRollback,
   createKeyedLock,
+  planLiveZipRepair,
   transitionScan,
   supersedePendingScans,
   runScanner,
