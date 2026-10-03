@@ -512,6 +512,10 @@ async function main() {
 
 async function start() {
   await migrationRunner.run();
+  // Settle plugin updates interrupted by a previous shutdown before serving requests.
+  await require('./apis/plugin')
+    .reconcilePublishingScans()
+    .catch((error) => console.error('Failed to reconcile plugin scans:', error));
   require('./crons');
   await main();
   app.listen(PORT, () => {
