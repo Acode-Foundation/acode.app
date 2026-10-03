@@ -787,36 +787,42 @@ router.put('/', pluginUploadLimiter, async (req, res) => {
       // One publish per plugin at a time: file swaps and row updates must not interleave.
       const outcome = await withPluginLock(pluginId, async () => {
         const [current] = await Plugin.get([Plugin.VERSION, Plugin.STATUS], [Plugin.ID, pluginId]);
-        // Another upload may have been published while this one waited.
-        if (!current || !isVersionGreater(version, current.version)) {
-          return { conflict: current?.version };
-        }
+        // The plugin may have been deleted, or another upload published, while this one waited.
+        if (!current) return { missing: true };
+        if (!isVersionGreater(version, current.version)) return { conflict: current.version };
 
         const live = { ...row, version: current.version };
         if (current.status === Plugin.STATUS_APPROVED) {
           return scanPublishedUpdate({ row: live, user, version, name, updates, zipBuffer: pluginZip.data, icon });
         }
 
-        // Unpublished plugins are reviewed as a whole on approval; record the scan of
-        // exactly these bytes for the reviewer, then publish.
+        // Unpublished plugins are reviewed as a whole on approval. Scan exactly these
+        // bytes for the reviewer, and record the scan only once the version is live.
         const uploadPath = await writeUpload(pluginId, pluginZip.data);
         try {
-          await recordScan({
+          const scan = await scanUpload({ uploadPath });
+          const published = await publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon });
+          await insertScanAfterPublish({
             pluginId,
             userId: user.id,
             version,
             previousVersion: current.version,
             kind: PluginScan.KIND_UPDATE,
             status: PluginScan.STATUS_APPLIED,
-            uploadPath,
+            scan,
+            decision: decideUpdate(scan),
             zipBuffer: pluginZip.data,
           });
-          return { held: false, skuErrors: await publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon }) };
+          return { held: false, skuErrors: published };
         } finally {
           await fs.promises.rm(uploadPath, { force: true });
         }
       });
 
+      if (outcome.missing) {
+        res.status(404).send({ error: 'Plugin not found' });
+        return;
+      }
       if (outcome.conflict !== undefined) {
         res.status(409).send({ error: `Version ${outcome.conflict} was published in the meantime; upload a version greater than it.` });
         return;
@@ -930,14 +936,7 @@ router.post('/scans/:scanId/review', pluginAdminLimiter, async (req, res) => {
       return;
     }
 
-    // Claim the row first: a concurrent review or a newer upload (which supersedes
-    // pending rows) can then no longer act on it.
     const outcome = action === 'approve' ? PluginScan.STATUS_APPROVED : PluginScan.STATUS_REJECTED;
-    if (!transitionScan(db, scan.id, PluginScan.STATUS_PENDING, outcome)) {
-      res.status(409).send({ error: 'This update was already reviewed or replaced by a newer upload.' });
-      return;
-    }
-
     const review = [
       [PluginScan.REVIEWED_BY, user.id],
       [PluginScan.REVIEWED_AT, moment().format('YYYY-MM-DD HH:mm:ss')],
@@ -945,45 +944,57 @@ router.post('/scans/:scanId/review', pluginAdminLimiter, async (req, res) => {
     ];
     const staged = { zip: stagedZipPath(pluginId, scan.zip_sha256), icon: stagedIconPath(pluginId, scan.zip_sha256) };
 
+    // Uploads supersede pending scans inside this same queue, and hard deletes run
+    // in it too, so a review always sees a settled state: either a newer upload
+    // already replaced this scan (the claim fails) or it runs after this review.
     let skuErrors = [];
-    if (action === 'approve') {
-      const conflict = await withPluginLock(pluginId, async () => {
-        // Read the live version inside the lock: an upload may have published since the request started.
-        const [current] = await Plugin.get([Plugin.VERSION], [Plugin.ID, pluginId]);
-        if (!current || !isVersionGreater(scan.version, current.version)) {
-          transitionScan(db, scan.id, outcome, PluginScan.STATUS_SUPERSEDED);
-          await PluginScan.update(review, [PluginScan.ID, scan.id]);
-          await discardStaged(staged);
-          return `The live version (${current?.version}) is already newer than ${scan.version}.`;
-        }
-
-        // Publish exactly the bytes that were scanned and reviewed.
-        const stagedBytes = fs.existsSync(staged.zip) ? await fs.promises.readFile(staged.zip) : null;
-        if (!stagedBytes || sha256(stagedBytes) !== scan.zip_sha256) {
-          transitionScan(db, scan.id, outcome, PluginScan.STATUS_PENDING);
-          return 'The staged zip is missing or does not match the scanned upload; reject it and ask for a new upload.';
-        }
-
-        const changes = parseChanges(scan.changes);
-        const newName = changes.find(([column]) => column === Plugin.NAME)?.[1] || plugin.name;
-        try {
-          skuErrors = await publishUpdate(pluginId, changes, newName, { zipFrom: staged.zip, iconFrom: staged.icon });
-        } catch (error) {
-          // publishUpdate only throws before the swap or after rolling it back, so the
-          // staged zip is still in place and the update can be retried.
-          transitionScan(db, scan.id, outcome, PluginScan.STATUS_PENDING);
-          throw error;
-        }
-        return null;
-      });
-      if (conflict) {
-        res.status(409).send({ error: conflict });
-        return;
+    const conflict = await withPluginLock(pluginId, async () => {
+      if (!transitionScan(db, scan.id, PluginScan.STATUS_PENDING, outcome)) {
+        return 'This update was already reviewed or replaced by a newer upload.';
       }
-    } else {
-      await discardStaged(staged);
+
+      if (action === 'reject') {
+        await discardStaged(staged);
+        await PluginScan.update(review, [PluginScan.ID, scan.id]);
+        return null;
+      }
+
+      const [current] = await Plugin.get([Plugin.VERSION, Plugin.STATUS], [Plugin.ID, pluginId]);
+      const stale = !current || current.status === Plugin.STATUS_DELETED || !isVersionGreater(scan.version, current.version);
+      if (stale) {
+        transitionScan(db, scan.id, outcome, PluginScan.STATUS_SUPERSEDED);
+        await PluginScan.update(review, [PluginScan.ID, scan.id]);
+        await discardStaged(staged);
+        if (!current || current.status === Plugin.STATUS_DELETED) return 'The plugin was deleted, so this update was discarded.';
+        return `The live version (${current.version}) is already newer than ${scan.version}.`;
+      }
+
+      // Publish exactly the bytes that were scanned and reviewed.
+      const stagedBytes = fs.existsSync(staged.zip) ? await fs.promises.readFile(staged.zip) : null;
+      if (!stagedBytes || sha256(stagedBytes) !== scan.zip_sha256) {
+        transitionScan(db, scan.id, outcome, PluginScan.STATUS_PENDING);
+        return 'The staged zip is missing or does not match the scanned upload; reject it and ask for a new upload.';
+      }
+
+      const changes = parseChanges(scan.changes);
+      const newName = changes.find(([column]) => column === Plugin.NAME)?.[1] || plugin.name;
+      try {
+        skuErrors = await publishUpdate(pluginId, changes, newName, { zipFrom: staged.zip, iconFrom: staged.icon });
+      } catch (error) {
+        // publishUpdate only throws before the swap or after rolling it back, so the
+        // staged zip is still in place and the update can be retried.
+        transitionScan(db, scan.id, outcome, PluginScan.STATUS_PENDING);
+        throw error;
+      }
+      // The update is live; failing to save review details must not report otherwise.
+      await PluginScan.update(review, [PluginScan.ID, scan.id]).catch((error) => console.error('Failed to save review details:', error));
+      return null;
+    });
+
+    if (conflict) {
+      res.status(409).send({ error: conflict });
+      return;
     }
-    await PluginScan.update(review, [PluginScan.ID, scan.id]);
 
     res.send({
       message: action === 'approve' ? `Version ${scan.version} is now live.` : `Version ${scan.version} was rejected.`,
@@ -1103,16 +1114,19 @@ router.delete('/:id', pluginAdminLimiter, async (req, res) => {
         return;
       }
       const pluginId = plugin.id;
-      await Plugin.deletePermanently([Plugin.ID, pluginId]);
-      await PluginScan.delete([PluginScan.PLUGIN_ID, pluginId]);
-      try {
-        await discardAllStaged(pluginId);
-        fs.unlinkSync(livePath(pluginId));
-        fs.unlinkSync(liveIconPath(pluginId));
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.log(error);
-      }
+      // In the plugin's queue, so it can't interleave with a publish or review.
+      await withPluginLock(pluginId, async () => {
+        await Plugin.deletePermanently([Plugin.ID, pluginId]);
+        await PluginScan.delete([PluginScan.PLUGIN_ID, pluginId]);
+        try {
+          await discardAllStaged(pluginId);
+          fs.unlinkSync(livePath(pluginId));
+          fs.unlinkSync(liveIconPath(pluginId));
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.log(error);
+        }
+      });
       res.send({ message: 'Plugin deleted successfully' });
       return;
     }
@@ -1250,7 +1264,7 @@ async function scanPublishedUpdate({ row, user, version, name, updates, zipBuffe
     }
 
     const skuErrors = await publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon });
-    await insertScan({ ...base, status: PluginScan.STATUS_APPLIED });
+    await insertScanAfterPublish({ ...base, status: PluginScan.STATUS_APPLIED });
     return { held: false, decision, skuErrors };
   } finally {
     await fs.promises.rm(uploadPath, { force: true });
@@ -1272,7 +1286,14 @@ async function publishUpdate(pluginId, updates, name, { zipFrom, icon, iconFrom 
     livePath: livePath(pluginId),
     backupPath: fileInDir(PLUGINS_DIR, `${pluginId}.${crypto.randomUUID()}.previous`),
     fromPath: zipFrom,
-    commit: () => Plugin.update(updates, [Plugin.ID, pluginId]),
+    commit: async () => {
+      // An UPDATE on a missing row "succeeds" with zero changes; refuse instead,
+      // so the zip swap is rolled back rather than left without a plugin record.
+      if (!db.prepare('SELECT 1 FROM plugin WHERE id = ?').get(pluginId)) {
+        throw new Error(`Plugin ${pluginId} no longer exists`);
+      }
+      await Plugin.update(updates, [Plugin.ID, pluginId]);
+    },
   });
 
   // The update is live at this point, so the icon must not turn it into a failure:
@@ -1319,6 +1340,15 @@ async function applyPluginUpdate(pluginId, updates, name) {
   const skuErrors = await registerPriceChange(pluginId, updates, name);
   await Plugin.update(updates, [Plugin.ID, pluginId]);
   return skuErrors;
+}
+
+/** Record a scan for a version that is already live; never fails the request. */
+async function insertScanAfterPublish(row) {
+  try {
+    await insertScan(row);
+  } catch (error) {
+    console.error(`Published ${row.pluginId} ${row.version} but could not record its scan:`, error);
+  }
 }
 
 async function insertScan({ pluginId, userId, version, previousVersion = null, kind, status, scan, zipBuffer, decision, changes = null }) {
