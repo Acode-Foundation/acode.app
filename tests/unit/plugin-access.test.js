@@ -86,6 +86,7 @@ beforeEach(() => {
     '../lib/modeRegex': {},
     '../lib/pluginScanner': { createKeyedLock: () => (_key, task) => task() },
     '../lib/db': {},
+    '../lib/pluginLicense': { LICENSES: [], normalizeLicense: (license) => license },
     '../lib/rateLimits': { pluginUploadLimiter: (_req, _res, next) => next(), pluginAdminLimiter: (_req, _res, next) => next() },
   };
   const module = { exports: {} };

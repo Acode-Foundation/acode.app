@@ -17,6 +17,7 @@ const sendEmail = require('../lib/sendEmail');
 const { convertPrice } = require('../lib/exchangeRates');
 const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
 const { pluginUploadLimiter, pluginAdminLimiter } = require('../lib/rateLimits');
+const { LICENSES, normalizeLicense } = require('../lib/pluginLicense');
 const db = require('../lib/db');
 const {
   scanUpload,
@@ -30,6 +31,8 @@ const {
   replaceWithRollback,
   createKeyedLock,
   planLiveZipRepair,
+  stagedFilePattern,
+  backupFilePattern,
   transitionScan,
   supersedePendingScans,
 } = require('../lib/pluginScanner');
@@ -41,19 +44,6 @@ const MIN_PRICE = 10;
 const MAX_PRICE = 10000;
 const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
 const ID_REGEX = /^[a-z][a-z0-9._]{3,49}$/i;
-const validLicenses = [
-  'MIT',
-  'GPL-3.0',
-  'Apache-2.0',
-  'BSD-2-Clause',
-  'BSD-3-Clause',
-  'LGPL-3.0',
-  'MPL-2.0',
-  'CDDL-1.0',
-  'EPL-2.0',
-  'AGPL-3.0',
-  'Proprietary',
-];
 
 function legacyModeScore(mode, keyword) {
   if (mode === keyword) return 100;
@@ -1314,15 +1304,6 @@ async function discardStaged({ zip, icon }) {
   await fs.promises.rm(icon, { force: true });
 }
 
-const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
-
-// Exact name patterns: plugin ids contain dots, so a prefix like `foo.` would
-// also match files belonging to `foo.bar`.
-const stagedFilePattern = (pluginId) => new RegExp(`^${escapeRegExp(pluginId)}(-[0-9a-f]{64}\\.(zip|png)|\\.${UUID}\\.upload)$`);
-// `{id}.{timestamp}.{uuid}.previous`; the timestamp orders backups without relying on file times.
-const backupFilePattern = (pluginId) => new RegExp(`^${escapeRegExp(pluginId)}\\.(\\d+)\\.${UUID}\\.previous$`);
-
 async function discardAllStaged(pluginId) {
   if (!fs.existsSync(STAGING_DIR)) return;
   const pattern = stagedFilePattern(pluginId);
@@ -1413,7 +1394,7 @@ async function listBackups(pluginId) {
     const match = pattern.exec(name);
     if (!match) continue;
     const hash = sha256(await fs.promises.readFile(fileInDir(PLUGINS_DIR, name)));
-    backups.push({ name, time: Number(match[1]), hash });
+    backups.push({ name, time: match[1] ? Number(match[1]) : 0, hash });
   }
   return backups.sort((a, b) => b.time - a.time);
 }
@@ -1583,8 +1564,13 @@ function validatePlugin(json, icon, readmeFile) {
     throw new Error('Icon size should be less than 50kb');
   }
 
-  if (license && !validLicenses.includes(license)) {
-    throw new Error('Invalid license');
+  if (license) {
+    const canonical = normalizeLicense(license);
+    if (!canonical) {
+      throw new Error(`Invalid license "${license}". Use one of: ${LICENSES.join(', ')}.`);
+    }
+    // Stored in its canonical spelling (e.g. `mit` -> `MIT`).
+    json.license = canonical;
   }
 
   if (contributors) {

@@ -268,6 +268,16 @@ function supersedePendingScans(db, pluginId) {
   return db.prepare("UPDATE plugin_scan SET status = 'superseded' WHERE plugin_id = ? AND status = 'pending' RETURNING id, zip_sha256").all(pluginId);
 }
 
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+
+// Exact name patterns: plugin ids contain dots, so a prefix like `foo.` would
+// also match files belonging to `foo.bar`.
+const stagedFilePattern = (pluginId) => new RegExp(`^${escapeRegExp(pluginId)}(-[0-9a-f]{64}\\.(zip|png)|\\.${UUID}\\.upload)$`);
+// `{id}.{timestamp}.{uuid}.previous`; the timestamp orders backups without relying on file times.
+// Earlier builds wrote `{id}.{uuid}.previous`; those are still recognised, ordered as oldest.
+const backupFilePattern = (pluginId) => new RegExp(`^${escapeRegExp(pluginId)}\\.(?:(\\d+)\\.)?${UUID}\\.previous$`);
+
 const SEVERITY_ORDER = ['info', 'low', 'medium', 'high', 'critical'];
 
 /**
@@ -327,6 +337,8 @@ module.exports = {
   replaceWithRollback,
   createKeyedLock,
   planLiveZipRepair,
+  stagedFilePattern,
+  backupFilePattern,
   transitionScan,
   supersedePendingScans,
   runScanner,

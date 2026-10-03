@@ -15,6 +15,8 @@ const {
   replaceWithRollback,
   createKeyedLock,
   planLiveZipRepair,
+  stagedFilePattern,
+  backupFilePattern,
   transitionScan,
   supersedePendingScans,
 } = require('../../server/lib/pluginScanner');
@@ -373,5 +375,27 @@ describe('planLiveZipRepair', () => {
   it('reports when nothing can be restored', () => {
     expect(planLiveZipRepair({ liveHash: null, expectedHash: 'v9', strayHashes: new Set(), backups }).action).toBe('stuck');
     expect(planLiveZipRepair({ liveHash: null, strayHashes: new Set(), backups: [] }).action).toBe('stuck');
+  });
+});
+
+describe('plugin file name patterns', () => {
+  const uuid = '11111111-2222-3333-4444-555555555555';
+  const hash = 'a'.repeat(64);
+
+  it('recognises both current and earlier backup names, and only for that plugin', () => {
+    const pattern = backupFilePattern('foo');
+    expect(pattern.exec(`foo.1791000000000.${uuid}.previous`)[1]).toBe('1791000000000');
+    expect(pattern.exec(`foo.${uuid}.previous`)[1]).toBeUndefined();
+    expect(pattern.test(`foo.bar.${uuid}.previous`)).toBe(false);
+    expect(pattern.test(`foo.bar.1791000000000.${uuid}.previous`)).toBe(false);
+  });
+
+  it('matches staged files of one plugin without catching ids that share a prefix', () => {
+    const pattern = stagedFilePattern('foo');
+    expect(pattern.test(`foo-${hash}.zip`)).toBe(true);
+    expect(pattern.test(`foo-${hash}.png`)).toBe(true);
+    expect(pattern.test(`foo.${uuid}.upload`)).toBe(true);
+    expect(pattern.test(`foo.bar-${hash}.zip`)).toBe(false);
+    expect(pattern.test(`foo.bar.${uuid}.upload`)).toBe(false);
   });
 });
