@@ -66,6 +66,7 @@ beforeEach(() => {
   googlePurchase = vi.fn().mockResolvedValue({ data: { purchaseState: 0 } });
   razorpayPayment = vi.fn().mockResolvedValue({ status: 'captured' });
   const dependencies = {
+    'node:crypto': {},
     'node:fs': {},
     'node:path': path,
     jszip: {},
@@ -84,6 +85,7 @@ beforeEach(() => {
     '../lib/exchangeRates': { convertPrice: async (amount) => ({ amount: amount / 10, currency: 'USD', symbol: '$' }) },
     '../lib/modeRegex': {},
     '../lib/pluginScanner': {},
+    '../lib/db': {},
   };
   const module = { exports: {} };
   // Load the real routes, but prohibit any unmocked import from opening the app database or contacting a provider.

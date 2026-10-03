@@ -1,4 +1,6 @@
 const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
 const { execFile } = require('node:child_process');
 
 // https://github.com/Acode-Foundation/plugin_scanner
@@ -102,6 +104,12 @@ function decideUpdate({ report, diff, error }) {
     reasons.push(...(report.verdict.reasons || []));
   }
 
+  // Code the scanner couldn't fully read (size limits, unreadable entries) never ships unreviewed.
+  if (report.verdict.complete === false && recommendation === 'pass') {
+    recommendation = 'review';
+    reasons.push('Scan incomplete: some files hit scanner limits or could not be read');
+  }
+
   return {
     hold: recommendation !== 'pass',
     recommendation,
@@ -110,13 +118,17 @@ function decideUpdate({ report, diff, error }) {
   };
 }
 
+function sha256(buffer) {
+  return crypto.createHash('sha256').update(buffer).digest('hex');
+}
+
 /** Fields shared by every scan row. */
 function scanRowFields({ report, diff }, zipBuffer, decision) {
   return {
     recommendation: decision.recommendation,
     risk: decision.risk,
     reasons: JSON.stringify(decision.reasons),
-    zip_sha256: zipBuffer ? crypto.createHash('sha256').update(zipBuffer).digest('hex') : null,
+    zip_sha256: zipBuffer ? sha256(zipBuffer) : null,
     scanner_version: report?.scanner_version || null,
     rules_version: report?.rules_version || null,
     report: report ? JSON.stringify(report) : null,
@@ -151,6 +163,62 @@ function parseJson(value, fallback = null) {
   } catch {
     return fallback;
   }
+}
+
+const SAFE_FILE_NAME = /^[a-z0-9][a-z0-9._-]*$/i;
+
+/**
+ * Path of a file directly inside `dir`. Names come from plugin ids and hashes,
+ * so anything that could leave the directory is refused.
+ * @param {string} dir absolute directory
+ * @param {string} name file name without separators
+ */
+function fileInDir(dir, name) {
+  if (!SAFE_FILE_NAME.test(name)) throw new Error(`Unsafe file name: ${name}`);
+  const root = path.resolve(dir);
+  const file = path.resolve(root, name);
+  if (path.dirname(file) !== root) throw new Error(`Unsafe file name: ${name}`);
+  return file;
+}
+
+/**
+ * Move `fromPath` over `livePath`, then run `commit` (the database update).
+ * If `commit` throws, the previous live file and the upload are both put back,
+ * so a failed publish never leaves new code live with old metadata.
+ * @param {{ livePath: string, backupPath: string, fromPath: string, commit: () => Promise<void> }} options
+ */
+async function replaceWithRollback({ livePath, backupPath, fromPath, commit }) {
+  const hadLive = fs.existsSync(livePath);
+  if (hadLive) await fs.promises.copyFile(livePath, backupPath);
+  await fs.promises.rename(fromPath, livePath);
+  try {
+    await commit();
+  } catch (error) {
+    await fs.promises.rename(livePath, fromPath);
+    if (hadLive) await fs.promises.rename(backupPath, livePath);
+    throw error;
+  }
+  await fs.promises.rm(backupPath, { force: true });
+}
+
+/**
+ * Atomically move a scan from one status to another. Returns false if another
+ * request changed it first, which is how approve, reject, and supersede avoid
+ * acting on the same held update twice.
+ * @param {import('better-sqlite3').Database} db
+ */
+function transitionScan(db, scanId, from, to) {
+  return db.prepare('UPDATE plugin_scan SET status = ? WHERE id = ? AND status = ?').run(to, scanId, from).changes === 1;
+}
+
+/**
+ * Mark every pending update of a plugin as superseded and return them, so
+ * their staged files can be removed.
+ * @param {import('better-sqlite3').Database} db
+ * @returns {Array<{ id: number, zip_sha256: string | null }>}
+ */
+function supersedePendingScans(db, pluginId) {
+  return db.prepare("UPDATE plugin_scan SET status = 'superseded' WHERE plugin_id = ? AND status = 'pending' RETURNING id, zip_sha256").all(pluginId);
 }
 
 const SEVERITY_ORDER = ['info', 'low', 'medium', 'high', 'critical'];
@@ -207,6 +275,11 @@ function presentScan(row, { isAdmin = false } = {}) {
 
 module.exports = {
   UPDATE_COLUMNS,
+  sha256,
+  fileInDir,
+  replaceWithRollback,
+  transitionScan,
+  supersedePendingScans,
   runScanner,
   scanUpload,
   decideUpdate,

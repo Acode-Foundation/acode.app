@@ -1,3 +1,7 @@
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const Database = require('better-sqlite3');
 const {
   runScanner,
   scanUpload,
@@ -6,6 +10,11 @@ const {
   parseChanges,
   presentScan,
   scanRowFields,
+  sha256,
+  fileInDir,
+  replaceWithRollback,
+  transitionScan,
+  supersedePendingScans,
 } = require('../../server/lib/pluginScanner');
 
 const report = (recommendation, extra = {}) => ({
@@ -128,6 +137,14 @@ describe('decideUpdate', () => {
     expect(decideUpdate({ report: report('review'), diff: null, error: null }).hold).toBe(true);
   });
 
+  it('holds a passing diff when the new version could not be fully scanned', () => {
+    const incomplete = report('review');
+    incomplete.verdict.complete = false;
+    const decision = decideUpdate({ report: incomplete, diff: diff('pass'), error: null });
+    expect(decision).toMatchObject({ hold: true, recommendation: 'review' });
+    expect(decision.reasons.at(-1)).toMatch(/Scan incomplete/);
+  });
+
   it('fails closed when the scanner could not run', () => {
     const decision = decideUpdate({ report: null, diff: null, error: 'scanner not installed' });
     expect(decision).toMatchObject({ hold: true, recommendation: 'error', risk: null });
@@ -193,5 +210,96 @@ describe('presentScan', () => {
     expect(view.newFindings[0].id).toBe('network.suspicious_endpoint');
     expect(view.changedFiles.changed).toEqual(['main.js']);
     expect(view.complete).toBe(true);
+  });
+});
+
+describe('fileInDir', () => {
+  const dir = path.resolve('/srv/data/plugins');
+
+  it('resolves plain names inside the directory', () => {
+    expect(fileInDir(dir, 'com.example.p.zip')).toBe(path.join(dir, 'com.example.p.zip'));
+    const staged = `com.example.p-${'a'.repeat(64)}.zip`;
+    expect(fileInDir(dir, staged)).toBe(path.join(dir, staged));
+  });
+
+  it('refuses names that could leave the directory', () => {
+    for (const name of ['../db.sqlite3', 'a/../../x', '/etc/passwd', '..', '.hidden', 'a\\b', '']) {
+      expect(() => fileInDir(dir, name)).toThrow(/Unsafe file name/);
+    }
+  });
+});
+
+describe('replaceWithRollback', () => {
+  let dir;
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'plugin-publish-'));
+  });
+  afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  const files = () => ({
+    livePath: path.join(dir, 'p.zip'),
+    backupPath: path.join(dir, 'p.previous'),
+    fromPath: path.join(dir, 'upload.zip'),
+  });
+
+  it('publishes the upload and removes the backup when the commit succeeds', async () => {
+    const paths = files();
+    fs.writeFileSync(paths.livePath, 'old');
+    fs.writeFileSync(paths.fromPath, 'new');
+    await replaceWithRollback({ ...paths, commit: async () => {} });
+    expect(fs.readFileSync(paths.livePath, 'utf8')).toBe('new');
+    expect(fs.existsSync(paths.fromPath)).toBe(false);
+    expect(fs.existsSync(paths.backupPath)).toBe(false);
+  });
+
+  it('restores the live zip and the upload when the commit fails', async () => {
+    const paths = files();
+    fs.writeFileSync(paths.livePath, 'old');
+    fs.writeFileSync(paths.fromPath, 'new');
+    const commit = () => Promise.reject(new Error('db down'));
+    await expect(replaceWithRollback({ ...paths, commit })).rejects.toThrow('db down');
+    expect(fs.readFileSync(paths.livePath, 'utf8')).toBe('old');
+    expect(fs.readFileSync(paths.fromPath, 'utf8')).toBe('new');
+  });
+
+  it('works for a plugin without a live zip yet', async () => {
+    const paths = files();
+    fs.writeFileSync(paths.fromPath, 'new');
+    const commit = () => Promise.reject(new Error('fail'));
+    await expect(replaceWithRollback({ ...paths, commit })).rejects.toThrow('fail');
+    expect(fs.existsSync(paths.livePath)).toBe(false);
+    expect(fs.readFileSync(paths.fromPath, 'utf8')).toBe('new');
+  });
+});
+
+describe('scan status transitions', () => {
+  let db;
+  beforeEach(() => {
+    db = new Database(':memory:');
+    db.exec('CREATE TABLE plugin_scan (id INTEGER PRIMARY KEY, plugin_id TEXT, status TEXT, zip_sha256 TEXT)');
+    const insert = db.prepare('INSERT INTO plugin_scan (plugin_id, status, zip_sha256) VALUES (?, ?, ?)');
+    insert.run('p', 'pending', sha256(Buffer.from('one')));
+    insert.run('p', 'applied', null);
+    insert.run('other', 'pending', 'ff');
+  });
+  afterEach(() => db.close());
+
+  const status = (id) => db.prepare('SELECT status FROM plugin_scan WHERE id = ?').get(id).status;
+
+  it('lets only one reviewer claim a pending update', () => {
+    expect(transitionScan(db, 1, 'pending', 'approved')).toBe(true);
+    expect(transitionScan(db, 1, 'pending', 'rejected')).toBe(false);
+    expect(status(1)).toBe('approved');
+  });
+
+  it('supersedes only still-pending updates of the same plugin', () => {
+    transitionScan(db, 1, 'pending', 'approved');
+    expect(supersedePendingScans(db, 'p')).toEqual([]);
+    expect(status(1)).toBe('approved');
+
+    db.prepare("INSERT INTO plugin_scan (plugin_id, status, zip_sha256) VALUES ('p', 'pending', 'abc')").run();
+    expect(supersedePendingScans(db, 'p')).toEqual([{ id: 4, zip_sha256: 'abc' }]);
+    expect(status(4)).toBe('superseded');
+    expect(status(3)).toBe('pending');
   });
 });

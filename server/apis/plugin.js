@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const JSZip = require('jszip');
@@ -15,7 +16,20 @@ const getRazorpay = require('../lib/razorpay');
 const sendEmail = require('../lib/sendEmail');
 const { convertPrice } = require('../lib/exchangeRates');
 const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
-const { scanUpload, decideUpdate, scanRowFields, serializeChanges, parseChanges, presentScan } = require('../lib/pluginScanner');
+const db = require('../lib/db');
+const {
+  scanUpload,
+  decideUpdate,
+  scanRowFields,
+  serializeChanges,
+  parseChanges,
+  presentScan,
+  sha256,
+  fileInDir,
+  replaceWithRollback,
+  transitionScan,
+  supersedePendingScans,
+} = require('../lib/pluginScanner');
 
 const androidpublisher = google.androidpublisher('v3');
 
@@ -696,6 +710,14 @@ router.put('/', async (req, res) => {
       return;
     }
 
+    // Checked up front so the Play SKU call can't fail halfway through publishing.
+    if (price && (price < MIN_PRICE || price > MAX_PRICE)) {
+      res.status(400).send({
+        error: `Price should be between ₹${MIN_PRICE} and ₹${MAX_PRICE}`,
+      });
+      return;
+    }
+
     const [row] = await Plugin.get([Plugin.ID, Plugin.USER_ID, Plugin.VERSION, Plugin.NAME, Plugin.PRICE, Plugin.STATUS], [Plugin.ID, pluginId]);
     if (!row || row.user_id !== user.id) {
       res.status(404).send({ error: 'Plugin not found' });
@@ -758,8 +780,10 @@ router.put('/', async (req, res) => {
     // Users install published plugins automatically, so new code for a published
     // plugin is scanned before it replaces the live zip. Unpublished plugins are
     // reviewed as a whole when an admin approves them.
-    if (packageChanged && row.status === Plugin.STATUS_APPROVED) {
-      const outcome = await scanPublishedUpdate({ row, user, version, updates, zipBuffer: pluginZip.data, icon });
+    const isPublished = row.status === Plugin.STATUS_APPROVED;
+    let skuErrors;
+    if (packageChanged && isPublished) {
+      const outcome = await scanPublishedUpdate({ row, user, version, name, updates, zipBuffer: pluginZip.data, icon });
       if (outcome.held) {
         res.send({
           message: `Version ${version} was submitted for review and will go live once an admin approves it.`,
@@ -769,12 +793,16 @@ router.put('/', async (req, res) => {
         notifyHeldUpdate({ pluginId, name, version, user, decision: outcome.decision });
         return;
       }
-    }
-
-    const skuErrors = await applyPluginUpdate(pluginId, updates, name);
-
-    if (packageChanged && row.status !== Plugin.STATUS_APPROVED) {
-      await savePlugin(pluginId, pluginZip.data, icon);
+      skuErrors = outcome.skuErrors;
+    } else if (packageChanged) {
+      const uploadPath = await writeUpload(pluginId, pluginZip.data);
+      try {
+        skuErrors = await publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon });
+      } finally {
+        await fs.promises.rm(uploadPath, { force: true });
+      }
+    } else {
+      skuErrors = await applyPluginUpdate(pluginId, updates, name);
     }
 
     const response = { message: 'Plugin updated successfully' };
@@ -785,7 +813,7 @@ router.put('/', async (req, res) => {
     }
     res.send(response);
 
-    if (packageChanged && row.status !== Plugin.STATUS_APPROVED) {
+    if (packageChanged && !isPublished) {
       await recordScan({
         pluginId,
         userId: user.id,
@@ -885,33 +913,52 @@ router.post('/scans/:scanId/review', async (req, res) => {
       return;
     }
 
+    // Claim the row first: a concurrent review or a newer upload (which supersedes
+    // pending rows) can then no longer act on it.
+    const outcome = action === 'approve' ? PluginScan.STATUS_APPROVED : PluginScan.STATUS_REJECTED;
+    if (!transitionScan(db, scan.id, PluginScan.STATUS_PENDING, outcome)) {
+      res.status(409).send({ error: 'This update was already reviewed or replaced by a newer upload.' });
+      return;
+    }
+
     const review = [
       [PluginScan.REVIEWED_BY, user.id],
       [PluginScan.REVIEWED_AT, moment().format('YYYY-MM-DD HH:mm:ss')],
       [PluginScan.REVIEW_MESSAGE, reason || null],
     ];
+    const staged = { zip: stagedZipPath(pluginId, scan.zip_sha256), icon: stagedIconPath(pluginId, scan.zip_sha256) };
 
     let skuErrors = [];
     if (action === 'approve') {
-      if (!fs.existsSync(stagedZipPath(pluginId))) {
-        res.status(409).send({ error: 'The staged zip for this update is missing; ask the developer to upload it again.' });
-        return;
-      }
       if (!isVersionGreater(scan.version, plugin.version)) {
-        await PluginScan.update([[PluginScan.STATUS, PluginScan.STATUS_SUPERSEDED], ...review], [PluginScan.ID, scan.id]);
+        transitionScan(db, scan.id, outcome, PluginScan.STATUS_SUPERSEDED);
+        await PluginScan.update(review, [PluginScan.ID, scan.id]);
+        await discardStaged(staged);
         res.status(409).send({ error: `The live version (${plugin.version}) is already newer than ${scan.version}.` });
         return;
       }
 
-      await promoteStaged(pluginId);
+      // Publish exactly the bytes that were scanned and reviewed.
+      const stagedBytes = fs.existsSync(staged.zip) ? await fs.promises.readFile(staged.zip) : null;
+      if (!stagedBytes || sha256(stagedBytes) !== scan.zip_sha256) {
+        transitionScan(db, scan.id, outcome, PluginScan.STATUS_PENDING);
+        res.status(409).send({ error: 'The staged zip is missing or does not match the scanned upload; reject it and ask for a new upload.' });
+        return;
+      }
+
       const changes = parseChanges(scan.changes);
       const newName = changes.find(([column]) => column === Plugin.NAME)?.[1] || plugin.name;
-      skuErrors = await applyPluginUpdate(pluginId, changes, newName);
-      await PluginScan.update([[PluginScan.STATUS, PluginScan.STATUS_APPROVED], ...review], [PluginScan.ID, scan.id]);
+      try {
+        skuErrors = await publishUpdate(pluginId, changes, newName, { zipFrom: staged.zip, iconFrom: staged.icon });
+      } catch (error) {
+        // publishUpdate restored the live zip and the staged file, so the update can be retried.
+        transitionScan(db, scan.id, outcome, PluginScan.STATUS_PENDING);
+        throw error;
+      }
     } else {
-      await discardStaged(pluginId);
-      await PluginScan.update([[PluginScan.STATUS, PluginScan.STATUS_REJECTED], ...review], [PluginScan.ID, scan.id]);
+      await discardStaged(staged);
     }
+    await PluginScan.update(review, [PluginScan.ID, scan.id]);
 
     res.send({
       message: action === 'approve' ? `Version ${scan.version} is now live.` : `Version ${scan.version} was rejected.`,
@@ -1026,10 +1073,10 @@ router.delete('/:id', async (req, res) => {
     if (mode === 'hard' && user.isAdmin) {
       await Plugin.deletePermanently([Plugin.ID, id]);
       await PluginScan.delete([PluginScan.PLUGIN_ID, id]);
-      await discardStaged(id);
       try {
-        fs.unlinkSync(path.join(__dirname, `../../data/plugins/${id}.zip`));
-        fs.unlinkSync(path.join(__dirname, `../../data/icons/${id}.png`));
+        await discardAllStaged(id);
+        fs.unlinkSync(livePath(id));
+        fs.unlinkSync(liveIconPath(id));
       } catch (error) {
         // eslint-disable-next-line no-console
         console.log(error);
@@ -1106,33 +1153,41 @@ async function exploreZip(file) {
 
 const PLUGINS_DIR = path.resolve(__dirname, '../../data/plugins');
 const ICONS_DIR = path.resolve(__dirname, '../../data/icons');
-// Held updates wait here until an admin reviews them.
+// Held updates wait here until an admin reviews them, one file per upload.
 const STAGING_DIR = path.join(PLUGINS_DIR, 'pending');
 
-const livePath = (id) => path.join(PLUGINS_DIR, `${id}.zip`);
-const stagedZipPath = (id) => path.join(STAGING_DIR, `${id}.zip`);
-const stagedIconPath = (id) => path.join(STAGING_DIR, `${id}.png`);
+const livePath = (id) => fileInDir(PLUGINS_DIR, `${id}.zip`);
+const liveIconPath = (id) => fileInDir(ICONS_DIR, `${id}.png`);
+// Keyed by the zip's hash so a newer upload can never replace the bytes an admin is reviewing.
+const stagedZipPath = (id, hash) => fileInDir(STAGING_DIR, `${id}-${hash}.zip`);
+const stagedIconPath = (id, hash) => fileInDir(STAGING_DIR, `${id}-${hash}.png`);
 
 async function savePlugin(id, zipBuffer, icon) {
   await fs.promises.writeFile(livePath(id), zipBuffer);
-  await fs.promises.writeFile(path.join(ICONS_DIR, `${id}.png`), icon, 'base64');
+  await fs.promises.writeFile(liveIconPath(id), icon, 'base64');
+}
+
+/** Write an upload to a private temporary file next to the staged updates. */
+async function writeUpload(pluginId, zipBuffer) {
+  await fs.promises.mkdir(STAGING_DIR, { recursive: true });
+  const file = fileInDir(STAGING_DIR, `${pluginId}.${crypto.randomUUID()}.upload`);
+  await fs.promises.writeFile(file, zipBuffer);
+  return file;
 }
 
 /**
  * Scan a new version of a published plugin against the live zip. A passing
- * update replaces the live zip immediately; anything else (including a scanner
+ * update is published immediately; anything else (including a scanner
  * failure) is staged and recorded as a pending update for admin review.
- * @returns {Promise<{ held: boolean, decision: ReturnType<typeof decideUpdate> }>}
+ * @returns {Promise<{ held: boolean, decision: ReturnType<typeof decideUpdate>, skuErrors: object[] }>}
  */
-async function scanPublishedUpdate({ row, user, version, updates, zipBuffer, icon }) {
+async function scanPublishedUpdate({ row, user, version, name, updates, zipBuffer, icon }) {
   const pluginId = row.id;
-  await fs.promises.mkdir(STAGING_DIR, { recursive: true });
-  // Unique name so a crash mid-request can't swap the zip behind an older pending row.
-  const uploadPath = path.join(STAGING_DIR, `${pluginId}.${process.pid}.${Date.now()}.upload.zip`);
-  await fs.promises.writeFile(uploadPath, zipBuffer);
+  const uploadPath = await writeUpload(pluginId, zipBuffer);
 
   try {
-    const scan = await scanUpload({ uploadPath, livePath: fs.existsSync(livePath(pluginId)) ? livePath(pluginId) : null });
+    const live = livePath(pluginId);
+    const scan = await scanUpload({ uploadPath, livePath: fs.existsSync(live) ? live : null });
     const decision = decideUpdate(scan);
     const base = {
       pluginId,
@@ -1145,57 +1200,84 @@ async function scanPublishedUpdate({ row, user, version, updates, zipBuffer, ico
       decision,
     };
 
-    // Whatever happens, an older pending update is replaced by this upload.
-    await PluginScan.update(
-      [PluginScan.STATUS, PluginScan.STATUS_SUPERSEDED],
-      [
-        [PluginScan.PLUGIN_ID, pluginId],
-        [PluginScan.STATUS, PluginScan.STATUS_PENDING],
-      ],
-    );
-
-    if (decision.hold) {
-      await fs.promises.rename(uploadPath, stagedZipPath(pluginId));
-      await fs.promises.writeFile(stagedIconPath(pluginId), icon, 'base64');
-      await insertScan({ ...base, status: PluginScan.STATUS_PENDING, changes: serializeChanges(updates) });
-      return { held: true, decision };
+    // Whatever happens, older pending updates are replaced by this upload.
+    for (const superseded of supersedePendingScans(db, pluginId)) {
+      if (superseded.zip_sha256) {
+        await discardStaged({ zip: stagedZipPath(pluginId, superseded.zip_sha256), icon: stagedIconPath(pluginId, superseded.zip_sha256) });
+      }
     }
 
-    await fs.promises.rename(uploadPath, livePath(pluginId));
-    await fs.promises.writeFile(path.join(ICONS_DIR, `${pluginId}.png`), icon, 'base64');
-    await discardStaged(pluginId);
+    if (decision.hold) {
+      const hash = sha256(zipBuffer);
+      await fs.promises.rename(uploadPath, stagedZipPath(pluginId, hash));
+      await fs.promises.writeFile(stagedIconPath(pluginId, hash), icon, 'base64');
+      await insertScan({ ...base, status: PluginScan.STATUS_PENDING, changes: serializeChanges(updates) });
+      return { held: true, decision, skuErrors: [] };
+    }
+
+    const skuErrors = await publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon });
     await insertScan({ ...base, status: PluginScan.STATUS_APPLIED });
-    return { held: false, decision };
+    return { held: false, decision, skuErrors };
   } finally {
     await fs.promises.rm(uploadPath, { force: true });
   }
 }
 
-/** Move a held update's zip and icon into place. */
-async function promoteStaged(pluginId) {
-  await fs.promises.rename(stagedZipPath(pluginId), livePath(pluginId));
-  if (fs.existsSync(stagedIconPath(pluginId))) {
-    await fs.promises.rename(stagedIconPath(pluginId), path.join(ICONS_DIR, `${pluginId}.png`));
+/**
+ * Make a new zip live together with its plugin changes. The Play SKU call
+ * (remote, can throw) runs before anything local changes, and the old zip is
+ * restored if the database update fails, so live code and metadata never drift.
+ * @param {string} pluginId
+ * @param {Array<[string, any]>} updates
+ * @param {string} name plugin name to register the SKU under
+ * @param {{ zipFrom: string, icon?: string, iconFrom?: string }} source
+ */
+async function publishUpdate(pluginId, updates, name, { zipFrom, icon, iconFrom }) {
+  const skuErrors = await registerPriceChange(pluginId, updates, name);
+  await replaceWithRollback({
+    livePath: livePath(pluginId),
+    backupPath: fileInDir(PLUGINS_DIR, `${pluginId}.previous`),
+    fromPath: zipFrom,
+    commit: () => Plugin.update(updates, [Plugin.ID, pluginId]),
+  });
+
+  // The icon is cosmetic and safe to rewrite, so it goes last.
+  if (iconFrom && fs.existsSync(iconFrom)) {
+    await fs.promises.rename(iconFrom, liveIconPath(pluginId));
+  } else if (icon) {
+    await fs.promises.writeFile(liveIconPath(pluginId), icon, 'base64');
+  }
+  return skuErrors;
+}
+
+async function discardStaged({ zip, icon }) {
+  await fs.promises.rm(zip, { force: true });
+  await fs.promises.rm(icon, { force: true });
+}
+
+async function discardAllStaged(pluginId) {
+  if (!fs.existsSync(STAGING_DIR)) return;
+  for (const name of await fs.promises.readdir(STAGING_DIR)) {
+    if (name.startsWith(`${pluginId}-`) || name.startsWith(`${pluginId}.`)) {
+      await fs.promises.rm(fileInDir(STAGING_DIR, name), { force: true });
+    }
   }
 }
 
-async function discardStaged(pluginId) {
-  await fs.promises.rm(stagedZipPath(pluginId), { force: true });
-  await fs.promises.rm(stagedIconPath(pluginId), { force: true });
+/** Register the Play SKU when the price changed and is non-zero. */
+async function registerPriceChange(pluginId, updates, name) {
+  const priceChange = updates.find(([column]) => column === Plugin.PRICE);
+  return priceChange?.[1] ? registerSKU(name, pluginId, priceChange[1]) : [];
 }
 
 /**
- * Apply plugin column changes, registering the Play SKU when the price changed.
+ * Apply plugin column changes that don't touch the zip.
  * @param {string} pluginId
  * @param {Array<[string, any]>} updates
  * @param {string} name plugin name to register the SKU under
  */
 async function applyPluginUpdate(pluginId, updates, name) {
-  let skuErrors = [];
-  const priceChange = updates.find(([column]) => column === Plugin.PRICE);
-  if (priceChange?.[1]) {
-    skuErrors = await registerSKU(name, pluginId, priceChange[1]);
-  }
+  const skuErrors = await registerPriceChange(pluginId, updates, name);
   await Plugin.update(updates, [Plugin.ID, pluginId]);
   return skuErrors;
 }
