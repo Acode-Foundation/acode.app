@@ -177,7 +177,7 @@ function fileInDir(dir, name) {
   if (!SAFE_FILE_NAME.test(name)) throw new Error(`Unsafe file name: ${name}`);
   const root = path.resolve(dir);
   const file = path.resolve(root, name);
-  if (path.dirname(file) !== root) throw new Error(`Unsafe file name: ${name}`);
+  if (!file.startsWith(root + path.sep) || path.dirname(file) !== root) throw new Error(`Unsafe file name: ${name}`);
   return file;
 }
 

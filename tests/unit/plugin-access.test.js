@@ -86,6 +86,7 @@ beforeEach(() => {
     '../lib/modeRegex': {},
     '../lib/pluginScanner': {},
     '../lib/db': {},
+    '../lib/rateLimits': { pluginUploadLimiter: (_req, _res, next) => next(), pluginAdminLimiter: (_req, _res, next) => next() },
   };
   const module = { exports: {} };
   // Load the real routes, but prohibit any unmocked import from opening the app database or contacting a provider.

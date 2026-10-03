@@ -16,6 +16,7 @@ const getRazorpay = require('../lib/razorpay');
 const sendEmail = require('../lib/sendEmail');
 const { convertPrice } = require('../lib/exchangeRates');
 const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
+const { pluginUploadLimiter, pluginAdminLimiter } = require('../lib/rateLimits');
 const db = require('../lib/db');
 const {
   scanUpload,
@@ -544,7 +545,7 @@ router.post('/order', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', pluginUploadLimiter, async (req, res) => {
   try {
     const user = await getWebLoggedInUser(req);
     if (!user) {
@@ -675,7 +676,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/', async (req, res) => {
+router.put('/', pluginUploadLimiter, async (req, res) => {
   try {
     const user = await getWebLoggedInUser(req);
 
@@ -885,7 +886,7 @@ router.get('/:id/scans', async (req, res) => {
   }
 });
 
-router.post('/scans/:scanId/review', async (req, res) => {
+router.post('/scans/:scanId/review', pluginAdminLimiter, async (req, res) => {
   try {
     const user = await getWebLoggedInUser(req);
     if (!user?.isAdmin) {
@@ -1059,7 +1060,7 @@ router.patch('/:id/supported-editor', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', pluginAdminLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const user = await getWebLoggedInUser(req);
@@ -1071,12 +1072,19 @@ router.delete('/:id', async (req, res) => {
     }
 
     if (mode === 'hard' && user.isAdmin) {
-      await Plugin.deletePermanently([Plugin.ID, id]);
-      await PluginScan.delete([PluginScan.PLUGIN_ID, id]);
+      // File paths use the stored id, never the raw URL parameter.
+      const [plugin] = await Plugin.get([Plugin.ID], [Plugin.ID, id]);
+      if (!plugin) {
+        res.status(404).send({ error: 'Plugin not found' });
+        return;
+      }
+      const pluginId = plugin.id;
+      await Plugin.deletePermanently([Plugin.ID, pluginId]);
+      await PluginScan.delete([PluginScan.PLUGIN_ID, pluginId]);
       try {
-        await discardAllStaged(id);
-        fs.unlinkSync(livePath(id));
-        fs.unlinkSync(liveIconPath(id));
+        await discardAllStaged(pluginId);
+        fs.unlinkSync(livePath(pluginId));
+        fs.unlinkSync(liveIconPath(pluginId));
       } catch (error) {
         // eslint-disable-next-line no-console
         console.log(error);
