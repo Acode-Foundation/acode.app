@@ -1,10 +1,18 @@
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
+const { getLoginSession } = require('./helpers');
 
-// Logged-in routes are keyed by session so developers behind one IP (an office,
-// a carrier NAT) don't share a bucket; anything else falls back to the client IP.
-function sessionOrIp(req) {
-  const token = req.cookies?.token || req.headers['x-auth-token'];
-  return token ? `session:${token}` : ipKeyGenerator(req.ip);
+/**
+ * Bucket key for a request. Signed-in users are keyed by account, so developers
+ * behind one IP (an office, a carrier NAT) don't share a bucket. Only a token
+ * that matches a live login session counts; made-up tokens fall back to the
+ * client IP, so rotating them doesn't buy a fresh bucket.
+ * @param {(req: object) => Promise<{ user_id: number } | null>} lookupSession
+ */
+function createUserOrIpKey(lookupSession) {
+  return async (req) => {
+    const session = await lookupSession(req).catch(() => null);
+    return session ? `user:${session.user_id}` : ipKeyGenerator(req.ip);
+  };
 }
 
 function limiter(limit, windowMinutes) {
@@ -13,12 +21,13 @@ function limiter(limit, windowMinutes) {
     limit,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: sessionOrIp,
+    keyGenerator: createUserOrIpKey(getLoginSession),
     message: { error: 'Too many requests, please try again later.' },
   });
 }
 
 module.exports = {
+  createUserOrIpKey,
   // Each upload is unzipped and run through the plugin scanner.
   pluginUploadLimiter: limiter(10, 15),
   // Admin moderation and deletion touch plugin files on disk.

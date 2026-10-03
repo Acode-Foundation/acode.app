@@ -13,6 +13,7 @@ const {
   sha256,
   fileInDir,
   replaceWithRollback,
+  createKeyedLock,
   transitionScan,
   supersedePendingScans,
 } = require('../../server/lib/pluginScanner');
@@ -301,5 +302,41 @@ describe('scan status transitions', () => {
     expect(supersedePendingScans(db, 'p')).toEqual([{ id: 4, zip_sha256: 'abc' }]);
     expect(status(4)).toBe('superseded');
     expect(status(3)).toBe('pending');
+  });
+});
+
+describe('createKeyedLock', () => {
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 5));
+
+  it('runs tasks for the same plugin one at a time, in order', async () => {
+    const withLock = createKeyedLock();
+    const events = [];
+    const task = (name) => async () => {
+      events.push(`start ${name}`);
+      await tick();
+      events.push(`end ${name}`);
+      return name;
+    };
+    const results = await Promise.all([withLock('p', task('a')), withLock('p', task('b')), withLock('p', task('c'))]);
+    expect(results).toEqual(['a', 'b', 'c']);
+    expect(events).toEqual(['start a', 'end a', 'start b', 'end b', 'start c', 'end c']);
+  });
+
+  it('lets different plugins run in parallel', async () => {
+    const withLock = createKeyedLock();
+    const events = [];
+    const task = (name) => async () => {
+      events.push(`start ${name}`);
+      await tick();
+      events.push(`end ${name}`);
+    };
+    await Promise.all([withLock('p', task('p')), withLock('q', task('q'))]);
+    expect(events.slice(0, 2).sort()).toEqual(['start p', 'start q']);
+  });
+
+  it('releases the lock when a task throws', async () => {
+    const withLock = createKeyedLock();
+    await expect(withLock('p', () => Promise.reject(new Error('boom')))).rejects.toThrow('boom');
+    await expect(withLock('p', async () => 'next')).resolves.toBe('next');
   });
 });

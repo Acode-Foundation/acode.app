@@ -28,6 +28,7 @@ const {
   sha256,
   fileInDir,
   replaceWithRollback,
+  createKeyedLock,
   transitionScan,
   supersedePendingScans,
 } = require('../lib/pluginScanner');
@@ -781,10 +782,45 @@ router.put('/', pluginUploadLimiter, async (req, res) => {
     // Users install published plugins automatically, so new code for a published
     // plugin is scanned before it replaces the live zip. Unpublished plugins are
     // reviewed as a whole when an admin approves them.
-    const isPublished = row.status === Plugin.STATUS_APPROVED;
     let skuErrors;
-    if (packageChanged && isPublished) {
-      const outcome = await scanPublishedUpdate({ row, user, version, name, updates, zipBuffer: pluginZip.data, icon });
+    if (packageChanged) {
+      // One publish per plugin at a time: file swaps and row updates must not interleave.
+      const outcome = await withPluginLock(pluginId, async () => {
+        const [current] = await Plugin.get([Plugin.VERSION, Plugin.STATUS], [Plugin.ID, pluginId]);
+        // Another upload may have been published while this one waited.
+        if (!current || !isVersionGreater(version, current.version)) {
+          return { conflict: current?.version };
+        }
+
+        const live = { ...row, version: current.version };
+        if (current.status === Plugin.STATUS_APPROVED) {
+          return scanPublishedUpdate({ row: live, user, version, name, updates, zipBuffer: pluginZip.data, icon });
+        }
+
+        // Unpublished plugins are reviewed as a whole on approval; record the scan of
+        // exactly these bytes for the reviewer, then publish.
+        const uploadPath = await writeUpload(pluginId, pluginZip.data);
+        try {
+          await recordScan({
+            pluginId,
+            userId: user.id,
+            version,
+            previousVersion: current.version,
+            kind: PluginScan.KIND_UPDATE,
+            status: PluginScan.STATUS_APPLIED,
+            uploadPath,
+            zipBuffer: pluginZip.data,
+          });
+          return { held: false, skuErrors: await publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon }) };
+        } finally {
+          await fs.promises.rm(uploadPath, { force: true });
+        }
+      });
+
+      if (outcome.conflict !== undefined) {
+        res.status(409).send({ error: `Version ${outcome.conflict} was published in the meantime; upload a version greater than it.` });
+        return;
+      }
       if (outcome.held) {
         res.send({
           message: `Version ${version} was submitted for review and will go live once an admin approves it.`,
@@ -795,13 +831,6 @@ router.put('/', pluginUploadLimiter, async (req, res) => {
         return;
       }
       skuErrors = outcome.skuErrors;
-    } else if (packageChanged) {
-      const uploadPath = await writeUpload(pluginId, pluginZip.data);
-      try {
-        skuErrors = await publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon });
-      } finally {
-        await fs.promises.rm(uploadPath, { force: true });
-      }
     } else {
       skuErrors = await applyPluginUpdate(pluginId, updates, name);
     }
@@ -813,19 +842,6 @@ router.put('/', pluginUploadLimiter, async (req, res) => {
       console.error('Google Play SKU registration had errors:', skuErrors);
     }
     res.send(response);
-
-    if (packageChanged && !isPublished) {
-      await recordScan({
-        pluginId,
-        userId: user.id,
-        version,
-        previousVersion: row.version,
-        kind: PluginScan.KIND_UPDATE,
-        status: PluginScan.STATUS_APPLIED,
-        uploadPath: livePath(pluginId),
-        zipBuffer: pluginZip.data,
-      });
-    }
   } catch (error) {
     console.error('Error updating plugin:', error);
     if (!res.headersSent) {
@@ -931,30 +947,38 @@ router.post('/scans/:scanId/review', pluginAdminLimiter, async (req, res) => {
 
     let skuErrors = [];
     if (action === 'approve') {
-      if (!isVersionGreater(scan.version, plugin.version)) {
-        transitionScan(db, scan.id, outcome, PluginScan.STATUS_SUPERSEDED);
-        await PluginScan.update(review, [PluginScan.ID, scan.id]);
-        await discardStaged(staged);
-        res.status(409).send({ error: `The live version (${plugin.version}) is already newer than ${scan.version}.` });
-        return;
-      }
+      const conflict = await withPluginLock(pluginId, async () => {
+        // Read the live version inside the lock: an upload may have published since the request started.
+        const [current] = await Plugin.get([Plugin.VERSION], [Plugin.ID, pluginId]);
+        if (!current || !isVersionGreater(scan.version, current.version)) {
+          transitionScan(db, scan.id, outcome, PluginScan.STATUS_SUPERSEDED);
+          await PluginScan.update(review, [PluginScan.ID, scan.id]);
+          await discardStaged(staged);
+          return `The live version (${current?.version}) is already newer than ${scan.version}.`;
+        }
 
-      // Publish exactly the bytes that were scanned and reviewed.
-      const stagedBytes = fs.existsSync(staged.zip) ? await fs.promises.readFile(staged.zip) : null;
-      if (!stagedBytes || sha256(stagedBytes) !== scan.zip_sha256) {
-        transitionScan(db, scan.id, outcome, PluginScan.STATUS_PENDING);
-        res.status(409).send({ error: 'The staged zip is missing or does not match the scanned upload; reject it and ask for a new upload.' });
-        return;
-      }
+        // Publish exactly the bytes that were scanned and reviewed.
+        const stagedBytes = fs.existsSync(staged.zip) ? await fs.promises.readFile(staged.zip) : null;
+        if (!stagedBytes || sha256(stagedBytes) !== scan.zip_sha256) {
+          transitionScan(db, scan.id, outcome, PluginScan.STATUS_PENDING);
+          return 'The staged zip is missing or does not match the scanned upload; reject it and ask for a new upload.';
+        }
 
-      const changes = parseChanges(scan.changes);
-      const newName = changes.find(([column]) => column === Plugin.NAME)?.[1] || plugin.name;
-      try {
-        skuErrors = await publishUpdate(pluginId, changes, newName, { zipFrom: staged.zip, iconFrom: staged.icon });
-      } catch (error) {
-        // publishUpdate restored the live zip and the staged file, so the update can be retried.
-        transitionScan(db, scan.id, outcome, PluginScan.STATUS_PENDING);
-        throw error;
+        const changes = parseChanges(scan.changes);
+        const newName = changes.find(([column]) => column === Plugin.NAME)?.[1] || plugin.name;
+        try {
+          skuErrors = await publishUpdate(pluginId, changes, newName, { zipFrom: staged.zip, iconFrom: staged.icon });
+        } catch (error) {
+          // publishUpdate only throws before the swap or after rolling it back, so the
+          // staged zip is still in place and the update can be retried.
+          transitionScan(db, scan.id, outcome, PluginScan.STATUS_PENDING);
+          throw error;
+        }
+        return null;
+      });
+      if (conflict) {
+        res.status(409).send({ error: conflict });
+        return;
       }
     } else {
       await discardStaged(staged);
@@ -1164,6 +1188,8 @@ const ICONS_DIR = path.resolve(__dirname, '../../data/icons');
 // Held updates wait here until an admin reviews them, one file per upload.
 const STAGING_DIR = path.join(PLUGINS_DIR, 'pending');
 
+const withPluginLock = createKeyedLock();
+
 const livePath = (id) => fileInDir(PLUGINS_DIR, `${id}.zip`);
 const liveIconPath = (id) => fileInDir(ICONS_DIR, `${id}.png`);
 // Keyed by the zip's hash so a newer upload can never replace the bytes an admin is reviewing.
@@ -1244,16 +1270,21 @@ async function publishUpdate(pluginId, updates, name, { zipFrom, icon, iconFrom 
   const skuErrors = await registerPriceChange(pluginId, updates, name);
   await replaceWithRollback({
     livePath: livePath(pluginId),
-    backupPath: fileInDir(PLUGINS_DIR, `${pluginId}.previous`),
+    backupPath: fileInDir(PLUGINS_DIR, `${pluginId}.${crypto.randomUUID()}.previous`),
     fromPath: zipFrom,
     commit: () => Plugin.update(updates, [Plugin.ID, pluginId]),
   });
 
-  // The icon is cosmetic and safe to rewrite, so it goes last.
-  if (iconFrom && fs.existsSync(iconFrom)) {
-    await fs.promises.rename(iconFrom, liveIconPath(pluginId));
-  } else if (icon) {
-    await fs.promises.writeFile(liveIconPath(pluginId), icon, 'base64');
+  // The update is live at this point, so the icon must not turn it into a failure:
+  // it is cosmetic, and the next upload rewrites it.
+  try {
+    if (iconFrom && fs.existsSync(iconFrom)) {
+      await fs.promises.rename(iconFrom, liveIconPath(pluginId));
+    } else if (icon) {
+      await fs.promises.writeFile(liveIconPath(pluginId), icon, 'base64');
+    }
+  } catch (error) {
+    console.error(`Published ${pluginId} but could not update its icon:`, error);
   }
   return skuErrors;
 }

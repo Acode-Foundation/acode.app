@@ -84,7 +84,7 @@ beforeEach(() => {
     '../lib/sendEmail': vi.fn(),
     '../lib/exchangeRates': { convertPrice: async (amount) => ({ amount: amount / 10, currency: 'USD', symbol: '$' }) },
     '../lib/modeRegex': {},
-    '../lib/pluginScanner': {},
+    '../lib/pluginScanner': { createKeyedLock: () => (_key, task) => task() },
     '../lib/db': {},
     '../lib/rateLimits': { pluginUploadLimiter: (_req, _res, next) => next(), pluginAdminLimiter: (_req, _res, next) => next() },
   };

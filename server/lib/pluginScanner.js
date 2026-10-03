@@ -202,6 +202,32 @@ async function replaceWithRollback({ livePath, backupPath, fromPath, commit }) {
 }
 
 /**
+ * Run tasks one at a time per key, in arrival order. Publishing a plugin moves
+ * files and updates its row in several steps, so two uploads (or an upload and
+ * an approval) for the same plugin must not interleave. The site runs as a
+ * single Node process, so an in-memory queue is enough.
+ */
+function createKeyedLock() {
+  const tails = new Map();
+  return async function withLock(key, task) {
+    const previous = tails.get(key) || Promise.resolve();
+    let release;
+    const turn = new Promise((resolve) => {
+      release = resolve;
+    });
+    const tail = previous.then(() => turn);
+    tails.set(key, tail);
+    await previous;
+    try {
+      return await task();
+    } finally {
+      release();
+      if (tails.get(key) === tail) tails.delete(key);
+    }
+  };
+}
+
+/**
  * Atomically move a scan from one status to another. Returns false if another
  * request changed it first, which is how approve, reject, and supersede avoid
  * acting on the same held update twice.
@@ -278,6 +304,7 @@ module.exports = {
   sha256,
   fileInDir,
   replaceWithRollback,
+  createKeyedLock,
   transitionScan,
   supersedePendingScans,
   runScanner,
