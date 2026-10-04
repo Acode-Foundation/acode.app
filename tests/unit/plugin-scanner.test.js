@@ -266,6 +266,15 @@ describe('replaceWithRollback', () => {
     expect(fs.readFileSync(paths.fromPath, 'utf8')).toBe('new');
   });
 
+  it('treats a failed backup removal after commit as success', async () => {
+    const paths = files();
+    fs.writeFileSync(paths.livePath, 'old');
+    fs.writeFileSync(paths.fromPath, 'new');
+    const removeBackup = () => Promise.reject(new Error('EBUSY'));
+    await expect(replaceWithRollback({ ...paths, commit: async () => {}, removeBackup })).resolves.toBeUndefined();
+    expect(fs.readFileSync(paths.livePath, 'utf8')).toBe('new');
+  });
+
   it('works for a plugin without a live zip yet', async () => {
     const paths = files();
     fs.writeFileSync(paths.fromPath, 'new');

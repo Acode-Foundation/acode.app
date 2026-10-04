@@ -187,7 +187,7 @@ function fileInDir(dir, name) {
  * so a failed publish never leaves new code live with old metadata.
  * @param {{ livePath: string, backupPath: string, fromPath: string, commit: () => Promise<void> }} options
  */
-async function replaceWithRollback({ livePath, backupPath, fromPath, commit }) {
+async function replaceWithRollback({ livePath, backupPath, fromPath, commit, removeBackup = (file) => fs.promises.rm(file, { force: true }) }) {
   const hadLive = fs.existsSync(livePath);
   if (hadLive) await fs.promises.copyFile(livePath, backupPath);
   await fs.promises.rename(fromPath, livePath);
@@ -198,7 +198,13 @@ async function replaceWithRollback({ livePath, backupPath, fromPath, commit }) {
     if (hadLive) await fs.promises.rename(backupPath, livePath);
     throw error;
   }
-  await fs.promises.rm(backupPath, { force: true });
+  // Committed: the publish succeeded, so a leftover backup is only clutter
+  // (startup recovery removes it) and must not turn success into an error.
+  try {
+    await removeBackup(backupPath);
+  } catch (error) {
+    console.error(`Published, but could not remove backup ${backupPath}:`, error);
+  }
 }
 
 /**

@@ -16,6 +16,7 @@ const STATUS_LABELS = {
   publishing: 'Publishing…',
   applied: 'Published automatically',
   pending: 'Waiting for review',
+  approving: 'Approving…',
   approved: 'Approved by admin',
   rejected: 'Rejected by admin',
   superseded: 'Replaced by a newer upload',

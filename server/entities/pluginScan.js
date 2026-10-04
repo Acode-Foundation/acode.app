@@ -71,6 +71,8 @@ class PluginScan extends Entity {
   STATUS_APPLIED = 'applied';
   /** Update is held until an admin reviews it. */
   STATUS_PENDING = 'pending';
+  /** An admin approved it and it is being published; becomes `approved`, or `pending` again on failure. */
+  STATUS_APPROVING = 'approving';
   STATUS_APPROVED = 'approved';
   STATUS_REJECTED = 'rejected';
   /** A newer upload replaced this pending update before review. */
