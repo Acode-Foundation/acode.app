@@ -5,12 +5,13 @@ import confirm from 'components/dialogs/confirm';
 import DialogBox from 'components/dialogs/dialogBox';
 import select from 'components/dialogs/select';
 import Input from 'components/input';
+import { RecommendationBadge, ReviewActions, ScanDetails } from 'components/pluginSecurity';
 import Tabs from 'components/tabs';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { createChartSafely, drawBarValueLabels, drawDoughnutPercentLabels } from 'lib/dashboardCharts';
 import { convertInrToUsd, formatCompactNumber, formatCompactUsd, formatExactNumber, formatExactUsd } from 'lib/formatNumber';
-import { getLoggedInUser } from 'lib/helpers';
+import { getLoggedInUser, since } from 'lib/helpers';
 import moment from 'moment';
 
 export default async function Admin({ queries = {} }) {
@@ -43,6 +44,7 @@ export default async function Admin({ queries = {} }) {
           { id: 'promotions', label: 'Promotions', content: <Promotions /> },
           { id: 'sponsors', label: 'Sponsors', content: <Sponsors /> },
           { id: 'plugins', label: 'Plugins', content: <Plugins /> },
+          { id: 'updates', label: 'Plugin updates', content: <PluginUpdates /> },
           { id: 'modes', label: 'Modes', content: <Modes /> },
         ]}
       />
@@ -381,6 +383,53 @@ function Plugins() {
       </div>
     </div>
   );
+}
+
+/** Updates to published plugins that the security scan held for review. */
+function PluginUpdates() {
+  const $list = <div className='admin-plugin-updates'>Loading…</div>;
+  load();
+  return $list;
+
+  async function load() {
+    try {
+      const res = await fetch('/api/plugin/scans/pending');
+      const scans = await res.json();
+      if (!res.ok || scans.error) throw new Error(scans.error || `Server error (${res.status})`);
+      if (!scans.length) {
+        $list.replaceChildren(<p className='muted'>No updates are waiting for review.</p>);
+        return;
+      }
+      $list.replaceChildren(
+        <p className='muted'>Held updates stay off the store until approved. Users keep the live version meanwhile.</p>,
+        ...scans.map((scan) => (
+          <article className='pending-update'>
+            <p className='pending-update-title'>
+              <a href={`/plugin/${scan.pluginId}/security`}>{scan.pluginName}</a>
+              <RecommendationBadge recommendation={scan.recommendation} />
+            </p>
+            <p className='muted pending-update-meta'>
+              {scan.pluginId} · by {scan.author || 'unknown'} · v{scan.previousVersion} → v{scan.version} · {since(scan.createdAt)}
+            </p>
+            {!!scan.reasons.length && (
+              <ul className='scan-reasons'>
+                {scan.reasons.map((reason) => (
+                  <li>{reason}</li>
+                ))}
+              </ul>
+            )}
+            <details className='scan-section'>
+              <summary>Scanner evidence</summary>
+              <ScanDetails scan={scan} />
+            </details>
+            <ReviewActions scan={scan} onReviewed={load} />
+          </article>
+        )),
+      );
+    } catch (error) {
+      $list.textContent = error.message || 'Failed to load pending updates';
+    }
+  }
 }
 
 function Dashboard() {

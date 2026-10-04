@@ -34,6 +34,12 @@ beforeEach(() => {
     month INTEGER,
     year INTEGER,
     payment_id INTEGER
+  );
+  CREATE TABLE plugin_scan (
+    id INTEGER PRIMARY KEY,
+    plugin_id TEXT,
+    version TEXT,
+    status TEXT
   );`);
 });
 
@@ -64,6 +70,19 @@ function insertDownloads(pluginId, date, count) {
 }
 
 describe('getDeveloperDashboard', () => {
+  it('reports the newest update that is waiting for security review', async () => {
+    insertPlugin({ id: 'held' });
+    insertPlugin({ id: 'clean' });
+    const scan = db.prepare('INSERT INTO plugin_scan (plugin_id, version, status) VALUES (?, ?, ?)');
+    scan.run('held', '1.1.0', 'superseded');
+    scan.run('held', '1.2.0', 'pending');
+    scan.run('clean', '1.1.0', 'applied');
+
+    const result = await getDeveloperDashboard(user, { executeQuery, now });
+    const byId = Object.fromEntries(result.plugins.map((p) => [p.id, p.pendingVersion]));
+    expect(byId).toEqual({ held: '1.2.0', clean: null });
+  });
+
   it('aggregates per-plugin and daily downloads for the user only', async () => {
     insertPlugin({ id: 'a', downloads: 100, votesUp: 4, votesDown: 1 });
     insertPlugin({ id: 'b', downloads: 50, price: 99 });

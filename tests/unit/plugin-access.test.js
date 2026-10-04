@@ -66,6 +66,7 @@ beforeEach(() => {
   googlePurchase = vi.fn().mockResolvedValue({ data: { purchaseState: 0 } });
   razorpayPayment = vi.fn().mockResolvedValue({ status: 'captured' });
   const dependencies = {
+    'node:crypto': {},
     'node:fs': {},
     'node:path': path,
     jszip: {},
@@ -76,12 +77,17 @@ beforeEach(() => {
     '../entities/user': {},
     '../entities/purchaseOrder': order,
     '../entities/download': download,
+    '../entities/pluginScan': {},
     '../badWords.json': [],
     '../lib/helpers': helpers,
     '../lib/razorpay': () => ({ payments: { fetch: razorpayPayment } }),
     '../lib/sendEmail': vi.fn(),
     '../lib/exchangeRates': { convertPrice: async (amount) => ({ amount: amount / 10, currency: 'USD', symbol: '$' }) },
     '../lib/modeRegex': {},
+    '../lib/pluginScanner': { createKeyedLock: () => (_key, task) => task() },
+    '../lib/db': {},
+    '../lib/pluginLicense': { LICENSES: [], normalizeLicense: (license) => license },
+    '../lib/rateLimits': { pluginUploadLimiter: (_req, _res, next) => next(), pluginAdminLimiter: (_req, _res, next) => next() },
   };
   const module = { exports: {} };
   // Load the real routes, but prohibit any unmocked import from opening the app database or contacting a provider.
@@ -202,6 +208,36 @@ describe('paid plugin download access', () => {
     const res = await downloadPlugin();
     expect(res.statusCode).toBe(404);
     expect(res.sendFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('unapproved packages', () => {
+  const unapproved = (status) => ({ ...paidPlugin, price: 0, status, version: '2.0.0' });
+
+  it.each([0, 2, 3])('are not downloadable by other users (status %s)', async (status) => {
+    plugin.get.mockResolvedValue([unapproved(status)]);
+    for (const user of [null, { id: 3, authType: 'app' }]) {
+      helpers.getLoggedInUser.mockResolvedValue(user);
+      const res = await downloadPlugin();
+      expect(res.statusCode).toBe(404);
+      expect(res.sendFile).not.toHaveBeenCalled();
+    }
+  });
+
+  it('stay downloadable by their owner and by admins', async () => {
+    plugin.get.mockResolvedValue([unapproved(0)]);
+    helpers.getLoggedInUser.mockResolvedValue({ id: paidPlugin.user_id, authType: 'app' });
+    expect((await downloadPlugin()).sendFile).toHaveBeenCalledOnce();
+    helpers.getLoggedInUser.mockResolvedValue({ id: 9, isAdmin: true, authType: 'web' });
+    expect((await downloadPlugin()).sendFile).toHaveBeenCalledOnce();
+  });
+
+  it('are not offered as updates to installed copies', async () => {
+    const checkUpdate = () => request('/check-update/:id/:version', { params: { id: paidPlugin.id, version: '1.0.0' } });
+    plugin.get.mockResolvedValue([unapproved(3)]);
+    expect((await checkUpdate()).send).toHaveBeenCalledWith({ update: false, version: '2.0.0' });
+    plugin.get.mockResolvedValue([{ ...unapproved(1) }]);
+    expect((await checkUpdate()).send).toHaveBeenCalledWith({ update: true, version: '2.0.0' });
   });
 });
 

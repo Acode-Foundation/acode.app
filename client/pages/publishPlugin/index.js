@@ -187,6 +187,13 @@ export default async function PublishPlugin({ mode = 'publish', id }) {
 
     let message = 'Plugin published successfully.';
 
+    if (data.review) {
+      // The security scan held this update; it goes live once an admin approves it.
+      alert('Submitted for review', data.message, null, true);
+      Router.loadUrl(`/plugin/${pluginId.value}/security`);
+      return;
+    }
+
     if (id) {
       const updateType = getUpdateType(pluginVersion.value, plugin.version);
       message = `Plugin updated to ${pluginVersion.value} (${updateType}) successfully.`;

@@ -9,6 +9,7 @@ import prompt from 'components/dialogs/prompt';
 import EditorType from 'components/editorType';
 import Input from 'components/input';
 import MonthSelect from 'components/MonthSelect';
+import PluginSecurity from 'components/pluginSecurity';
 import PluginStatus from 'components/pluginStatus';
 import BuyButton, { checkPluginOwnership } from 'components/razorpayCheckout';
 import Tabs from 'components/tabs';
@@ -77,6 +78,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   };
   const $orders = <Order />;
   const shouldShowOrders = user && (user.id === userId || user.isAdmin) && !!plugin.price;
+  const canSeeScans = Boolean(user && (user.id === userId || user.isAdmin));
 
   const canInstall =
     /android|iphone|ipad|ipod/i.test(navigator.userAgent) || (/macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
@@ -359,6 +361,12 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
             },
             { id: 'comments', label: `${commentCount} Reviews`, content: $comments },
             { id: 'orders', label: 'Orders', visible: shouldShowOrders, content: $orders },
+            {
+              id: 'security',
+              label: 'Security',
+              visible: canSeeScans,
+              content: () => <PluginSecurity pluginId={pluginId} isAdmin={Boolean(user?.isAdmin)} />,
+            },
           ]}
         />
       </div>
