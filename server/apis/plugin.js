@@ -908,6 +908,35 @@ router.get('/:id/scans', async (req, res) => {
   }
 });
 
+// Admin-triggered scan of the live zip, e.g. after a scanner or rules upgrade.
+// Only records the result; it never changes the plugin or its live zip.
+router.post('/:id/scans', pluginAdminLimiter, async (req, res) => {
+  try {
+    const user = await getWebLoggedInUser(req);
+    if (!user?.isAdmin) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const [plugin] = await Plugin.get([Plugin.ID, Plugin.VERSION], [Plugin.ID, req.params.id]);
+    if (!plugin) {
+      res.status(404).send({ error: 'Not found' });
+      return;
+    }
+
+    const result = await rescanLive(plugin, user.id);
+    if (!result) {
+      res.status(404).send({ error: 'This plugin has no live zip to scan' });
+      return;
+    }
+
+    const [row] = await PluginScan.get([PluginScan.ID, result.scanId]);
+    res.send(presentScan(row, { isAdmin: true }));
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
 router.post('/scans/:scanId/review', pluginAdminLimiter, async (req, res) => {
   try {
     const user = await getWebLoggedInUser(req);
@@ -1455,7 +1484,7 @@ function expectedZipHash(pluginId, version, publishedRows) {
   const recorded = db
     .prepare(
       `SELECT zip_sha256 FROM plugin_scan
-       WHERE plugin_id = ? AND version = ? AND zip_sha256 IS NOT NULL AND status IN ('applied', 'approved', 'recorded')
+       WHERE plugin_id = ? AND version = ? AND zip_sha256 IS NOT NULL AND status IN ('applied', 'approved', 'recorded') AND kind != 'rescan'
        ORDER BY id DESC LIMIT 1`,
     )
     .get(pluginId, version);
@@ -1520,6 +1549,32 @@ async function publishWithScanRecord(record, publish) {
     console.error(`Published ${record.pluginId} ${record.version} but could not mark its scan applied:`, error);
   }
   return result;
+}
+
+/**
+ * Admin re-scan of a plugin's live zip, recorded as a `rescan` row. Runs under
+ * the plugin lock so a publish can't swap the zip between hashing and scanning.
+ * @returns {Promise<{ scanId: number, decision: ReturnType<typeof decideUpdate> } | null>} null when there is no live zip
+ */
+function rescanLive(plugin, userId) {
+  return withPluginLock(plugin.id, async () => {
+    const live = livePath(plugin.id);
+    if (!fs.existsSync(live)) return null;
+    const zipBuffer = await fs.promises.readFile(live);
+    const scan = await scanUpload({ uploadPath: live });
+    const decision = decideUpdate(scan);
+    const scanId = insertScan({
+      pluginId: plugin.id,
+      userId,
+      version: plugin.version,
+      kind: PluginScan.KIND_RESCAN,
+      status: PluginScan.STATUS_RECORDED,
+      scan,
+      zipBuffer,
+      decision,
+    });
+    return { scanId, decision };
+  });
 }
 
 /** Insert a scan row and return its id. */

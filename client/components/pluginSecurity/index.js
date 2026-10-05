@@ -43,13 +43,15 @@ export default function PluginSecurity({ pluginId, isAdmin }) {
   }
 
   function render({ pending, scans }) {
+    const $rescan = isAdmin ? <RescanButton pluginId={pluginId} onScanned={load} /> : '';
     if (!scans.length) {
-      $root.replaceChildren(<p className='muted'>No security scans yet. Scans run when a new version is uploaded.</p>);
+      $root.replaceChildren(<p className='muted'>No security scans yet. Scans run when a new version is uploaded.</p>, $rescan);
       return;
     }
 
     const [latest] = scans;
     $root.replaceChildren(
+      $rescan,
       pending ? <PendingUpdate scan={pending} isAdmin={isAdmin} onReviewed={load} /> : '',
       isAdmin && latest !== pending ? <ScanDetails scan={latest} title={`Latest scan · v${latest.version}`} showReasons={true} /> : '',
       <h3>History</h3>,
@@ -58,13 +60,40 @@ export default function PluginSecurity({ pluginId, isAdmin }) {
           <li>
             <span className='scan-version'>v{scan.version}</span>
             <RecommendationBadge recommendation={scan.recommendation} />
-            <span>{STATUS_LABELS[scan.status] || scan.status}</span>
+            <span>{scan.kind === 'rescan' ? 'Rescanned by admin' : STATUS_LABELS[scan.status] || scan.status}</span>
             <small className='muted'>{since(scan.createdAt)}</small>
             {scan.recommendation === 'error' && scan.reasons[0] && <small className='scan-error-reason'>{scan.reasons[0]}</small>}
           </li>
         ))}
       </ul>,
     );
+  }
+}
+
+/** Admin-only: scan the live zip again, e.g. after the scanner or its rules were upgraded. */
+function RescanButton({ pluginId, onScanned }) {
+  const $label = <span>Run security scan</span>;
+  const $button = (
+    <button type='button' className='scan-rescan' onclick={rescan}>
+      <span className='icon refresh' />
+      {$label}
+    </button>
+  );
+  return <div className='scan-actions'>{$button}</div>;
+
+  async function rescan() {
+    $button.disabled = true;
+    $label.textContent = 'Scanning…';
+    try {
+      const res = await fetch(`/api/plugin/${pluginId}/scans`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Scan failed');
+      onScanned?.();
+    } catch (error) {
+      alert('ERROR', error.message);
+      $button.disabled = false;
+      $label.textContent = 'Run security scan';
+    }
   }
 }
 
