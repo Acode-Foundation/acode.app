@@ -112,6 +112,12 @@ function Card({ plugin, isSelf }) {
           <small>Positive</small>
         </div>
       </div>
+      {plugin.pendingVersion && (
+        <a className='manage-note manage-note--review' href={`/plugin/${plugin.id}/security`}>
+          <span className='icon hourglass_empty' />
+          Update v{plugin.pendingVersion} is waiting for security review
+        </a>
+      )}
       {plugin.status === 2 && plugin.statusMessage && (
         <p className='manage-note'>
           <span className='icon warning' />

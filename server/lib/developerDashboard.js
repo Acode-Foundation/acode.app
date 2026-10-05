@@ -1,6 +1,8 @@
 const moment = require('moment');
 const Entity = require('../entities/entity');
 const Download = require('../entities/download');
+// Loaded for its table: PLUGIN_STATS_QUERY reads plugin_scan.
+require('../entities/pluginScan');
 
 const DAILY_RANGE = 30;
 const MONTHLY_RANGE = 12;
@@ -19,6 +21,7 @@ const PLUGIN_STATS_QUERY = `SELECT
   p.status AS status,
   p.version AS version,
   p.status_change_message AS status_message,
+  (SELECT s.version FROM plugin_scan s WHERE s.plugin_id = p.id AND s.status = 'pending' ORDER BY s.id DESC LIMIT 1) AS pending_version,
   COALESCE(p.package_updated_at, p.created_at) AS updated_at,
   CAST(IFNULL(p.downloads, 0) AS INTEGER) AS downloads,
   IFNULL(p.votes_up, 0) AS votes_up,
@@ -76,6 +79,7 @@ async function getDeveloperDashboard(user, { executeQuery = executeDashboardQuer
     status: Number(row.status),
     version: row.version,
     statusMessage: row.status_message || '',
+    pendingVersion: row.pending_version || null,
     updatedAt: row.updated_at,
     downloads: Number(row.downloads) || 0,
     votesUp: Number(row.votes_up) || 0,

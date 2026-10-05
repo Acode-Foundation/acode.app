@@ -9,6 +9,10 @@ const daily = new CronJob('0 1 * * *', async () => {
   await updateOrders();
   await cleanDb();
   await updateSponsors();
+  // Required lazily: the plugin API loads entities and routes the cron process doesn't otherwise need at start.
+  await require('../apis/plugin')
+    .sweepStagedFiles()
+    .catch((error) => console.error('Failed to sweep staged plugin files:', error));
 });
 
 const monthly = new CronJob('0 0 16 * *', async () => {

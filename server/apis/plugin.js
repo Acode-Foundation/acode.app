@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const JSZip = require('jszip');
@@ -8,12 +9,34 @@ const Plugin = require('../entities/plugin');
 const User = require('../entities/user');
 const Order = require('../entities/purchaseOrder');
 const Download = require('../entities/download');
+const PluginScan = require('../entities/pluginScan');
 const badWords = require('../badWords.json');
 const { getLoggedInUser, getWebLoggedInUser, getPluginSKU, detectUserCurrency, formatAmount } = require('../lib/helpers');
 const getRazorpay = require('../lib/razorpay');
 const sendEmail = require('../lib/sendEmail');
 const { convertPrice } = require('../lib/exchangeRates');
 const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
+const { pluginUploadLimiter, pluginAdminLimiter } = require('../lib/rateLimits');
+const { LICENSES, normalizeLicense } = require('../lib/pluginLicense');
+const db = require('../lib/db');
+const {
+  scanUpload,
+  decideUpdate,
+  scanRowFields,
+  serializeChanges,
+  parseChanges,
+  presentScan,
+  sha256,
+  fileInDir,
+  replaceWithRollback,
+  createKeyedLock,
+  planLiveZipRepair,
+  pickOrphanedStagedFiles,
+  stagedFilePattern,
+  backupFilePattern,
+  transitionScan,
+  supersedePendingScans,
+} = require('../lib/pluginScanner');
 
 const androidpublisher = google.androidpublisher('v3');
 
@@ -22,19 +45,6 @@ const MIN_PRICE = 10;
 const MAX_PRICE = 10000;
 const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
 const ID_REGEX = /^[a-z][a-z0-9._]{3,49}$/i;
-const validLicenses = [
-  'MIT',
-  'GPL-3.0',
-  'Apache-2.0',
-  'BSD-2-Clause',
-  'BSD-3-Clause',
-  'LGPL-3.0',
-  'MPL-2.0',
-  'CDDL-1.0',
-  'EPL-2.0',
-  'AGPL-3.0',
-  'Proprietary',
-];
 
 function legacyModeScore(mode, keyword) {
   if (mode === keyword) return 100;
@@ -115,7 +125,14 @@ router.get('/download/:id', async (req, res) => {
 
     const clientIp = req.headers['x-forwarded-for'] || req.ip;
 
-    const loggedInUser = row.price ? await getLoggedInUser(req) : null;
+    const isApproved = row.status === Plugin.STATUS_APPROVED;
+    const loggedInUser = row.price || !isApproved ? await getLoggedInUser(req) : null;
+
+    // Packages that aren't approved (pending review, rejected, deleted) reach only admins and their owner.
+    if (!isApproved && !loggedInUser?.isAdmin && loggedInUser?.id !== row.user_id) {
+      res.status(404).send({ error: 'Not found' });
+      return;
+    }
 
     if (row.price && !loggedInUser?.isAdmin) {
       // Check for user-linked purchase (Razorpay or any provider)
@@ -240,8 +257,9 @@ router.get('/check-update/:id/:version', async (req, res) => {
       return;
     }
 
+    // Only approved versions are offered to installed copies.
     res.send({
-      update: isVersionGreater(row.version, version),
+      update: row.status === Plugin.STATUS_APPROVED && isVersionGreater(row.version, version),
       version: row.version,
     });
   } catch (error) {
@@ -528,7 +546,7 @@ router.post('/order', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', pluginUploadLimiter, async (req, res) => {
   try {
     const user = await getWebLoggedInUser(req);
     if (!user) {
@@ -630,7 +648,7 @@ router.post('/', async (req, res) => {
 
     await Plugin.insert(...insert);
 
-    savePlugin(pluginId, pluginZip, icon);
+    await savePlugin(pluginId, pluginZip.data, icon);
 
     const response = { message: 'Plugin uploaded successfully' };
     if (skuErrors.length) {
@@ -639,33 +657,36 @@ router.post('/', async (req, res) => {
     }
     res.send(response);
 
-    User.get([User.EMAIL, User.NAME], [User.ROLE, 'admin']).then((rows) => {
-      for (const row of rows) {
-        sendEmail(
-          row.email,
-          row.name,
-          'New plugin waiting for approval',
-          `A new plugin <a href='https://acode.app/plugin/${pluginId}'><strong>${name}</strong></a> is waiting for approval.`,
-        );
-      }
+    // New plugins already wait for admin approval; the scan gives the reviewer evidence.
+    const decision = await recordScan({
+      pluginId,
+      userId: user.id,
+      version,
+      kind: PluginScan.KIND_PUBLISH,
+      status: PluginScan.STATUS_RECORDED,
+      uploadPath: livePath(pluginId),
+      zipBuffer: pluginZip.data,
     });
+    notifyAdmins(
+      'New plugin waiting for approval',
+      `A new plugin <a href='https://acode.app/plugin/${pluginId}'><strong>${escapeHtml(name)}</strong></a> is waiting for approval.${scanSummaryHtml(decision)}`,
+    );
   } catch (error) {
     console.error('Error uploading plugin:', error);
     res.status(500).send({ error: 'Unable to upload plugin, please try again later, if issue persists contact support.' });
   }
 });
 
-router.put('/', async (req, res) => {
+router.put('/', pluginUploadLimiter, async (req, res) => {
   try {
     const user = await getWebLoggedInUser(req);
-    let savePluginZip = false;
 
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
     }
 
-    const { plugin: pluginZip } = req.files;
+    const { plugin: pluginZip } = req.files || {};
 
     if (!pluginZip) {
       res.status(400).send({ error: 'Plugin file is required' });
@@ -691,8 +712,17 @@ router.put('/', async (req, res) => {
       return;
     }
 
-    const [row] = await Plugin.get([Plugin.ID, Plugin.USER_ID, Plugin.VERSION, Plugin.NAME, Plugin.PRICE], [Plugin.ID, pluginId]);
-    if (!row || row.user_id !== user.id) {
+    // Checked up front so the Play SKU call can't fail halfway through publishing.
+    if (price && (price < MIN_PRICE || price > MAX_PRICE)) {
+      res.status(400).send({
+        error: `Price should be between ₹${MIN_PRICE} and ₹${MAX_PRICE}`,
+      });
+      return;
+    }
+
+    const [row] = await Plugin.get([Plugin.ID, Plugin.USER_ID, Plugin.VERSION, Plugin.NAME, Plugin.PRICE, Plugin.STATUS], [Plugin.ID, pluginId]);
+    // Deleted plugins can't be updated: that would publish outside the scan gate.
+    if (!row || row.user_id !== user.id || row.status === Plugin.STATUS_DELETED) {
       res.status(404).send({ error: 'Plugin not found' });
       return;
     }
@@ -731,7 +761,8 @@ router.put('/', async (req, res) => {
       updates.push([Plugin.SUPPORTED_EDITOR, req.body.supported_editor]);
     }
 
-    if (version !== row.version) {
+    const packageChanged = version !== row.version;
+    if (packageChanged) {
       if (!isVersionGreater(version, row.version)) {
         res.status(400).send({
           error: 'Version should be greater than the current version',
@@ -739,25 +770,75 @@ router.put('/', async (req, res) => {
         return;
       }
       updates.push([Plugin.VERSION, version]);
-      savePluginZip = true;
     }
 
     if (name !== row.name) {
       updates.push([Plugin.NAME, name]);
     }
 
-    let skuErrors = [];
     if (row.price !== price) {
-      if (price) {
-        skuErrors = await registerSKU(name, pluginId, price);
-      }
       updates.push([Plugin.PRICE, price]);
     }
 
-    await Plugin.update(updates, [Plugin.ID, pluginId]);
+    // Users install published plugins automatically, so new code for a published
+    // plugin is scanned before it replaces the live zip. Unpublished plugins are
+    // reviewed as a whole when an admin approves them.
+    let skuErrors;
+    if (packageChanged) {
+      // One publish per plugin at a time: file swaps and row updates must not interleave.
+      const outcome = await withPluginLock(pluginId, async () => {
+        const [current] = await Plugin.get([Plugin.VERSION, Plugin.STATUS], [Plugin.ID, pluginId]);
+        // The plugin may have been deleted, or another upload published, while this one waited.
+        if (!current || current.status === Plugin.STATUS_DELETED) return { missing: true };
+        if (!isVersionGreater(version, current.version)) return { conflict: current.version };
 
-    if (savePluginZip) {
-      savePlugin(pluginId, pluginZip, icon);
+        const live = { ...row, version: current.version };
+        if (current.status === Plugin.STATUS_APPROVED) {
+          return scanPublishedUpdate({ row: live, user, version, name, updates, zipBuffer: pluginZip.data, icon });
+        }
+
+        // Unpublished plugins are reviewed as a whole on approval; scan exactly these
+        // bytes so the reviewer has a record of them.
+        const uploadPath = await writeUpload(pluginId, pluginZip.data);
+        try {
+          const scan = await scanUpload({ uploadPath });
+          const record = {
+            pluginId,
+            userId: user.id,
+            version,
+            previousVersion: current.version,
+            kind: PluginScan.KIND_UPDATE,
+            scan,
+            decision: decideUpdate(scan),
+            zipBuffer: pluginZip.data,
+          };
+          const published = await publishWithScanRecord(record, () => publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon }));
+          return { held: false, skuErrors: published };
+        } finally {
+          await fs.promises.rm(uploadPath, { force: true });
+        }
+      });
+
+      if (outcome.missing) {
+        res.status(404).send({ error: 'Plugin not found' });
+        return;
+      }
+      if (outcome.conflict !== undefined) {
+        res.status(409).send({ error: `Version ${outcome.conflict} was published in the meantime; upload a version greater than it.` });
+        return;
+      }
+      if (outcome.held) {
+        res.send({
+          message: `Version ${version} was submitted for review and will go live once an admin approves it.`,
+          review: true,
+          reasons: outcome.decision.reasons,
+        });
+        notifyHeldUpdate({ pluginId, name, version, user, decision: outcome.decision });
+        return;
+      }
+      skuErrors = outcome.skuErrors;
+    } else {
+      skuErrors = await applyPluginUpdate(pluginId, updates, name);
     }
 
     const response = { message: 'Plugin updated successfully' };
@@ -769,7 +850,193 @@ router.put('/', async (req, res) => {
     res.send(response);
   } catch (error) {
     console.error('Error updating plugin:', error);
-    res.status(500).send({ error: 'Unable to update plugin, please try again later, if issue persists contact support.' });
+    if (!res.headersSent) {
+      res.status(500).send({ error: 'Unable to update plugin, please try again later, if issue persists contact support.' });
+    }
+  }
+});
+
+router.get('/scans/pending', async (req, res) => {
+  try {
+    const user = await getWebLoggedInUser(req);
+    if (!user?.isAdmin) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const rows = await PluginScan.get([PluginScan.STATUS, PluginScan.STATUS_PENDING], { orderBy: 'id ASC', limit: 200 });
+    const ids = [...new Set(rows.map((row) => row.plugin_id))];
+    const plugins = ids.length ? await Plugin.get([Plugin.ID, Plugin.NAME, Plugin.AUTHOR], [Plugin.ID, ids], { limit: ids.length }) : [];
+    const byId = new Map(plugins.map((plugin) => [plugin.id, plugin]));
+
+    res.send(
+      rows.map((row) => ({
+        ...presentScan(row, { isAdmin: true }),
+        pluginName: byId.get(row.plugin_id)?.name || row.plugin_id,
+        author: byId.get(row.plugin_id)?.author || '',
+      })),
+    );
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+router.get('/:id/scans', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await getWebLoggedInUser(req);
+    if (!user) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const [plugin] = await Plugin.get([Plugin.ID, Plugin.USER_ID], [Plugin.ID, id]);
+    if (!plugin || (!user.isAdmin && plugin.user_id !== user.id)) {
+      res.status(404).send({ error: 'Not found' });
+      return;
+    }
+
+    const columns = user.isAdmin ? ['*'] : PluginScan.summaryColumns;
+    const rows = await PluginScan.get(columns, [PluginScan.PLUGIN_ID, id], { orderBy: 'id DESC', limit: 10 });
+    const scans = rows.map((row) => presentScan(row, { isAdmin: user.isAdmin }));
+    res.send({
+      pending: scans.find((scan) => scan.status === PluginScan.STATUS_PENDING) || null,
+      scans,
+    });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+router.post('/scans/:scanId/review', pluginAdminLimiter, async (req, res) => {
+  try {
+    const user = await getWebLoggedInUser(req);
+    if (!user?.isAdmin) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { action } = req.body || {};
+    const reason = String(req.body?.reason || '').trim();
+    if (!['approve', 'reject'].includes(action)) {
+      res.status(400).send({ error: 'Action must be approve or reject' });
+      return;
+    }
+
+    const [scan] = await PluginScan.get([PluginScan.ID, Number(req.params.scanId)]);
+    if (!scan || scan.status !== PluginScan.STATUS_PENDING) {
+      res.status(404).send({ error: 'No pending update found for this scan' });
+      return;
+    }
+
+    const pluginId = scan.plugin_id;
+    const [plugin] = await Plugin.get([Plugin.ID, Plugin.NAME, Plugin.USER_ID, Plugin.VERSION], [Plugin.ID, pluginId]);
+    if (!plugin) {
+      res.status(404).send({ error: 'Plugin not found' });
+      return;
+    }
+
+    // An approval holds `approving` until the publish is final, so startup recovery
+    // can finish or undo it if the server stops part-way.
+    const claim = action === 'approve' ? PluginScan.STATUS_APPROVING : PluginScan.STATUS_REJECTED;
+    const review = [
+      [PluginScan.REVIEWED_BY, user.id],
+      [PluginScan.REVIEWED_AT, moment().format('YYYY-MM-DD HH:mm:ss')],
+      [PluginScan.REVIEW_MESSAGE, reason || null],
+    ];
+    const staged = { zip: stagedZipPath(pluginId, scan.zip_sha256), icon: stagedIconPath(pluginId, scan.zip_sha256) };
+
+    // Uploads supersede pending scans inside this same queue, and hard deletes run
+    // in it too, so a review always sees a settled state: either a newer upload
+    // already replaced this scan (the claim fails) or it runs after this review.
+    let skuErrors = [];
+    const conflict = await withPluginLock(pluginId, async () => {
+      if (!transitionScan(db, scan.id, PluginScan.STATUS_PENDING, claim)) {
+        return 'This update was already reviewed or replaced by a newer upload.';
+      }
+
+      if (action === 'reject') {
+        // The rejection is recorded; leftover staged files are only clutter.
+        await discardStaged(staged).catch((error) => console.error('Failed to remove staged files:', error));
+        await PluginScan.update(review, [PluginScan.ID, scan.id]);
+        return null;
+      }
+
+      // Until the update is live, any failure (a full disk while copying, an unreadable
+      // staged file, a database error) must put the scan back to `pending` so admins
+      // can retry or reject it, rather than leaving it stuck in `approving`.
+      let published = false;
+      try {
+        const [current] = await Plugin.get([Plugin.VERSION, Plugin.STATUS], [Plugin.ID, pluginId]);
+        const stale = !current || current.status === Plugin.STATUS_DELETED || !isVersionGreater(scan.version, current.version);
+        if (stale) {
+          transitionScan(db, scan.id, claim, PluginScan.STATUS_SUPERSEDED);
+          await PluginScan.update(review, [PluginScan.ID, scan.id]);
+          await discardStaged(staged).catch((error) => console.error('Failed to remove staged files:', error));
+          if (!current || current.status === Plugin.STATUS_DELETED) return 'The plugin was deleted, so this update was discarded.';
+          return `The live version (${current.version}) is already newer than ${scan.version}.`;
+        }
+
+        // Publish exactly the bytes that were scanned and reviewed.
+        const stagedBytes = fs.existsSync(staged.zip) ? await fs.promises.readFile(staged.zip) : null;
+        if (!stagedBytes || sha256(stagedBytes) !== scan.zip_sha256) {
+          transitionScan(db, scan.id, claim, PluginScan.STATUS_PENDING);
+          return 'The staged zip is missing or does not match the scanned upload; reject it and ask for a new upload.';
+        }
+
+        const changes = parseChanges(scan.changes);
+        const newName = changes.find(([column]) => column === Plugin.NAME)?.[1] || plugin.name;
+        // Publish from a copy: the staged zip stays put until the publish is final, so a
+        // failed or interrupted approval can go back to pending with nothing lost.
+        const uploadPath = await writeUpload(pluginId, stagedBytes);
+        try {
+          const icon = fs.existsSync(staged.icon) ? (await fs.promises.readFile(staged.icon)).toString('base64') : null;
+          // publishUpdate only throws before the swap or after rolling it back.
+          skuErrors = await publishUpdate(pluginId, changes, newName, { zipFrom: uploadPath, icon });
+          published = true;
+        } finally {
+          await fs.promises.rm(uploadPath, { force: true }).catch((error) => console.error('Failed to remove upload copy:', error));
+        }
+      } catch (error) {
+        // A no-op if the scan already reached a final status (e.g. superseded).
+        if (!published) transitionScan(db, scan.id, claim, PluginScan.STATUS_PENDING);
+        throw error;
+      }
+
+      // The update is live. Bookkeeping failures below are logged, not reported as a
+      // failed approval; startup recovery settles a scan left in `approving`.
+      try {
+        transitionScan(db, scan.id, claim, PluginScan.STATUS_APPROVED);
+      } catch (error) {
+        console.error(`Approved ${pluginId} ${scan.version} but could not mark the scan approved:`, error);
+      }
+      await discardStaged(staged).catch((error) => console.error('Failed to remove staged files:', error));
+      await PluginScan.update(review, [PluginScan.ID, scan.id]).catch((error) => console.error('Failed to save review details:', error));
+      return null;
+    });
+
+    if (conflict) {
+      res.status(409).send({ error: conflict });
+      return;
+    }
+
+    res.send({
+      message: action === 'approve' ? `Version ${scan.version} is now live.` : `Version ${scan.version} was rejected.`,
+      ...(skuErrors.length && { warning: 'Google Play SKU sync had errors', skuErrors }),
+    });
+
+    notifyDeveloper(plugin.user_id, {
+      subject: action === 'approve' ? 'Plugin update approved' : 'Plugin update rejected',
+      html:
+        action === 'approve'
+          ? `Version ${escapeHtml(scan.version)} of <a href='https://acode.app/plugin/${pluginId}'><strong>${escapeHtml(plugin.name)}</strong></a> was approved and is now available.`
+          : `Version ${escapeHtml(scan.version)} of <a href='https://acode.app/plugin/${pluginId}'><strong>${escapeHtml(plugin.name)}</strong></a> was rejected after review.${
+              reason ? `<br><em><strong>Reason</strong> ${escapeHtml(reason)}</em>` : ''
+            }`,
+    });
+  } catch (error) {
+    console.error('Error reviewing plugin update:', error);
+    if (!res.headersSent) res.status(500).send({ error: error.message });
   }
 });
 
@@ -778,7 +1045,7 @@ router.patch('/', async (req, res) => {
     const { id, status, reason } = req.body;
     const user = await getWebLoggedInUser(req);
 
-    if (!user.isAdmin) {
+    if (!user?.isAdmin) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
     }
@@ -852,7 +1119,7 @@ router.patch('/:id/supported-editor', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', pluginAdminLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const user = await getWebLoggedInUser(req);
@@ -864,14 +1131,26 @@ router.delete('/:id', async (req, res) => {
     }
 
     if (mode === 'hard' && user.isAdmin) {
-      await Plugin.deletePermanently([Plugin.ID, id]);
-      try {
-        fs.unlinkSync(path.join(__dirname, `../../data/plugins/${id}.zip`));
-        fs.unlinkSync(path.join(__dirname, `../../data/icons/${id}.png`));
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.log(error);
+      // File paths use the stored id, never the raw URL parameter.
+      const [plugin] = await Plugin.get([Plugin.ID], [Plugin.ID, id]);
+      if (!plugin) {
+        res.status(404).send({ error: 'Plugin not found' });
+        return;
       }
+      const pluginId = plugin.id;
+      // In the plugin's queue, so it can't interleave with a publish or review.
+      await withPluginLock(pluginId, async () => {
+        await Plugin.deletePermanently([Plugin.ID, pluginId]);
+        await PluginScan.delete([PluginScan.PLUGIN_ID, pluginId]);
+        try {
+          await discardAllStaged(pluginId);
+          fs.unlinkSync(livePath(pluginId));
+          fs.unlinkSync(liveIconPath(pluginId));
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.log(error);
+        }
+      });
       res.send({ message: 'Plugin deleted successfully' });
       return;
     }
@@ -942,12 +1221,384 @@ async function exploreZip(file) {
   return { pluginJson, icon, readme, changelogs };
 }
 
-function savePlugin(id, file, icon) {
-  file.mv(path.resolve(__dirname, '../../data/plugins', `${id}.zip`));
-  fs.writeFile(path.resolve(__dirname, '../../data/icons', `${id}.png`), icon, 'base64', (err) => {
-    // eslint-disable-next-line no-console
-    if (err) console.log(err);
+const PLUGINS_DIR = path.resolve(__dirname, '../../data/plugins');
+const ICONS_DIR = path.resolve(__dirname, '../../data/icons');
+// Held updates wait here until an admin reviews them, one file per upload.
+const STAGING_DIR = path.join(PLUGINS_DIR, 'pending');
+
+const withPluginLock = createKeyedLock();
+
+const livePath = (id) => fileInDir(PLUGINS_DIR, `${id}.zip`);
+const liveIconPath = (id) => fileInDir(ICONS_DIR, `${id}.png`);
+// Keyed by the zip's hash so a newer upload can never replace the bytes an admin is reviewing.
+const stagedZipPath = (id, hash) => fileInDir(STAGING_DIR, `${id}-${hash}.zip`);
+const stagedIconPath = (id, hash) => fileInDir(STAGING_DIR, `${id}-${hash}.png`);
+
+async function savePlugin(id, zipBuffer, icon) {
+  await fs.promises.writeFile(livePath(id), zipBuffer);
+  await fs.promises.writeFile(liveIconPath(id), icon, 'base64');
+}
+
+/** Write an upload to a private temporary file next to the staged updates. */
+async function writeUpload(pluginId, zipBuffer) {
+  await fs.promises.mkdir(STAGING_DIR, { recursive: true });
+  const file = fileInDir(STAGING_DIR, `${pluginId}.${crypto.randomUUID()}.upload`);
+  await fs.promises.writeFile(file, zipBuffer);
+  return file;
+}
+
+/**
+ * Scan a new version of a published plugin against the live zip. A passing
+ * update is published immediately; anything else (including a scanner
+ * failure) is staged and recorded as a pending update for admin review.
+ * @returns {Promise<{ held: boolean, decision: ReturnType<typeof decideUpdate>, skuErrors: object[] }>}
+ */
+async function scanPublishedUpdate({ row, user, version, name, updates, zipBuffer, icon }) {
+  const pluginId = row.id;
+  const uploadPath = await writeUpload(pluginId, zipBuffer);
+
+  try {
+    const live = livePath(pluginId);
+    const scan = await scanUpload({ uploadPath, livePath: fs.existsSync(live) ? live : null });
+    const decision = decideUpdate(scan);
+    const base = {
+      pluginId,
+      userId: user.id,
+      version,
+      previousVersion: row.version,
+      kind: PluginScan.KIND_UPDATE,
+      scan,
+      zipBuffer,
+      decision,
+    };
+
+    // Whatever happens, older pending updates are replaced by this upload.
+    for (const superseded of supersedePendingScans(db, pluginId)) {
+      if (superseded.zip_sha256) {
+        await discardStaged({ zip: stagedZipPath(pluginId, superseded.zip_sha256), icon: stagedIconPath(pluginId, superseded.zip_sha256) });
+      }
+    }
+
+    if (decision.hold) {
+      const hash = sha256(zipBuffer);
+      await fs.promises.rename(uploadPath, stagedZipPath(pluginId, hash));
+      await fs.promises.writeFile(stagedIconPath(pluginId, hash), icon, 'base64');
+      await insertScan({ ...base, status: PluginScan.STATUS_PENDING, changes: serializeChanges(updates) });
+      return { held: true, decision, skuErrors: [] };
+    }
+
+    const skuErrors = await publishWithScanRecord(base, () => publishUpdate(pluginId, updates, name, { zipFrom: uploadPath, icon }));
+    return { held: false, decision, skuErrors };
+  } finally {
+    await fs.promises.rm(uploadPath, { force: true });
+  }
+}
+
+/**
+ * Make a new zip live together with its plugin changes. The Play SKU call
+ * (remote, can throw) runs before anything local changes, and the old zip is
+ * restored if the database update fails, so live code and metadata never drift.
+ * @param {string} pluginId
+ * @param {Array<[string, any]>} updates
+ * @param {string} name plugin name to register the SKU under
+ * @param {{ zipFrom: string, icon?: string, iconFrom?: string }} source
+ */
+async function publishUpdate(pluginId, updates, name, { zipFrom, icon, iconFrom }) {
+  const skuErrors = await registerPriceChange(pluginId, updates, name);
+  await replaceWithRollback({
+    livePath: livePath(pluginId),
+    backupPath: fileInDir(PLUGINS_DIR, `${pluginId}.${Date.now()}.${crypto.randomUUID()}.previous`),
+    fromPath: zipFrom,
+    commit: async () => {
+      // An UPDATE on a missing row "succeeds" with zero changes; refuse instead,
+      // so the zip swap is rolled back rather than left without a plugin record.
+      if (!db.prepare('SELECT 1 FROM plugin WHERE id = ?').get(pluginId)) {
+        throw new Error(`Plugin ${pluginId} no longer exists`);
+      }
+      await Plugin.update(updates, [Plugin.ID, pluginId]);
+    },
   });
+
+  // The update is live at this point, so the icon must not turn it into a failure:
+  // it is cosmetic, and the next upload rewrites it.
+  try {
+    if (iconFrom && fs.existsSync(iconFrom)) {
+      await fs.promises.rename(iconFrom, liveIconPath(pluginId));
+    } else if (icon) {
+      await fs.promises.writeFile(liveIconPath(pluginId), icon, 'base64');
+    }
+  } catch (error) {
+    console.error(`Published ${pluginId} but could not update its icon:`, error);
+  }
+  return skuErrors;
+}
+
+async function discardStaged({ zip, icon }) {
+  await fs.promises.rm(zip, { force: true });
+  await fs.promises.rm(icon, { force: true });
+}
+
+async function discardAllStaged(pluginId) {
+  if (!fs.existsSync(STAGING_DIR)) return;
+  const pattern = stagedFilePattern(pluginId);
+  for (const name of await fs.promises.readdir(STAGING_DIR)) {
+    if (pattern.test(name)) await fs.promises.rm(fileInDir(STAGING_DIR, name), { force: true });
+  }
+}
+
+const ORPHAN_MIN_AGE_MS = 60 * 60 * 1000;
+
+/**
+ * Delete staged files no pending or approving scan refers to: leftovers from a
+ * rejection or stale approval whose cleanup failed, superseded uploads, and
+ * temporary copies from interrupted requests. Runs at startup and daily.
+ */
+async function sweepStagedFiles() {
+  if (!fs.existsSync(STAGING_DIR)) return;
+  const referenced = new Set(
+    db
+      .prepare('SELECT plugin_id, zip_sha256 FROM plugin_scan WHERE status IN (?, ?) AND zip_sha256 IS NOT NULL')
+      .all(PluginScan.STATUS_PENDING, PluginScan.STATUS_APPROVING)
+      .flatMap(({ plugin_id: id, zip_sha256: hash }) => [`${id}-${hash}.zip`, `${id}-${hash}.png`]),
+  );
+  const now = Date.now();
+  const entries = [];
+  for (const name of await fs.promises.readdir(STAGING_DIR)) {
+    try {
+      const stat = await fs.promises.stat(fileInDir(STAGING_DIR, name));
+      if (stat.isFile()) entries.push({ name, ageMs: now - stat.mtimeMs });
+    } catch (error) {
+      console.error(`Skipping staged entry ${name}:`, error.message);
+    }
+  }
+  for (const name of pickOrphanedStagedFiles({ entries, referenced, minAgeMs: ORPHAN_MIN_AGE_MS })) {
+    await fs.promises
+      .rm(fileInDir(STAGING_DIR, name), { force: true })
+      .catch((error) => console.error(`Failed to remove orphaned staged file ${name}:`, error));
+  }
+}
+
+/**
+ * Settle scans left in `publishing` or `approving` because the server stopped
+ * mid-publish (or the final status update failed). Runs at startup, before requests are served,
+ * one plugin at a time: the live zip and its backups belong to the plugin, not
+ * to any single scan.
+ */
+async function reconcilePublishingScans() {
+  const pluginIds = db
+    .prepare('SELECT DISTINCT plugin_id FROM plugin_scan WHERE status IN (?, ?)')
+    .all(PluginScan.STATUS_PUBLISHING, PluginScan.STATUS_APPROVING)
+    .map((row) => row.plugin_id);
+  for (const pluginId of pluginIds) {
+    try {
+      await withPluginLock(pluginId, () => reconcilePlugin(pluginId));
+    } catch (error) {
+      console.error(`Could not reconcile interrupted publishes for ${pluginId}; leaving them for the next start:`, error);
+    }
+  }
+}
+
+async function reconcilePlugin(pluginId) {
+  const rows = db
+    .prepare('SELECT id, version, zip_sha256, status FROM plugin_scan WHERE plugin_id = ? AND status IN (?, ?) ORDER BY id')
+    .all(pluginId, PluginScan.STATUS_PUBLISHING, PluginScan.STATUS_APPROVING);
+  const [plugin] = await Plugin.get([Plugin.VERSION], [Plugin.ID, pluginId]);
+
+  // A publish sets the version only in its final row update, and versions only
+  // increase, so a stored version at or past a scan's means it went live.
+  const isLive = (row) => plugin && (plugin.version === row.version || isVersionGreater(plugin.version, row.version));
+  const published = rows.filter(isLive);
+  const unpublished = rows.filter((row) => !isLive(row));
+  const backups = await listBackups(pluginId);
+
+  // Repair files before touching rows or backups: if this fails, the next start retries with everything intact.
+  if (plugin) {
+    const live = livePath(pluginId);
+    const plan = planLiveZipRepair({
+      liveHash: fs.existsSync(live) ? sha256(await fs.promises.readFile(live)) : null,
+      expectedHash: expectedZipHash(pluginId, plugin.version, published),
+      strayHashes: new Set(unpublished.map((row) => row.zip_sha256)),
+      backups,
+    });
+    if (plan.action === 'stuck') throw new Error(`Cannot repair ${pluginId}: ${plan.reason}`);
+    if (plan.action === 'restore') {
+      await fs.promises.rename(fileInDir(PLUGINS_DIR, plan.name), live);
+      console.warn(`Restored the live zip for ${pluginId} (version ${plugin.version}) from ${plan.name}.`);
+    }
+  }
+
+  for (const row of published) {
+    const done = row.status === PluginScan.STATUS_APPROVING ? PluginScan.STATUS_APPROVED : PluginScan.STATUS_APPLIED;
+    transitionScan(db, row.id, row.status, done);
+    if (row.status === PluginScan.STATUS_APPROVING && row.zip_sha256) {
+      await discardStaged({ zip: stagedZipPath(pluginId, row.zip_sha256), icon: stagedIconPath(pluginId, row.zip_sha256) });
+    }
+  }
+  for (const row of unpublished) {
+    if (row.status === PluginScan.STATUS_APPROVING) {
+      // The staged zip is untouched until an approval is final, so it can simply be reviewed again.
+      transitionScan(db, row.id, PluginScan.STATUS_APPROVING, PluginScan.STATUS_PENDING);
+    } else {
+      db.prepare('DELETE FROM plugin_scan WHERE id = ? AND status = ?').run(row.id, PluginScan.STATUS_PUBLISHING);
+    }
+  }
+  // Backups only exist during a publish; once the live zip is settled none are needed.
+  for (const { name } of backups) {
+    await fs.promises.rm(fileInDir(PLUGINS_DIR, name), { force: true });
+  }
+}
+
+/** Hash of the zip for the plugin's recorded version, when a scan captured it. */
+function expectedZipHash(pluginId, version, publishedRows) {
+  const fromInterrupted = publishedRows.filter((row) => row.version === version).at(-1)?.zip_sha256;
+  if (fromInterrupted) return fromInterrupted;
+  const recorded = db
+    .prepare(
+      `SELECT zip_sha256 FROM plugin_scan
+       WHERE plugin_id = ? AND version = ? AND zip_sha256 IS NOT NULL AND status IN ('applied', 'approved', 'recorded')
+       ORDER BY id DESC LIMIT 1`,
+    )
+    .get(pluginId, version);
+  return recorded?.zip_sha256 || null;
+}
+
+/** Backups of a plugin's live zip, newest first, with their hashes. */
+async function listBackups(pluginId) {
+  if (!fs.existsSync(PLUGINS_DIR)) return [];
+  const pattern = backupFilePattern(pluginId);
+  const backups = [];
+  for (const name of await fs.promises.readdir(PLUGINS_DIR)) {
+    const match = pattern.exec(name);
+    if (!match) continue;
+    const hash = sha256(await fs.promises.readFile(fileInDir(PLUGINS_DIR, name)));
+    backups.push({ name, time: match[1] ? Number(match[1]) : 0, hash });
+  }
+  return backups.sort((a, b) => b.time - a.time);
+}
+
+/** Register the Play SKU when the price changed and is non-zero. */
+async function registerPriceChange(pluginId, updates, name) {
+  const priceChange = updates.find(([column]) => column === Plugin.PRICE);
+  return priceChange?.[1] ? registerSKU(name, pluginId, priceChange[1]) : [];
+}
+
+/**
+ * Apply plugin column changes that don't touch the zip.
+ * @param {string} pluginId
+ * @param {Array<[string, any]>} updates
+ * @param {string} name plugin name to register the SKU under
+ */
+async function applyPluginUpdate(pluginId, updates, name) {
+  const skuErrors = await registerPriceChange(pluginId, updates, name);
+  await Plugin.update(updates, [Plugin.ID, pluginId]);
+  return skuErrors;
+}
+
+/**
+ * Publish with a durable scan record. The record is written before anything
+ * goes live (so a published version always has its scan), marked `applied`
+ * once the publish succeeds, and removed if the publish fails (so a failed
+ * upload never shows as published).
+ * @template T
+ * @param {object} record insertScan fields without `status`
+ * @param {() => Promise<T>} publish
+ * @returns {Promise<T>}
+ */
+async function publishWithScanRecord(record, publish) {
+  const scanId = insertScan({ ...record, status: PluginScan.STATUS_PUBLISHING });
+  let result;
+  try {
+    result = await publish();
+  } catch (error) {
+    db.prepare('DELETE FROM plugin_scan WHERE id = ? AND status = ?').run(scanId, PluginScan.STATUS_PUBLISHING);
+    throw error;
+  }
+  // A single-row status change; if even this fails, the full report is still stored (as "publishing").
+  try {
+    transitionScan(db, scanId, PluginScan.STATUS_PUBLISHING, PluginScan.STATUS_APPLIED);
+  } catch (error) {
+    console.error(`Published ${record.pluginId} ${record.version} but could not mark its scan applied:`, error);
+  }
+  return result;
+}
+
+/** Insert a scan row and return its id. */
+function insertScan({ pluginId, userId, version, previousVersion = null, kind, status, scan, zipBuffer, decision, changes = null }) {
+  const fields = scanRowFields(scan, zipBuffer, decision);
+  const row = {
+    [PluginScan.PLUGIN_ID]: pluginId,
+    [PluginScan.USER_ID]: userId,
+    [PluginScan.VERSION]: version,
+    [PluginScan.PREVIOUS_VERSION]: previousVersion,
+    [PluginScan.KIND]: kind,
+    [PluginScan.STATUS]: status,
+    [PluginScan.RECOMMENDATION]: fields.recommendation,
+    [PluginScan.RISK]: fields.risk,
+    [PluginScan.REASONS]: fields.reasons,
+    [PluginScan.ZIP_SHA256]: fields.zip_sha256,
+    [PluginScan.SCANNER_VERSION]: fields.scanner_version,
+    [PluginScan.RULES_VERSION]: fields.rules_version,
+    [PluginScan.REPORT]: fields.report,
+    [PluginScan.DIFF]: fields.diff,
+    [PluginScan.CHANGES]: changes,
+  };
+  const columns = Object.keys(row);
+  const sql = `INSERT INTO plugin_scan (${columns.join(', ')}) VALUES (${columns.map((column) => `@${column}`).join(', ')})`;
+  return Number(db.prepare(sql).run(row).lastInsertRowid);
+}
+
+/**
+ * Scan a zip that is already in place and record the result. Used after the
+ * response is sent, so it never throws.
+ */
+async function recordScan({ uploadPath, ...row }) {
+  try {
+    const scan = await scanUpload({ uploadPath });
+    const decision = decideUpdate(scan);
+    await insertScan({ ...row, scan, decision });
+    return decision;
+  } catch (error) {
+    console.error('Failed to record plugin scan:', error);
+    return null;
+  }
+}
+
+function scanSummaryHtml(decision) {
+  if (!decision) return '<br><br>Security scan: not recorded.';
+  const reasons = decision.reasons.slice(0, 5).map((reason) => `<li>${escapeHtml(reason)}</li>`);
+  return `<br><br>Security scan: <strong>${escapeHtml(decision.recommendation)}</strong>${reasons.length ? `<ul>${reasons.join('')}</ul>` : ''}`;
+}
+
+function notifyAdmins(subject, html) {
+  User.get([User.EMAIL, User.NAME], [User.ROLE, 'admin'])
+    .then((rows) => {
+      for (const row of rows) sendEmail(row.email, row.name, subject, html);
+    })
+    .catch((error) => console.error('Failed to notify admins:', error));
+}
+
+function notifyDeveloper(userId, { subject, html }) {
+  User.get([User.EMAIL, User.NAME], [User.ID, userId])
+    .then(([row]) => row && sendEmail(row.email, row.name, subject, html))
+    .catch((error) => console.error('Failed to notify developer:', error));
+}
+
+function notifyHeldUpdate({ pluginId, name, version, user, decision }) {
+  const link = `<a href='https://acode.app/plugin/${pluginId}'><strong>${escapeHtml(name)}</strong></a>`;
+  notifyAdmins(
+    'Plugin update waiting for review',
+    `Version ${escapeHtml(version)} of ${link} was held by the security scan. Review it in the admin panel (Plugin updates).${scanSummaryHtml(decision)}`,
+  );
+  sendEmail(
+    user.email,
+    user.name,
+    'Plugin update submitted for review',
+    `Version ${escapeHtml(version)} of ${link} needs a manual review before it goes live. You will get an email when it is reviewed.${scanSummaryHtml(decision)}`,
+  );
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 }
 
 function validatePlugin(json, icon, readmeFile) {
@@ -990,8 +1641,13 @@ function validatePlugin(json, icon, readmeFile) {
     throw new Error('Icon size should be less than 50kb');
   }
 
-  if (license && !validLicenses.includes(license)) {
-    throw new Error('Invalid license');
+  if (license) {
+    const canonical = normalizeLicense(license);
+    if (!canonical) {
+      throw new Error(`Invalid license "${license}". Use one of: ${LICENSES.join(', ')}.`);
+    }
+    // Stored in its canonical spelling (e.g. `mit` -> `MIT`).
+    json.license = canonical;
   }
 
   if (contributors) {
@@ -1282,6 +1938,8 @@ function isVersionGreater(newV, oldV) {
 
 module.exports = router;
 module.exports.registerSKU = registerSKU;
+module.exports.reconcilePublishingScans = reconcilePublishingScans;
+module.exports.sweepStagedFiles = sweepStagedFiles;
 module.exports.isValidPrice = isValidPrice;
 module.exports.isVersionGreater = isVersionGreater;
 module.exports.matchScore = matchScore;
