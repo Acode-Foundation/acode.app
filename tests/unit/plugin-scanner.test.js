@@ -15,6 +15,7 @@ const {
   replaceWithRollback,
   createKeyedLock,
   planLiveZipRepair,
+  pickOrphanedStagedFiles,
   stagedFilePattern,
   backupFilePattern,
   transitionScan,
@@ -406,5 +407,29 @@ describe('plugin file name patterns', () => {
     expect(pattern.test(`foo.${uuid}.upload`)).toBe(true);
     expect(pattern.test(`foo.bar-${hash}.zip`)).toBe(false);
     expect(pattern.test(`foo.bar.${uuid}.upload`)).toBe(false);
+  });
+});
+
+describe('pickOrphanedStagedFiles', () => {
+  const hour = 60 * 60 * 1000;
+  const referenced = new Set(['p-aa.zip', 'p-aa.png']);
+
+  it('removes old files no pending scan refers to', () => {
+    const entries = [
+      { name: 'p-aa.zip', ageMs: 5 * hour },
+      { name: 'p-aa.png', ageMs: 5 * hour },
+      { name: 'p-bb.zip', ageMs: 5 * hour },
+      { name: 'p-bb.png', ageMs: 2 * hour },
+      { name: 'p.1111.upload', ageMs: 3 * hour },
+    ];
+    expect(pickOrphanedStagedFiles({ entries, referenced, minAgeMs: hour })).toEqual(['p-bb.zip', 'p-bb.png', 'p.1111.upload']);
+  });
+
+  it('leaves recent files alone so in-flight uploads are not touched', () => {
+    const entries = [
+      { name: 'p-cc.zip', ageMs: 1000 },
+      { name: 'p.2222.upload', ageMs: 1000 },
+    ];
+    expect(pickOrphanedStagedFiles({ entries, referenced, minAgeMs: hour })).toEqual([]);
   });
 });

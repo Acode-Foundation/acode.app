@@ -513,9 +513,9 @@ async function main() {
 async function start() {
   await migrationRunner.run();
   // Settle plugin updates interrupted by a previous shutdown before serving requests.
-  await require('./apis/plugin')
-    .reconcilePublishingScans()
-    .catch((error) => console.error('Failed to reconcile plugin scans:', error));
+  const pluginApi = require('./apis/plugin');
+  await pluginApi.reconcilePublishingScans().catch((error) => console.error('Failed to reconcile plugin scans:', error));
+  await pluginApi.sweepStagedFiles().catch((error) => console.error('Failed to sweep staged plugin files:', error));
   require('./crons');
   await main();
   app.listen(PORT, () => {

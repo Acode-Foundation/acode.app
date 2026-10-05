@@ -31,6 +31,7 @@ const {
   replaceWithRollback,
   createKeyedLock,
   planLiveZipRepair,
+  pickOrphanedStagedFiles,
   stagedFilePattern,
   backupFilePattern,
   transitionScan,
@@ -1345,6 +1346,38 @@ async function discardAllStaged(pluginId) {
   }
 }
 
+const ORPHAN_MIN_AGE_MS = 60 * 60 * 1000;
+
+/**
+ * Delete staged files no pending or approving scan refers to: leftovers from a
+ * rejection or stale approval whose cleanup failed, superseded uploads, and
+ * temporary copies from interrupted requests. Runs at startup and daily.
+ */
+async function sweepStagedFiles() {
+  if (!fs.existsSync(STAGING_DIR)) return;
+  const referenced = new Set(
+    db
+      .prepare('SELECT plugin_id, zip_sha256 FROM plugin_scan WHERE status IN (?, ?) AND zip_sha256 IS NOT NULL')
+      .all(PluginScan.STATUS_PENDING, PluginScan.STATUS_APPROVING)
+      .flatMap(({ plugin_id: id, zip_sha256: hash }) => [`${id}-${hash}.zip`, `${id}-${hash}.png`]),
+  );
+  const now = Date.now();
+  const entries = [];
+  for (const name of await fs.promises.readdir(STAGING_DIR)) {
+    try {
+      const stat = await fs.promises.stat(fileInDir(STAGING_DIR, name));
+      if (stat.isFile()) entries.push({ name, ageMs: now - stat.mtimeMs });
+    } catch (error) {
+      console.error(`Skipping staged entry ${name}:`, error.message);
+    }
+  }
+  for (const name of pickOrphanedStagedFiles({ entries, referenced, minAgeMs: ORPHAN_MIN_AGE_MS })) {
+    await fs.promises
+      .rm(fileInDir(STAGING_DIR, name), { force: true })
+      .catch((error) => console.error(`Failed to remove orphaned staged file ${name}:`, error));
+  }
+}
+
 /**
  * Settle scans left in `publishing` or `approving` because the server stopped
  * mid-publish (or the final status update failed). Runs at startup, before requests are served,
@@ -1906,6 +1939,7 @@ function isVersionGreater(newV, oldV) {
 module.exports = router;
 module.exports.registerSKU = registerSKU;
 module.exports.reconcilePublishingScans = reconcilePublishingScans;
+module.exports.sweepStagedFiles = sweepStagedFiles;
 module.exports.isValidPrice = isValidPrice;
 module.exports.isVersionGreater = isVersionGreater;
 module.exports.matchScore = matchScore;

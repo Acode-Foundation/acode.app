@@ -255,6 +255,17 @@ function planLiveZipRepair({ liveHash, expectedHash = null, strayHashes, backups
 }
 
 /**
+ * Staged files nothing needs any more: not the zip/icon of a scan that is still
+ * pending or being approved, and old enough that no upload can be mid-flight
+ * (a held upload is renamed into place just before its scan row is written).
+ * @param {{ entries: Array<{ name: string, ageMs: number }>, referenced: Set<string>, minAgeMs: number }} options
+ * @returns {string[]} file names to delete
+ */
+function pickOrphanedStagedFiles({ entries, referenced, minAgeMs }) {
+  return entries.filter(({ name, ageMs }) => !referenced.has(name) && ageMs >= minAgeMs).map(({ name }) => name);
+}
+
+/**
  * Atomically move a scan from one status to another. Returns false if another
  * request changed it first, which is how approve, reject, and supersede avoid
  * acting on the same held update twice.
@@ -343,6 +354,7 @@ module.exports = {
   replaceWithRollback,
   createKeyedLock,
   planLiveZipRepair,
+  pickOrphanedStagedFiles,
   stagedFilePattern,
   backupFilePattern,
   transitionScan,
