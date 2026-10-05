@@ -898,10 +898,13 @@ router.get('/:id/scans', async (req, res) => {
 
     const columns = user.isAdmin ? ['*'] : PluginScan.summaryColumns;
     const rows = await PluginScan.get(columns, [PluginScan.PLUGIN_ID, id], { orderBy: 'id DESC', limit: 10 });
-    const scans = rows.map((row) => presentScan(row, { isAdmin: user.isAdmin }));
+    // Looked up on its own: rescans can push a held update out of the capped history.
+    const pending = db
+      .prepare(`SELECT ${columns.join(', ')} FROM plugin_scan WHERE plugin_id = ? AND status = ? ORDER BY id DESC LIMIT 1`)
+      .get(id, PluginScan.STATUS_PENDING);
     res.send({
-      pending: scans.find((scan) => scan.status === PluginScan.STATUS_PENDING) || null,
-      scans,
+      pending: pending ? presentScan(pending, { isAdmin: user.isAdmin }) : null,
+      scans: rows.map((row) => presentScan(row, { isAdmin: user.isAdmin })),
     });
   } catch (error) {
     res.status(500).send({ error: error.message });
@@ -918,13 +921,13 @@ router.post('/:id/scans', pluginAdminLimiter, async (req, res) => {
       return;
     }
 
-    const [plugin] = await Plugin.get([Plugin.ID, Plugin.VERSION], [Plugin.ID, req.params.id]);
+    const [plugin] = await Plugin.get([Plugin.ID], [Plugin.ID, req.params.id]);
     if (!plugin) {
       res.status(404).send({ error: 'Not found' });
       return;
     }
 
-    const result = await rescanLive(plugin, user.id);
+    const result = await rescanLive(plugin.id, user.id);
     if (!result) {
       res.status(404).send({ error: 'This plugin has no live zip to scan' });
       return;
@@ -1552,19 +1555,21 @@ async function publishWithScanRecord(record, publish) {
 }
 
 /**
- * Admin re-scan of a plugin's live zip, recorded as a `rescan` row. Runs under
- * the plugin lock so a publish can't swap the zip between hashing and scanning.
+ * Admin re-scan of a plugin's live zip, recorded as a `rescan` row. The version,
+ * zip, and scan are all read under the plugin lock, so a publish can't swap the
+ * zip (or the version it is recorded under) partway through.
  * @returns {Promise<{ scanId: number, decision: ReturnType<typeof decideUpdate> } | null>} null when there is no live zip
  */
-function rescanLive(plugin, userId) {
-  return withPluginLock(plugin.id, async () => {
-    const live = livePath(plugin.id);
-    if (!fs.existsSync(live)) return null;
+function rescanLive(pluginId, userId) {
+  return withPluginLock(pluginId, async () => {
+    const [plugin] = await Plugin.get([Plugin.VERSION], [Plugin.ID, pluginId]);
+    const live = livePath(pluginId);
+    if (!plugin || !fs.existsSync(live)) return null;
     const zipBuffer = await fs.promises.readFile(live);
     const scan = await scanUpload({ uploadPath: live });
     const decision = decideUpdate(scan);
     const scanId = insertScan({
-      pluginId: plugin.id,
+      pluginId,
       userId,
       version: plugin.version,
       kind: PluginScan.KIND_RESCAN,

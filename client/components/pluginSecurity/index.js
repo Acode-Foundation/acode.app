@@ -53,7 +53,7 @@ export default function PluginSecurity({ pluginId, isAdmin }) {
     $root.replaceChildren(
       $rescan,
       pending ? <PendingUpdate scan={pending} isAdmin={isAdmin} onReviewed={load} /> : '',
-      isAdmin && latest !== pending ? <ScanDetails scan={latest} title={`Latest scan · v${latest.version}`} showReasons={true} /> : '',
+      isAdmin && latest.id !== pending?.id ? <ScanDetails scan={latest} title={`Latest scan · v${latest.version}`} showReasons={true} /> : '',
       <h3>History</h3>,
       <ul className='scan-history'>
         {scans.map((scan) => (
