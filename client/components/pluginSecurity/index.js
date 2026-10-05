@@ -51,7 +51,7 @@ export default function PluginSecurity({ pluginId, isAdmin }) {
     const [latest] = scans;
     $root.replaceChildren(
       pending ? <PendingUpdate scan={pending} isAdmin={isAdmin} onReviewed={load} /> : '',
-      isAdmin && latest !== pending ? <ScanDetails scan={latest} title={`Latest scan · v${latest.version}`} /> : '',
+      isAdmin && latest !== pending ? <ScanDetails scan={latest} title={`Latest scan · v${latest.version}`} showReasons={true} /> : '',
       <h3>History</h3>,
       <ul className='scan-history'>
         {scans.map((scan) => (
@@ -60,6 +60,7 @@ export default function PluginSecurity({ pluginId, isAdmin }) {
             <RecommendationBadge recommendation={scan.recommendation} />
             <span>{STATUS_LABELS[scan.status] || scan.status}</span>
             <small className='muted'>{since(scan.createdAt)}</small>
+            {scan.recommendation === 'error' && scan.reasons[0] && <small className='scan-error-reason'>{scan.reasons[0]}</small>}
           </li>
         ))}
       </ul>,
@@ -135,20 +136,24 @@ export function ReviewActions({ scan, onReviewed }) {
 }
 
 /** Scanner evidence, for admins. */
-export function ScanDetails({ scan, title }) {
+export function ScanDetails({ scan, title, showReasons = false }) {
   const newFindings = scan.newFindings || [];
   const findings = scan.findings || [];
+  const failed = scan.recommendation === 'error';
   return (
     <div className='scan-details'>
       {title && <h3>{title}</h3>}
       <p>
-        <RecommendationBadge recommendation={scan.recommendation} /> Risk: <strong>{scan.risk || 'none'}</strong>
+        <RecommendationBadge recommendation={scan.recommendation} /> Risk: <strong>{failed ? 'unknown' : scan.risk || 'none'}</strong>
         {scan.complete === false && <span className='scan-warning'> · scan incomplete</span>}
-        <small className='muted'>
-          {' '}
-          · scanner {scan.scannerVersion || '?'} / rules {scan.rulesVersion || '?'}
-        </small>
+        {scan.scannerVersion && (
+          <small className='muted'>
+            {' '}
+            · scanner {scan.scannerVersion} / rules {scan.rulesVersion}
+          </small>
+        )}
       </p>
+      {showReasons && <Reasons reasons={scan.reasons} />}
       {!!scan.newEndpoints?.length && (
         <Section title='New network hosts in this version'>
           <ul>

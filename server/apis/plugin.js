@@ -955,42 +955,51 @@ router.post('/scans/:scanId/review', pluginAdminLimiter, async (req, res) => {
       }
 
       if (action === 'reject') {
-        await discardStaged(staged);
+        // The rejection is recorded; leftover staged files are only clutter.
+        await discardStaged(staged).catch((error) => console.error('Failed to remove staged files:', error));
         await PluginScan.update(review, [PluginScan.ID, scan.id]);
         return null;
       }
 
-      const [current] = await Plugin.get([Plugin.VERSION, Plugin.STATUS], [Plugin.ID, pluginId]);
-      const stale = !current || current.status === Plugin.STATUS_DELETED || !isVersionGreater(scan.version, current.version);
-      if (stale) {
-        transitionScan(db, scan.id, claim, PluginScan.STATUS_SUPERSEDED);
-        await PluginScan.update(review, [PluginScan.ID, scan.id]);
-        await discardStaged(staged);
-        if (!current || current.status === Plugin.STATUS_DELETED) return 'The plugin was deleted, so this update was discarded.';
-        return `The live version (${current.version}) is already newer than ${scan.version}.`;
-      }
-
-      // Publish exactly the bytes that were scanned and reviewed.
-      const stagedBytes = fs.existsSync(staged.zip) ? await fs.promises.readFile(staged.zip) : null;
-      if (!stagedBytes || sha256(stagedBytes) !== scan.zip_sha256) {
-        transitionScan(db, scan.id, claim, PluginScan.STATUS_PENDING);
-        return 'The staged zip is missing or does not match the scanned upload; reject it and ask for a new upload.';
-      }
-
-      const changes = parseChanges(scan.changes);
-      const newName = changes.find(([column]) => column === Plugin.NAME)?.[1] || plugin.name;
-      // Publish from a copy: the staged zip stays put until the publish is final, so a
-      // failed or interrupted approval can go back to pending with nothing lost.
-      const uploadPath = await writeUpload(pluginId, stagedBytes);
-      const icon = fs.existsSync(staged.icon) ? (await fs.promises.readFile(staged.icon)).toString('base64') : null;
+      // Until the update is live, any failure (a full disk while copying, an unreadable
+      // staged file, a database error) must put the scan back to `pending` so admins
+      // can retry or reject it, rather than leaving it stuck in `approving`.
+      let published = false;
       try {
-        skuErrors = await publishUpdate(pluginId, changes, newName, { zipFrom: uploadPath, icon });
+        const [current] = await Plugin.get([Plugin.VERSION, Plugin.STATUS], [Plugin.ID, pluginId]);
+        const stale = !current || current.status === Plugin.STATUS_DELETED || !isVersionGreater(scan.version, current.version);
+        if (stale) {
+          transitionScan(db, scan.id, claim, PluginScan.STATUS_SUPERSEDED);
+          await PluginScan.update(review, [PluginScan.ID, scan.id]);
+          await discardStaged(staged).catch((error) => console.error('Failed to remove staged files:', error));
+          if (!current || current.status === Plugin.STATUS_DELETED) return 'The plugin was deleted, so this update was discarded.';
+          return `The live version (${current.version}) is already newer than ${scan.version}.`;
+        }
+
+        // Publish exactly the bytes that were scanned and reviewed.
+        const stagedBytes = fs.existsSync(staged.zip) ? await fs.promises.readFile(staged.zip) : null;
+        if (!stagedBytes || sha256(stagedBytes) !== scan.zip_sha256) {
+          transitionScan(db, scan.id, claim, PluginScan.STATUS_PENDING);
+          return 'The staged zip is missing or does not match the scanned upload; reject it and ask for a new upload.';
+        }
+
+        const changes = parseChanges(scan.changes);
+        const newName = changes.find(([column]) => column === Plugin.NAME)?.[1] || plugin.name;
+        // Publish from a copy: the staged zip stays put until the publish is final, so a
+        // failed or interrupted approval can go back to pending with nothing lost.
+        const uploadPath = await writeUpload(pluginId, stagedBytes);
+        try {
+          const icon = fs.existsSync(staged.icon) ? (await fs.promises.readFile(staged.icon)).toString('base64') : null;
+          // publishUpdate only throws before the swap or after rolling it back.
+          skuErrors = await publishUpdate(pluginId, changes, newName, { zipFrom: uploadPath, icon });
+          published = true;
+        } finally {
+          await fs.promises.rm(uploadPath, { force: true }).catch((error) => console.error('Failed to remove upload copy:', error));
+        }
       } catch (error) {
-        // publishUpdate only throws before the swap or after rolling it back.
-        transitionScan(db, scan.id, claim, PluginScan.STATUS_PENDING);
+        // A no-op if the scan already reached a final status (e.g. superseded).
+        if (!published) transitionScan(db, scan.id, claim, PluginScan.STATUS_PENDING);
         throw error;
-      } finally {
-        await fs.promises.rm(uploadPath, { force: true });
       }
 
       // The update is live. Bookkeeping failures below are logged, not reported as a
