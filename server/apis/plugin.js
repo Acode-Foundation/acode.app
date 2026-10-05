@@ -16,7 +16,7 @@ const getRazorpay = require('../lib/razorpay');
 const sendEmail = require('../lib/sendEmail');
 const { convertPrice } = require('../lib/exchangeRates');
 const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
-const { pluginUploadLimiter, pluginAdminLimiter } = require('../lib/rateLimits');
+const { pluginUploadLimiter, pluginAdminLimiter, pluginScanReadLimiter } = require('../lib/rateLimits');
 const { LICENSES, normalizeLicense } = require('../lib/pluginLicense');
 const db = require('../lib/db');
 const {
@@ -881,7 +881,7 @@ router.get('/scans/pending', async (req, res) => {
   }
 });
 
-router.get('/:id/scans', async (req, res) => {
+router.get('/:id/scans', pluginScanReadLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const user = await getWebLoggedInUser(req);

@@ -87,7 +87,11 @@ beforeEach(() => {
     '../lib/pluginScanner': { createKeyedLock: () => (_key, task) => task() },
     '../lib/db': {},
     '../lib/pluginLicense': { LICENSES: [], normalizeLicense: (license) => license },
-    '../lib/rateLimits': { pluginUploadLimiter: (_req, _res, next) => next(), pluginAdminLimiter: (_req, _res, next) => next() },
+    '../lib/rateLimits': {
+      pluginUploadLimiter: (_req, _res, next) => next(),
+      pluginAdminLimiter: (_req, _res, next) => next(),
+      pluginScanReadLimiter: (_req, _res, next) => next(),
+    },
   };
   const module = { exports: {} };
   // Load the real routes, but prohibit any unmocked import from opening the app database or contacting a provider.

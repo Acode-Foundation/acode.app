@@ -32,4 +32,6 @@ module.exports = {
   pluginUploadLimiter: limiter(10, 15),
   // Admin moderation and deletion touch plugin files on disk.
   pluginAdminLimiter: limiter(120, 15),
+  // Scan history reads several plugin_scan rows (with full reports for admins).
+  pluginScanReadLimiter: limiter(300, 15),
 };
