@@ -292,3 +292,35 @@ describe('plugin install entitlement', () => {
     expect(order.insert).not.toHaveBeenCalled();
   });
 });
+
+describe('plugin list sorting and filters', () => {
+  const listOptions = async (query) => {
+    await request('{/:pluginId}', { query });
+    return plugin.get.mock.calls.at(-1)[2];
+  };
+  const listWhere = async (query) => {
+    await request('{/:pluginId}', { query });
+    return plugin.get.mock.calls.at(-1)[1];
+  };
+
+  it('sorts downloads numerically because the column is stored as text', async () => {
+    expect((await listOptions({ orderBy: 'downloads' })).orderBy).toEqual(['CAST(downloads AS INTEGER) DESC']);
+    expect((await listOptions({})).orderBy).toContain('CAST(downloads AS INTEGER) DESC');
+  });
+
+  it.each(['trending', 'rating', 'updated', 'newest', 'name'])('supports the %s sort', async (orderBy) => {
+    const { orderBy: sort } = await listOptions({ orderBy });
+    expect(Array.isArray(sort)).toBe(true);
+    expect(sort).not.toEqual((await listOptions({})).orderBy);
+  });
+
+  it.each(['unknown', 'constructor', '__proto__'])('falls back to popular for %s', async (orderBy) => {
+    expect((await listOptions({ orderBy })).orderBy).toEqual((await listOptions({})).orderBy);
+  });
+
+  it('filters by price', async () => {
+    expect(await listWhere({ price: 'free' })).toContainEqual(['IFNULL(price, 0)', 0]);
+    expect(await listWhere({ price: 'paid' })).toContainEqual(['IFNULL(price, 0)', 0, '>']);
+    expect(await listWhere({ price: 'other' })).not.toContainEqual(expect.arrayContaining(['IFNULL(price, 0)']));
+  });
+});

@@ -1,6 +1,7 @@
 #plugins {
   max-width: 1120px;
   width: calc(100% - 48px);
+  margin: 0 auto;
   padding-top: clamp(2.5rem, 6vw, 4.5rem);
 
   &::after {
@@ -9,149 +10,134 @@
     height: 100%;
   }
 
-  .header {
-    max-width: 1200px;
-    margin: 0 auto 40px;
-    padding: 0 20px;
+  .plugins-browse {
+    margin-bottom: 24px;
 
     h1 {
-      margin-bottom: 32px;
+      margin-bottom: 24px;
       font-size: clamp(2.2rem, 5vw, 3.4rem);
       font-weight: 500;
       letter-spacing: -0.05em;
-      color: #fff;
       line-height: 1.1;
+      color: #fff;
+    }
+  }
+
+  .plugins-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+
+    &__search {
+      flex: 1 1 280px;
+      max-width: 420px;
+
+      .custom-input {
+        margin: 0;
+      }
     }
 
-    .controls-wrapper {
+    &__filters {
       display: flex;
       flex-wrap: wrap;
-      justify-content: center;
       align-items: center;
-      position: relative;
-      gap: 4px;
+      gap: 8px;
+    }
 
-      @keyframes shimmer {
-        0% {
-          background-position: 200% 0%;
-        }
+    &__reset {
+      height: 42px;
+      margin: 0;
+      padding: 0 14px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: none;
+      color: var(--page-muted);
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.2s ease, background-color 0.2s ease;
 
-        100% {
-          background-position: -200% 0%;
-        }
+      &:hover {
+        color: var(--page-text);
+        background: rgba(255, 255, 255, 0.05);
       }
 
-      .control-group {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        min-width: 200px;
-
-        &.search-group {
-          flex: 1;
-          min-width: 250px;
-          max-width: 400px;
-        }
-
-        .control-label {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 0.9rem;
-          font-weight: 600;
-          color: var(--secondary-text-color);
-          padding-left: 4px;
-
-          .icon {
-            font-size: 1rem;
-            opacity: 0.8;
-          }
-        }
-
-        select {
-          display: block;
-          width: 100%;
-          padding: 0 16px;
-          font-size: 1rem;
-          font-weight: 500;
-          height: 40px;
-          color: var(--page-text, #f1f2f4);
-          cursor: pointer;
-          transition: border-color 0.2s ease, box-shadow 0.2s ease;
-          padding-right: 40px;
-
-          &:hover {
-            border-color: rgba(255, 255, 255, 0.16);
-            box-shadow: none;
-          }
-
-          &:focus {
-            outline: none;
-            border-color: var(--page-accent);
-            box-shadow: 0 0 0 3px rgba(52, 153, 254, 0.15);
-          }
-
-          optgroup {
-            font-weight: 700;
-            color: var(--primary-text-color);
-            padding: 8px 0;
-          }
-
-          option {
-            padding: 8px;
-            font-weight: 500;
-          }
-        }
-
-        .filter-select {
-          border-color: var(--page-line);
-        }
-
-        .sort-select {
-          border-color: var(--page-line);
-        }
+      &[hidden] {
+        display: none;
       }
     }
   }
 
-  .plugins-container {
-    padding: 0 20px;
+  // Same box as the search field (.custom-input) so the toolbar reads as one set of controls.
+  .plugins-select {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: 42px;
+    border: 1px solid var(--page-line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    transition: border-color 0.2s ease;
+
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+
+    &:focus-within {
+      border-color: var(--page-accent);
+      box-shadow: 0 0 0 1px var(--page-accent);
+    }
+
+    span {
+      padding-left: 12px;
+      font-size: 0.875rem;
+      color: var(--page-muted);
+      pointer-events: none;
+    }
+
+    select {
+      height: 100%;
+      margin: 0;
+      padding: 0 34px 0 6px;
+      border: none;
+      border-radius: inherit;
+      background-color: transparent;
+      background-position: right 12px center;
+      background-size: 10px;
+      font: inherit;
+      font-size: 0.875rem;
+      color: var(--page-text);
+      box-shadow: none;
+      outline: none;
+    }
   }
 }
 
-// Responsive design
 @media (max-width: 768px) {
-  #plugins .header {
-    padding: 0 12px;
+  #plugins {
+    .plugins-toolbar {
+      &__search {
+        flex-basis: 100%;
+        max-width: none;
+      }
 
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 24px;
-    }
-
-    .controls-wrapper {
-      padding: 20px 16px;
-      gap: 16px;
-
-      .control-group {
-        min-width: 100%;
-
-        &.search-group {
-          max-width: 100%;
-        }
+      &__filters {
+        width: 100%;
       }
     }
-  }
-}
 
-@media (max-width: 480px) {
-  #plugins .header {
-    h1 {
-      font-size: 1.75rem;
-    }
+    // Wrap instead of scrolling sideways so every control, including Reset, stays on screen.
+    .plugins-select {
+      flex: 1 1 150px;
+      min-width: 0;
 
-    .controls-wrapper {
-      padding: 16px 12px;
+      select {
+        flex: 1;
+        min-width: 0;
+        text-overflow: ellipsis;
+      }
     }
   }
 }

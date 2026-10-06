@@ -147,6 +147,9 @@ class Entity {
    * @returns {Promise<number>}
    */
   async count(where, options = 'AND') {
+    // COUNT has no ORDER BY/LIMIT, but a `.for('internal')` set before it must still be
+    // consumed, or the next get() on this shared entity would silently drop them.
+    void this.mode;
     let sql = `SELECT COUNT(*) as count FROM ${this.table}`;
     const values = [];
 
