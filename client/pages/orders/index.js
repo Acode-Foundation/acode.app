@@ -242,7 +242,7 @@ export default async function Orders() {
       <div className='orders-info'>
         <h3>Need help?</h3>
         <p>
-          Orders show <strong>Pending</strong> while your bank is processing the payment. Payments are usually confirmed automatically — this can take
+          Orders show <strong>Pending</strong> while your bank is processing the payment. Payments are usually confirmed automatically. This can take
           up to a few hours depending on your bank. If you see <strong>Failed</strong>, no money was deducted and you can try again. For other issues,
           contact us at <a href='/contact'>acode.app/contact</a>.
         </p>

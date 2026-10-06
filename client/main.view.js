@@ -104,10 +104,10 @@ export default ({ routes }) => (
           <h4>Featured In</h4>
           <nav className='footer-links'>
             <a href='https://zapier.com/blog/best-code-editor/' target='_blank' rel='noreferrer'>
-              Zapier — Best Android Code Editor 2026
+              Zapier: Best Android Code Editor 2026
             </a>
             <a href='https://www.kdnuggets.com/5-android-apps-for-code-editing' target='_blank' rel='noreferrer'>
-              KDnuggets — 5 Android Apps for Code Editing
+              KDnuggets: 5 Android Apps for Code Editing
             </a>
           </nav>
         </div>

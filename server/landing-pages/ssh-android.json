@@ -1,10 +1,10 @@
 {
   "path": "/ssh-android",
-  "title": "SSH on Android — Remote Server Access Guide | Acode",
+  "title": "SSH on Android - Remote Server Access Guide | Acode",
   "description": "Connect to remote servers via SSH from your Android phone using Acode. Edit configs, manage deployments, and troubleshoot from anywhere. Full Alpine Linux terminal with OpenSSH support.",
   "heroHeadline": "SSH from Your Android Phone",
-  "heroSubheadline": "Acode gives you a full SSH experience on Android. Install OpenSSH in the Alpine Linux terminal, connect to remote servers, edit files with syntax highlighting — all from your phone.",
-  "ctaPrimary": "Download Acode — Free",
+  "heroSubheadline": "Acode gives you a full SSH experience on Android. Install OpenSSH in the Alpine Linux terminal, connect to remote servers, edit files with syntax highlighting, all from your phone.",
+  "ctaPrimary": "Download Acode for Free",
   "ctaSecondary": "Setup Guide",
   "problemHeadline": "Remote Server Access on Mobile Is Painful",
   "problemPoints": [
@@ -14,7 +14,7 @@
   "solutionHeadline": "SSH + Professional Editor in Acode",
   "solutionPoints": [
     "Install OpenSSH in Acode's terminal: <code>apk add openssh</code>. Connect to any server with standard SSH commands. Use SSH keys for secure, passwordless authentication.",
-    "The game-changer: download server files and edit them in Acode's editor with full syntax highlighting. YAML, JSON, Python, bash — all with proper color coding and formatting.",
+    "Download server files and edit them in Acode's editor with full syntax highlighting. YAML, JSON, Python, and bash files have syntax highlighting and formatting.",
     "Acode also has an SSH client plugin for a GUI connection manager. Combine terminal SSH with the editor for complete remote development on Android."
   ],
   "featuresHeadline": "SSH Features on Acode",
@@ -52,5 +52,5 @@
     { "title": "Code Editor Guide", "url": "/android-ide" },
     { "title": "Termux Alternative", "url": "/termux-alternative" }
   ],
-  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"SSH on Android — Remote Server Access Guide\",\"description\":\"Connect to remote servers via SSH from your Android phone using Acode.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/ssh-android\"}}"
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"SSH on Android - Remote Server Access Guide\",\"description\":\"Connect to remote servers via SSH from your Android phone using Acode.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/ssh-android\"}}"
 }

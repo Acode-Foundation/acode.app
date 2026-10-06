@@ -22,7 +22,7 @@ const BANNERS = [
     badge: 'NEW',
     mobileTitle: 'Better Keep Notes - Secure & Private',
     title: 'Introducing Better Keep Notes',
-    subtitle: 'A beautiful, private note-taking app. Try it free!',
+    subtitle: 'A private note-taking app. Try it free.',
     cta: 'Learn More',
     theme: 'betterkeep',
   },
@@ -70,7 +70,7 @@ export default function AnnouncementBanner() {
         </div>
         <div className='announcement-banner__cta'>
           {$ctaText}
-          <span className='announcement-banner__arrow'>→</span>
+          <span className='announcement-banner__arrow icon navigate_next' aria-hidden='true' />
         </div>
       </div>
       <div className='announcement-banner__indicators'>

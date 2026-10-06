@@ -82,13 +82,13 @@ export function resolveRouteMetadata(pathname, origin = window.location.origin, 
     title = namedRoute.title.replace(/\{\{count\}\}/g, count);
     description = namedRoute.description.replace(/\{\{count\}\}/g, count);
   } else if (pluginMatch) {
-    title = 'Acode Plugin — Acode';
+    title = 'Acode Plugin - Acode';
     description = 'Explore this plugin for Acode, the extensible Android code editor.';
     canonicalPath = `/plugin/${pluginMatch[1]}`;
   } else {
     const lastSegment = path.split('/').filter(Boolean).at(-1);
     const pageName = lastSegment ? pathToTitle(lastSegment) : 'Acode';
-    title = lastSegment ? `${pageName} — Acode` : metadataConfig.fallback.title;
+    title = lastSegment ? `${pageName} - Acode` : metadataConfig.fallback.title;
     description = lastSegment ? `${pageName} on Acode, the extensible Android code editor.` : metadataConfig.fallback.description;
   }
 
@@ -101,7 +101,7 @@ export function resolveRouteMetadata(pathname, origin = window.location.origin, 
     imageWidth: IMAGE_WIDTH,
     imageHeight: IMAGE_HEIGHT,
     imageType: 'image/png',
-    imageAlt: 'Acode — code, build, and run projects on Android',
+    imageAlt: 'Acode - code, build, and run projects on Android',
     siteName: SITE_NAME,
     type: 'website',
   };
@@ -119,7 +119,7 @@ export function resolvePluginMetadata(plugin, origin = window.location.origin) {
   const description = createPluginMetadataDescription(plugin.description, `${plugin.name} is a plugin for Acode.`);
 
   return {
-    title: `${plugin.name} — Acode Plugin`,
+    title: `${plugin.name} - Acode Plugin`,
     description,
     robots: INDEX_ROBOTS,
     canonicalUrl: absoluteUrl(`/plugin/${encodeURIComponent(id)}`, origin),

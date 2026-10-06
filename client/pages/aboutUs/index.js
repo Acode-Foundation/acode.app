@@ -15,7 +15,7 @@ export default async function AboutUs() {
     <section id='about-us'>
       <div className='hero'>
         <h1>About Us</h1>
-        <p className='subtitle'>Building the future of mobile development — one line of code at a time.</p>
+        <p className='subtitle'>The code editor built for mobile developers.</p>
       </div>
 
       <div className='about-section'>
@@ -23,8 +23,8 @@ export default async function AboutUs() {
         <h2>About Acode</h2>
         <p className='section-body'>
           Acode is a powerful, extensible, and open-source code editor for Android. It brings a full Alpine Linux terminal, AI coding assistants
-          (Claude Code, Codex, OpenCode), and 250+ community plugins to your phone. Build React, Next.js, Node.js, and Python projects — complete with
-          Git and SSH — right from your Android device.
+          (Claude Code, Codex, OpenCode), and 250+ community plugins to your phone. Build React, Next.js, Node.js, and Python projects with Git and
+          SSH right from your Android device.
         </p>
       </div>
 
@@ -32,16 +32,15 @@ export default async function AboutUs() {
         <span className='section-label'>The Company</span>
         <h2>Foxbiz Software</h2>
         <p className='section-body'>
-          <strong style='color: #ffffff'>Foxbiz Software Pvt. Ltd.</strong> is the company behind Acode. We are dedicated to building world-class
-          developer tools that empower coders everywhere. Our mission is to make professional-grade development accessible on every device, starting
-          with Android.
+          <strong style='color: #ffffff'>Foxbiz Software Pvt. Ltd.</strong> is the company behind Acode. We build developer tools for coding on mobile
+          devices, starting with Android.
         </p>
       </div>
 
       <div className='about-section'>
         <span className='section-label'>The People</span>
         <h2>Our Team</h2>
-        <p className='section-body'>Meet the developers behind Acode. We're a passionate team building the future of mobile development.</p>
+        <p className='section-body'>Meet the developers who build and maintain Acode.</p>
         <div className='team-grid' ref={teamGrid}>
           {Array.from({ length: 4 }, (_, i) => (
             <div className='team-card skeleton' key={i}>

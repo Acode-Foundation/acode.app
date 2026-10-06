@@ -81,14 +81,14 @@ describe('server-rendered metadata', () => {
     const html = Handlebars.compile(source)({ ...context, ...metadata, image_alt: metadata.title });
 
     expect(metadata).toEqual({
-      title: 'Ajit Kumar — Acode',
+      title: 'Ajit Kumar - Acode',
       description: "View Ajit Kumar's profile and published plugins on Acode.",
       robots: 'index, follow',
     });
-    expect(html).toContain('<title>Ajit Kumar — Acode</title>');
+    expect(html).toContain('<title>Ajit Kumar - Acode</title>');
     expect(html).toContain('<link rel="canonical" href="https://acode.app/profile/1" />');
-    expect(html).toContain('<meta property="og:title" content="Ajit Kumar — Acode" />');
-    expect(html).toContain('<meta name="twitter:title" content="Ajit Kumar — Acode" />');
+    expect(html).toContain('<meta property="og:title" content="Ajit Kumar - Acode" />');
+    expect(html).toContain('<meta name="twitter:title" content="Ajit Kumar - Acode" />');
     expect(html).toContain('<meta property="og:image" content="https://acode.app/og/default.png" />');
     expect(html).toContain('<meta name="robots" content="index, follow" />');
   });
@@ -105,7 +105,7 @@ describe('server-rendered metadata', () => {
   it('uses count-free plugins metadata when a live count is unavailable', () => {
     const metadata = getMetadata('/plugins');
 
-    expect(metadata.title).toBe('Acode Plugins — Community Extensions');
+    expect(metadata.title).toBe('Acode Plugins - Community Extensions');
     expect(metadata.description).toBe('Browse community plugins for Acode. Find language support, themes, AI assistants, build tools, and more.');
   });
 

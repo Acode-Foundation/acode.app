@@ -303,7 +303,7 @@ function SponsorshipForm({ isLoggedIn, onSuccess, onCancel, loggedInEmail, logge
               <div className='upload-placeholder'>
                 <span className='icon image' />
                 <span className='upload-text'>Click to upload or drag and drop</span>
-                <span className='upload-hint'>PNG, JPEG, or WebP &mdash; max 512KB</span>
+                <span className='upload-hint'>PNG, JPEG, or WebP (max 512KB)</span>
               </div>
               <div className='upload-file-info'>
                 <span className='upload-filename' />

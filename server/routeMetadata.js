@@ -102,8 +102,8 @@ function getMetadata(pathname, origin = getPublicOrigin()) {
     const lastSegment = segments[segments.length - 1];
     const pageName = pathToTitle(lastSegment);
     return {
-      title: `${pageName} — Acode`,
-      description: `${pageName} — Acode is a code editor with a full Alpine Linux terminal, AI coding support, and 250+ plugins.`,
+      title: `${pageName} - Acode`,
+      description: `${pageName}. Acode is a code editor with a full Alpine Linux terminal, AI coding support, and 250+ plugins.`,
     };
   }
 

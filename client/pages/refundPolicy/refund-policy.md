@@ -16,7 +16,7 @@ We want you to be satisfied with your purchase. If you are not completely satisf
 
 ## Self-Service Refunds (Razorpay Purchases)
 
-All purchases made via Razorpay — including plugin purchases on the website and Acode Pro — are eligible for a **self-service refund within 2 hours** of purchase.
+All purchases made via Razorpay, including plugin purchases on the website and Acode Pro, are eligible for a **self-service refund within 2 hours** of purchase.
 
 - **Plugin purchases:** A "Request Refund" button is available on the plugin page while you are within the refund window.
 - **Acode Pro:** A "Request Refund" button is available on the [Pro page](/pro) while you are within the refund window.
@@ -74,8 +74,8 @@ Include the following details in your email:
 
 ## Refund Processing
 
-- **Self-service refunds** are initiated immediately. Please allow **5–7 business days** for the refund to appear in your account, depending on your bank or payment provider.
-- **Manual refund requests** will be reviewed by our support team and responded to within **3–5 business days**. Approved refunds will be processed back to your original payment method. Please allow an additional **5–10 business days** for the refund to appear in your account.
+- **Self-service refunds** are initiated immediately. Please allow **5-7 business days** for the refund to appear in your account, depending on your bank or payment provider.
+- **Manual refund requests** will be reviewed by our support team and responded to within **3-5 business days**. Approved refunds will be processed back to your original payment method. Please allow an additional **5-10 business days** for the refund to appear in your account.
 
 ---
 

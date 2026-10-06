@@ -192,7 +192,7 @@ async function loadPlugins(mount, pluginCount) {
         <div className='featured-plugins__intro'>
           <div>
             <h2>Growing plugin ecosystem</h2>
-            <p>Language servers, themes, formatters, and tools — or write your own.</p>
+            <p>Add language servers, themes, formatters, and tools, or write your own plugins.</p>
           </div>
           <a href='/plugins' className='see-all'>
             View all plugins <span className='icon navigate_next' />
@@ -330,7 +330,9 @@ function Plugin({ data }) {
         <span className='plugin-meta'>
           <span className='plugin-top'>
             <span className='plugin-name'>{name}</span>
-            <span className='plugin-downloads'>↓ {formatDownloads(downloads)}</span>
+            <span className='plugin-downloads' title='Downloads'>
+              <span className='icon download' aria-hidden='true' /> {formatDownloads(downloads)}
+            </span>
           </span>
           {author ? <span className='plugin-author'>{author}</span> : null}
         </span>

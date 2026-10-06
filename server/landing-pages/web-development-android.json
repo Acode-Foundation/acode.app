@@ -1,20 +1,20 @@
 {
   "path": "/web-development-android",
-  "title": "Web Development on Android — Complete Guide | Acode",
-  "description": "Build websites and web apps on your Android phone. Full web development environment with HTML/CSS/JS editor, live preview, Node.js, npm, Git, and terminal — all in Acode.",
+  "title": "Web Development on Android - Complete Guide | Acode",
+  "description": "Build websites and web apps on your Android phone. Full web development environment with HTML/CSS/JS editor, live preview, Node.js, npm, Git, and terminal, all in Acode.",
   "heroHeadline": "Full Web Development on Your Android Phone",
   "heroSubheadline": "Acode is the complete web development environment for Android. Edit HTML, CSS, and JavaScript with live preview. Run Node.js, npm, React, Next.js. Use Git. All on your phone.",
-  "ctaPrimary": "Download Acode — Free",
+  "ctaPrimary": "Download Acode for Free",
   "ctaSecondary": "Start Building",
   "problemHeadline": "Web Development Needs Real Tools",
   "problemPoints": [
-    "Web developers need more than a text editor. They need a local server, package manager, live preview, browser DevTools, and version control. Desktop IDEs provide all of this — Android apps historically provide none of it.",
+    "Web developers need more than a text editor. They need a local server, package manager, live preview, browser DevTools, and version control. Acode combines an editor, terminal, and preview tools on Android.",
     "You can edit HTML on your phone, but you can't see it rendered. You can write CSS, but can't check responsive breakpoints. You can write JavaScript, but can't run npm or debug with a console."
   ],
   "solutionHeadline": "Acode: Complete Web Development on Android",
   "solutionPoints": [
     "Acode combines everything a web developer needs: <strong>editor</strong> with HTML/CSS/JS syntax highlighting, <strong>live preview</strong> of your pages, <strong>JavaScript console</strong> for debugging, and a <strong>full Linux terminal</strong> for Node.js, npm, and build tools.",
-    "Build with any framework: React, Next.js, Vue, Svelte, Angular. Install via npm, develop with hot reload, and deploy — all from your phone.",
+    "Build with any framework: React, Next.js, Vue, Svelte, Angular. Install via npm, develop with hot reload, and deploy, all from your phone.",
     "Use Git for version control, FTP/SFTP for deployment, SSH for server management. The complete web development workflow, on Android."
   ],
   "featuresHeadline": "Web Development Toolkit",
@@ -63,7 +63,7 @@
   "faqs": [
     {
       "question": "Can I build and deploy a real website from my phone?",
-      "answer": "Yes. You can build a complete website — HTML, CSS, JavaScript, backend with Node.js — and deploy it via Git push to Vercel/Netlify, or FTP to your hosting provider. All from Acode."
+      "answer": "Yes. You can build a complete website with HTML, CSS, JavaScript, and a Node.js backend, then deploy it via Git push to Vercel/Netlify, or FTP to your hosting provider. All from Acode."
     },
     {
       "question": "Does Acode replace a desktop web development setup?",
@@ -77,5 +77,5 @@
     { "title": "npm on Android", "url": "/npm-android" },
     { "title": "Git on Android", "url": "/git-android" }
   ],
-  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Web Development on Android — Complete Guide\",\"description\":\"Build websites and web apps on your Android phone. Full web development environment with HTML/CSS/JS editor, live preview, Node.js, npm, Git.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/web-development-android\"}}"
+  "pageSchema": "{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Web Development on Android - Complete Guide\",\"description\":\"Build websites and web apps on your Android phone. Full web development environment with HTML/CSS/JS editor, live preview, Node.js, npm, Git.\",\"author\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"url\":\"https://acode.app\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Foxbiz Software Pvt. Ltd.\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://acode.app/logo-512.png\"}},\"datePublished\":\"2026-06-01\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://acode.app/web-development-android\"}}"
 }

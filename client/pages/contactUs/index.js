@@ -11,7 +11,7 @@ export default async function ContactUs() {
         <div className='contact-info'>
           <h2>Email</h2>
           <a href='mailto:contact@acode.app'>contact@acode.app</a>
-          <p>We typically respond within 3–5 business days.</p>
+          <p>We typically respond within 3-5 business days.</p>
         </div>
       </div>
 

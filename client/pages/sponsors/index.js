@@ -15,7 +15,7 @@ export default async function Sponsors() {
           <span className='highlight'>Sponsors</span>
         </h1>
         <p className='subtitle'>
-          {allSponsorsExpired ? 'These people and companies previously supported ' : 'These amazing people and companies support '}
+          {allSponsorsExpired ? 'These people and companies previously supported ' : 'These people and companies support '}
           <span className='highlight'>Acode</span>.
         </p>
       </div>
