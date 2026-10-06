@@ -315,7 +315,17 @@ router.get('/description/:id', async (req, res) => {
 router.get('{/:pluginId}', async (req, res) => {
   try {
     const { pluginId } = req.params;
-    const { user, name, status, page, limit, orderBy, supported_editor, owned, price } = req.query;
+    // Repeated params (`?name=a&name=b`) arrive as arrays; treat anything but a single string as absent.
+    const { query } = req;
+    const user = stringParam(query.user);
+    const name = stringParam(query.name);
+    const status = stringParam(query.status);
+    const page = stringParam(query.page);
+    const limit = stringParam(query.limit);
+    const orderBy = stringParam(query.orderBy);
+    const supported_editor = stringParam(query.supported_editor);
+    const owned = stringParam(query.owned);
+    const price = stringParam(query.price);
     const loggedInUser = await getLoggedInUser(req);
     const isAppAdmin = loggedInUser?.isAdmin === true && loggedInUser.authType === 'app';
     const columns = Plugin.minColumns;
@@ -427,7 +437,11 @@ router.get('{/:pluginId}', async (req, res) => {
       }
     }
 
-    const options = { page, limit, orderBy: Object.hasOwn(LIST_ORDER, orderBy) ? LIST_ORDER[orderBy] : LIST_ORDER.popular };
+    const options = {
+      page: positiveInt(page),
+      limit: positiveInt(limit),
+      orderBy: Object.hasOwn(LIST_ORDER, orderBy) ? LIST_ORDER[orderBy] : LIST_ORDER.popular,
+    };
 
     const rows = await Plugin.get(columns, where, options);
     const currency = detectUserCurrency(req);
@@ -1952,6 +1966,23 @@ async function verifyPurchase(order, plugin) {
     console.error(`Purchase verification failed (provider=${order.provider}):`, err.message);
     return true;
   }
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string|undefined}
+ */
+function stringParam(value) {
+  return typeof value === 'string' ? value : undefined;
+}
+
+/**
+ * @param {string} [value]
+ * @returns {number|undefined} the value as a positive integer, or undefined to use the default
+ */
+function positiveInt(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : undefined;
 }
 
 async function recordDownload(pluginId, device, clientIp, pkgName) {

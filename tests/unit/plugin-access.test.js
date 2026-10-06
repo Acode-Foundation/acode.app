@@ -324,3 +324,21 @@ describe('plugin list sorting and filters', () => {
     expect(await listWhere({ price: 'other' })).not.toContainEqual(expect.arrayContaining(['IFNULL(price, 0)']));
   });
 });
+
+describe('plugin list query parsing', () => {
+  it('ignores repeated params instead of failing on an array', async () => {
+    const res = await request('{/:pluginId}', { query: { name: ['mode:js', 'x'], orderBy: ['name'], price: ['free'] } });
+    expect(res.statusCode).toBe(200);
+    const [, where, options] = plugin.get.mock.calls.at(-1);
+    expect(where).not.toContainEqual(expect.arrayContaining(['name']));
+    expect(where).not.toContainEqual(expect.arrayContaining(['IFNULL(price, 0)']));
+    expect(options.orderBy).toContain('votes_up DESC');
+  });
+
+  it('passes page and limit as positive integers only', async () => {
+    await request('{/:pluginId}', { query: { page: '2', limit: '30' } });
+    expect(plugin.get.mock.calls.at(-1)[2]).toMatchObject({ page: 2, limit: 30 });
+    await request('{/:pluginId}', { query: { page: '-1', limit: 'abc' } });
+    expect(plugin.get.mock.calls.at(-1)[2]).toMatchObject({ page: undefined, limit: undefined });
+  });
+});
