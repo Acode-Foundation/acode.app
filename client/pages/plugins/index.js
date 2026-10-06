@@ -44,7 +44,7 @@ export default async function PluginList({ filter, orderBy, editor, price, statu
   const loggedInUser = await getLoggedInUser();
   if (price === OWNED.value && !loggedInUser) {
     // Purchases belong to an account, so sign in first instead of silently showing every plugin.
-    Router.loadUrl(withRedirect('/login', encodeURIComponent(`${location.pathname}${location.search}`)));
+    Router.loadUrl(withRedirect('/login', `${location.pathname}${location.search}`));
     return 'Redirecting...';
   }
 
