@@ -18,6 +18,13 @@ export default async function Plugins({ user, orderBy, status, name, editor, own
       Load more
     </button>
   );
+  // Fetch the next page as the button nears the viewport; the button stays as a manual retry.
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting && !loadMore.disabled) loadPage(page + 1);
+    },
+    { rootMargin: '600px 0px' },
+  );
   const params = new URLSearchParams();
   let page = 1;
   let count = 0;
@@ -73,6 +80,7 @@ export default async function Plugins({ user, orderBy, status, name, editor, own
       if (plugins.error) throw new Error(plugins.error);
 
       page = nextPage;
+      observer.unobserve(loadMore);
       loadMore.remove();
       el.setAttribute('data-msg', 'No plugins found. :(');
       for (const plugin of plugins) {
@@ -85,7 +93,11 @@ export default async function Plugins({ user, orderBy, status, name, editor, own
       }
 
       // A short page means there is nothing left to fetch.
-      if (plugins.length === PAGE_SIZE) el.append(loadMore);
+      if (plugins.length === PAGE_SIZE) {
+        el.append(loadMore);
+        // Re-observing reports the current state, so a page that doesn't fill the screen keeps loading.
+        observer.observe(loadMore);
+      }
     } catch (error) {
       if (count) {
         // Keep the button so a failed "load more" can be retried.
