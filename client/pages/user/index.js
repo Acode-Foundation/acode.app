@@ -82,7 +82,7 @@ export default async function User({ userId }) {
   return (
     <section id='user'>
       <div className='profile'>
-        <img src={user.avatar_url || gravatar(user.github)} alt={user.email} className='profile-image' />
+        <img src={user.avatar_url || gravatar(user.github)} alt={user.name || ''} className='profile-image' />
         <div className='profile-info'>
           <h1>
             <div className='user-name'>

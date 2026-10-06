@@ -424,23 +424,34 @@ route.delete('/link/google', async (req, res) => {
 });
 
 route.get('/:idOrEmail', async (req, res) => {
-  const { idOrEmail } = req.params;
+  try {
+    const { idOrEmail } = req.params;
+    const loggedInUser = await getLoggedInUser(req);
+    const isAdmin = Boolean(loggedInUser?.isAdmin);
+    // Only admins may look users up by email, or anyone could check whether an address has an account.
+    const where = isAdmin
+      ? [
+          [User.ID, idOrEmail],
+          [User.EMAIL, idOrEmail],
+        ]
+      : [[User.ID, idOrEmail]];
 
-  const [row] = await User.get(
-    [User.safeColumns],
-    [
-      [User.ID, idOrEmail],
-      [User.EMAIL, idOrEmail],
-    ],
-    'OR',
-  );
+    const [row] = await User.get(User.publicColumns, where, 'OR');
+    if (!row) {
+      res.status(404).send({ error: 'User not found' });
+      return;
+    }
 
-  if (!row) {
-    res.status(404).send({ error: 'User not found' });
-    return;
+    if (isAdmin || String(loggedInUser?.id) === String(row.id)) {
+      const [privateRow] = await User.get(User.safeColumns, [User.ID, row.id]);
+      res.send(privateRow);
+      return;
+    }
+
+    res.send(row);
+  } catch (error) {
+    handleError(res, error);
   }
-
-  res.send(row);
 });
 
 route.patch('/verify{/:type}/:userId', async (req, res) => {
