@@ -62,7 +62,7 @@ describe('route metadata', () => {
 
     applyPageMetadata(metadata, documentRef);
 
-    expect(metadata.title).toBe('Acode Plugins — 100+ Community Extensions');
+    expect(metadata.title).toBe('Acode Plugins - 100+ Community Extensions');
     expect(metadata.description).toBe(
       'Browse 100+ community plugins for Acode. Find language support, themes, AI assistants, build tools, and more.',
     );
@@ -80,13 +80,13 @@ describe('route metadata', () => {
     [6_789, '5K+'],
     [12_345, '10K+'],
   ])('formats plugin count %i as the reached %s milestone', (count, milestone) => {
-    expect(resolveRouteMetadata('/plugins', origin, count).title).toBe(`Acode Plugins — ${milestone} Community Extensions`);
+    expect(resolveRouteMetadata('/plugins', origin, count).title).toBe(`Acode Plugins - ${milestone} Community Extensions`);
   });
 
   it.each([undefined, -1, 1.5, Number.NaN, '287'])('uses count-free plugins metadata for invalid count %s', (count) => {
     const metadata = resolveRouteMetadata('/plugins', origin, count);
 
-    expect(metadata.title).toBe('Acode Plugins — Community Extensions');
+    expect(metadata.title).toBe('Acode Plugins - Community Extensions');
     expect(metadata.description).toBe('Browse community plugins for Acode. Find language support, themes, AI assistants, build tools, and more.');
     expect(`${metadata.title} ${metadata.description}`).not.toMatch(/250\+|\{\{count\}\}/);
   });
@@ -132,7 +132,7 @@ describe('route metadata', () => {
 
   it('resolves plugin sections without carrying the section into the canonical URL', () => {
     const metadata = resolveRouteMetadata('/plugin/example.plugin/comments', origin);
-    expect(metadata.title).toBe('Acode Plugin — Acode');
+    expect(metadata.title).toBe('Acode Plugin - Acode');
     expect(metadata.canonicalUrl).toBe('https://acode.app/plugin/example.plugin');
     expect(metadata.imageUrl).toBe('https://acode.app/og/default.png');
   });
@@ -150,7 +150,7 @@ describe('route metadata', () => {
     );
 
     applyPageMetadata(pluginMetadata, documentRef);
-    expect(documentRef.title).toBe('Example Plugin — Acode Plugin');
+    expect(documentRef.title).toBe('Example Plugin - Acode Plugin');
     expect(pluginMetadata.robots).toBe('index, follow');
     expect(content(documentRef, 'meta[property="og:image"]')).toContain('/og/plugin/example.plugin.png?v=1.2.3&r=2');
     expect(content(documentRef, 'meta[name="twitter:card"]')).toBe('summary_large_image');
@@ -178,7 +178,7 @@ describe('route metadata', () => {
     expect(applyProfileMetadata(user, request)).toBe(true);
 
     expect(metadata).toMatchObject({
-      title: 'Ajit Kumar — Acode',
+      title: 'Ajit Kumar - Acode',
       description: "View Ajit Kumar's profile and published plugins on Acode.",
       robots: 'index, follow',
       canonicalUrl: 'https://acode.app/profile/1',

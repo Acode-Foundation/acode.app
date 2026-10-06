@@ -30,7 +30,7 @@ export default async function Pro({ redirect }) {
           Support <span className='highlight'>Acode</span>
         </h1>
         <p className='subtitle'>
-          Acode is a free, open-source code editor built for mobile developers. Your support keeps the project alive, independent, and growing.
+          Acode is a free, open-source code editor built for mobile developers. Your purchase helps fund development and maintenance.
         </p>
       </div>
 
@@ -70,7 +70,7 @@ export default async function Pro({ redirect }) {
 
       <div className='pro-footer-note'>
         <p>100% of proceeds go to the maintainers of this open-source project.</p>
-        <p>Refunds available within 2 hours of purchase — no questions asked.</p>
+        <p>Refunds available within 2 hours of purchase, no questions asked.</p>
       </div>
     </section>
   );

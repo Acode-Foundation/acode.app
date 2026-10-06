@@ -52,7 +52,7 @@ function createPluginMetadataDescription(markdown, fallback = 'Explore this plug
 function createProfileMetadata(user) {
   const normalizedName = normalizeMetadataText(user?.name) || 'Acode User';
   return {
-    title: `${normalizedName} — Acode`,
+    title: `${normalizedName} - Acode`,
     description: `View ${normalizedName}'s profile and published plugins on Acode.`,
     robots: user?.role === 'deleted' ? 'noindex, follow' : 'index, follow',
   };

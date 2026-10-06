@@ -92,7 +92,7 @@ async function renderDefaultOgImage() {
       <text x="86" y="352" fill="#b8c2d8" font-family="Arial, sans-serif" font-size="29">Android code editor with Linux terminal and AI coding.</text>
       <g transform="translate(86 420)">
         <rect width="410" height="72" rx="36" fill="#3399ff"/>
-        <text x="205" y="46" text-anchor="middle" fill="#07111f" font-family="Arial, sans-serif" font-size="27" font-weight="700">Open source · 250+ plugins</text>
+        <text x="205" y="46" text-anchor="middle" fill="#07111f" font-family="Arial, sans-serif" font-size="27" font-weight="700">Open source, 250+ plugins</text>
       </g>
       <text x="1020" y="550" text-anchor="end" fill="#ffffff" font-family="Arial, sans-serif" font-size="34" font-weight="700">Acode</text>
       <text x="1020" y="585" text-anchor="end" fill="#a8b3c7" font-family="Arial, sans-serif" font-size="22">acode.app</text>

@@ -176,7 +176,7 @@ export function ScanDetails({ scan, title, showReasons = false }) {
             {scan.capabilities.map((capability) => (
               <li>
                 <span className={`severity severity--${capability.severity}`}>{capability.severity}</span> {capability.title}
-                {capability.evidence?.length ? <small className='muted'> — {capability.evidence.join(', ')}</small> : ''}
+                {capability.evidence?.length ? <small className='muted'> - {capability.evidence.join(', ')}</small> : ''}
               </li>
             ))}
           </ul>

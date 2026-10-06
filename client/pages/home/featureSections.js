@@ -23,7 +23,7 @@ const features = [
     eyebrow: 'MAKE IT YOURS',
     title: ['Your editor,', 'your way.'],
     description:
-      'Add language tools and developer utilities with plugins. Pick a theme, tune your shortcuts, and make the workspace feel like yours. Nothing is locked. If you can think it, you can wire it.',
+      'Add language tools and developer utilities with plugins. Pick a theme, tune your shortcuts, and make the workspace feel like yours. Build your own plugins with the developer API.',
     shots: [screenshots.plugins, screenshots.themes],
     link: { href: '/plugins', label: 'Explore plugins' },
   },

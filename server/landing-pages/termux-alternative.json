@@ -3,8 +3,8 @@
   "title": "Termux Alternative: Why Acode Is the Better Android Development Environment | Acode",
   "description": "Looking for a Termux alternative? Acode combines the same Alpine Linux terminal with a professional code editor, AI coding support, Git, and 250+ plugins. The complete Code Editor Termux users upgrade to.",
   "heroHeadline": "The Termux Alternative with a Real Code Editor",
-  "heroSubheadline": "Acode gives you the same proot-based Alpine Linux terminal as Termux — plus a professional code editor, AI coding agents, Git integration, and 250+ plugins. One app. No switching.",
-  "ctaPrimary": "Download Acode — Free",
+  "heroSubheadline": "Acode gives you the same proot-based Alpine Linux terminal as Termux, plus a professional code editor, AI coding agents, Git integration, and 250+ plugins. One app. No switching.",
+  "ctaPrimary": "Download Acode for Free",
   "ctaSecondary": "Acode vs Termux",
   "problemHeadline": "Why Developers Look for Termux Alternatives",
   "problemPoints": [
@@ -16,31 +16,31 @@
   "solutionHeadline": "Acode: The Same Terminal, Plus a Complete development environment",
   "solutionPoints": [
     "Acode uses the <strong>same proot-based Alpine Linux</strong> as Termux. You get the same <code>apk</code> package manager, the same access to Alpine's repository, the same terminal commands. Nothing changes in your terminal workflow.",
-    "But Acode adds a <strong>professional code editor</strong> — Ace Editor v1.22.0 with syntax highlighting for 100+ languages, multi-file tabs, command palette (Ctrl+Shift+P), file search (Ctrl+P), keyboard shortcuts, and live HTML preview.",
-    "The killer feature: <strong>Acodes CLI</strong>. Run <code>acode .</code> in the terminal to open your current folder in the editor. Run <code>acode file.js</code> to open a specific file. The terminal and editor are connected — not separate apps.",
-    "And because Acode has a real terminal, you can run <strong>AI coding agents</strong> — Claude Code, Codex, OpenCode — right in the terminal, then view and edit AI-generated files in the editor. Termux can't do this."
+    "But Acode adds a <strong>professional code editor</strong> based on Ace Editor v1.22.0 with syntax highlighting for 100+ languages, multi-file tabs, command palette (Ctrl+Shift+P), file search (Ctrl+P), keyboard shortcuts, and live HTML preview.",
+    "Use the <strong>acode CLI</strong> to connect the terminal and editor. Run <code>acode .</code> in the terminal to open your current folder in the editor. Run <code>acode file.js</code> to open a specific file. The terminal and editor are connected, not separate apps.",
+    "And because Acode has a real terminal, you can run <strong>AI coding agents</strong> such as Claude Code, Codex, and OpenCode right in the terminal, then view and edit AI-generated files in the editor. Termux can't do this."
   ],
   "comparisonHeadline": "Acode vs Termux: Feature Comparison",
   "comparisonHeaders": ["Feature", "Acode", "Termux"],
   "comparisonRows": [
-    ["Linux Terminal", "<span class='lan-check'>✔ Alpine Linux (proot)</span>", "<span class='lan-check'>✔ Alpine Linux (proot)</span>"],
-    ["apk Package Manager", "<span class='lan-check'>✔ Full access</span>", "<span class='lan-check'>✔ Full access</span>"],
-    ["Code Editor", "<span class='lan-check'>✔ Professional (100+ languages)</span>", "<span class='lan-cross'>✘ Vim/Nano only</span>"],
-    ["Syntax Highlighting", "<span class='lan-check'>✔ 100+ languages</span>", "<span class='lan-cross'>✘ Terminal-only</span>"],
-    ["Multi-File Tabs", "<span class='lan-check'>✔ Yes</span>", "<span class='lan-cross'>✘ No</span>"],
-    ["Project File Browser", "<span class='lan-check'>✔ Built-in</span>", "<span class='lan-cross'>✘ ls/tree only</span>"],
-    ["AI Coding Agents", "<span class='lan-check'>✔ Claude Code, Codex, OpenCode</span>", "<span class='lan-check'>✔ Can run them</span>"],
-    ["Editor for AI Output", "<span class='lan-check'>✔ Full syntax-aware editor</span>", "<span class='lan-cross'>✘ Terminal editors only</span>"],
-    ["Live HTML Preview", "<span class='lan-check'>✔ In-app browser</span>", "<span class='lan-cross'>✘ No</span>"],
-    ["JavaScript Console", "<span class='lan-check'>✔ Interactive debugger</span>", "<span class='lan-cross'>✘ Node.js REPL only</span>"],
-    ["Git Integration", "<span class='lan-check'>✔ CLI + GUI plugins</span>", "<span class='lan-check'>✔ CLI only</span>"],
-    ["FTP/SFTP Client", "<span class='lan-check'>✔ Built-in</span>", "<span class='lan-cross'>✘ CLI tools only</span>"],
-    ["SSH Client", "<span class='lan-check'>✔ Plugin + terminal</span>", "<span class='lan-check'>✔ Terminal only</span>"],
-    ["Plugins", "<span class='lan-check'>✔ 250+ plugins</span>", "<span class='lan-cross'>✘ Package manager only</span>"],
-    ["Command Palette", "<span class='lan-check'>✔ Ctrl+Shift+P</span>", "<span class='lan-cross'>✘ No</span>"],
-    ["File Search", "<span class='lan-check'>✔ Ctrl+P</span>", "<span class='lan-cross'>✘ find/grep only</span>"],
-    ["Open Source", "<span class='lan-check'>✔ MIT License</span>", "<span class='lan-check'>✔ GPL 3.0</span>"],
-    ["Price", "<span class='lan-check'>✔ Free</span>", "<span class='lan-check'>✔ Free</span>"]
+    ["Linux Terminal", "<span class='lan-check'>Alpine Linux (proot)</span>", "<span class='lan-check'>Alpine Linux (proot)</span>"],
+    ["apk Package Manager", "<span class='lan-check'>Full access</span>", "<span class='lan-check'>Full access</span>"],
+    ["Code Editor", "<span class='lan-check'>Professional (100+ languages)</span>", "<span class='lan-cross'>Vim/Nano only</span>"],
+    ["Syntax Highlighting", "<span class='lan-check'>100+ languages</span>", "<span class='lan-cross'>Terminal-only</span>"],
+    ["Multi-File Tabs", "<span class='lan-check'>Yes</span>", "<span class='lan-cross'>No</span>"],
+    ["Project File Browser", "<span class='lan-check'>Built-in</span>", "<span class='lan-cross'>ls/tree only</span>"],
+    ["AI Coding Agents", "<span class='lan-check'>Claude Code, Codex, OpenCode</span>", "<span class='lan-check'>Can run them</span>"],
+    ["Editor for AI Output", "<span class='lan-check'>Full syntax-aware editor</span>", "<span class='lan-cross'>Terminal editors only</span>"],
+    ["Live HTML Preview", "<span class='lan-check'>In-app browser</span>", "<span class='lan-cross'>No</span>"],
+    ["JavaScript Console", "<span class='lan-check'>Interactive debugger</span>", "<span class='lan-cross'>Node.js REPL only</span>"],
+    ["Git Integration", "<span class='lan-check'>CLI + GUI plugins</span>", "<span class='lan-check'>CLI only</span>"],
+    ["FTP/SFTP Client", "<span class='lan-check'>Built-in</span>", "<span class='lan-cross'>CLI tools only</span>"],
+    ["SSH Client", "<span class='lan-check'>Plugin + terminal</span>", "<span class='lan-check'>Terminal only</span>"],
+    ["Plugins", "<span class='lan-check'>250+ plugins</span>", "<span class='lan-cross'>Package manager only</span>"],
+    ["Command Palette", "<span class='lan-check'>Ctrl+Shift+P</span>", "<span class='lan-cross'>No</span>"],
+    ["File Search", "<span class='lan-check'>Ctrl+P</span>", "<span class='lan-cross'>find/grep only</span>"],
+    ["Open Source", "<span class='lan-check'>MIT License</span>", "<span class='lan-check'>GPL 3.0</span>"],
+    ["Price", "<span class='lan-check'>Free</span>", "<span class='lan-check'>Free</span>"]
   ],
   "setupHeadline": "How to Switch from Termux to Acode",
   "setupSteps": [
@@ -50,7 +50,7 @@
     },
     {
       "title": "Set Up the Terminal",
-      "description": "Tap the terminal icon. Acode downloads and configures Alpine Linux — the same as Termux. Takes about a minute."
+      "description": "Tap the terminal icon. Acode downloads and configures Alpine Linux, the same as Termux. Takes about a minute."
     },
     {
       "title": "Install Your Tools",
@@ -62,7 +62,7 @@
     },
     {
       "title": "Configure Your Shell",
-      "description": "Customize Acode's <code>/initrc</code> file just like you configured Termux's <code>.bashrc</code>. Aliases, environment variables, prompt customization — all supported."
+      "description": "Customize Acode's <code>/initrc</code> file just like you configured Termux's <code>.bashrc</code>. Aliases, environment variables, and prompt customization are supported."
     },
     {
       "title": "Migrate Gradually",
@@ -73,11 +73,11 @@
   "features": [
     {
       "title": "Same Terminal, Better Editor",
-      "description": "You keep the Alpine Linux terminal you know. You gain a professional editor with syntax highlighting, multi-file tabs, keyboard shortcuts, and project management. No compromises."
+      "description": "You keep the Alpine Linux terminal you know. You gain a professional editor with syntax highlighting, multi-file tabs, keyboard shortcuts, and project management. Keep your tools and files in the same app."
     },
     {
-      "title": "acode CLI — Bridge Terminal to Editor",
-      "description": "The <code>acode</code> command opens files and folders from the terminal into Acode's editor. Navigate with <code>ls</code> and <code>cd</code>, open with <code>acode file.js</code>. Workflow is seamless."
+      "title": "acode CLI - Bridge Terminal to Editor",
+      "description": "The <code>acode</code> command opens files and folders from the terminal into Acode's editor. Navigate with <code>ls</code> and <code>cd</code>, open with <code>acode file.js</code>. Keep the terminal and editor in the same app."
     },
     {
       "title": "AI Coding Ready",
@@ -89,7 +89,7 @@
     },
     {
       "title": "Full Web Development",
-      "description": "Edit HTML/CSS/JS with live preview. Debug with JavaScript console. Run build tools like webpack, vite, and npm scripts. Full web dev environment — something Termux alone can't provide."
+      "description": "Edit HTML/CSS/JS with live preview. Debug with JavaScript console. Run build tools like webpack, vite, and npm scripts. Full web dev environment, something Termux alone can't provide."
     },
     {
       "title": "One App, Not Two",
@@ -99,7 +99,7 @@
   "faqs": [
     {
       "question": "Does Acode's terminal work exactly like Termux?",
-      "answer": "Yes. Both use proot-based Alpine Linux with the <code>apk</code> package manager. The terminal experience is identical — bash shell, customizable prompt, all standard Linux commands. If it works in Termux, it works in Acode."
+      "answer": "Yes. Both use proot-based Alpine Linux with the <code>apk</code> package manager. Use a bash shell, a customizable prompt, and standard Linux commands. If it works in Termux, it works in Acode."
     },
     {
       "question": "Can I migrate my Termux configuration?",
