@@ -224,6 +224,11 @@ class User extends Entity {
     ];
   }
 
+  /** What anyone may see on a profile: no email, auth or purchase details. */
+  get publicColumns() {
+    return [this.X, this.ID, this.NAME, this.GITHUB, this.WEBSITE, this.VERIFIED, this.LINKEDIN, this.ACODE_PRO, this.AVATAR_URL, this.CREATED_AT];
+  }
+
   get safeColumns() {
     return [
       this.X,

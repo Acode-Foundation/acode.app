@@ -150,7 +150,7 @@ function getHomeSchemas(origin) {
 async function getPluginsMetadata() {
   const Plugin = require('./entities/plugin');
   try {
-    const count = await Plugin.for('internal').count();
+    const count = await Plugin.count();
     const countLabel = formatMilestoneCount(count);
     if (countLabel === null) return { ...PLUGINS_FALLBACK };
 

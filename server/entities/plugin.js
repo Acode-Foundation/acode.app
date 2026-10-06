@@ -124,7 +124,7 @@ class Plugin extends Entity {
         WHERE c.comment IS NOT NULL AND c.comment IS NOT ''
         GROUP BY c.plugin_id
       ) as c ON p.id = c.plugin_id
-    )`;
+    ) AS listing`;
 
     if (this.mode === 'api') {
       sql += ` ORDER BY ${Array.isArray(orderBy) ? orderBy.join(',') : orderBy} LIMIT ? OFFSET ?`;

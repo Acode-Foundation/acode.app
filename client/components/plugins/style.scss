@@ -101,6 +101,33 @@
     }
   }
 
+  .load-more {
+    grid-column: 1 / -1;
+    justify-self: center;
+    height: 42px;
+    margin: 16px 0 0;
+    padding: 0 22px;
+    border: 1px solid var(--page-line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--page-text);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+
+    &:hover:not(:disabled) {
+      border-color: rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+  }
+
   .info {
     display: flex;
     justify-content: center;

@@ -45,6 +45,25 @@ const MIN_PRICE = 10;
 const MAX_PRICE = 10000;
 const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
 const ID_REGEX = /^[a-z][a-z0-9._]{3,49}$/i;
+// `downloads` is stored as TEXT, so it must be cast or "900" sorts above "21004".
+const DOWNLOADS_DESC = 'CAST(downloads AS INTEGER) DESC';
+const LIST_ORDER = Object.fromEntries(
+  Object.entries({
+    popular: ['votes_up DESC', DOWNLOADS_DESC, 'comment_count DESC', 'updated_at DESC', 'votes_down ASC'],
+    // Unique installs over the last week, read through the (plugin_id, created_at) index.
+    trending: [
+      "(SELECT COUNT(*) FROM download d WHERE d.plugin_id = listing.id AND d.created_at >= datetime('now', '-7 days')) DESC",
+      DOWNLOADS_DESC,
+    ],
+    downloads: [DOWNLOADS_DESC],
+    // Smoothed approval ratio, so one upvote doesn't outrank hundreds of mostly positive reviews.
+    rating: ['(votes_up + 1.0) / (votes_up + votes_down + 2) DESC', 'votes_up DESC', DOWNLOADS_DESC],
+    updated: ['COALESCE(package_updated_at, created_at) DESC'],
+    newest: ['created_at DESC'],
+    name: ['name COLLATE NOCASE ASC'],
+    // The unique id last keeps ties in the same order on every request, so pages don't repeat or skip plugins.
+  }).map(([key, order]) => [key, [...order, 'id ASC']]),
+);
 
 function legacyModeScore(mode, keyword) {
   if (mode === keyword) return 100;
@@ -302,7 +321,17 @@ router.get('/description/:id', async (req, res) => {
 router.get('{/:pluginId}', async (req, res) => {
   try {
     const { pluginId } = req.params;
-    const { user, name, status, page, limit, orderBy, supported_editor, owned } = req.query;
+    // Repeated params (`?name=a&name=b`) arrive as arrays; treat anything but a single string as absent.
+    const { query } = req;
+    const user = stringParam(query.user);
+    const name = stringParam(query.name);
+    const status = stringParam(query.status);
+    const page = stringParam(query.page);
+    const limit = stringParam(query.limit);
+    const orderBy = stringParam(query.orderBy);
+    const supported_editor = stringParam(query.supported_editor);
+    const owned = stringParam(query.owned);
+    const price = stringParam(query.price);
     const loggedInUser = await getLoggedInUser(req);
     const isAppAdmin = loggedInUser?.isAdmin === true && loggedInUser.authType === 'app';
     const columns = Plugin.minColumns;
@@ -394,6 +423,12 @@ router.get('{/:pluginId}', async (req, res) => {
         where.push([Plugin.ID, ownedOrders.map((o) => String(o.plugin_id)), 'IN']);
       }
 
+      if (price === 'free') {
+        where.push(['IFNULL(price, 0)', 0]);
+      } else if (price === 'paid') {
+        where.push(['IFNULL(price, 0)', 0, '>']);
+      }
+
       const origin = req.headers.origin || req.headers.referer;
       const allowAllEditors = Boolean(origin?.startsWith(process.env.HOST));
 
@@ -408,22 +443,11 @@ router.get('{/:pluginId}', async (req, res) => {
       }
     }
 
-    const options = { page, limit };
-
-    if (orderBy) {
-      switch (orderBy) {
-        case 'downloads':
-          options.orderBy = 'downloads DESC';
-          break;
-        case 'newest':
-          options.orderBy = 'created_at DESC';
-          break;
-        default:
-          break;
-      }
-    } else {
-      options.orderBy = ['votes_up DESC', 'downloads DESC', 'comment_count DESC', 'updated_at DESC', 'votes_down ASC'];
-    }
+    const options = {
+      page: positiveInt(page),
+      limit: positiveInt(limit),
+      orderBy: Object.hasOwn(LIST_ORDER, orderBy) ? LIST_ORDER[orderBy] : LIST_ORDER.popular,
+    };
 
     const rows = await Plugin.get(columns, where, options);
     const currency = detectUserCurrency(req);
@@ -1948,6 +1972,23 @@ async function verifyPurchase(order, plugin) {
     console.error(`Purchase verification failed (provider=${order.provider}):`, err.message);
     return true;
   }
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string|undefined}
+ */
+function stringParam(value) {
+  return typeof value === 'string' ? value : undefined;
+}
+
+/**
+ * @param {string} [value]
+ * @returns {number|undefined} the value as a positive integer, or undefined to use the default
+ */
+function positiveInt(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : undefined;
 }
 
 async function recordDownload(pluginId, device, clientIp, pkgName) {

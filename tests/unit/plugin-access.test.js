@@ -292,3 +292,60 @@ describe('plugin install entitlement', () => {
     expect(order.insert).not.toHaveBeenCalled();
   });
 });
+
+describe('plugin list sorting and filters', () => {
+  const listOptions = async (query) => {
+    await request('{/:pluginId}', { query });
+    return plugin.get.mock.calls.at(-1)[2];
+  };
+  const listWhere = async (query) => {
+    await request('{/:pluginId}', { query });
+    return plugin.get.mock.calls.at(-1)[1];
+  };
+
+  it('sorts downloads numerically because the column is stored as text', async () => {
+    expect((await listOptions({ orderBy: 'downloads' })).orderBy).toEqual(['CAST(downloads AS INTEGER) DESC', 'id ASC']);
+    expect((await listOptions({})).orderBy).toContain('CAST(downloads AS INTEGER) DESC');
+  });
+
+  it.each(['trending', 'rating', 'updated', 'newest', 'name'])('supports the %s sort', async (orderBy) => {
+    const { orderBy: sort } = await listOptions({ orderBy });
+    expect(Array.isArray(sort)).toBe(true);
+    expect(sort).not.toEqual((await listOptions({})).orderBy);
+  });
+
+  it.each(['popular', 'trending', 'downloads', 'rating', 'updated', 'newest', 'name'])(
+    'ends the %s sort with the unique id so pages stay stable',
+    async (orderBy) => {
+      expect((await listOptions({ orderBy })).orderBy.at(-1)).toBe('id ASC');
+    },
+  );
+
+  it.each(['unknown', 'constructor', '__proto__'])('falls back to popular for %s', async (orderBy) => {
+    expect((await listOptions({ orderBy })).orderBy).toEqual((await listOptions({})).orderBy);
+  });
+
+  it('filters by price', async () => {
+    expect(await listWhere({ price: 'free' })).toContainEqual(['IFNULL(price, 0)', 0]);
+    expect(await listWhere({ price: 'paid' })).toContainEqual(['IFNULL(price, 0)', 0, '>']);
+    expect(await listWhere({ price: 'other' })).not.toContainEqual(expect.arrayContaining(['IFNULL(price, 0)']));
+  });
+});
+
+describe('plugin list query parsing', () => {
+  it('ignores repeated params instead of failing on an array', async () => {
+    const res = await request('{/:pluginId}', { query: { name: ['mode:js', 'x'], orderBy: ['name'], price: ['free'] } });
+    expect(res.statusCode).toBe(200);
+    const [, where, options] = plugin.get.mock.calls.at(-1);
+    expect(where).not.toContainEqual(expect.arrayContaining(['name']));
+    expect(where).not.toContainEqual(expect.arrayContaining(['IFNULL(price, 0)']));
+    expect(options.orderBy).toContain('votes_up DESC');
+  });
+
+  it('passes page and limit as positive integers only', async () => {
+    await request('{/:pluginId}', { query: { page: '2', limit: '30' } });
+    expect(plugin.get.mock.calls.at(-1)[2]).toMatchObject({ page: 2, limit: 30 });
+    await request('{/:pluginId}', { query: { page: '-1', limit: 'abc' } });
+    expect(plugin.get.mock.calls.at(-1)[2]).toMatchObject({ page: undefined, limit: undefined });
+  });
+});

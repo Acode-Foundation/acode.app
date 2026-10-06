@@ -8,64 +8,100 @@ import { calcRating, getLoggedInUser, hideLoading, showLoading, since } from 'li
 import Router from 'lib/Router';
 import EditorType from '../editorType';
 
-export default async function Plugins({ user, orderBy, status, name, editor, owned }) {
+const PAGE_SIZE = 30;
+const AD_POSITIONS = [2, 15, 28];
+
+export default async function Plugins({ user, orderBy, status, name, editor, owned, price }) {
   const el = <div className='plugins' data-msg='loading...' />;
+  const loadMore = (
+    <button type='button' className='load-more' onclick={() => loadPage(page + 1)}>
+      Load more
+    </button>
+  );
+  const params = new URLSearchParams();
+  let page = 1;
+  let count = 0;
+
+  if (user) {
+    params.set('user', user);
+  }
+
+  if (status !== undefined) {
+    params.set('status', status);
+  }
+
+  if (name) {
+    params.set('name', name);
+  }
+
+  if (editor) {
+    params.set('supported_editor', editor);
+  }
+
+  if (orderBy) {
+    params.set('orderBy', orderBy);
+  }
+
+  if (owned) {
+    params.set('owned', owned);
+  }
+
+  if (price) {
+    params.set('price', price);
+  }
+
+  params.set('limit', PAGE_SIZE);
 
   try {
     showLoading();
-    const params = new URLSearchParams();
-
-    if (user) {
-      params.set('user', user);
-    }
-
-    if (status !== undefined) {
-      params.set('status', status);
-    }
-
-    if (name) {
-      params.set('name', name);
-    }
-
-    if (editor) {
-      params.set('supported_editor', editor);
-    }
-
-    if (orderBy) {
-      params.set('orderBy', orderBy);
-    }
-
-    if (owned) {
-      params.set('owned', owned);
-    }
-
-    const query = params.toString();
-    const url = `/api/plugin${query ? `?${query}` : ''}`;
-
-    const res = await fetch(url);
-    const { isAdmin, id: userId } = (await getLoggedInUser()) || {};
-    const plugins = await res.json();
-    const adsPosition = [2, 15, 28];
-
-    el.setAttribute('data-msg', 'No plugins found. :(');
-    for (let i = 0; i < plugins.length; i++) {
-      const plugin = plugins[i];
-      if (adsPosition.includes(i) || (i > 33 && Math.random() < 0.1)) {
-        el.append(<AdSense className='plugin' style={{ position: 'relative' }} />);
-      }
-      el.append(<Plugin {...plugin} isAdmin={isAdmin} userId={userId} />);
-    }
-  } catch (error) {
-    el.append(
-      <div className='error'>
-        <h2>{error.error}</h2>
-      </div>,
-    );
+    await loadPage(1);
   } finally {
     hideLoading();
   }
 
   return el;
+
+  async function loadPage(nextPage) {
+    loadMore.disabled = true;
+    loadMore.textContent = 'Loading...';
+
+    try {
+      params.set('page', nextPage);
+      const res = await fetch(`/api/plugin?${params}`);
+      const { isAdmin, id: userId } = (await getLoggedInUser()) || {};
+      const plugins = await res.json();
+      if (plugins.error) throw new Error(plugins.error);
+
+      page = nextPage;
+      loadMore.remove();
+      el.setAttribute('data-msg', 'No plugins found. :(');
+      for (const plugin of plugins) {
+        // Ads are placed by position in the whole list, so later pages keep the same rhythm.
+        if (AD_POSITIONS.includes(count) || (count > 33 && Math.random() < 0.1)) {
+          el.append(<AdSense className='plugin' style={{ position: 'relative' }} />);
+        }
+        el.append(<Plugin {...plugin} isAdmin={isAdmin} userId={userId} />);
+        count++;
+      }
+
+      // A short page means there is nothing left to fetch.
+      if (plugins.length === PAGE_SIZE) el.append(loadMore);
+    } catch (error) {
+      if (count) {
+        // Keep the button so a failed "load more" can be retried.
+        alert('Error', error.message);
+      } else {
+        el.append(
+          <div className='error'>
+            <h2>{error.message}</h2>
+          </div>,
+        );
+      }
+    } finally {
+      loadMore.disabled = false;
+      loadMore.textContent = 'Load more';
+    }
+  }
 }
 
 function Plugin({
@@ -106,7 +142,7 @@ function Plugin({
         <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</h2>
         <div className='info'>
           <div title='Downloads counter'>
-            {downloads.toLocaleString()} <span className='icon download' />
+            {Number(downloads).toLocaleString()} <span className='icon download' />
           </div>
           <PluginStatus status={status_text} id={id} name={name} />
           <div>{calcRating(upVotes, downVotes)}</div>

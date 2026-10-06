@@ -184,14 +184,16 @@ export function since(date) {
  * @param {string} redirect
  *
  * @example ```js
- * withRedirect('/login', '/profile') // '/login?redirect=/profile'
+ * withRedirect('/login', '/profile') // '/login?redirect=%2Fprofile'
  * ```
  */
 export function withRedirect(url, redirect) {
   if (!redirect) return url;
+  // Encode so a redirect with its own query (`/plugins?price=owned&editor=cm`) survives as one param.
+  const value = encodeURIComponent(redirect);
   if (url.includes('?')) {
-    return `${url}&redirect=${redirect}`;
+    return `${url}&redirect=${value}`;
   }
 
-  return `${url}?redirect=${redirect}`;
+  return `${url}?redirect=${value}`;
 }
