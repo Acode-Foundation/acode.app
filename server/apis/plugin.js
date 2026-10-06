@@ -47,17 +47,23 @@ const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
 const ID_REGEX = /^[a-z][a-z0-9._]{3,49}$/i;
 // `downloads` is stored as TEXT, so it must be cast or "900" sorts above "21004".
 const DOWNLOADS_DESC = 'CAST(downloads AS INTEGER) DESC';
-const LIST_ORDER = {
-  popular: ['votes_up DESC', DOWNLOADS_DESC, 'comment_count DESC', 'updated_at DESC', 'votes_down ASC'],
-  // Unique installs over the last week, read through the (plugin_id, created_at) index.
-  trending: ["(SELECT COUNT(*) FROM download d WHERE d.plugin_id = listing.id AND d.created_at >= datetime('now', '-7 days')) DESC", DOWNLOADS_DESC],
-  downloads: [DOWNLOADS_DESC],
-  // Smoothed approval ratio, so one upvote doesn't outrank hundreds of mostly positive reviews.
-  rating: ['(votes_up + 1.0) / (votes_up + votes_down + 2) DESC', 'votes_up DESC', DOWNLOADS_DESC],
-  updated: ['COALESCE(package_updated_at, created_at) DESC'],
-  newest: ['created_at DESC'],
-  name: ['name COLLATE NOCASE ASC'],
-};
+const LIST_ORDER = Object.fromEntries(
+  Object.entries({
+    popular: ['votes_up DESC', DOWNLOADS_DESC, 'comment_count DESC', 'updated_at DESC', 'votes_down ASC'],
+    // Unique installs over the last week, read through the (plugin_id, created_at) index.
+    trending: [
+      "(SELECT COUNT(*) FROM download d WHERE d.plugin_id = listing.id AND d.created_at >= datetime('now', '-7 days')) DESC",
+      DOWNLOADS_DESC,
+    ],
+    downloads: [DOWNLOADS_DESC],
+    // Smoothed approval ratio, so one upvote doesn't outrank hundreds of mostly positive reviews.
+    rating: ['(votes_up + 1.0) / (votes_up + votes_down + 2) DESC', 'votes_up DESC', DOWNLOADS_DESC],
+    updated: ['COALESCE(package_updated_at, created_at) DESC'],
+    newest: ['created_at DESC'],
+    name: ['name COLLATE NOCASE ASC'],
+    // The unique id last keeps ties in the same order on every request, so pages don't repeat or skip plugins.
+  }).map(([key, order]) => [key, [...order, 'id ASC']]),
+);
 
 function legacyModeScore(mode, keyword) {
   if (mode === keyword) return 100;

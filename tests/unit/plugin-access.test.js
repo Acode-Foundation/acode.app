@@ -304,7 +304,7 @@ describe('plugin list sorting and filters', () => {
   };
 
   it('sorts downloads numerically because the column is stored as text', async () => {
-    expect((await listOptions({ orderBy: 'downloads' })).orderBy).toEqual(['CAST(downloads AS INTEGER) DESC']);
+    expect((await listOptions({ orderBy: 'downloads' })).orderBy).toEqual(['CAST(downloads AS INTEGER) DESC', 'id ASC']);
     expect((await listOptions({})).orderBy).toContain('CAST(downloads AS INTEGER) DESC');
   });
 
@@ -313,6 +313,13 @@ describe('plugin list sorting and filters', () => {
     expect(Array.isArray(sort)).toBe(true);
     expect(sort).not.toEqual((await listOptions({})).orderBy);
   });
+
+  it.each(['popular', 'trending', 'downloads', 'rating', 'updated', 'newest', 'name'])(
+    'ends the %s sort with the unique id so pages stay stable',
+    async (orderBy) => {
+      expect((await listOptions({ orderBy })).orderBy.at(-1)).toBe('id ASC');
+    },
+  );
 
   it.each(['unknown', 'constructor', '__proto__'])('falls back to popular for %s', async (orderBy) => {
     expect((await listOptions({ orderBy })).orderBy).toEqual((await listOptions({})).orderBy);

@@ -2,7 +2,7 @@ import './style.scss';
 import Input from 'components/input';
 import Plugins from 'components/plugins';
 import Ref from 'html-tag-js/ref';
-import { getLoggedInUser } from 'lib/helpers';
+import { getLoggedInUser, withRedirect } from 'lib/helpers';
 import Router from 'lib/Router';
 
 const SORTS = [
@@ -42,6 +42,12 @@ const EDITOR_TITLES = { cm: 'CodeMirror', ace: 'Ace', all: 'Universal' };
 
 export default async function PluginList({ filter, orderBy, editor, price, status, q }) {
   const loggedInUser = await getLoggedInUser();
+  if (price === OWNED.value && !loggedInUser) {
+    // Purchases belong to an account, so sign in first instead of silently showing every plugin.
+    Router.loadUrl(withRedirect('/login', encodeURIComponent(`${location.pathname}${location.search}`)));
+    return 'Redirecting...';
+  }
+
   const title = Ref();
   const plugins = Ref();
   const reset = Ref();
@@ -62,6 +68,13 @@ export default async function PluginList({ filter, orderBy, editor, price, statu
   else if (loggedInUser?.isAdmin && pick(STATUSES, filter)) state.status = filter;
 
   plugins.onref = () => renderPlugins();
+
+  // A pending search must not rewrite the URL of the page the visitor navigated to.
+  const cancelSearch = () => {
+    clearTimeout(searchTimeout);
+    Router.off('navigate', cancelSearch);
+  };
+  Router.on('navigate', cancelSearch);
 
   return (
     <section id='plugins'>
