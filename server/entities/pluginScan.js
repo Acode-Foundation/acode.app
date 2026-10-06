@@ -62,6 +62,8 @@ class PluginScan extends Entity {
 
   KIND_PUBLISH = 'publish';
   KIND_UPDATE = 'update';
+  /** Admin re-scan of the live zip. Recorded only; it never affects publishing or repair. */
+  KIND_RESCAN = 'rescan';
 
   /** Scan of a new plugin; the plugin itself goes through normal approval. */
   STATUS_RECORDED = 'recorded';
