@@ -69,50 +69,6 @@
       }
     }
   }
-
-  // Same box as the search field (.custom-input) so the toolbar reads as one set of controls.
-  .plugins-select {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    height: 42px;
-    border: 1px solid var(--page-line);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    transition: border-color 0.2s ease;
-
-    &:hover {
-      border-color: rgba(255, 255, 255, 0.16);
-    }
-
-    &:focus-within {
-      border-color: var(--page-accent);
-      box-shadow: 0 0 0 1px var(--page-accent);
-    }
-
-    span {
-      padding-left: 12px;
-      font-size: 0.875rem;
-      color: var(--page-muted);
-      pointer-events: none;
-    }
-
-    select {
-      height: 100%;
-      margin: 0;
-      padding: 0 34px 0 6px;
-      border: none;
-      border-radius: inherit;
-      background-color: transparent;
-      background-position: right 12px center;
-      background-size: 10px;
-      font: inherit;
-      font-size: 0.875rem;
-      color: var(--page-text);
-      box-shadow: none;
-      outline: none;
-    }
-  }
 }
 
 @media (max-width: 768px) {
@@ -129,15 +85,9 @@
     }
 
     // Wrap instead of scrolling sideways so every control, including Reset, stays on screen.
-    .plugins-select {
+    .custom-select-container {
       flex: 1 1 150px;
       min-width: 0;
-
-      select {
-        flex: 1;
-        min-width: 0;
-        text-overflow: ellipsis;
-      }
     }
   }
 }

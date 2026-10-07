@@ -1,4 +1,5 @@
 import './style.scss';
+import '../user/style.scss';
 import alert from 'components/dialogs/alert';
 import MonthSelect from 'components/MonthSelect';
 import YearSelect from 'components/YearSelect';
@@ -12,11 +13,11 @@ let loggedInUser;
 export default async function Earnings({ user }) {
   loggedInUser = user;
 
-  const paymentsTable = Ref();
+  const paymentsList = Ref();
   const earningsYear = Ref();
   const earningsMonth = Ref();
   const paymentsYear = Ref();
-  const earnings = Reactive('Loading...');
+  const earnings = Reactive('...');
 
   let unpaidEarnings;
   try {
@@ -26,117 +27,89 @@ export default async function Earnings({ user }) {
   }
 
   earningsMonth.onref = updateEarnings;
-  paymentsTable.onref = renderPaymentsTable;
+  paymentsList.onref = renderPaymentsTable;
 
   return (
     <section id='earnings'>
-      <h2 style={{ textAlign: 'center' }}>Earnings</h2>
-      <div className='table-wrapper'>
-        <table className='info'>
-          <tbody>
-            <tr>
-              <th>Month</th>
-              <td>
-                <YearSelect ref={earningsYear} onChange={updateEarnings} />
-                <MonthSelect ref={earningsMonth} onChange={updateEarnings} />
-              </td>
-            </tr>
-            <tr>
-              <th>Total Earnings</th>
-              <td>
-                <span title='Your earnings'>&#8377; {earnings}</span>
-              </td>
-            </tr>
-            <tr>
-              <th>Unpaid earnings</th>
-              <td>
-                <table className='mini-info'>
-                  <tr>
-                    <td attr-colspan='2'>&#8377; {unpaidEarnings.earnings.toLocaleString()}</td>
-                  </tr>
-                  <tr>
-                    <th>From</th>
-                    <th>To</th>
-                  </tr>
-                  <tr>
-                    <td>{new Date(unpaidEarnings.from).toLocaleDateString()}</td>
-                    <td>{new Date(unpaidEarnings.to).toLocaleDateString()}</td>
-                  </tr>
-                  <tr>
-                    <td attr-colspan='2'>
-                      <p>Earnings from previous month will be calculated after 16th of this month.</p>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            <tr>
-              <th>Payment Threshold</th>
-              <td>
-                <div>&#8377; {unpaidEarnings.threshold.toLocaleString()}</div>
-                <p>
-                  You will be paid when your earnings reach this amount. Please read <a href='/terms'>Terms of Service</a> "Payment threshold" section
-                  for more info.
-                </p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div className='profile'>
+        <div className='profile-info'>
+          <h1>Earnings</h1>
+        </div>
       </div>
-      <div className='table-wrapper'>
-        <table className='payments'>
-          <thead>
-            <th>
-              <strong>Payments</strong>
-            </th>
-            <th attr-colspan={4}>
-              <YearSelect ref={paymentsYear} onChange={renderPaymentsTable} />
-            </th>
-          </thead>
-          <thead>
-            <th>Date</th>
-            <th>Amount</th>
-            <th>Payment Method</th>
-            <th>Status</th>
-            <th>Receipt</th>
-          </thead>
-          <tbody ref={paymentsTable} />
-        </table>
+
+      <div className='dash-grid' style={{ marginTop: '20px' }}>
+        <div className='panel'>
+          <div className='panel-head'>
+            <h3>Selected Month</h3>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <YearSelect ref={earningsYear} onChange={updateEarnings} />
+              <MonthSelect ref={earningsMonth} onChange={updateEarnings} />
+            </div>
+          </div>
+          <div className='stat-value'>&#8377; {earnings}</div>
+          <div className='stat-sub'>Total earnings for the period</div>
+        </div>
+
+        <div className='panel'>
+          <div className='panel-head'>
+            <h3>Unpaid Earnings</h3>
+          </div>
+          <div className='stat-value'>&#8377; {unpaidEarnings.earnings.toLocaleString()}</div>
+          <div className='stat-sub'>
+            From {new Date(unpaidEarnings.from).toLocaleDateString()} to {new Date(unpaidEarnings.to).toLocaleDateString()}
+          </div>
+          <div className='panel-meta' style={{ marginTop: 'auto', paddingTop: '12px' }}>
+            Earnings from previous month will be calculated after 16th of this month.
+          </div>
+        </div>
+
+        <div className='panel'>
+          <div className='panel-head'>
+            <h3>Payment Threshold</h3>
+          </div>
+          <div className='stat-value'>&#8377; {unpaidEarnings.threshold.toLocaleString()}</div>
+          <div className='stat-sub'>Minimum amount for payout</div>
+          <div className='panel-meta' style={{ marginTop: 'auto', paddingTop: '12px' }}>
+            You will be paid when your earnings reach this amount. Read <a href='/terms'>Terms of Service</a>.
+          </div>
+        </div>
+      </div>
+
+      <div className='panel' style={{ marginTop: '16px' }}>
+        <div className='panel-head'>
+          <h3>Payment History</h3>
+          <YearSelect ref={paymentsYear} onChange={renderPaymentsTable} />
+        </div>
+        <div className='payment-methods' ref={paymentsList}></div>
       </div>
     </section>
   );
 
-  /**
-   * Renders earnings table
-   */
   async function updateEarnings() {
     try {
       showLoading();
       const selectedYear = earningsYear.el.value;
       const selectedMonth = earningsMonth.el.value;
-      const totalEarnings = await fetchJson(`earnings/${selectedYear}/${selectedMonth}`);
+      const response = await fetchJson(`earnings/${selectedYear}/${selectedMonth}`);
 
-      earnings.value = totalEarnings.earnings.toLocaleString();
+      earnings.value = response.earnings !== undefined ? response.earnings.toLocaleString() : '0';
     } catch (error) {
-      earnings.value = error.message;
+      earnings.value = 'Error';
     } finally {
       hideLoading();
     }
   }
 
-  /**
-   * Render payments table
-   */
   async function renderPaymentsTable() {
     try {
       showLoading();
       const year = paymentsYear.el.value;
       const payments = await fetchJson(`payments/${year}`);
-      let content = <td attr-colspan={4}>No payments yet.</td>;
+      let content = <div className='panel-empty'>No payments yet.</div>;
       if (payments.length) {
         content = payments.map((payment) => <Payment {...payment} />);
       }
-      paymentsTable.el.content = content;
+      paymentsList.el.content = content;
     } catch (error) {
       alert('Error', error.message);
     } finally {
@@ -147,30 +120,31 @@ export default async function Earnings({ user }) {
 
 function Payment(props) {
   const { bank_name: bankName, bank_account_number: bankAccountNumber } = props;
+  const statusLower = String(props.status).toLowerCase();
+  const statusClass = statusLower === 'paid' ? 'live' : statusLower === 'pending' ? 'pending' : 'rejected';
 
   return (
-    <tr>
-      <td className='download'>{moment(props.created_at).format('DD MMM YYYY')}</td>
-      <td className='amount'>&#8377; {props.amount.toLocaleString()}</td>
-      <td className='payment-method'>
-        <div>
-          <span className='icon bank' />
-          <span>{bankName}</span>
-          <span>{bankAccountNumber}</span>
-        </div>
-      </td>
-      <td className='status'>{props.status}</td>
-      <td className='download'>
-        <button type='button' onclick={() => window.open(`/api/user/receipt/${props.id}`, '_blank')} title='download' className='icon download' />
-      </td>
-    </tr>
+    <div className='payment-method'>
+      <div className='info' style={{ flex: '1 1 0' }}>
+        <strong>&#8377; {props.amount.toLocaleString()}</strong>
+        <span>{moment(props.created_at).format('DD MMM YYYY')}</span>
+      </div>
+      <div className='info' style={{ flex: '2 1 0' }}>
+        <strong style={{ textTransform: 'none' }}>{bankName}</strong>
+        <span>{bankAccountNumber}</span>
+      </div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <span className={`status-chip status-chip--${statusClass}`}>
+          {props.status}
+        </span>
+        <button type='button' onclick={() => window.open(`/api/user/receipt/${props.id}`, '_blank')} title='Download receipt' className='icon-action'>
+          <span className='icon download' />
+        </button>
+      </div>
+    </div>
   );
 }
 
-/**
- * Fetch json data from server
- * @param {string} url
- */
 async function fetchJson(url) {
   const res = await fetch(`/api/user/${url}?user=${loggedInUser}`);
   const json = await res.json();

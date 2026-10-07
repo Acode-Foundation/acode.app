@@ -1,21 +1,18 @@
 import moment from 'moment';
+import Select from './select';
 
 /**
  * Component for selecting month
  * @param {object} props
- * @param {(e: InputEvent)=>void} [props.onChange]
+ * @param {(e: Event)=>void} [props.onChange]
  * @param {Ref} [props.ref]
- * @returns {HTMLSelectElement}
  */
 export default function MonthSelect({ onChange, ref }) {
   const currentMonth = moment().month();
-  return (
-    <select ref={ref} attr-name='month' onchange={onChange} title='Month'>
-      {moment.months().map((month, i) => (
-        <option selected={currentMonth === i} value={i}>
-          {month}
-        </option>
-      ))}
-    </select>
-  );
+  const options = moment.months().map((month, i) => ({
+    label: month,
+    value: i,
+  }));
+
+  return <Select options={options} value={currentMonth} onChange={onChange} ref={ref} title='Month' />;
 }
