@@ -17,6 +17,7 @@ const User = require('./entities/user');
 const { getLoggedInUser } = require('./lib/helpers');
 const apis = require('./routes/apis');
 const oauth = require('./apis/oauth');
+const aiOAuthCallback = require('./lib/aiOAuthCallback');
 const setAuth = require('./lib/gapis');
 const migrationRunner = require('./lib/migrationRunner');
 const { renderDefaultOgImage, renderPluginOgImage } = require('./lib/ogImage');
@@ -154,6 +155,8 @@ async function main() {
     if (req.path === '/api/razorpay/webhook') return next();
     express.json({ limit: '50mb' })(req, res, next);
   });
+
+  app.get('/ai/oauth/openrouter', aiOAuthCallback);
 
   app.get('/sitemap.xml', (_req, res) => {
     res.setHeader('Content-Type', 'application/xml');
