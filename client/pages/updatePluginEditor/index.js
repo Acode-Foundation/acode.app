@@ -5,6 +5,7 @@ import Ref from 'html-tag-js/ref';
 import { getLoggedInUser, loadingEnd, loadingStart } from 'lib/helpers';
 import Router from 'lib/Router';
 import './style.scss';
+import '../user/style.scss';
 
 export default async function UpdatePluginEditor({ id }) {
   const user = await getLoggedInUser();
@@ -62,24 +63,15 @@ export default async function UpdatePluginEditor({ id }) {
       break;
   }
 
-  return (
+    return (
     <section id='update-plugin-editor'>
-      <h1>Update Editor Support</h1>
-
-      <div className='plugin-info'>
-        <div className='plugin-header'>
-          <img src={plugin.icon} alt={plugin.name} className='plugin-icon' />
-          <div className='plugin-details'>
-            <h2>{plugin.name}</h2>
-            <p className='plugin-id'>{plugin.id}</p>
-            <p className='current-support'>
-              Current Support: <strong>{currentEditorText}</strong>
-            </p>
-          </div>
+      <div className='profile' style={{ marginBottom: '24px', width: 'fit-content', margin: '0 auto 24px auto' }}>
+        <div className='profile-info' style={{ alignItems: 'center' }}>
+          <h1 style={{ textAlign: 'center', margin: 0 }}>Update Editor Support</h1>
         </div>
       </div>
 
-      <div className='info-banner'>
+      <div className='info-banner' style={{ marginTop: '20px' }}>
         <div className='icon-wrapper'>
           <span className='icon info' />
           <span>Important Information</span>
@@ -90,64 +82,91 @@ export default async function UpdatePluginEditor({ id }) {
         <p>Please update your plugin to support CodeMirror for the best experience and future compatibility.</p>
       </div>
 
-      <AjaxForm
-        action={`/api/plugin/${id}/supported-editor`}
-        method='PATCH'
-        onloadend={onloadend}
-        onerror={onerror}
-        loading={(form) => loadingStart(form, errorText, successText, buttonText)}
-        loadingEnd={(form) => loadingEnd(form, buttonText, 'Update')}
-      >
-        <div className='editor-options'>
-          <h3>Select Editor Support</h3>
+      <div style={{ marginTop: '20px', maxWidth: '800px', margin: '20px auto 0' }}>
+        <div className='panel'>
+          <div className='panel-head'>
+            <h3>Select Editor Support</h3>
+          </div>
+          <div className='panel-body'>
+            <AjaxForm
+              action={`/api/plugin/${id}/supported-editor`}
+              method='PATCH'
+              onloadend={onloadend}
+              onerror={onerror}
+              loading={(form) => loadingStart(form, errorText, successText, buttonText)}
+              loadingEnd={(form) => loadingEnd(form, buttonText, 'Update')}
+            >
+              <div className='editor-options'>
+                <label className='radio-option recommended'>
+                  <input type='radio' name='supported_editor' value='cm' defaultChecked={plugin.supported_editor === 'cm'} />
+                  <div className='option-content'>
+                    <div className='option-header'>
+                      <strong>CodeMirror</strong>
+                      <span className='badge recommended'>Recommended</span>
+                    </div>
+                    <p className='option-description'>
+                      Modern code editor with better performance and features. This is the recommended choice for all new and updated plugins.
+                    </p>
+                  </div>
+                </label>
 
-          <label className='radio-option recommended'>
-            <input type='radio' name='supported_editor' value='cm' defaultChecked={plugin.supported_editor === 'cm'} />
-            <div className='option-content'>
-              <div className='option-header'>
-                <strong>CodeMirror</strong>
-                <span className='badge recommended'>Recommended</span>
+                <label className='radio-option'>
+                  <input type='radio' name='supported_editor' value='all' defaultChecked={plugin.supported_editor === 'all'} />
+                  <div className='option-content'>
+                    <div className='option-header'>
+                      <strong>Both CodeMirror &amp; Ace</strong>
+                      <span className='badge'>Universal</span>
+                    </div>
+                    <p className='option-description'>Support both editors for maximum compatibility with existing Ace users.</p>
+                  </div>
+                </label>
               </div>
-              <p className='option-description'>
-                Modern code editor with better performance and features. This is the recommended choice for all new and updated plugins.
+
+              <span className='error'>{errorText}</span>
+              <span className='success'>{successText}</span>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: '16px',
+                  gap: '8px',
+                  marginTop: '16px',
+                }}
+              >
+                <input type='checkbox' name='agree_tested' id='tested_agreement' required={true} />
+                <label htmlFor='tested_agreement' className='agreement'>
+                  I have tested my plugin with the selected editor(s) and confirm that it works correctly.
+                </label>
+              </div>
+
+              <button ref={submitButton} type='submit' style={{ width: '100%', justifyContent: 'center' }}>
+                <span className='icon save' />
+                {buttonText}
+              </button>
+            </AjaxForm>
+          </div>
+        </div>
+
+        <div className='panel'>
+          <div className='panel-head'>
+            <h3>Plugin Info</h3>
+          </div>
+          <div className='panel-body' style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '12px' }}>
+            <img src={plugin.icon} alt={plugin.name} className='plugin-icon' style={{ width: '100px', height: '100px', borderRadius: '16px' }} />
+            <div>
+              <h2 style={{ margin: '0 0 4px', fontSize: '18px' }}>{plugin.name}</h2>
+              <p style={{ margin: 0, color: 'var(--dash-muted)', fontSize: '14px' }}>ID: {plugin.id}</p>
+            </div>
+            <div style={{ padding: '12px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', width: '100%' }}>
+              <p style={{ margin: 0, fontSize: '14px' }}>
+                Current Support:<br />
+                <strong style={{ display: 'inline-block', marginTop: '6px' }}>{currentEditorText}</strong>
               </p>
             </div>
-          </label>
-
-          <label className='radio-option'>
-            <input type='radio' name='supported_editor' value='all' defaultChecked={plugin.supported_editor === 'all'} />
-            <div className='option-content'>
-              <div className='option-header'>
-                <strong>Both CodeMirror &amp; Ace</strong>
-                <span className='badge'>Universal</span>
-              </div>
-              <p className='option-description'>Support both editors for maximum compatibility with existing Ace users.</p>
-            </div>
-          </label>
+          </div>
         </div>
-
-        <span className='error'>{errorText}</span>
-        <span className='success'>{successText}</span>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            marginBottom: '16px',
-            gap: '8px',
-          }}
-        >
-          <input type='checkbox' name='agree_tested' id='tested_agreement' required={true} />
-          <label htmlFor='tested_agreement' className='agreement'>
-            I have tested my plugin with the selected editor(s) and confirm that it works correctly.
-          </label>
-        </div>
-
-        <button ref={submitButton} type='submit'>
-          <span className='icon save' />
-          {buttonText}
-        </button>
-      </AjaxForm>
+      </div>
     </section>
   );
 

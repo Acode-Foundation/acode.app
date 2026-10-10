@@ -218,13 +218,7 @@ function onDelete(e, id) {
  */
 export async function deletePlugin(id) {
   const loggedInUser = await getLoggedInUser();
-  let mode = 'soft';
-  if (loggedInUser.isAdmin) {
-    mode = await select('Delete mode', ['soft', 'hard']);
-    if (!mode) {
-      return;
-    }
-  }
+  const mode = loggedInUser.isAdmin ? 'hard' : 'soft';
 
   const confirmation = await confirm('Delete plugin', 'Are you sure you want to delete this plugin?');
   if (!confirmation) {

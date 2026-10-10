@@ -3,6 +3,7 @@ import AjaxForm from 'components/ajaxForm';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import Input from 'components/input';
+import Select from 'components/select';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { getLoggedInUser, hashString } from 'lib/helpers';
@@ -120,13 +121,11 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory }) {
             value={a || ''}
           />
           <div className='row'>
-            <select name='category' className='category-select'>
-              {categories.map((cat) => (
-                <option value={cat.id} selected={cat.id === oldCategory}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+            <Select 
+              name='category' 
+              options={categories.map((cat) => ({ label: cat.name, value: cat.id }))} 
+              value={oldCategory || 'all'}
+            />
           </div>
           <div className='preview' ref={mdPreview} />
           <div className='buttons'>

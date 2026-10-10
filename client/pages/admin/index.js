@@ -5,6 +5,7 @@ import confirm from 'components/dialogs/confirm';
 import DialogBox from 'components/dialogs/dialogBox';
 import select from 'components/dialogs/select';
 import Input from 'components/input';
+import Select from 'components/select';
 import { RecommendationBadge, ReviewActions, ScanDetails } from 'components/pluginSecurity';
 import Tabs from 'components/tabs';
 import Reactive from 'html-tag-js/reactive';
@@ -355,13 +356,17 @@ function Plugins() {
               </th>
               <th>Author</th>
               <th>
-                <select className='status-filter' onchange={onStatusFilter}>
-                  <option value=''>All Status</option>
-                  <option value='0'>Pending</option>
-                  <option value='1'>Approved</option>
-                  <option value='2'>Rejected</option>
-                  <option value='3'>Deleted</option>
-                </select>
+                <Select
+                  onChange={onStatusFilter}
+                  options={[
+                    { label: 'All Status', value: '' },
+                    { label: 'Pending', value: '0' },
+                    { label: 'Approved', value: '1' },
+                    { label: 'Rejected', value: '2' },
+                    { label: 'Deleted', value: '3' },
+                  ]}
+                  value=''
+                />
               </th>
               <th>Editor</th>
               <th>Date</th>
@@ -1102,12 +1107,16 @@ function EmailUsers() {
       <div className='email-form'>
         <div className='form-group'>
           <label>Recipients</label>
-          <select onchange={onFilterChange}>
-            <option value='all'>All Users</option>
-            <option value='with_plugins'>Users with Plugins</option>
-            <option value='with_paid_plugins'>Users with Paid Plugins</option>
-            <option value='with_payment'>Users who Received Payment</option>
-          </select>
+          <Select
+            onChange={onFilterChange}
+            options={[
+              { label: 'All Users', value: 'all' },
+              { label: 'Users with Plugins', value: 'with_plugins' },
+              { label: 'Users with Paid Plugins', value: 'with_paid_plugins' },
+              { label: 'Users who Received Payment', value: 'with_payment' },
+            ]}
+            value='all'
+          />
           <small>{recipientCount} recipient(s) will receive this email</small>
         </div>
         <Input
@@ -1380,12 +1389,16 @@ function Payments() {
               <th>Email</th>
               <th>Amount</th>
               <th>
-                <select className='status-filter' onchange={onStatusFilter}>
-                  <option value='all'>All Status</option>
-                  <option value='paid'>Paid</option>
-                  <option value='initiated'>Initiated</option>
-                  <option value='none'>None</option>
-                </select>
+                <Select
+                  onChange={onStatusFilter}
+                  options={[
+                    { label: 'All Status', value: 'all' },
+                    { label: 'Paid', value: 'paid' },
+                    { label: 'Initiated', value: 'initiated' },
+                    { label: 'None', value: 'none' },
+                  ]}
+                  value='all'
+                />
               </th>
               <th>Date</th>
             </tr>

@@ -1,6 +1,7 @@
 import './style.scss';
 import Input from 'components/input';
 import Plugins from 'components/plugins';
+import Select from 'components/select';
 import Ref from 'html-tag-js/ref';
 import { getLoggedInUser, withRedirect } from 'lib/helpers';
 import Router from 'lib/Router';
@@ -121,8 +122,9 @@ export default async function PluginList({ filter, orderBy, editor, price, statu
   }
 
   function resetFilters() {
-    for (const select of document.querySelectorAll('#plugins .plugins-select select')) {
-      select.value = select.name === 'sort' ? 'popular' : '';
+    for (const select of document.querySelectorAll('#plugins .custom-select-container')) {
+      const name = select.querySelector('input[type="hidden"]')?.name;
+      select.value = name === 'sort' ? 'popular' : '';
     }
     update({ sort: 'popular', editor: '', price: '', status: '' });
   }
@@ -184,16 +186,7 @@ export default async function PluginList({ filter, orderBy, editor, price, statu
 function FilterSelect({ label, options, value, onchange }) {
   const name = label.toLowerCase();
   return (
-    <label className='plugins-select'>
-      <span>{label}</span>
-      <select name={name} onchange={(e) => onchange(e.target.value)}>
-        {options.map((option) => (
-          <option value={option.value} selected={option.value === value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <Select title={label} name={name} options={options} value={value} onChange={(e) => onchange(e.target.value)} />
   );
 }
 
