@@ -15,7 +15,7 @@ const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
 const AppConfig = require('../entities/appConfig');
 const login = require('../entities/login');
 const AppAuthCode = require('../entities/appAuthCode');
-const { appAuthCodeLimiter, appTokenExchangeLimiter } = require('../lib/rateLimits');
+const { appAuthCodeLimiter, appTokenExchangeLimiter, appleUnlinkLimiter } = require('../lib/rateLimits');
 const { logAppleError } = require('../lib/appleOAuth');
 
 const route = Router();
@@ -435,7 +435,7 @@ route.delete('/link/google', async (req, res) => {
   }
 });
 
-route.delete('/link/apple', async (req, res) => {
+route.delete('/link/apple', appleUnlinkLimiter, async (req, res) => {
   try {
     const account = await getWebLoggedInUser(req);
     if (!account) return res.status(401).send({ error: 'Not logged in' });

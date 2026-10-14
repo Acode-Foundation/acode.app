@@ -4,6 +4,7 @@ const { safeAccountRedirect } = require('../../shared/accountRedirect');
 const user = require('../entities/user');
 const { getWebLoggedInUser } = require('../lib/helpers');
 const apple = require('../lib/appleOAuth');
+const { createAppleSignInLimiter, createAppleCallbackLimiter } = require('../lib/rateLimits');
 const {
   getGitHubAuthURL,
   getGitHubToken,
@@ -30,6 +31,14 @@ function validatedRedirect(url) {
 
 const appleCookie = '__Host-apple_oauth';
 const appleCookieOptions = { httpOnly: true, secure: true, sameSite: 'none', path: '/', maxAge: 10 * 60 * 1000 };
+const appleSignInLimiter = createAppleSignInLimiter(appleRateLimitResponse);
+const appleCallbackLimiter = createAppleCallbackLimiter(appleRateLimitResponse, (req) => {
+  try {
+    return `apple-flow:${readAppleFlow(req).state}`;
+  } catch {
+    return null;
+  }
+});
 
 route.use('/apple', (_req, res, next) => {
   res.set('Cache-Control', 'no-store');
@@ -37,7 +46,7 @@ route.use('/apple', (_req, res, next) => {
   next();
 });
 
-route.get('/apple', async (req, res) => {
+route.get('/apple', appleSignInLimiter, async (req, res) => {
   const redirect = validatedRedirect(req.query.redirect);
   try {
     const flow = { state: generateState(), nonce: generateState(), redirect, expires: Date.now() + appleCookieOptions.maxAge };
@@ -59,7 +68,7 @@ route.get('/apple', async (req, res) => {
 
 // Apple posts cross-site, so the Lax website session is absent here. Validate the
 // browser-bound state first, then resume on a GET to restore that session.
-route.post('/apple/callback', urlencoded({ extended: false, limit: '8kb', parameterLimit: 10 }), (req, res) => {
+route.post('/apple/callback', appleCallbackLimiter, urlencoded({ extended: false, limit: '8kb', parameterLimit: 10 }), (req, res) => {
   let flow;
   try {
     flow = readAppleFlow(req);
@@ -91,7 +100,7 @@ route.post('/apple/callback', urlencoded({ extended: false, limit: '8kb', parame
   }
 });
 
-route.get('/apple/complete', async (req, res) => {
+route.get('/apple/complete', appleSignInLimiter, async (req, res) => {
   let flow;
   res.clearCookie(appleCookie, { path: '/', secure: true, sameSite: 'lax' });
   try {
@@ -112,6 +121,24 @@ route.get('/apple/complete', async (req, res) => {
     res.redirect(loginErrorRedirect(flow?.redirect, 'Unable to sign in with Apple. Please try again.'));
   }
 });
+
+function appleRateLimitResponse(req, res) {
+  const isStart = req.route.path === '/apple';
+  let redirect = isStart ? validatedRedirect(req.query.redirect) : null;
+  let linking = isStart && req.query.intent === 'link';
+  if (!isStart) {
+    try {
+      const flow = readAppleFlow(req);
+      redirect = flow.redirect;
+      linking = Boolean(flow.userId);
+    } catch {
+      // A missing, forged or expired flow must not supply a return destination.
+    }
+  }
+  res.clearCookie(appleCookie, { path: '/', secure: true, sameSite: 'none' });
+  const message = 'Too many Apple sign-in attempts. Please try again later.';
+  res.redirect(303, linking ? `/profile/edit?error=${encodeURIComponent(message)}` : loginErrorRedirect(redirect, message));
+}
 
 function appleSession(req) {
   return crypto

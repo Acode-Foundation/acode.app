@@ -18,6 +18,7 @@ let sequence;
 let oauthTokens;
 let oauthUsers;
 let oauthUserEntity;
+let appleStart;
 let appleExchange;
 const verifier = 'ab'.repeat(32);
 const state = 'cd'.repeat(24);
@@ -291,6 +292,85 @@ it('protects primary Apple login, retains failed revocations and recovers missin
   expect(oauthUsers[0]).toMatchObject({ apple_id: null, apple_refresh_token: null });
 });
 
+it('keeps malformed callback traffic out of the Apple start and completion budget', async () => {
+  await start();
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const begun = await beginApple();
+  const callback = await applePost(begun, { code: 'code' });
+  let response;
+  for (let attempt = 0; attempt <= 120; attempt++) {
+    response = await fetch(`${origin}/oauth/apple/callback`, { method: 'POST', redirect: 'manual' });
+  }
+  expect(limitedLocation(response)).toBe('/login');
+  const another = await beginApple();
+  expect(another.status).toBe(302);
+  expect((await applePost(another, { code: 'code' })).headers.get('Location')).toBe('/oauth/apple/complete');
+  expect((await completeApple(callback)).status).toBe(302);
+  expect(appleExchange).toHaveBeenCalledOnce();
+});
+
+it('preserves safe app-return context on throttled browser legs and separates authenticated accounts from the IP budget', async () => {
+  await start();
+  const destination = `/login?redirect=app&src=android&authFlow=app-code&state=${state}&challenge=${challenge}`;
+  const begun = await beginApple(`?redirect=${encodeURIComponent(destination)}`);
+  const callback = await applePost(begun, { code: 'code' });
+  for (let attempt = 1; attempt < 120; attempt++) expect((await beginApple()).status).toBe(302);
+  for (const target of [destination, destination.replace('android', 'ios')]) {
+    expect(limitedLocation(await beginApple(`?redirect=${encodeURIComponent(target)}`))).toBe(target);
+  }
+  expect(limitedLocation(await completeApple(callback))).toBe(destination);
+  expect(limitedLocation(await beginApple('?redirect=https://attacker.example'))).toBe('/login');
+  expect(limitedLocation(await beginApple('', 'forged-token'))).toBe('/login');
+  // A callback has its own budget even when the start/completion budget is spent.
+  for (let attempt = 1; attempt < 120; attempt++) expect((await applePost(begun, { code: 'code' })).status).toBe(303);
+  expect(limitedLocation(await applePost(begun, { code: 'code' }))).toBe(destination);
+  const forged = await fetch(`${origin}/oauth/apple/complete?redirect=https://attacker.example`, {
+    headers: { Cookie: '__Host-apple_oauth=forged' },
+    redirect: 'manual',
+  });
+  expect(limitedLocation(forged)).toBe('/login');
+  const expiredFlow = JSON.parse(appleCrypto.unseal(cookie(callback).split('=')[1], 'apple-oauth'));
+  expiredFlow.expires = Date.now() - 1;
+  const expired = await fetch(`${origin}/oauth/apple/complete`, {
+    headers: { Cookie: `__Host-apple_oauth=${appleCrypto.seal(JSON.stringify(expiredFlow), 'apple-oauth')}` },
+    redirect: 'manual',
+  });
+  expect(limitedLocation(expired)).toBe('/login');
+  expect(appleStart).toHaveBeenCalledTimes(120);
+  expect(appleExchange).not.toHaveBeenCalled();
+  expect((await beginApple('', 'web-session')).status).toBe(302);
+  expect((await beginApple('', 'other-web-session')).status).toBe(302);
+  expect((await post('/app-auth-code', { state, challenge })).status).toBe(200);
+});
+
+it('keeps throttled Apple linking on account settings and shares its account budget across sessions', async () => {
+  await start();
+  const begun = await beginApple('?intent=link', 'web-session');
+  const callback = await applePost(begun, { code: 'code' });
+  for (let attempt = 1; attempt < 120; attempt++) expect((await beginApple('', 'renewed-web-session')).status).toBe(302);
+  expect(limitedLocation(await beginApple('?intent=link', 'web-session'))).toBe('/profile/edit');
+  expect(limitedLocation(await completeApple(callback, 'renewed-web-session'))).toBe('/profile/edit');
+  expect(appleExchange).not.toHaveBeenCalled();
+  expect((await beginApple('', 'other-web-session')).status).toBe(302);
+  expect((await beginApple()).status).toBe(302);
+});
+
+it('limits Apple unlink by account across sessions before calling Apple, without blocking another account', async () => {
+  await start();
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  oauthUsers[0].apple_id = 'linked-sub';
+  oauthUserEntity.revokeAppleAuthorization.mockRejectedValue(new Error('Apple unavailable'));
+  const unlink = (token) => fetch(`${origin}/api/user/link/apple`, { method: 'DELETE', headers: { Cookie: `token=${token}` } });
+  for (let attempt = 0; attempt < 5; attempt++) expect((await unlink(attempt % 2 ? 'renewed-web-session' : 'web-session')).status).toBe(500);
+  const blocked = await unlink('renewed-web-session');
+  expect(blocked.status).toBe(429);
+  expect(Number(blocked.headers.get('Retry-After'))).toBeGreaterThan(0);
+  expect(oauthUserEntity.revokeAppleAuthorization).toHaveBeenCalledTimes(5);
+  expect(oauthUsers[0].apple_id).toBe('linked-sub');
+  expect((await unlink('other-web-session')).status).toBe(500);
+  expect(oauthUserEntity.revokeAppleAuthorization).toHaveBeenCalledTimes(6);
+});
+
 it.each(['linked', 'deleted'])('does not write Apple credentials when the account was %s during exchange', async (change) => {
   await start();
   const callback = await applePost(await beginApple('?intent=link', 'web-session'), { code: 'code' });
@@ -324,6 +404,18 @@ it('does not clear a new Apple link when an older unlink revocation finishes', a
   expect(response.status).toBe(409);
   expect(oauthUsers[0]).toMatchObject({ apple_id: 'newer-sub', apple_refresh_token: 'newer-refresh' });
 });
+
+function limitedLocation(response) {
+  expect(response.status).toBe(303);
+  expect(Number(response.headers.get('Retry-After'))).toBeGreaterThan(0);
+  expect(response.headers.get('Cache-Control')).toBe('no-store');
+  expect(response.headers.getSetCookie()).toContainEqual(expect.stringMatching(/^__Host-apple_oauth=;.*Secure/));
+  const target = new URL(response.headers.get('Location'), origin);
+  expect(target.origin).toBe(origin);
+  expect(target.searchParams.get('error')).toContain('Too many Apple sign-in attempts');
+  target.searchParams.delete('error');
+  return `${target.pathname}${target.search}`;
+}
 
 function matches(row, where) {
   const conditions = Array.isArray(where[0]) ? where : [where];
@@ -405,6 +497,7 @@ async function start() {
     insert: vi.fn(async (...entries) => oauthUsers.push({ id: 9, ...Object.fromEntries(entries) })),
     revokeAppleAuthorization: vi.fn(async (id) => ({ ...oauthUsers.find((row) => row.id === id) })),
   };
+  appleStart = vi.fn(async (state, nonce) => `https://appleid.apple.com/auth/authorize?state=${state}&nonce=${nonce}`);
   appleExchange = vi.fn(async () => ({ id: 'apple-sub', refreshToken: 'encrypted-refresh' }));
   const helpers = {
     getLoginSession: async (req) => (webUsers[req.cookies?.token] ? { user_id: webUsers[req.cookies.token], type: 'web' } : null),
@@ -451,7 +544,7 @@ async function start() {
     '../../shared/accountRedirect': { safeAccountRedirect },
     '../lib/appleOAuth': {
       ...appleCrypto,
-      getAppleAuthURL: async (state, nonce) => `https://appleid.apple.com/auth/authorize?state=${state}&nonce=${nonce}`,
+      getAppleAuthURL: appleStart,
       exchangeAppleCode: appleExchange,
     },
     '../lib/oauth': {
