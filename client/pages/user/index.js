@@ -62,13 +62,19 @@ export default async function User({ userId }) {
   const isDeveloper = Boolean(stats && (stats.totals.plugins > 0 || stats.totals.lifetimeEarnings > 0));
   const params = new URLSearchParams(window.location.search);
   const linked = params.get('linked');
-  if (linked) {
-    const label = linked === 'github' ? 'GitHub' : 'Google';
-    alert('Success', `${label} account linked successfully.`, () => {
-      params.delete('linked');
-      const newSearch = params.toString();
-      Router.loadUrl(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`);
-    });
+  const linkedLabel = { github: 'GitHub', google: 'Google', apple: 'Apple' }[linked];
+  if (isSelf && typeof linkedLabel === 'string' && user[`${linked}_id`]) {
+    alert(
+      `${linkedLabel} account linked`,
+      `You can now sign in to Acode with ${linkedLabel}.`,
+      () => {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('linked');
+        history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`);
+      },
+      false,
+      { icon: linked, variant: 'success' },
+    );
   }
 
   const linkError = params.get('error');

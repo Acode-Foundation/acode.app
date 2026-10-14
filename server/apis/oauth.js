@@ -1,7 +1,9 @@
-const { Router } = require('express');
+const crypto = require('node:crypto');
+const { Router, urlencoded } = require('express');
 const { safeAccountRedirect } = require('../../shared/accountRedirect');
 const user = require('../entities/user');
 const { getWebLoggedInUser } = require('../lib/helpers');
+const apple = require('../lib/appleOAuth');
 const {
   getGitHubAuthURL,
   getGitHubToken,
@@ -18,11 +20,117 @@ const route = Router();
 const ID_COL = {
   github: user.GITHUB_ID,
   google: user.GOOGLE_ID,
+  apple: user.APPLE_ID,
 };
 
 function validatedRedirect(url) {
   if (url === 'app') return '/login?redirect=app';
   return safeAccountRedirect(url) || null;
+}
+
+const appleCookie = '__Host-apple_oauth';
+const appleCookieOptions = { httpOnly: true, secure: true, sameSite: 'none', path: '/', maxAge: 10 * 60 * 1000 };
+
+route.use('/apple', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  res.set('Referrer-Policy', 'no-referrer');
+  next();
+});
+
+route.get('/apple', async (req, res) => {
+  const redirect = validatedRedirect(req.query.redirect);
+  try {
+    const flow = { state: generateState(), nonce: generateState(), redirect, expires: Date.now() + appleCookieOptions.maxAge };
+    if (req.query.intent === 'link') {
+      const account = await getWebLoggedInUser(req);
+      if (!account || !req.cookies.token) throw new Error('Sign in before linking Apple');
+      flow.userId = account.id;
+      flow.session = appleSession(req);
+    }
+    const url = await apple.getAppleAuthURL(flow.state, flow.nonce);
+    setAppleFlow(res, flow);
+    res.redirect(url);
+  } catch (error) {
+    apple.logAppleError('sign-in start', error);
+    res.clearCookie(appleCookie, { path: '/', secure: true, sameSite: 'none' });
+    res.redirect(loginErrorRedirect(redirect, 'Unable to start Apple sign-in. Sign in before linking an account, or try again.'));
+  }
+});
+
+// Apple posts cross-site, so the Lax website session is absent here. Validate the
+// browser-bound state first, then resume on a GET to restore that session.
+route.post('/apple/callback', urlencoded({ extended: false, limit: '8kb', parameterLimit: 10 }), (req, res) => {
+  let flow;
+  try {
+    flow = readAppleFlow(req);
+    if (flow.callback || typeof req.body?.state !== 'string' || req.body.state !== flow.state) throw new Error('Invalid Apple state');
+    const { code, error, user: profile } = req.body;
+    if (!error && (typeof code !== 'string' || !code || code.length > 2048)) throw new Error('Missing Apple code');
+    // Only the first response contains the editable name. Email always comes from
+    // the verified identity token, never from the unsigned user object.
+    let name;
+    if (typeof profile === 'string') {
+      try {
+        const parsed = JSON.parse(profile);
+        name = [parsed.name?.firstName, parsed.name?.lastName]
+          .filter((part) => typeof part === 'string')
+          .join(' ')
+          .replace(/[<>\p{Cc}]/gu, '')
+          .trim()
+          .slice(0, 100);
+      } catch {
+        /* An optional malformed display name must not prevent returning-user sign-in. */
+      }
+    }
+    setAppleFlow(res, { ...flow, callback: true, code: error ? undefined : code, cancelled: Boolean(error), name }, 'lax');
+    res.redirect(303, '/oauth/apple/complete');
+  } catch (error) {
+    apple.logAppleError('callback', error);
+    res.clearCookie(appleCookie, { path: '/', secure: true, sameSite: 'none' });
+    res.redirect(303, loginErrorRedirect(flow?.redirect, 'Invalid or expired Apple sign-in. Please try again.'));
+  }
+});
+
+route.get('/apple/complete', async (req, res) => {
+  let flow;
+  res.clearCookie(appleCookie, { path: '/', secure: true, sameSite: 'lax' });
+  try {
+    flow = readAppleFlow(req);
+    if (!flow.callback) throw new Error('Missing Apple callback');
+    if (flow.cancelled) return res.redirect(loginErrorRedirect(flow.redirect, 'Sign-in was cancelled. Please try again.'));
+    if (flow.userId) {
+      const account = await getWebLoggedInUser(req);
+      if (account?.id !== flow.userId || appleSession(req) !== flow.session) {
+        return res.redirect('/profile/edit?error=Your%20signed-in%20account%20changed.%20Please%20link%20Apple%20again.');
+      }
+    }
+    const identity = await apple.exchangeAppleCode(flow.code, flow.nonce, flow.name);
+    if (flow.userId) await handleLink('apple', identity, req, res);
+    else await handleLogin('apple', identity, res, flow.redirect);
+  } catch (error) {
+    apple.logAppleError('sign-in completion', error);
+    res.redirect(loginErrorRedirect(flow?.redirect, 'Unable to sign in with Apple. Please try again.'));
+  }
+});
+
+function appleSession(req) {
+  return crypto
+    .createHash('sha256')
+    .update(req.cookies.token || '')
+    .digest('hex');
+}
+
+function setAppleFlow(res, flow, sameSite = 'none') {
+  const value = apple.seal(JSON.stringify(flow), 'apple-oauth');
+  if (value.length > 3800) throw new Error('Apple sign-in request is too large');
+  res.cookie(appleCookie, value, { ...appleCookieOptions, sameSite });
+}
+
+function readAppleFlow(req) {
+  const flow = JSON.parse(apple.unseal(req.cookies[appleCookie], 'apple-oauth'));
+  if (!Number.isFinite(flow.expires) || flow.expires <= Date.now() || !flow.state || !flow.nonce) throw new Error('Expired Apple sign-in');
+  flow.redirect = validatedRedirect(flow.redirect);
+  return flow;
 }
 
 route.get('/github', (req, res) => {
@@ -137,6 +245,11 @@ async function handleLink(provider, oauthUser, req, res) {
 
   const updates = [[idCol, oauthUser.id]];
 
+  if (provider === 'apple') {
+    if (loggedInUser.apple_id) return res.redirect('/profile/edit?error=Unlink%20your%20existing%20Apple%20account%20first.');
+    updates.push([user.APPLE_REFRESH_TOKEN, oauthUser.refreshToken]);
+  }
+
   if (!loggedInUser.avatar_url && oauthUser.avatar_url) {
     updates.push([user.AVATAR_URL, oauthUser.avatar_url]);
   }
@@ -153,7 +266,22 @@ async function handleLink(provider, oauthUser, req, res) {
     updates.push([user.WEBSITE, oauthUser.website]);
   }
 
-  await user.update(updates, [user.ID, loggedInUser.id]);
+  const where =
+    provider === 'apple'
+      ? [
+          [user.ID, loggedInUser.id],
+          [user.APPLE_ID, null],
+          [user.ROLE, 'deleted', '!='],
+        ]
+      : [user.ID, loggedInUser.id];
+  await user.update(updates, where);
+  if (provider === 'apple') {
+    const [linked] = await user.for('internal').get([
+      [user.ID, loggedInUser.id],
+      [user.APPLE_ID, oauthUser.id],
+    ]);
+    if (!linked) return res.redirect('/profile/edit?error=Your%20account%20changed.%20Please%20link%20Apple%20again.');
+  }
 
   return res.redirect(`/profile?linked=${provider}`);
 }
@@ -165,11 +293,16 @@ async function handleLogin(provider, oauthUser, res, redirect) {
   const existingById = await user.for('internal').get([idCol, oauthUser.id]);
   if (existingById.length) {
     userRow = existingById[0];
+    if (provider === 'apple') await user.update([user.APPLE_REFRESH_TOKEN, oauthUser.refreshToken], [user.ID, userRow.id]);
   } else {
+    if (provider === 'apple' && !oauthUser.email) throw new Error('Apple did not provide a verified email for registration');
     const existingByEmail = await user.for('internal').get([user.EMAIL, oauthUser.email]);
     if (existingByEmail.length) {
       return res.redirect(
-        loginErrorRedirect(redirect, `User already exists, please login to link to ${provider === 'github' ? 'GitHub' : 'Google'} account.`),
+        loginErrorRedirect(
+          redirect,
+          `User already exists, please login to link to ${{ github: 'GitHub', google: 'Google', apple: 'Apple' }[provider]} account.`,
+        ),
       );
     } else {
       const insertCols = [
@@ -179,6 +312,8 @@ async function handleLogin(provider, oauthUser, res, redirect) {
         [user.PRIMARY_AUTH, provider],
         [user.PASSWORD, generateRandomPassword()],
       ];
+
+      if (provider === 'apple') insertCols.push([user.APPLE_REFRESH_TOKEN, oauthUser.refreshToken]);
 
       if (oauthUser.github) {
         insertCols.push([user.GITHUB, oauthUser.github]);
@@ -197,7 +332,7 @@ async function handleLogin(provider, oauthUser, res, redirect) {
       }
 
       await user.insert(...insertCols);
-      const [created] = await user.for('internal').get([user.EMAIL, oauthUser.email]);
+      const [created] = await user.for('internal').get(provider === 'apple' ? [idCol, oauthUser.id] : [user.EMAIL, oauthUser.email]);
       userRow = created;
     }
   }

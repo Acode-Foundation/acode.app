@@ -89,6 +89,7 @@ export default async function Profile({ mode = 'register', redirect }) {
             </h3>
             <AuthButton type='github' user={user} />
             <AuthButton type='google' user={user} />
+            <AuthButton type='apple' user={user} />
           </div>
         )}
         {isRegister && (
@@ -96,6 +97,7 @@ export default async function Profile({ mode = 'register', redirect }) {
             <div className='social-login'>
               <OAuthButton provider='github' redirectUrl={oauthRedirect} />
               <OAuthButton provider='google' redirectUrl={oauthRedirect} />
+              <OAuthButton provider='apple' redirectUrl={oauthRedirect} />
             </div>
             <div className='divider'>
               <span>or register with email</span>
@@ -226,7 +228,7 @@ function normalizeEmail(email) {
 /**
  * AuthButton
  * @param {object} props
- * @param {'github'|'google'} props.type
+ * @param {'github'|'google'|'apple'} props.type
  * @param {import('lib/helpers').User} props.user
  */
 function AuthButton({ type, user }) {
@@ -280,7 +282,7 @@ function AuthButton({ type, user }) {
     <div className='oauth-link-item'>
       <span className={`icon ${type} oauth-link-icon`} />
       <span className='oauth-link-label'>
-        {type === 'github' ? 'Github' : 'Google'}{' '}
+        {{ github: 'GitHub', google: 'Google', apple: 'Apple' }[type]}{' '}
         {Boolean(user[key]) && <span className='icon check_circle oauth-status oauth-status--linked' title='Connected' />}
       </span>
       {action}

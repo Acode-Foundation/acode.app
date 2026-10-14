@@ -84,6 +84,7 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
           <div className='oauth-buttons'>
             <OAuthButton provider='github' redirectUrl={oauthRedirect} />
             <OAuthButton provider='google' redirectUrl={oauthRedirect} />
+            <OAuthButton provider='apple' redirectUrl={oauthRedirect} />
           </div>
         </div>
         <div style={{ margin: 'auto' }}>

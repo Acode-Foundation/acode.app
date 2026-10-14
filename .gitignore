@@ -1,5 +1,6 @@
 node_modules
 .env
+*.p8
 public
 data
 .DS_Store

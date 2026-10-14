@@ -16,6 +16,7 @@ const AppConfig = require('../entities/appConfig');
 const login = require('../entities/login');
 const AppAuthCode = require('../entities/appAuthCode');
 const { appAuthCodeLimiter, appTokenExchangeLimiter } = require('../lib/rateLimits');
+const { logAppleError } = require('../lib/appleOAuth');
 
 const route = Router();
 
@@ -431,6 +432,38 @@ route.delete('/link/google', async (req, res) => {
     res.send({ message: 'Google account unlinked' });
   } catch (error) {
     res.status(500).send({ error: error.message });
+  }
+});
+
+route.delete('/link/apple', async (req, res) => {
+  try {
+    const account = await getWebLoggedInUser(req);
+    if (!account) return res.status(401).send({ error: 'Not logged in' });
+    if (!account.apple_id) return res.status(400).send({ error: 'Apple is not linked' });
+    if (account.primary_auth === 'apple') return res.status(400).send({ error: 'Cannot unlink your primary login method' });
+    const authorization = await User.revokeAppleAuthorization(account.id);
+    if (authorization) {
+      await User.update(
+        [
+          [User.APPLE_ID, null],
+          [User.APPLE_REFRESH_TOKEN, null],
+        ],
+        [
+          [User.ID, account.id],
+          [User.APPLE_ID, authorization.apple_id],
+          [User.APPLE_REFRESH_TOKEN, authorization.apple_refresh_token],
+        ],
+      );
+    }
+    const [current] = await User.get([User.ID, account.id]);
+    if (current?.apple_id) return res.status(409).send({ error: 'Your Apple account link changed. Please try unlinking again.' });
+    res.send({ message: 'Apple account unlinked' });
+  } catch (error) {
+    logAppleError('unlink', error);
+    if (error?.code === 'APPLE_REVOCATION_CREDENTIAL_MISSING') {
+      return res.status(409).send({ error: 'Sign in with your linked Apple account, then try unlinking again.' });
+    }
+    res.status(500).send({ error: 'Unable to unlink Apple. Please try again.' });
   }
 });
 

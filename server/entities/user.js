@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const path = require('node:path');
 const { config } = require('dotenv');
 const db = require('../lib/db');
+const { revokeAppleToken, logAppleError } = require('../lib/appleOAuth');
 const { encryptPassword } = require('../password');
 const Entity = require('./entity');
 
@@ -22,6 +23,8 @@ const table = `create table if not exists user (
   pro_purchased_at timestamp,
   github_id text unique,
   google_id text unique,
+  apple_id text,
+  apple_refresh_token text,
   avatar_url text,
   x text,
   linkedin text,
@@ -46,6 +49,8 @@ class User extends Entity {
   WEBSITE = 'website';
   GITHUB_ID = 'github_id';
   GOOGLE_ID = 'google_id';
+  APPLE_ID = 'apple_id';
+  APPLE_REFRESH_TOKEN = 'apple_refresh_token';
   AVATAR_URL = 'avatar_url';
   PRIMARY_AUTH = 'primary_auth';
   PASSWORD = 'password';
@@ -67,8 +72,9 @@ class User extends Entity {
   }
 
   async init() {
-    const admin = await this.get([this.EMAIL, process.env.ADMIN_EMAIL]);
-    if (!admin.length) {
+    // This runs before additive migrations, so avoid projecting new columns here.
+    const admin = await this.count([this.EMAIL, process.env.ADMIN_EMAIL]);
+    if (!admin) {
       this.insert(
         [this.ROLE, 'admin'],
         [this.NAME, process.env.ADMIN_NAME],
@@ -85,13 +91,21 @@ class User extends Entity {
     const isExactIdCondition = column === this.ID && id != null && !Array.isArray(id) && comparison === '=' && where.length <= 3;
     if (!isExactIdCondition) throw new Error('User deletion requires an exact ID condition');
 
-    const [row] = await this.get(this.allColumns, [this.ID, id]);
+    const [row] = await this.get([this.ID, this.EMAIL, this.ROLE], [this.ID, id]);
     if (!row) {
       throw new Error('User not found');
     }
     if (row.role === this.ROLE_DELETED) return [];
     if (row.role === 'admin') {
       throw new Error('Admin accounts cannot be deleted');
+    }
+
+    // Erasure must remain available when Apple is unreachable or the credential
+    // is lost. Unlinking still requires successful revocation before clearing it.
+    try {
+      await this.revokeAppleAuthorization(row.id);
+    } catch (error) {
+      logAppleError('account deletion revocation', error);
     }
 
     const email = `deleted-user-${row.id}-${crypto.randomUUID()}@acode.invalid`;
@@ -138,6 +152,8 @@ class User extends Entity {
              pro_purchase_token = NULL,
              github_id = NULL,
              google_id = NULL,
+             apple_id = NULL,
+             apple_refresh_token = NULL,
              avatar_url = NULL,
              x = NULL,
              linkedin = NULL,
@@ -148,6 +164,16 @@ class User extends Entity {
 
     anonymize();
     return [];
+  }
+
+  async revokeAppleAuthorization(id) {
+    const row = db.prepare('SELECT apple_id, apple_refresh_token FROM user WHERE id = ?').get(id);
+    if (!row?.apple_id) return;
+    if (!row.apple_refresh_token) {
+      throw Object.assign(new Error('Apple revocation credential is missing'), { code: 'APPLE_REVOCATION_CREDENTIAL_MISSING' });
+    }
+    await revokeAppleToken(row.apple_refresh_token);
+    return row;
   }
 
   getUsersByFilter(filter) {
@@ -215,6 +241,7 @@ class User extends Entity {
       this.ACODE_PRO,
       this.GITHUB_ID,
       this.GOOGLE_ID,
+      this.APPLE_ID,
       this.AVATAR_URL,
       this.CREATED_AT,
       this.UPDATED_AT,
@@ -249,6 +276,7 @@ class User extends Entity {
       this.PRO_PURCHASED_AT,
       'github_id IS NOT NULL AS github_id',
       'google_id IS NOT NULL AS google_id',
+      'apple_id IS NOT NULL AS apple_id',
     ];
   }
 
@@ -265,6 +293,7 @@ class User extends Entity {
       this.ACODE_PRO,
       this.GITHUB_ID,
       this.GOOGLE_ID,
+      this.APPLE_ID,
       this.PRIMARY_AUTH,
       this.AVATAR_URL,
       `IFNULL(github, '') as github`,

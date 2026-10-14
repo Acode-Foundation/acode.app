@@ -1,6 +1,9 @@
 const Module = require('node:module');
 const Database = require('better-sqlite3');
 const { comparePassword, encryptPassword } = require('../../server/password');
+const migration = require('../../server/migrations/016_add_apple_auth');
+const { logAppleError } = require('../../server/lib/appleOAuth');
+let revokeAppleToken;
 
 function loadUser(db) {
   const entityPath = require.resolve('../../server/entities/entity');
@@ -11,6 +14,7 @@ function loadUser(db) {
   const originalLoad = Module._load;
   Module._load = function load(request, parent, isMain) {
     if (request === '../lib/db' && parent?.filename.startsWith(`${process.cwd()}/server/entities/`)) return db;
+    if (request === '../lib/appleOAuth' && parent?.filename === userPath) return { revokeAppleToken, logAppleError };
     return originalLoad.call(this, request, parent, isMain);
   };
 
@@ -84,11 +88,13 @@ describe('User.delete anonymization', () => {
   let User;
 
   beforeEach(() => {
+    revokeAppleToken = vi.fn(async () => {});
     ({ db, User } = createDatabase());
   });
 
   afterEach(() => {
     db.close();
+    vi.restoreAllMocks();
   });
 
   it('fixes the reported two-session foreign-key failure and keeps the anonymized user queryable', async () => {
@@ -117,7 +123,18 @@ describe('User.delete anonymization', () => {
     expect(row.password).not.toBe(encryptPassword('original-password'));
     expect(comparePassword('original-password', row.password)).toBe(false);
     expect(row.email).toMatch(/^deleted-user-2-[0-9a-f-]{36}@acode\.invalid$/);
-    for (const field of ['github', 'website', 'github_id', 'google_id', 'avatar_url', 'x', 'linkedin', 'primary_auth']) {
+    for (const field of [
+      'github',
+      'website',
+      'github_id',
+      'google_id',
+      'apple_id',
+      'apple_refresh_token',
+      'avatar_url',
+      'x',
+      'linkedin',
+      'primary_auth',
+    ]) {
       expect(row[field]).toBeNull();
     }
     expect(db.prepare('SELECT * FROM payment_method WHERE id = 1').get()).toMatchObject({
@@ -175,14 +192,84 @@ describe('User.delete anonymization', () => {
     expect(db.prepare('SELECT COUNT(*) count FROM login').get().count).toBe(3);
   });
 
+  it.each(['Apple unavailable', 'missing credential'])('still erases the account when revocation fails: %s', async (failure) => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const token = failure === 'missing credential' ? null : 'encrypted-refresh-token';
+    db.prepare('UPDATE user SET apple_id = ?, apple_refresh_token = ? WHERE id = 2').run('apple-sub', token);
+    revokeAppleToken.mockRejectedValueOnce(new Error(`${failure}: sensitive-provider-response`));
+    await expect(User.delete([User.ID, 2])).resolves.toEqual([]);
+    if (token) expect(revokeAppleToken).toHaveBeenCalledWith(token);
+    else expect(revokeAppleToken).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith('Apple account deletion revocation failed:', expect.objectContaining({ reason: expect.any(String) }));
+    expect(JSON.stringify(log.mock.calls)).not.toContain('sensitive-provider-response');
+    expect(JSON.stringify(log.mock.calls)).not.toContain('encrypted-refresh-token');
+    expect(db.prepare('SELECT COUNT(*) count FROM login WHERE user_id = 2').get().count).toBe(0);
+    expect(db.prepare('SELECT COUNT(*) count FROM app_auth_code WHERE user_id = 2').get().count).toBe(0);
+    expect(db.prepare('SELECT role, apple_id, apple_refresh_token FROM user WHERE id = 2').get()).toEqual({
+      role: 'deleted',
+      apple_id: null,
+      apple_refresh_token: null,
+    });
+  });
+
+  it('keeps encrypted credentials out of all user projections and redacts them from SQL error logs', async () => {
+    db.prepare('UPDATE user SET apple_id = ?, apple_refresh_token = ? WHERE id = 2').run('private-subject', 'encrypted-secret');
+    const [safe] = await User.get(User.safeColumns, [User.ID, 2]);
+    expect(safe.apple_id).toBe(1);
+    for (const columns of [undefined, User.columns, User.safeColumns, User.publicColumns]) {
+      const [row] = await User.get(columns, [User.ID, 2]);
+      expect(row).not.toHaveProperty('apple_refresh_token');
+    }
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      db.exec(
+        "CREATE TRIGGER reject_apple_credential BEFORE UPDATE OF apple_refresh_token, password ON user BEGIN SELECT RAISE(ABORT, 'forced failure'); END",
+      );
+      await expect(User.update([User.APPLE_REFRESH_TOKEN, 'encrypted-secret'], [User.ID, 2])).rejects.toThrow();
+      await expect(User.update([User.PASSWORD, 'another-secret'], [User.ID, 2])).rejects.toThrow();
+      expect(JSON.stringify(log.mock.calls)).not.toContain('encrypted-secret');
+      expect(JSON.stringify(log.mock.calls)).not.toContain('another-secret');
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it('adds nullable unique Apple identity and nullable credential columns without changing legacy rows', () => {
+    const legacy = new Database(':memory:');
+    try {
+      legacy.exec(
+        "CREATE TABLE user (id INTEGER PRIMARY KEY, name TEXT, email TEXT); INSERT INTO user VALUES (1, 'Existing', 'existing@example.com'), (2, 'Second', 'second@example.com')",
+      );
+      migration.up(legacy);
+      migration.up(legacy);
+      expect(legacy.prepare('SELECT * FROM user WHERE id = 1').get()).toEqual({
+        id: 1,
+        name: 'Existing',
+        email: 'existing@example.com',
+        apple_id: null,
+        apple_refresh_token: null,
+      });
+      legacy.prepare('UPDATE user SET apple_id = ? WHERE id = 1').run('apple-sub');
+      expect(() => legacy.prepare('UPDATE user SET apple_id = ? WHERE id = 2').run('apple-sub')).toThrow('UNIQUE');
+    } finally {
+      legacy.close();
+    }
+  });
+
   it('protects admins and rolls back all changes on failure', async () => {
     const admin = db.prepare("SELECT id FROM user WHERE role = 'admin'").get();
     await expect(User.delete([User.ID, admin.id])).rejects.toThrow('Admin accounts cannot be deleted');
+    expect(revokeAppleToken).not.toHaveBeenCalled();
 
+    db.prepare('UPDATE user SET apple_id = ?, apple_refresh_token = ? WHERE id = 2').run('apple-sub', 'encrypted-refresh-token');
     db.exec(`CREATE TRIGGER reject_sponsor_scrub BEFORE UPDATE ON sponsor BEGIN SELECT RAISE(ABORT, 'forced failure'); END`);
     await expect(User.delete([User.ID, 2])).rejects.toThrow('forced failure');
     expect(db.prepare('SELECT name, role FROM user WHERE id = 2').get()).toEqual({ name: 'Normal User', role: 'user' });
     expect(db.prepare('SELECT COUNT(*) count FROM login WHERE user_id = 2').get().count).toBe(1);
     expect(db.prepare('SELECT paypal_email FROM payment_method WHERE id = 1').get().paypal_email).toBe('paypal@example.com');
+    db.exec('DROP TRIGGER reject_sponsor_scrub');
+    await expect(User.delete([User.ID, 2])).resolves.toEqual([]);
+    expect(revokeAppleToken).toHaveBeenCalledTimes(2);
+    expect(db.prepare('SELECT role FROM user WHERE id = 2').get().role).toBe('deleted');
   });
 });

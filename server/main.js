@@ -109,8 +109,9 @@ async function main() {
       next();
       return;
     }
-    // Skip webhook endpoint (receives callbacks from Razorpay servers)
-    if (req.path === '/api/razorpay/webhook') {
+    // Provider callbacks authenticate themselves: Razorpay by signature, Apple by
+    // browser-bound state and a nonce in the verified identity token.
+    if (req.path === '/api/razorpay/webhook' || (req.method === 'POST' && req.path === '/oauth/apple/callback')) {
       next();
       return;
     }

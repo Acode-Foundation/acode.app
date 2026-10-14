@@ -1,6 +1,8 @@
 import './style.scss';
 import Router from 'lib/Router';
 
+let nextDialogId = 0;
+
 /**
  * @typedef {(hide: ()=>void, $box: HTMLElement) => void} DialogBoxCallback
  * @typedef {HTMLElement & {hide: () => void}} DialogBox
@@ -19,16 +21,19 @@ import Router from 'lib/Router';
  * @param {string} [props.message]
  * @param {string} [props.body]
  * @param {boolean} [props.keep]
+ * @param {string} [props.icon]
+ * @param {'success'} [props.variant]
  * @param {HTMLElement[]} [children]
  * @returns {DialogBox}
  */
-export default function DialogBox({ title = '', onhide, onok, oncancel, onselect, options, message, body, keep = false }, children) {
+export default function DialogBox({ title = '', onhide, onok, oncancel, onselect, options, message, body, keep = false, icon, variant }, children) {
+  const titleId = `dialog-title-${++nextDialogId}`;
   const buttons = [];
 
   if (onok && typeof onok === 'function') {
     buttons.push(
       <button type='button' onclick={() => onok(hide, $box)}>
-        OK
+        {variant === 'success' ? 'Done' : 'OK'}
       </button>,
     );
   }
@@ -58,8 +63,16 @@ export default function DialogBox({ title = '', onhide, onok, oncancel, onselect
   const $box = (
     <div className='dialog-box-container'>
       <div onclick={hide} className='dialog-box-overlay' />
-      <div className='dialog-box'>
-        <h2 className='title'>{title}</h2>
+      <div className={`dialog-box${variant ? ` dialog-box--${variant}` : ''}`} role='dialog' aria-labelledby={titleId}>
+        {icon && (
+          <div className='dialog-icon' aria-hidden='true'>
+            <span className={`icon ${icon}`} />
+            {variant === 'success' && <span className='icon check_circle dialog-status' />}
+          </div>
+        )}
+        <h2 id={titleId} className='title'>
+          {title}
+        </h2>
         <div className='body'>{body}</div>
         <div className='buttons'>{buttons}</div>
       </div>
