@@ -12,6 +12,7 @@ let origin;
 let sessions;
 let authCodes;
 let sequence;
+let oauthTokens;
 const verifier = 'ab'.repeat(32);
 const state = 'cd'.repeat(24);
 const challenge = crypto.createHash('sha256').update(verifier).digest('hex');
@@ -19,6 +20,7 @@ const challenge = crypto.createHash('sha256').update(verifier).digest('hex');
 afterEach(async () => {
   if (server) await new Promise((resolve) => server.close(resolve));
   server = undefined;
+  vi.restoreAllMocks();
 });
 
 it('supports repeated login/logout with an existing browser session, without spending the exchange limit on code issuance', async () => {
@@ -51,13 +53,63 @@ it('supports repeated login/logout with an existing browser session, without spe
 it('rejects off-site OAuth return URLs while preserving local paths and app sign-in', async () => {
   await start();
   for (const redirect of ['https://example.com', '//example.com', '/\\example.com', '/\n/example.com']) {
-    const response = await fetch(`${origin}/api/oauth/github?redirect=${encodeURIComponent(redirect)}`, { redirect: 'manual' });
+    const response = await fetch(`${origin}/oauth/github?redirect=${encodeURIComponent(redirect)}`, { redirect: 'manual' });
     expect(response.status).toBe(302);
-    expect(response.headers.get('Set-Cookie')).not.toContain('oauth_redirect=');
+    expect(response.headers.getSetCookie()).toContainEqual(expect.stringMatching(/^oauth_redirect=;.*Expires=Thu, 01 Jan 1970/));
   }
   for (const redirect of ['/', '/profile/edit?src=ios', 'app']) {
-    const response = await fetch(`${origin}/api/oauth/github?redirect=${encodeURIComponent(redirect)}`, { redirect: 'manual' });
+    const response = await fetch(`${origin}/oauth/github?redirect=${encodeURIComponent(redirect)}`, { redirect: 'manual' });
     expect(response.headers.get('Set-Cookie')).toContain('oauth_redirect=');
+  }
+});
+
+it.each(['github', 'google'])('keeps the app request through %s account selection, successful login and cancellation', async (provider) => {
+  await start();
+  const loginUrl = `/login?redirect=app&src=android&androidPackage=com.foxdebug.acodefree&authFlow=app-code&state=${state}&challenge=${challenge}&appVersionCode=1017`;
+  const started = await fetch(`${origin}/oauth/${provider}?redirect=${encodeURIComponent(loginUrl)}`, { redirect: 'manual' });
+  expect(new URL(started.headers.get('Location')).searchParams.get('prompt')).toBe('select_account');
+  const headers = { Cookie: `oauth_state=fixture-state; oauth_redirect=${encodeURIComponent(loginUrl)}` };
+  const completed = await fetch(`${origin}/oauth/${provider}/callback?state=fixture-state&code=fixture-code`, { headers, redirect: 'manual' });
+  expect(completed.headers.get('Location')).toBe(loginUrl);
+  expect(completed.headers.get('Set-Cookie')).toContain('token=fixture-session');
+  oauthTokens[provider].mockClear();
+  const cancelled = await fetch(`${origin}/oauth/${provider}/callback?state=fixture-state&error=access_denied`, { headers, redirect: 'manual' });
+  const returned = new URL(cancelled.headers.get('Location'), origin);
+  expect(returned.pathname).toBe('/login');
+  expect(returned.searchParams.get('error')).toContain('cancelled');
+  returned.searchParams.delete('error');
+  expect(`${returned.pathname}${returned.search}`).toBe(loginUrl);
+  expect(oauthTokens[provider]).not.toHaveBeenCalled();
+});
+
+it.each(['github', 'google'])('preserves the %s return path on exchange failures and rejects off-site callback destinations', async (provider) => {
+  await start();
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const loginUrl = `/login?redirect=app&authFlow=app-code&state=${state}&challenge=${challenge}`;
+  oauthTokens[provider].mockRejectedValueOnce(new Error('Provider unavailable'));
+  const failed = await fetch(`${origin}/oauth/${provider}/callback?state=fixture-state&code=fixture-code`, {
+    headers: { Cookie: `oauth_state=fixture-state; oauth_redirect=${encodeURIComponent(loginUrl)}` },
+    redirect: 'manual',
+  });
+  const returned = new URL(failed.headers.get('Location'), origin);
+  expect(returned.searchParams.get('error')).toContain('Please try again');
+  expect(returned.searchParams.get('challenge')).toBe(challenge);
+  const invalid = await fetch(`${origin}/oauth/${provider}/callback?state=wrong-state`, {
+    headers: { Cookie: `oauth_state=fixture-state; oauth_redirect=${encodeURIComponent('https://example.com')}` },
+    redirect: 'manual',
+  });
+  expect(invalid.headers.get('Location')).toMatch(/^\/login\?error=/);
+});
+
+it.each(['github', 'google'])('clears a cancelled linking request before starting a new %s sign-in', async (provider) => {
+  await start();
+  const response = await fetch(`${origin}/oauth/${provider}`, {
+    headers: { Cookie: 'oauth_intent=link; oauth_redirect=%2Fprofile%2Fedit' },
+    redirect: 'manual',
+  });
+  const cookies = response.headers.getSetCookie();
+  for (const name of ['oauth_intent', 'oauth_redirect']) {
+    expect(cookies).toContainEqual(expect.stringMatching(new RegExp(`^${name}=;.*Expires=Thu, 01 Jan 1970`)));
   }
 });
 
@@ -65,6 +117,7 @@ async function start() {
   sessions = new Map();
   authCodes = new Map();
   sequence = 0;
+  oauthTokens = { github: vi.fn(async () => 'fixture-token'), google: vi.fn(async () => 'fixture-token') };
   const login = entity(sessions, ['ID', 'TYPE', 'TOKEN', 'USER_ID', 'EXPIRED_AT']);
   const codes = entity(authCodes, ['ID', 'USER_ID', 'CODE', 'STATE', 'CHALLENGE', 'USED', 'APP_VERSION_CODE', 'EXPIRED_AT']);
   codes.markUsed = (id) => {
@@ -109,13 +162,28 @@ async function start() {
   const oauth = load('../../server/apis/oauth.js', {
     ...dependencies,
     '../../shared/accountRedirect': { safeAccountRedirect },
-    '../lib/oauth': { generateState: () => 'fixture-state', getGitHubAuthURL: () => 'https://identity.example.com' },
+    '../entities/user': {
+      for() {
+        return this;
+      },
+      get: async () => [{ id: 8 }],
+    },
+    '../lib/oauth': {
+      generateState: () => 'fixture-state',
+      getGitHubAuthURL: () => 'https://identity.example.com/github',
+      getGoogleAuthURL: () => 'https://identity.example.com/google',
+      getGitHubToken: oauthTokens.github,
+      getGoogleToken: oauthTokens.google,
+      getGitHubUser: async () => ({ id: 'fixture-user' }),
+      getGoogleUser: async () => ({ id: 'fixture-user' }),
+      issueTokenAndLogin: async (_id, res) => res.cookie('token', 'fixture-session'),
+    },
   });
   const app = express();
   app.use(express.json(), cookieParser());
   app.use('/api/user', router);
   app.use('/api/login', account);
-  app.use('/api/oauth', oauth);
+  app.use('/oauth', oauth);
   server = await new Promise((resolve, reject) => {
     const listening = app.listen(0, '127.0.0.1', (error) => (error ? reject(error) : resolve(listening)));
   });
@@ -129,6 +197,7 @@ function load(path, dependencies, globals = {}) {
     Buffer,
     console,
     Date,
+    URL,
     ...globals,
     require(name) {
       if (name in dependencies) return dependencies[name];

@@ -1,6 +1,8 @@
+import { isAdFreeRoute } from '../../shared/adPolicy';
 import { withAppSource } from './appSource';
 
 class Router {
+  #adFreeDocument = isAdFreeRoute(location.pathname);
   #thisSite = new RegExp(`(^https?://(www.)?${location.hostname}(/.*)?)|(^/)`);
   #customEvent = new CustomEvent('locationchange');
   #routes = {};
@@ -45,7 +47,12 @@ class Router {
    */
   navigate(url) {
     const { location } = window;
-    url = typeof url === 'string' ? url : location.pathname;
+    url = (typeof url === 'string' ? url : location.pathname).split(/[?#]/, 1)[0];
+    // A new document discards any running ad SDK when entering account flows.
+    if (isAdFreeRoute(url) !== this.#adFreeDocument) {
+      location.reload();
+      return;
+    }
     url = url.toLowerCase();
     const allCallbacks = [];
     this.#currentUrl = url;
@@ -279,6 +286,7 @@ class Router {
     path = withAppSource(path);
     const { history } = window;
     history.pushState(history.state, document.title, path);
+    if (isAdFreeRoute(location.pathname) !== this.#adFreeDocument) location.reload();
   }
 }
 

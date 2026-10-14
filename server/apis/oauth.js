@@ -28,23 +28,24 @@ function validatedRedirect(url) {
 route.get('/github', (req, res) => {
   if (req.query.intent === 'link') {
     res.cookie('oauth_intent', 'link', { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: true });
-  }
+  } else res.clearCookie('oauth_intent');
   const redirect = validatedRedirect(req.query.redirect);
   if (redirect) {
     res.cookie('oauth_redirect', redirect, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: true });
-  }
+  } else res.clearCookie('oauth_redirect');
   const state = generateState();
   res.cookie('oauth_state', state, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: true });
-  res.redirect(getGitHubAuthURL(state));
+  res.redirect(withAccountSelection(getGitHubAuthURL(state), redirect));
 });
 
 route.get('/github/callback', async (req, res) => {
+  const oauthRedirect = req.cookies.oauth_redirect;
   try {
     const { code, state } = req.query;
 
     if (!state || state !== req.cookies.oauth_state) {
       res.clearCookie('oauth_state');
-      return res.redirect(`/login?error=${encodeURIComponent('Invalid state parameter')}`);
+      return res.redirect(loginErrorRedirect(oauthRedirect, 'Invalid state parameter'));
     }
 
     res.clearCookie('oauth_state');
@@ -52,8 +53,9 @@ route.get('/github/callback', async (req, res) => {
     const intent = req.cookies.oauth_intent;
     res.clearCookie('oauth_intent');
 
-    const oauthRedirect = req.cookies.oauth_redirect;
     res.clearCookie('oauth_redirect');
+
+    if (req.query.error) return res.redirect(loginErrorRedirect(oauthRedirect, 'Sign-in was cancelled. Please try again.'));
 
     const accessToken = await getGitHubToken(code);
     const ghUser = await getGitHubUser(accessToken);
@@ -65,30 +67,31 @@ route.get('/github/callback', async (req, res) => {
     }
   } catch (error) {
     console.error('GitHub OAuth error:', error);
-    res.redirect(`/login?error=${encodeURIComponent('Error occurred while logging with Github')}`);
+    res.redirect(loginErrorRedirect(oauthRedirect, 'Unable to sign in with GitHub. Please try again.'));
   }
 });
 
 route.get('/google', (req, res) => {
   if (req.query.intent === 'link') {
     res.cookie('oauth_intent', 'link', { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: true });
-  }
+  } else res.clearCookie('oauth_intent');
   const redirect = validatedRedirect(req.query.redirect);
   if (redirect) {
     res.cookie('oauth_redirect', redirect, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: true });
-  }
+  } else res.clearCookie('oauth_redirect');
   const state = generateState();
   res.cookie('oauth_state', state, { maxAge: 10 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: true });
-  res.redirect(getGoogleAuthURL(state));
+  res.redirect(withAccountSelection(getGoogleAuthURL(state), redirect));
 });
 
 route.get('/google/callback', async (req, res) => {
+  const oauthRedirect = req.cookies.oauth_redirect;
   try {
     const { code, state } = req.query;
 
     if (!state || state !== req.cookies.oauth_state) {
       res.clearCookie('oauth_state');
-      return res.redirect(`/login?error=${encodeURIComponent('Invalid state parameter')}`);
+      return res.redirect(loginErrorRedirect(oauthRedirect, 'Invalid state parameter'));
     }
 
     res.clearCookie('oauth_state');
@@ -96,8 +99,9 @@ route.get('/google/callback', async (req, res) => {
     const intent = req.cookies.oauth_intent;
     res.clearCookie('oauth_intent');
 
-    const oauthRedirect = req.cookies.oauth_redirect;
     res.clearCookie('oauth_redirect');
+
+    if (req.query.error) return res.redirect(loginErrorRedirect(oauthRedirect, 'Sign-in was cancelled. Please try again.'));
 
     const accessToken = await getGoogleToken(code);
     const googleUser = await getGoogleUser(accessToken);
@@ -109,7 +113,7 @@ route.get('/google/callback', async (req, res) => {
     }
   } catch (error) {
     console.error('Google OAuth error:', error);
-    res.redirect(`/login?error=${encodeURIComponent('Error occurred while logging with Google')}`);
+    res.redirect(loginErrorRedirect(oauthRedirect, 'Unable to sign in with Google. Please try again.'));
   }
 });
 
@@ -165,7 +169,7 @@ async function handleLogin(provider, oauthUser, res, redirect) {
     const existingByEmail = await user.for('internal').get([user.EMAIL, oauthUser.email]);
     if (existingByEmail.length) {
       return res.redirect(
-        `/login?error=${encodeURIComponent(`User already exists, please login to link to ${provider === 'github' ? 'Github' : 'Google'} account.`)}`,
+        loginErrorRedirect(redirect, `User already exists, please login to link to ${provider === 'github' ? 'GitHub' : 'Google'} account.`),
       );
     } else {
       const insertCols = [
@@ -200,6 +204,23 @@ async function handleLogin(provider, oauthUser, res, redirect) {
 
   await issueTokenAndLogin(userRow.id, res);
   res.redirect(validatedRedirect(redirect) || '/');
+}
+
+function withAccountSelection(authUrl, redirect) {
+  const destination = new URL(redirect || '/', 'https://acode.app');
+  if (destination.pathname !== '/login' || destination.searchParams.get('redirect') !== 'app') return authUrl;
+  const url = new URL(authUrl);
+  url.searchParams.set('prompt', 'select_account');
+  return url.toString();
+}
+
+function loginErrorRedirect(redirect, message) {
+  const destination = validatedRedirect(redirect);
+  const target = new URL(destination || '/login', 'https://acode.app');
+  const url = target.pathname === '/login' ? target : new URL('/login', target.origin);
+  if (destination && target.pathname !== '/login') url.searchParams.set('redirect', destination);
+  url.searchParams.set('error', message);
+  return `${url.pathname}${url.search}`;
 }
 
 module.exports = route;

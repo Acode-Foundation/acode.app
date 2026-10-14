@@ -7,8 +7,9 @@ import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { safeAccountRedirect } from 'lib/appSource';
 import background from 'lib/background';
-import { getLoggedInUser, loadingEnd, loadingStart, withRedirect } from 'lib/helpers';
+import { getLoggedInUser, invalidateLoggedInUser, loadingEnd, loadingStart, withRedirect } from 'lib/helpers';
 import Router from 'lib/Router';
+import AppSignIn from './appSignIn';
 
 export default async function Login({ redirect = sessionStorage.getItem('redirect') }) {
   redirect = safeAccountRedirect(redirect);
@@ -17,17 +18,13 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
   const button = Ref();
   const canvas = Ref();
   const search = new URLSearchParams(window.location.search);
-  const appLoginState = search.get('state');
-  const appAuthChallenge = search.get('challenge');
-  const appAuthFlow = search.get('authFlow');
-  const appVersionCode = search.get('appVersionCode');
-  const usesAppCodeFlow = redirect === 'app' && appAuthFlow === 'app-code';
-  const oauthRedirect = usesAppCodeFlow ? `${location.pathname}${location.search}` : redirect;
+  const oauthRedirect = redirect === 'app' ? withRedirect('/login', 'app') : redirect;
   if (search.get('accountDeleted') === '1') successText.value = 'Your account has been deleted.';
 
   try {
     const user = await getLoggedInUser();
     if (user) {
+      if (redirect === 'app') return <AppSignIn user={user} />;
       redirectAfterDone();
       return (
         <section id='user-login'>
@@ -59,8 +56,8 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
       <AjaxForm
         className='glass user-form'
         loading={onloadstart}
-        loadingEnd={(form) => loadingEnd(form, 'Login')}
-        onloadend={onloadeend}
+        loadingEnd={(form) => loadingEnd(form, 'Sign in')}
+        onloadend={onloadend}
         onerror={onerror}
         action='/api/login'
         autofill={false}
@@ -106,13 +103,18 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
     loadingStart(form, errorText, successText);
   }
 
-  function onloadeend(data) {
+  function onloadend(data) {
     if (data.error) {
       onerror(data.error);
       return;
     }
 
-    redirectAfterDone();
+    invalidateLoggedInUser();
+    if (redirect === 'app') {
+      window.location.replace(withRedirect('/login', 'app'));
+    } else {
+      redirectAfterDone();
+    }
   }
 
   function onerror(error) {
@@ -120,66 +122,12 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
       button.el.disabled = false;
     }
     successText.value = '';
-    errorText.value = error;
+    errorText.value = error.message || error;
   }
 
-  async function getAppRedirectUrl() {
-    if (usesAppCodeFlow) {
-      if (!appLoginState || !appAuthChallenge) {
-        throw new Error('Invalid app login request');
-      }
-
-      const res = await fetch('/api/user/app-auth-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          state: appLoginState,
-          challenge: appAuthChallenge,
-          appVersionCode,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(await getResponseError(res, 'Failed to create app auth code'));
-      }
-
-      const data = await res.json();
-      if (!data.code) {
-        throw new Error('Failed to create app auth code');
-      }
-
-      const callback = new URL('acode://auth/callback');
-      callback.searchParams.set('code', data.code);
-      callback.searchParams.set('state', appLoginState);
-      return callback.toString();
-    }
-
-    const res = await fetch('/api/user/app-token', { method: 'POST' });
-
-    if (!res.ok) {
-      throw new Error(await getResponseError(res, 'Failed to create token'));
-    }
-
-    const data = await res.json();
-    if (!data.token) {
-      throw new Error('Failed to create token');
-    }
-
-    return `acode://user/login/${data.token}`;
-  }
-
-  async function redirectAfterDone() {
+  function redirectAfterDone() {
     if (button.el) {
       button.el.disabled = true;
-    }
-
-    try {
-      if (redirect === 'app') {
-        redirect = await getAppRedirectUrl();
-      }
-    } catch (error) {
-      onerror(error.message);
-      return;
     }
 
     errorText.value = '';
@@ -188,18 +136,5 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
     setTimeout(() => {
       window.location.replace(redirect || '/');
     }, 1000);
-  }
-}
-
-async function getResponseError(response, fallback) {
-  const retryAfter = Number(response.headers.get('Retry-After'));
-  if (response.status === 429 && Number.isFinite(retryAfter) && retryAfter > 0) {
-    return `Too many sign-in attempts. Please wait ${Math.ceil(retryAfter / 60)} minute(s) and try again.`;
-  }
-  try {
-    const data = await response.json();
-    return data.error || fallback;
-  } catch {
-    return fallback;
   }
 }

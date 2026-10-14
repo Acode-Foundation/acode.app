@@ -24,24 +24,29 @@ it('preserves iOS context across internal navigation and reloads without tagging
   expect(withAppSource('/pro')).toBe('/pro');
 });
 
-it('keeps the PKCE flow intact through registration, password reset and return to login', () => {
-  for (const page of ['/register', '/change-password?mode=reset']) {
-    const target = withAccountRedirect(page, 'app');
-    const params = new URL(target, location.href).searchParams;
-    expect(Object.fromEntries(params)).toMatchObject({
-      src: 'ios',
-      redirect: 'app',
-      authFlow: 'app-code',
-      state: 'StateValue',
-      challenge: 'ChallengeValue',
-      appVersionCode: '1016',
-    });
-    setLocation(target);
-    const returned = new URL(withAccountRedirect('/login', 'app'), location.href);
-    expect(returned.searchParams.get('state')).toBe('StateValue');
-    expect(returned.searchParams.get('challenge')).toBe('ChallengeValue');
-  }
-});
+it.each([null, 'com.foxdebug.acode', 'com.foxdebug.acodefree'])(
+  'keeps the PKCE flow and app target %s through registration and password reset',
+  (androidPackage) => {
+    if (androidPackage) setLocation(`${location.pathname}${location.search.replace('src=ios', 'src=android')}&androidPackage=${androidPackage}`);
+    for (const page of ['/register', '/change-password?mode=reset']) {
+      const target = withAccountRedirect(page, 'app');
+      const params = new URL(target, location.href).searchParams;
+      expect(Object.fromEntries(params)).toMatchObject({
+        src: androidPackage ? 'android' : 'ios',
+        redirect: 'app',
+        authFlow: 'app-code',
+        state: 'StateValue',
+        challenge: 'ChallengeValue',
+        appVersionCode: '1016',
+      });
+      setLocation(target);
+      const returned = new URL(withAccountRedirect('/login', 'app'), location.href);
+      expect(returned.searchParams.get('state')).toBe('StateValue');
+      expect(returned.searchParams.get('challenge')).toBe('ChallengeValue');
+      expect(returned.searchParams.get('androidPackage')).toBe(androidPackage);
+    }
+  },
+);
 
 it('preserves redirects containing their own queries and does not attach app secrets to account settings', () => {
   const target = new URL(withAccountRedirect('/login', '/profile/edit?src=ios'), location.href);

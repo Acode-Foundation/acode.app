@@ -27,8 +27,8 @@ export function withAccountRedirect(value, redirect) {
   if (redirect) url.searchParams.set('redirect', redirect);
   if (redirect === 'app') {
     const current = new URLSearchParams(location.search);
-    for (const key of ['authFlow', 'state', 'challenge', 'appVersionCode']) {
-      if (current.has(key)) url.searchParams.set(key, current.get(key));
+    for (const key of ['src', 'androidPackage', 'authFlow', 'state', 'challenge', 'appVersionCode']) {
+      if (current.has(key) && (key !== 'src' || !url.searchParams.has(key))) url.searchParams.set(key, current.get(key));
     }
   }
   return `${url.pathname}${url.search}${url.hash}`;

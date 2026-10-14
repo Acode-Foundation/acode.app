@@ -91,7 +91,7 @@ export default async function Pro({ redirect }) {
             <span className='currency'>{proStatus.symbol}</span>
             <span className='amount'>{proStatus.price}</span>
           </CurrencySelector>
-          <a href={`/login?redirect=/pro`} className='btn primary'>
+          <a href={`/login?redirect=/pro`} className='btn primary' data-google-vignette='false'>
             <span className='icon login' /> Login to Purchase
           </a>
         </div>

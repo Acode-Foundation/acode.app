@@ -6,6 +6,7 @@ import { isIOSSource } from 'lib/appSource';
 import { gravatar } from 'lib/helpers';
 import digitalOceanLogo from 'res/digitalocean-icon.svg';
 import logo from 'res/logo.svg';
+import { isAdFreeRoute } from '../shared/adPolicy';
 
 const accountButtonRef = Ref();
 const userMenuRef = Ref();
@@ -139,7 +140,7 @@ export default ({ routes }) => (
         <span className='icon person' />
         {userName}
       </a>
-      <a href='/profile/edit'>
+      <a href='/profile/edit' data-google-vignette='false'>
         <span className='icon create' />
         Edit Profile
       </a>
@@ -148,7 +149,7 @@ export default ({ routes }) => (
         My Orders
       </a>
       <span className='divider' />
-      <a href='/logout' className='danger-text'>
+      <a href='/logout' className='danger-text' data-google-vignette='false'>
         <span className='icon logout' />
         Logout
       </a>
@@ -168,6 +169,7 @@ export function updateAccountButton(user) {
     button = (
       <a
         href='/login'
+        data-google-vignette='false'
         onclick={() => {
           if (!/\/(logout|login|change-password)/i.test(location.pathname)) {
             sessionStorage.setItem('redirect', location.pathname);
@@ -210,7 +212,7 @@ export function addProButton(user) {
 
   const navUser = header.get('nav:last-of-type');
 
-  if (isIOSSource()) {
+  if (isIOSSource() || isAdFreeRoute(location.pathname)) {
     navUser?.get('.get-pro-btn')?.remove();
     return;
   }

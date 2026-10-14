@@ -136,7 +136,7 @@ export default async function User({ userId }) {
               <span className='icon publish' />
               Publish plugin
             </a>
-            <a className='action' href='/profile/edit'>
+            <a className='action' href='/profile/edit' data-google-vignette='false'>
               <span className='icon create' />
               Edit profile
             </a>
