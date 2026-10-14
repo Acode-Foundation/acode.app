@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^8.0.0",
-    "@google-cloud/storage": "^7.16.0",
+    "@google-cloud/storage": "^8.4.0",
     "autosize": "^6.0.1",
     "better-sqlite3": "^12.6.2",
     "chart.js": "^4.5.1",
@@ -53,18 +53,18 @@
     "geoip-lite": "^2.0.2",
     "github-buttons": "^2.29.1",
     "googleapis": "^173.0.0",
-    "handlebars": "^4.7.9",
+    "handlebars": "^4.7.10",
     "highlight.js": "^11.11.1",
     "html-tag-js": "^2.4.16",
     "jose": "^6.2.12",
     "jszip": "^3.10.1",
     "markdown-to-txt": "^2.0.1",
     "marked": "^18.0.5",
-    "moment": "^2.30.1",
+    "moment": "^2.31.0",
     "motion": "^13.1.1",
-    "nodemailer": "^9.0.0",
+    "nodemailer": "^10.0.9",
     "razorpay": "^2.9.6",
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.5"
   },
   "scripts": {
     "prepare": "husky",
