@@ -70,7 +70,7 @@ export default async function changePassword({ mode, redirect }) {
         <span className='success'>{successText}</span>
         <button type='submit'>Change password</button>
         <p style={{ margin: 0 }}>
-          Go back <a href='/login'>Signin</a> page.
+          Go back <a href={withRedirect('/login', redirect)}>Signin</a> page.
         </p>
       </AjaxForm>
     </section>

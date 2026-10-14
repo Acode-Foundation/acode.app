@@ -1,4 +1,5 @@
 const { Router } = require('express');
+const { safeAccountRedirect } = require('../../shared/accountRedirect');
 const user = require('../entities/user');
 const { getWebLoggedInUser } = require('../lib/helpers');
 const {
@@ -21,9 +22,7 @@ const ID_COL = {
 
 function validatedRedirect(url) {
   if (url === 'app') return '/login?redirect=app';
-  if (!url || typeof url !== 'string') return null;
-  if (!/^\/[^/]/.test(url)) return null;
-  return url;
+  return safeAccountRedirect(url) || null;
 }
 
 route.get('/github', (req, res) => {

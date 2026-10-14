@@ -1,3 +1,5 @@
+import { withAppSource } from './appSource';
+
 class Router {
   #thisSite = new RegExp(`(^https?://(www.)?${location.hostname}(/.*)?)|(^/)`);
   #customEvent = new CustomEvent('locationchange');
@@ -250,6 +252,7 @@ class Router {
    * @param {string} href
    */
   loadUrl(href) {
+    href = withAppSource(href);
     const { location, history } = window;
     if (!this.#thisSite.test(href)) {
       window.location.href = href;
@@ -273,6 +276,7 @@ class Router {
 
   // eslint-disable-next-line class-methods-use-this
   setUrl(path) {
+    path = withAppSource(path);
     const { history } = window;
     history.pushState(history.state, document.title, path);
   }

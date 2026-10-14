@@ -5,11 +5,13 @@ import Input from 'components/input';
 import OAuthButton from 'components/oauthButton';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
+import { safeAccountRedirect } from 'lib/appSource';
 import background from 'lib/background';
 import { getLoggedInUser, loadingEnd, loadingStart, withRedirect } from 'lib/helpers';
 import Router from 'lib/Router';
 
 export default async function Login({ redirect = sessionStorage.getItem('redirect') }) {
+  redirect = safeAccountRedirect(redirect);
   const errorText = Reactive('');
   const successText = Reactive('');
   const button = Ref();
@@ -21,6 +23,7 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
   const appVersionCode = search.get('appVersionCode');
   const usesAppCodeFlow = redirect === 'app' && appAuthFlow === 'app-code';
   const oauthRedirect = usesAppCodeFlow ? `${location.pathname}${location.search}` : redirect;
+  if (search.get('accountDeleted') === '1') successText.value = 'Your account has been deleted.';
 
   try {
     const user = await getLoggedInUser();
@@ -189,6 +192,10 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
 }
 
 async function getResponseError(response, fallback) {
+  const retryAfter = Number(response.headers.get('Retry-After'));
+  if (response.status === 429 && Number.isFinite(retryAfter) && retryAfter > 0) {
+    return `Too many sign-in attempts. Please wait ${Math.ceil(retryAfter / 60)} minute(s) and try again.`;
+  }
   try {
     const data = await response.json();
     return data.error || fallback;

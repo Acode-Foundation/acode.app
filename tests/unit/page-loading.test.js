@@ -3,6 +3,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { transformAsync } from '@babel/core';
 import Handlebars from 'handlebars';
+import { safeAccountRedirect } from '../../client/lib/appSource';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const compiled = new Map();
@@ -107,6 +108,31 @@ describe('page startup', () => {
   });
 });
 
+it('keeps successful website sign-in on-site even when the incoming redirect is malicious', async () => {
+  const replace = vi.fn();
+  const login = await loadClient(
+    'client/pages/login/index.js',
+    {
+      './style.scss': {},
+      'components/ajaxForm': {},
+      'components/dialogs/alert': {},
+      'components/input': {},
+      'components/oauthButton': {},
+      'html-tag-js/reactive': (value) => ({ value }),
+      'html-tag-js/ref': () => ({}),
+      'lib/appSource': { safeAccountRedirect },
+      'lib/background': {},
+      'lib/helpers': { getLoggedInUser: async () => ({ id: 7 }) },
+      'lib/Router': {},
+    },
+    { window: { location: { search: '', replace } }, URLSearchParams, tag: () => ({}), setTimeout: (callback) => callback() },
+  );
+  for (const redirect of ['https://example.com', '/\\example.com', '/plugins?editor=cm']) {
+    await login.default({ redirect });
+    expect(replace).toHaveBeenLastCalledWith(redirect.startsWith('/plugins') ? redirect : '/');
+  }
+});
+
 describe('shared account lookup during page loading', () => {
   let session;
   let fetch;
@@ -117,7 +143,7 @@ describe('shared account lookup during page loading', () => {
     fetch = vi.fn();
     session = await loadClient(
       'client/lib/helpers.js',
-      { moment: {}, 'res/user.svg': '' },
+      { moment: {}, 'res/user.svg': '', './appSource': { withAccountRedirect: vi.fn() } },
       {
         fetch,
         Date: { now: () => now },

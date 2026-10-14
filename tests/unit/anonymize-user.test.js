@@ -63,6 +63,7 @@ function createDatabase() {
     INSERT INTO login VALUES (1, 2, 'normal-session'), (2, 65421, 'session-one'), (3, 65421, 'session-two');
     INSERT INTO app_auth_code VALUES (1, 2, 'auth-code');
     INSERT INTO otp VALUES (1, 'normal@example.com', '123456');
+    INSERT INTO otp VALUES (2, 'account-delete:2:fixture-session', 'hashed-code');
     INSERT INTO payment_method VALUES
       (1, 2, 'paypal@example.com', 'Bank', 'IFSC', 'SWIFT', '1234', 'Normal User', 'Savings', 'wallet', 'btc', 1, 0);
     INSERT INTO plugin VALUES ('plugin.one', 2, 'Plugin One', 10, 0);
@@ -137,6 +138,7 @@ describe('User.delete anonymization', () => {
     expect(db.prepare('SELECT COUNT(*) count FROM login WHERE user_id = 2').get().count).toBe(0);
     expect(db.prepare('SELECT COUNT(*) count FROM app_auth_code WHERE user_id = 2').get().count).toBe(0);
     expect(db.prepare("SELECT COUNT(*) count FROM otp WHERE email = 'normal@example.com'").get().count).toBe(0);
+    expect(db.prepare("SELECT COUNT(*) count FROM otp WHERE email LIKE 'account-delete:2:%'").get().count).toBe(0);
     expect(await User.getUsersByFilter()).toEqual([{ name: 'Axch1l13s', email: 'reported@example.com' }]);
     expect(await User.countUsersByFilter()).toBe(1);
     for (const filter of ['with_plugins', 'with_paid_plugins', 'with_payment']) {

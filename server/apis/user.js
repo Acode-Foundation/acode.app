@@ -15,10 +15,10 @@ const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
 const AppConfig = require('../entities/appConfig');
 const login = require('../entities/login');
 const AppAuthCode = require('../entities/appAuthCode');
+const { appAuthCodeLimiter, appTokenExchangeLimiter } = require('../lib/rateLimits');
 
 const route = Router();
 
-const appTokenRateLimit = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
 const hexPattern = /^[a-f0-9]+$/i;
 
 function isHex(value, minLength, maxLength = minLength) {
@@ -34,7 +34,7 @@ function safeCompareHex(a, b) {
   return crypto.timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
 }
 
-route.post('/app-token', appTokenRateLimit, async (req, res) => {
+route.post('/app-token', appAuthCodeLimiter, async (req, res) => {
   try {
     const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser) {
@@ -69,7 +69,7 @@ route.post('/app-token', appTokenRateLimit, async (req, res) => {
   }
 });
 
-route.post('/app-auth-code', appTokenRateLimit, async (req, res) => {
+route.post('/app-auth-code', appAuthCodeLimiter, async (req, res) => {
   try {
     const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser) {
@@ -109,7 +109,7 @@ route.post('/app-auth-code', appTokenRateLimit, async (req, res) => {
   }
 });
 
-route.post('/app-token/exchange', appTokenRateLimit, async (req, res) => {
+route.post('/app-token/exchange', appTokenExchangeLimiter, async (req, res) => {
   try {
     const { code, state, verifier } = req.body || {};
     if (!isHex(code, 64) || !isHex(state, 16, 128) || !isHex(verifier, 64)) {
@@ -828,41 +828,6 @@ async function getAuthorizedUser(req) {
 function handleError(res, error) {
   console.log(error);
   res.status(error.code || 500).send({ error: error.message });
-}
-
-function createRateLimiter({ windowMs, max }) {
-  const store = new Map();
-
-  const cleanup = () => {
-    const now = Date.now();
-    for (const [key, entry] of store) {
-      if (now > entry.resetAt) {
-        store.delete(key);
-      }
-    }
-  };
-
-  setInterval(cleanup, 60 * 1000).unref();
-
-  return (req, res, next) => {
-    const key = req.ip || req.socket?.remoteAddress || 'unknown';
-    const now = Date.now();
-    const entry = store.get(key);
-
-    if (!entry || now > entry.resetAt) {
-      store.set(key, { count: 1, resetAt: now + windowMs });
-      next();
-      return;
-    }
-
-    if (entry.count >= max) {
-      res.status(429).send({ error: 'Too many requests. Please try again later.' });
-      return;
-    }
-
-    entry.count++;
-    next();
-  };
 }
 
 module.exports = route;
