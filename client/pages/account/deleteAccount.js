@@ -27,6 +27,16 @@ export default function DeleteAccount({ user }) {
           unaffected.
         </p>
       </details>
+      {Boolean(user.apple_id) && (
+        <p>
+          We also request removal of your Apple authorization. If Apple cannot complete that request, your Acode account will still be deleted. You
+          can remove Acode under Sign-In &amp; Security → Sign in with Apple at{' '}
+          <a href='https://account.apple.com' target='_blank' rel='noopener noreferrer'>
+            your Apple Account
+          </a>
+          .
+        </p>
+      )}
       <button type='button' className='danger' ref={sendButton} onclick={sendCode}>
         Send deletion code
       </button>

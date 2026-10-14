@@ -394,7 +394,6 @@ class Entity {
         console.log('Table:', entity.table);
         console.log('Error:', err.message, err.stack);
         console.log('SQL:', sql);
-        console.log('Values:', values);
         err.message = `table<${entity.table}> sql execution failed.`;
         reject(err);
       }

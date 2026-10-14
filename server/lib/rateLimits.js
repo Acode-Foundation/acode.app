@@ -33,6 +33,14 @@ module.exports = {
   appTokenExchangeLimiter: limiter(process.env.NODE_ENV === 'development' ? 400 : 120, 15, {
     keyGenerator: (req) => ipKeyGenerator(req.ip),
   }),
+  // Start/completion use account-or-IP; callbacks can use only a verified sealed flow.
+  createAppleSignInLimiter: (handler) => limiter(120, 15, { handler }),
+  createAppleCallbackLimiter: (handler, flowKey) =>
+    limiter(120, 15, {
+      keyGenerator: (req) => flowKey(req) || ipKeyGenerator(req.ip),
+      handler,
+    }),
+  appleUnlinkLimiter: limiter(5, 10),
   accountDeletionCodeLimiter: limiter(5, 10),
   accountDeletionLimiter: limiter(5, 10),
   // Each upload is unzipped and run through the plugin scanner.

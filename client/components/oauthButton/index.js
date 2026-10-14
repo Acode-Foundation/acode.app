@@ -4,11 +4,11 @@ import { showLoading } from 'lib/helpers';
 
 /**
  * @param {object} props
- * @param {'github'|'google'} props.provider
+ * @param {'github'|'google'|'apple'} props.provider
  * @param {string} redirectUrl
  */
 export default function OAuthButton({ provider, redirectUrl }) {
-  const label = provider === 'github' ? 'GitHub' : 'Google';
+  const label = { github: 'GitHub', google: 'Google', apple: 'Apple' }[provider];
   const authUrl = redirectUrl ? `/oauth/${provider}?redirect=${encodeURIComponent(redirectUrl)}` : `/oauth/${provider}`;
   const button = Ref();
 

@@ -17,9 +17,10 @@ import { withAccountRedirect } from './appSource';
  * @property {string} [linkedin]
  * @property {string} [github_id]
  * @property {string} [google_id]
+ * @property {boolean} [apple_id]
  * @property {string} [avatar_url]
  * @property {string} [pro_purchased_at]
- * @property {'github' | 'google' | 'email'} primary_auth
+ * @property {'github' | 'google' | 'apple' | 'email'} primary_auth
  * @property {string} created_at
  * @property {string} updated_at
  * @property {boolean} isAdmin
