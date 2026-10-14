@@ -16,7 +16,7 @@ export function isIOSSource() {
 export function withAppSource(value) {
   const url = new URL(value, location.href);
   if (url.origin !== location.origin || !isIOSSource()) return value;
-  url.searchParams.set('src', 'ios');
+  if (!url.searchParams.has('src')) url.searchParams.set('src', 'ios');
   return `${url.pathname}${url.search}${url.hash}`;
 }
 

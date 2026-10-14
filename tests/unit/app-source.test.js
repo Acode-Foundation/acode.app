@@ -15,8 +15,13 @@ it('preserves iOS context across internal navigation and reloads without tagging
   expect(isIOSSource()).toBe(true);
   expect(withAppSource('https://example.com/pro')).toBe('https://example.com/pro');
   expect(withAccountRedirect('https://example.com/return?x=1', 'app')).toBe('https://example.com/return?x=1');
-  setLocation('/login?src=android');
+  const androidLink = withAppSource('/login?src=android');
+  expect(androidLink).toBe('/login?src=android');
+  expect(withAppSource('/login?src=')).toBe('/login?src=');
+  setLocation(androidLink);
   expect(isIOSSource()).toBe(false);
+  setLocation('/profile/edit');
+  expect(withAppSource('/pro')).toBe('/pro');
 });
 
 it('keeps the PKCE flow intact through registration, password reset and return to login', () => {

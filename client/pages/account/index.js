@@ -177,7 +177,7 @@ export default async function Profile({ mode = 'register', redirect }) {
           </p>
         )}
       </AjaxForm>
-      {mode === 'edit' && <DeleteAccount user={user} />}
+      {mode === 'edit' && !user.isAdmin && user.role !== 'admin' && <DeleteAccount user={user} />}
     </section>
   );
 
