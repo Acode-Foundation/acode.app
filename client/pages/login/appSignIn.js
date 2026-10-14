@@ -69,23 +69,17 @@ export default function AppSignIn({ user }) {
         return;
       }
 
-      // The website session may have changed in another tab since this account was shown.
-      const currentUser = await request('/api/login', { cache: 'no-store' });
-      if (!page.isConnected) return;
-      if (currentUser.id !== user.id) {
-        invalidateLoggedInUser();
-        window.location.replace(loginUrl);
-        return;
-      }
-      const callback = await getAppRedirectUrl(search);
+      const callback = await getAppRedirectUrl(search, user.id);
       if (!page.isConnected) return;
       status.value = 'Opening Acode. If it doesn’t open, tap Continue again.';
       window.location.replace(callback);
     } catch (failure) {
       if (!page.isConnected) return;
-      if (failure.status === 401 || (action === 'switch' && failure.status === 400)) {
+      if (failure.status === 401 || failure.status === 409 || (action === 'switch' && failure.status === 400)) {
         invalidateLoggedInUser();
-        window.location.replace(loginUrl);
+        const destination = new URL(loginUrl, location.href);
+        if (failure.status === 409) destination.searchParams.set('error', failure.message);
+        window.location.replace(`${destination.pathname}${destination.search}`);
         return;
       }
       error.value = failure.message;
@@ -100,7 +94,7 @@ export default function AppSignIn({ user }) {
   }
 }
 
-async function getAppRedirectUrl(search) {
+async function getAppRedirectUrl(search, expectedUserId) {
   if (search.get('authFlow') === 'app-code') {
     const androidPackage = search.get('androidPackage');
     if (androidPackage && !['com.foxdebug.acode', 'com.foxdebug.acodefree'].includes(androidPackage)) {
@@ -112,7 +106,7 @@ async function getAppRedirectUrl(search) {
     const data = await request('/api/user/app-auth-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state, challenge, appVersionCode: search.get('appVersionCode') }),
+      body: JSON.stringify({ state, challenge, appVersionCode: search.get('appVersionCode'), expectedUserId }),
     });
     if (!data.code) throw new Error('Unable to open Acode. Please try again.');
     const callback = new URL('acode://auth/callback');
@@ -123,7 +117,11 @@ async function getAppRedirectUrl(search) {
     }
     return callback.toString();
   }
-  const data = await request('/api/user/app-token', { method: 'POST' });
+  const data = await request('/api/user/app-token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ expectedUserId }),
+  });
   if (!data.token) throw new Error('Unable to open Acode. Please try again.');
   return `acode://user/login/${encodeURIComponent(data.token)}`;
 }

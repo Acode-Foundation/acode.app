@@ -50,6 +50,40 @@ it('supports repeated login/logout with an existing browser session, without spe
   expect(exchange.status).toBe(200);
 });
 
+it.each(['/app-auth-code', '/app-token'])('requires the confirmed account when issuing %s after a session switch', async (endpoint) => {
+  await start();
+  const confirmed = await (await accountRequest('GET', 'web-session')).json();
+  expect(confirmed.id).toBe(7);
+  sessions.set(90, { id: 90, user_id: 8, type: 'app', token: 'existing-app-session' });
+  const issue = (expectedUserId) =>
+    fetch(`${origin}/api/user${endpoint}`, {
+      method: 'POST',
+      // Another tab has replaced the browser's website session after account 7 was displayed.
+      headers: { 'Content-Type': 'application/json', Cookie: 'token=other-web-session' },
+      body: JSON.stringify({ state, challenge, expectedUserId }),
+    });
+
+  const mismatch = await issue(confirmed.id);
+  expect(mismatch.status).toBe(409);
+  expect(authCodes.size).toBe(0);
+  expect([...sessions.values()]).toEqual([{ id: 90, user_id: 8, type: 'app', token: 'existing-app-session' }]);
+
+  const current = await (await accountRequest('GET', 'other-web-session')).json();
+  const accepted = await issue(current.id);
+  expect(accepted.status).toBe(200);
+  let token;
+  if (endpoint === '/app-auth-code') {
+    const { code } = await accepted.json();
+    const exchanged = await post('/app-token/exchange', { code, state, verifier }, false);
+    expect(exchanged.status).toBe(200);
+    ({ token } = await exchanged.json());
+  } else ({ token } = await accepted.json());
+  expect((await (await accountRequest('GET', token)).json()).id).toBe(current.id);
+
+  // Cached pages and older clients can still use the original request format.
+  expect((await issue()).status).toBe(200);
+});
+
 it('rejects off-site OAuth return URLs while preserving local paths and app sign-in', async () => {
   await start();
   for (const redirect of ['https://example.com', '//example.com', '/\\example.com', '/\n/example.com']) {
@@ -127,11 +161,12 @@ async function start() {
     return true;
   };
   codes.cleanupStaleRows = () => {};
+  const webUsers = { 'web-session': 7, 'other-web-session': 8 };
   const helpers = {
-    getLoginSession: async (req) => (req.cookies?.token === 'web-session' ? { user_id: 7, type: 'web' } : null),
-    getWebLoggedInUser: async (req) => (req.cookies?.token === 'web-session' ? { id: 7 } : null),
+    getLoginSession: async (req) => (webUsers[req.cookies?.token] ? { user_id: webUsers[req.cookies.token], type: 'web' } : null),
+    getWebLoggedInUser: async (req) => (webUsers[req.cookies?.token] ? { id: webUsers[req.cookies.token] } : null),
     getLoggedInUser: async (req) => {
-      if (req.cookies?.token === 'web-session') return { id: 7, authType: 'web' };
+      if (webUsers[req.cookies?.token]) return { id: webUsers[req.cookies.token], authType: 'web' };
       const session = [...sessions.values()].find((row) => row.token === req.cookies?.token);
       return session ? { id: session.user_id, authType: session.type } : null;
     },

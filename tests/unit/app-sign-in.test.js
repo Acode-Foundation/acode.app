@@ -83,7 +83,7 @@ it.each([
   if (flow === 'legacy') location.search = '?redirect=app';
   if (androidPackage) location.search = `${query.replace('src=ios', 'src=android')}&androidPackage=${androidPackage}`;
   let finish;
-  request.mockResolvedValueOnce(Response.json(user)).mockImplementationOnce(
+  request.mockImplementationOnce(
     () =>
       new Promise((resolve) => {
         finish = resolve;
@@ -94,15 +94,17 @@ it.each([
   const switchButton = find(page, (node) => node.className === 'switch-account');
   expect(request).not.toHaveBeenCalled();
   const pending = form.onsubmit({ preventDefault() {} });
-  await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(2));
+  await vi.waitFor(() => expect(request).toHaveBeenCalledOnce());
   await form.onsubmit({ preventDefault() {} });
   await switchButton.onclick();
   expect(switchButton.disabled).toBe(true);
-  expect(request).toHaveBeenCalledTimes(2);
+  expect(request).toHaveBeenCalledOnce();
+  expect(request.mock.calls[0][1].headers['Content-Type']).toBe('application/json');
+  expect(JSON.parse(request.mock.calls[0][1].body).expectedUserId).toBe(user.id);
   if (flow === 'app-code') {
-    expect(request.mock.calls[1][0]).toBe('/api/user/app-auth-code');
-    expect(JSON.parse(request.mock.calls[1][1].body)).toEqual({ state: 'StateValue', challenge: 'ChallengeValue', appVersionCode: '1017' });
-  } else expect(request.mock.calls[1][0]).toBe('/api/user/app-token');
+    expect(request.mock.calls[0][0]).toBe('/api/user/app-auth-code');
+    expect(JSON.parse(request.mock.calls[0][1].body)).toMatchObject({ state: 'StateValue', challenge: 'ChallengeValue', appVersionCode: '1017' });
+  } else expect(request.mock.calls[0][0]).toBe('/api/user/app-token');
   finish(Response.json(flow === 'app-code' ? { code: 'fixture-code' } : { token: 'fixture-token' }));
   await pending;
   const callback = androidPackage
@@ -115,7 +117,7 @@ it('rejects an unrecognized Android target before issuing a code', async () => {
   location.search = `${query}&androidPackage=${encodeURIComponent('com.foxdebug.acode;component=other.app/.Activity')}`;
   const page = load('appSignIn')({ user });
   await find(page, (node) => node.tagName === 'form').onsubmit({ preventDefault() {} });
-  expect(request).toHaveBeenCalledOnce();
+  expect(request).not.toHaveBeenCalled();
   expect(replace).not.toHaveBeenCalled();
   expect(find(page, (node) => node.role === 'alert').children.find((child) => typeof child === 'object').value).toContain('unsupported app');
 });
@@ -132,26 +134,31 @@ it('switches accounts without issuing app credentials or losing the pending requ
   expect(Object.fromEntries(returned.searchParams)).toEqual(Object.fromEntries(new URLSearchParams(location.search)));
 });
 
-it.each([Response.json({ id: 8 }), Response.json({ error: 'Signed out' }, { status: 401 })])(
-  'requires confirmation again when the displayed session has changed or expired',
-  async (response) => {
-    request.mockResolvedValue(response);
-    const page = load('appSignIn')({ user });
-    await find(page, (node) => node.tagName === 'form').onsubmit({ preventDefault() {} });
-    expect(request).toHaveBeenCalledOnce();
-    expect(replace.mock.calls[0][0]).toMatch(/^\/login\?/);
-  },
-);
+it.each([409, 401])('requires confirmation again when credential issuance rejects the session with %s', async (status) => {
+  const message = status === 409 ? 'Your signed-in account changed. Please confirm the account again.' : 'Signed out';
+  request.mockResolvedValue(Response.json({ error: message }, { status }));
+  const page = load('appSignIn')({ user });
+  await find(page, (node) => node.tagName === 'form').onsubmit({ preventDefault() {} });
+  expect(request).toHaveBeenCalledOnce();
+  expect(helpers.invalidateLoggedInUser).toHaveBeenCalledOnce();
+  const returned = new URL(replace.mock.calls[0][0], location.href);
+  expect(returned.pathname).toBe('/login');
+  if (status === 409) {
+    expect(returned.searchParams.get('error')).toBe(message);
+    returned.searchParams.delete('error');
+  }
+  expect(Object.fromEntries(returned.searchParams)).toEqual(Object.fromEntries(new URLSearchParams(query)));
+});
 
 it('shows rate-limit feedback and enables retry after a failed handoff', async () => {
-  request.mockResolvedValueOnce(Response.json(user)).mockResolvedValueOnce(Response.json({}, { status: 429, headers: { 'Retry-After': '120' } }));
+  request.mockResolvedValueOnce(Response.json({}, { status: 429, headers: { 'Retry-After': '120' } }));
   const page = load('appSignIn')({ user });
   const form = find(page, (node) => node.tagName === 'form');
   await form.onsubmit({ preventDefault() {} });
   expect(find(page, (node) => node.role === 'alert').children.find((child) => typeof child === 'object').value).toContain('2 minutes');
   expect(find(page, (node) => node.type === 'submit').disabled).toBe(false);
   expect(replace).not.toHaveBeenCalled();
-  request.mockResolvedValueOnce(Response.json(user)).mockResolvedValueOnce(Response.json({ code: 'retry-code' }));
+  request.mockResolvedValueOnce(Response.json({ code: 'retry-code' }));
   await form.onsubmit({ preventDefault() {} });
   expect(replace).toHaveBeenCalledWith('acode://auth/callback?code=retry-code&state=StateValue');
 });
@@ -176,7 +183,7 @@ it('does not pretend to sign out after a network failure and bounds stalled requ
 
 it('does not launch the app after the user leaves the confirmation page', async () => {
   let finish;
-  request.mockResolvedValueOnce(Response.json(user)).mockImplementationOnce(
+  request.mockImplementationOnce(
     () =>
       new Promise((resolve) => {
         finish = resolve;
@@ -184,7 +191,7 @@ it('does not launch the app after the user leaves the confirmation page', async 
   );
   const page = load('appSignIn')({ user });
   const pending = find(page, (node) => node.tagName === 'form').onsubmit({ preventDefault() {} });
-  await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(2));
+  await vi.waitFor(() => expect(request).toHaveBeenCalledOnce());
   page.isConnected = false;
   finish(Response.json({ code: 'fixture-code' }));
   await pending;
