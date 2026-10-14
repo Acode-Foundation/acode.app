@@ -15,7 +15,7 @@ function createUserOrIpKey(lookupSession) {
   };
 }
 
-function limiter(limit, windowMinutes) {
+function limiter(limit, windowMinutes, options = {}) {
   return rateLimit({
     windowMs: windowMinutes * 60 * 1000,
     limit,
@@ -23,11 +23,18 @@ function limiter(limit, windowMinutes) {
     legacyHeaders: false,
     keyGenerator: createUserOrIpKey(getLoginSession),
     message: { error: 'Too many requests, please try again later.' },
+    ...options,
   });
 }
 
 module.exports = {
   createUserOrIpKey,
+  appAuthCodeLimiter: limiter(process.env.NODE_ENV === 'development' ? 200 : 20, 15),
+  appTokenExchangeLimiter: limiter(process.env.NODE_ENV === 'development' ? 400 : 120, 15, {
+    keyGenerator: (req) => ipKeyGenerator(req.ip),
+  }),
+  accountDeletionCodeLimiter: limiter(5, 10),
+  accountDeletionLimiter: limiter(5, 10),
   // Each upload is unzipped and run through the plugin scanner.
   pluginUploadLimiter: limiter(10, 15),
   // Admin moderation and deletion touch plugin files on disk.

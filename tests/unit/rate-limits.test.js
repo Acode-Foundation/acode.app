@@ -1,4 +1,18 @@
-const { createUserOrIpKey } = require('../../server/lib/rateLimits');
+import fs from 'node:fs';
+import vm from 'node:vm';
+import * as rateLimit from 'express-rate-limit';
+
+const module = { exports: {} };
+vm.runInNewContext(fs.readFileSync(new URL('../../server/lib/rateLimits.js', import.meta.url), 'utf8'), {
+  module,
+  process: { env: {} },
+  require(name) {
+    if (name === 'express-rate-limit') return rateLimit;
+    if (name === './helpers') return { getLoginSession: async () => null };
+    throw new Error(`Unmocked dependency: ${name}`);
+  },
+});
+const { createUserOrIpKey } = module.exports;
 
 describe('rate limit keys', () => {
   const sessions = { valid: { user_id: 42 } };

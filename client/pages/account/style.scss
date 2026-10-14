@@ -1,4 +1,79 @@
 #register-user {
+  .delete-account {
+    width: 90%;
+    max-width: 420px;
+    box-sizing: border-box;
+    margin-top: 24px;
+    padding: 28px;
+    background: linear-gradient(rgba(255, 85, 85, 0.04), rgba(255, 85, 85, 0.04)), var(--page-surface);
+    border: 1px solid rgba(255, 100, 100, 0.3);
+    border-radius: 16px;
+    box-shadow: 0 24px 64px rgba(8, 10, 16, 0.45);
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 12px;
+      color: #ff8585;
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    p {
+      margin: 12px 0;
+      color: var(--page-muted);
+      font-size: 0.88rem;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+
+      strong { color: var(--page-text); }
+      &:empty { display: none; }
+    }
+
+    .error { color: var(--error-color); }
+
+    details {
+      margin: 16px 0;
+      font-size: 0.82rem;
+      color: var(--page-muted);
+
+      summary { cursor: pointer; }
+    }
+
+    button {
+      --danger-color: #b52d3b;
+      --danger-text-color: #fff;
+      width: 100%;
+      max-width: none;
+      min-height: 46px;
+      height: auto;
+      margin: 8px 0 0;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      white-space: normal;
+
+      &:hover:not(:disabled) { --danger-color: #cc3343; }
+    }
+
+    .resend-code {
+      width: auto;
+      min-height: 0;
+      padding: 0;
+      background: transparent;
+      color: #ff8585;
+      text-decoration: underline;
+    }
+
+    button:focus-visible,
+    summary:focus-visible {
+      outline: 2px solid #ff8585;
+      outline-offset: 4px;
+    }
+  }
   position: relative;
   display: flex;
   flex-direction: column;

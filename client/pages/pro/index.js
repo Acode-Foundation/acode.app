@@ -4,9 +4,17 @@ import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import { initiateProCheckout } from 'components/razorpayCheckout';
 import Ref from 'html-tag-js/ref';
+import { isIOSSource } from 'lib/appSource';
 import { getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
 
 export default async function Pro({ redirect }) {
+  if (isIOSSource())
+    return (
+      <section>
+        <h1>Acode Pro</h1>
+        <p>Purchase or restore Acode Pro in the app under Settings.</p>
+      </section>
+    );
   const statusRef = Ref();
   const loggedInUser = await getLoggedInUser();
 

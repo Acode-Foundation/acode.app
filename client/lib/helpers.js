@@ -1,5 +1,6 @@
 import moment from 'moment';
 import userImage from 'res/user.svg';
+import { withAccountRedirect } from './appSource';
 
 /**
  * @typedef {object} User
@@ -188,12 +189,5 @@ export function since(date) {
  * ```
  */
 export function withRedirect(url, redirect) {
-  if (!redirect) return url;
-  // Encode so a redirect with its own query (`/plugins?price=owned&editor=cm`) survives as one param.
-  const value = encodeURIComponent(redirect);
-  if (url.includes('?')) {
-    return `${url}&redirect=${value}`;
-  }
-
-  return `${url}?redirect=${value}`;
+  return withAccountRedirect(url, redirect);
 }

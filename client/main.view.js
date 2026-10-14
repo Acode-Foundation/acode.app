@@ -2,6 +2,7 @@ import './main.scss';
 import AnnouncementBanner from 'components/announcementBanner';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
+import { isIOSSource } from 'lib/appSource';
 import { gravatar } from 'lib/helpers';
 import digitalOceanLogo from 'res/digitalocean-icon.svg';
 import logo from 'res/logo.svg';
@@ -208,6 +209,11 @@ export function addProButton(user) {
   if (!header) return;
 
   const navUser = header.get('nav:last-of-type');
+
+  if (isIOSSource()) {
+    navUser?.get('.get-pro-btn')?.remove();
+    return;
+  }
 
   if (navUser.get('.get-pro-btn')) return;
 

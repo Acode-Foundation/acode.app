@@ -18,7 +18,7 @@ class Otp extends Entity {
   }
 
   get columns() {
-    return [this.ID, this.USER_ID, this.OTP, this.CREATED_AT];
+    return [this.ID, this.EMAIL, this.OTP, this.CREATED_AT];
   }
 }
 

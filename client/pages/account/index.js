@@ -6,12 +6,15 @@ import OAuthButton from 'components/oauthButton';
 import SendOtp from 'components/sendOtp';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
+import { safeAccountRedirect } from 'lib/appSource';
 import background from 'lib/background';
 import { getLoggedInUser, hideLoading, loadingEnd, loadingStart, showLoading, withRedirect } from 'lib/helpers';
 import Router from 'lib/Router';
+import DeleteAccount from './deleteAccount';
 
 export default async function Profile({ mode = 'register', redirect }) {
   const isRegister = mode === 'register';
+  const oauthRedirect = redirect === 'app' ? withRedirect('/login', redirect) : safeAccountRedirect(redirect);
   const buttonText = mode === 'edit' ? 'Update' : 'Register';
   const method = mode === 'edit' ? 'put' : 'post';
   const errorText = Reactive('');
@@ -26,7 +29,7 @@ export default async function Profile({ mode = 'register', redirect }) {
   if (mode === 'edit') {
     user = await getLoggedInUser();
     if (!user) {
-      window.location.href = '/login';
+      window.location.href = withRedirect('/login', '/profile/edit');
       return null;
     }
 
@@ -91,8 +94,8 @@ export default async function Profile({ mode = 'register', redirect }) {
         {isRegister && (
           <>
             <div className='social-login'>
-              <OAuthButton provider='github' redirectUrl={redirect} />
-              <OAuthButton provider='google' redirectUrl={redirect} />
+              <OAuthButton provider='github' redirectUrl={oauthRedirect} />
+              <OAuthButton provider='google' redirectUrl={oauthRedirect} />
             </div>
             <div className='divider'>
               <span>or register with email</span>
@@ -174,6 +177,7 @@ export default async function Profile({ mode = 'register', redirect }) {
           </p>
         )}
       </AjaxForm>
+      {mode === 'edit' && !user.isAdmin && user.role !== 'admin' && <DeleteAccount user={user} />}
     </section>
   );
 

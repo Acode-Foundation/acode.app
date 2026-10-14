@@ -5,6 +5,7 @@ import select from 'components/dialogs/select';
 import Plugins from 'components/plugins';
 import Tabs from 'components/tabs';
 import Ref from 'html-tag-js/ref';
+import { isIOSSource } from 'lib/appSource';
 import { getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers';
 import { applyProfileMetadata, beginProfileMetadataRequest } from 'lib/pageMetadata';
 import Router from 'lib/Router';
@@ -94,7 +95,7 @@ export default async function User({ userId }) {
                     Admin
                   </a>
                 )}
-                {Boolean(user.acode_pro) && (
+                {Boolean(user.acode_pro) && !isIOSSource() && (
                   <a className='tag pro-tag' href='/pro'>
                     Pro
                   </a>

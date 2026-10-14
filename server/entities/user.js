@@ -99,7 +99,7 @@ class User extends Entity {
     const anonymize = db.transaction(() => {
       db.prepare('DELETE FROM login WHERE user_id = ?').run(row.id);
       db.prepare('DELETE FROM app_auth_code WHERE user_id = ?').run(row.id);
-      db.prepare('DELETE FROM otp WHERE email = ?').run(row.email);
+      db.prepare('DELETE FROM otp WHERE email = ? OR email LIKE ?').run(row.email, `account-delete:${row.id}:%`);
       db.prepare(
         `UPDATE payment_method
          SET paypal_email = NULL,
