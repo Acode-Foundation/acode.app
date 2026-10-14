@@ -42,6 +42,12 @@ route.post('/app-token', appAuthCodeLimiter, async (req, res) => {
       return;
     }
 
+    // Older clients omit this field; new confirmations must match the issuing session.
+    if (req.body?.expectedUserId !== undefined && req.body.expectedUserId !== loggedInUser.id) {
+      res.status(409).send({ error: 'Your signed-in account changed. Please confirm the account again.' });
+      return;
+    }
+
     const [loginRow] = await login.get(login.columns, [
       [login.USER_ID, loggedInUser.id],
       [login.TYPE, 'app'],
@@ -74,6 +80,11 @@ route.post('/app-auth-code', appAuthCodeLimiter, async (req, res) => {
     const loggedInUser = await getWebLoggedInUser(req);
     if (!loggedInUser) {
       res.status(401).send({ error: 'User not logged in' });
+      return;
+    }
+
+    if (req.body?.expectedUserId !== undefined && req.body.expectedUserId !== loggedInUser.id) {
+      res.status(409).send({ error: 'Your signed-in account changed. Please confirm the account again.' });
       return;
     }
 

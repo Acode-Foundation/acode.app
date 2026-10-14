@@ -259,7 +259,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
             <span>One-time purchase</span>
           </div>
         </div>
-        <a href={`/login?redirect=/plugin/${pluginId}`} className='login-to-buy'>
+        <a href={`/login?redirect=/plugin/${pluginId}`} className='login-to-buy' data-google-vignette='false'>
           <span className='icon account_circle' />
           <span>Login to Purchase</span>
         </a>
@@ -546,7 +546,10 @@ function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
     return (
       <div className='comments'>
         <span>
-          <a href={`/login?redirect=/plugin/${id}/comments`}>Sign in</a> to write your review.
+          <a href={`/login?redirect=/plugin/${id}/comments`} data-google-vignette='false'>
+            Sign in
+          </a>{' '}
+          to write your review.
         </span>
         <div ref={listRef} className='list' />
       </div>

@@ -11,6 +11,7 @@ const Handlebars = require('handlebars');
 const defaultOg = require('./defaultOg.json');
 const { pluginRevision } = require('../shared/ogImage.json');
 const { createProfileMetadata } = require('../shared/metadataText');
+const { isAdFreeRoute } = require('../shared/adPolicy');
 const { getMetadata, getPluginsMetadata, getFaqsMetadata, FALLBACK_TITLE } = require('./routeMetadata');
 const Plugin = require('./entities/plugin');
 const User = require('./entities/user');
@@ -499,7 +500,7 @@ async function main() {
         };
 
     res.header('Content-Type', 'text/html;charset=utf-8');
-    res.send(renderIndexTemplate(context));
+    res.send(renderIndexTemplate({ ...context, adsDisabled: isAdFreeRoute(req.path) }));
   });
 
   // eslint-disable-next-line no-unused-vars

@@ -1,5 +1,6 @@
 import './style.scss';
 import shellularLogo from 'res/shellular-logo.png';
+import { isAdFreeRoute } from '../../../shared/adPolicy';
 
 const BANNERS = [
   {
@@ -42,6 +43,11 @@ const BANNERS = [
 const TOGGLE_INTERVAL = 8000;
 
 export default function AnnouncementBanner() {
+  if (isAdFreeRoute(location.pathname)) {
+    document.documentElement.style.setProperty('--announcement-height', '0px');
+    return null;
+  }
+
   let currentIndex = 0;
 
   const $logo = <img alt='App Logo' className='announcement-banner__logo' />;

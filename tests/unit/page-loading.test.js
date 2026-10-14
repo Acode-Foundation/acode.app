@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import { transformAsync } from '@babel/core';
 import Handlebars from 'handlebars';
 import { safeAccountRedirect } from '../../client/lib/appSource';
+import { isAdFreeRoute } from '../../shared/adPolicy';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const compiled = new Map();
@@ -124,6 +125,7 @@ it('keeps successful website sign-in on-site even when the incoming redirect is 
       'lib/background': {},
       'lib/helpers': { getLoggedInUser: async () => ({ id: 7 }) },
       'lib/Router': {},
+      './appSignIn': {},
     },
     { window: { location: { search: '', replace } }, URLSearchParams, tag: () => ({}), setTimeout: (callback) => callback() },
   );
@@ -131,6 +133,82 @@ it('keeps successful website sign-in on-site even when the incoming redirect is 
     await login.default({ redirect });
     expect(replace).toHaveBeenLastCalledWith(redirect.startsWith('/plugins') ? redirect : '/');
   }
+});
+
+describe('ad-free account flows', () => {
+  const accountPaths = ['/login', '/register', '/change-password', '/logout', '/profile/edit', '/user/edit', '/oauth/google'];
+
+  it('omits the ad SDK from account documents while retaining it on public pages', () => {
+    const render = Handlebars.compile(fs.readFileSync(path.join(root, 'server/index.hbs'), 'utf8'));
+    for (const pathname of [...accountPaths, '/LOGIN', '/register/']) {
+      expect(render({ adsDisabled: isAdFreeRoute(pathname) })).not.toContain('adsbygoogle.js');
+    }
+    for (const pathname of ['/', '/plugins', '/plugin/example', '/profile/7', '/login-guide']) {
+      expect(render({ adsDisabled: isAdFreeRoute(pathname) })).toContain('adsbygoogle.js');
+    }
+  });
+
+  it('does not create promotional banners or their rotation timers on account pages', async () => {
+    const setProperty = vi.fn();
+    const tag = vi.fn();
+    const setInterval = vi.fn();
+    for (const pathname of accountPaths) {
+      const banner = await loadClient(
+        'client/components/announcementBanner/index.js',
+        { './style.scss': {}, 'res/shellular-logo.png': '', '../../../shared/adPolicy': { isAdFreeRoute } },
+        { location: { pathname }, document: { documentElement: { style: { setProperty } } }, tag, setInterval },
+      );
+      expect(banner.default()).toBeNull();
+    }
+    expect(setProperty).toHaveBeenCalledWith('--announcement-height', '0px');
+    expect(tag).not.toHaveBeenCalled();
+    expect(setInterval).not.toHaveBeenCalled();
+  });
+
+  it.each(['/', '/login'])('reloads across the ad boundary, including history navigation from %s', async (initialPath) => {
+    const location = new URL(initialPath, 'https://acode.app');
+    location.reload = vi.fn();
+    const history = {
+      pushState: vi.fn((_state, _title, href) => {
+        location.href = new URL(href, location.href).href;
+      }),
+    };
+    const router = (
+      await loadClient(
+        'client/lib/Router.js',
+        { './appSource': { withAppSource: (href) => href }, '../../shared/adPolicy': { isAdFreeRoute } },
+        { location, window: { location, history }, document: { title: 'Acode' }, CustomEvent },
+      )
+    ).default;
+    const render = vi.fn();
+    router.add('/plugins', render);
+    router.add('/register', render);
+
+    router.loadUrl(initialPath === '/' ? '/plugins' : '/register?redirect=app&state=StateValue');
+    expect(render).toHaveBeenCalledOnce();
+    expect(location.reload).not.toHaveBeenCalled();
+
+    router.navigate(`${location.pathname}${location.search}#continue`);
+    expect(location.reload).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledTimes(2);
+
+    const destination = initialPath === '/' ? '/login?redirect=app&state=StateValue' : '/plugins';
+    router.loadUrl(destination);
+    expect(location.pathname + location.search).toBe(destination);
+    expect(location.reload).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledTimes(2);
+
+    location.reload.mockClear();
+    // popstate invokes navigate() after the browser has changed the URL.
+    router.navigate();
+    expect(location.reload).toHaveBeenCalledOnce();
+
+    location.reload.mockClear();
+    router.setUrl(initialPath);
+    expect(location.reload).not.toHaveBeenCalled();
+    router.setUrl(destination);
+    expect(location.reload).toHaveBeenCalledOnce();
+  });
 });
 
 describe('shared account lookup during page loading', () => {

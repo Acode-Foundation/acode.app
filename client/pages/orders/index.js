@@ -24,7 +24,7 @@ export default async function Orders() {
           <span className='icon account_circle' style={{ fontSize: '48px', opacity: 0.3 }} />
           <h2>Login to view your orders</h2>
           <p>You need to be logged in to see your order history.</p>
-          <a href='/login?redirect=/orders' className='login-link'>
+          <a href='/login?redirect=/orders' className='login-link' data-google-vignette='false'>
             <span className='icon login' />
             <span>Login</span>
           </a>

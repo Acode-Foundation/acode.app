@@ -15,6 +15,120 @@
     display: none;
   }
 
+  .app-sign-in {
+    text-align: center;
+
+    .app-sign-in-logo {
+      display: block;
+      margin: 0 auto 20px;
+    }
+
+    .app-sign-in-intro,
+    .app-sign-in-note {
+      color: var(--page-muted);
+      line-height: 1.5;
+    }
+
+    .app-sign-in-intro {
+      margin: 0 0 24px;
+      font-size: 0.95rem;
+    }
+
+    .app-sign-in-account {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid var(--page-line);
+      border-radius: 12px;
+      background: var(--page-surface);
+      text-align: left;
+
+      .account-initial {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        background: rgba(52, 153, 254, 0.15);
+        color: var(--page-accent);
+        font-size: 1.2rem;
+        font-weight: 600;
+
+        img {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          border-radius: inherit;
+          object-fit: cover;
+        }
+      }
+
+      div {
+        min-width: 0;
+      }
+
+      strong,
+      div > span {
+        display: block;
+        overflow-wrap: anywhere;
+      }
+
+      div > span {
+        margin-top: 4px;
+        font-size: 0.85rem;
+        color: var(--page-muted);
+      }
+    }
+
+    .switch-account {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 8px;
+      background: transparent;
+      border: 1px solid var(--page-line);
+      border-radius: 10px;
+      color: var(--page-text);
+      font-size: 0.9rem;
+      cursor: pointer;
+
+      &:hover:not(:disabled) {
+        background: var(--page-surface);
+      }
+    }
+
+    button:focus-visible {
+      outline: 2px solid var(--page-accent);
+      outline-offset: 3px;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+      transform: none;
+    }
+
+    .app-sign-in-note {
+      font-size: 0.78rem;
+      margin: 16px 0 0;
+    }
+
+    .error,
+    .success {
+      display: block;
+      line-height: 1.5;
+      margin: 0;
+
+      &:not(:empty) {
+        margin-bottom: 12px;
+      }
+    }
+  }
+
   .login-profile {
     height: 150px;
     width: 150px;
