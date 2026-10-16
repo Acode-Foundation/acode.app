@@ -442,6 +442,26 @@
     }
   }
 
+  .option--disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+
+    &:hover {
+      background: transparent;
+    }
+
+    input {
+      cursor: not-allowed;
+    }
+  }
+
+  .option-text small {
+    display: block;
+    margin-top: 2px;
+    color: var(--keys-faint);
+    font-size: 0.78rem;
+  }
+
   .option-text {
     display: flex;
     flex-wrap: wrap;

@@ -5,7 +5,6 @@ Disallow: /register
 Disallow: /user
 Disallow: /profile
 Disallow: /change-password
-Disallow: /api-keys
 Disallow: /payments
 Disallow: /orders
 Disallow: /earnings

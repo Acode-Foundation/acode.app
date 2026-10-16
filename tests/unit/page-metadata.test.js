@@ -95,6 +95,8 @@ describe('route metadata', () => {
     ['/profile', 'noindex, follow'],
     ['/profile/1', 'noindex, follow'],
     ['/profile/edit', 'noindex, follow'],
+    ['/api-keys', 'noindex, follow'],
+    ['/api-keys/', 'noindex, follow'],
     ['/sponsors', 'index, follow'],
     ['/plugin/example.plugin', 'index, follow'],
   ])('resolves %s with the explicit robots policy %s', (pathname, robots) => {

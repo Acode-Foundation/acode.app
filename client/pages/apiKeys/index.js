@@ -66,7 +66,9 @@ export default async function ApiKeys() {
   const scopeLabels = new Map(data.scopes.map((scope) => [scope.id, scope.label]));
   const pluginScopes = new Set(data.scopes.filter((scope) => scope.resource === 'plugin').map((scope) => scope.id));
   const needsPlugins = (scopes) => scopes.some((scope) => pluginScopes.has(scope));
-  const canCreate = data.plugins.length > 0;
+  // Plugin permissions need at least one plugin; the others work for everyone.
+  const isUnavailable = (scope) => scope.resource === 'plugin' && !data.plugins.length;
+  const isPreselected = (scope) => scope.default && !isUnavailable(scope);
   const status = Reactive('');
   const selectedCount = Reactive(pluginSummary(data.plugins.length, data.plugins.length));
   const expiryHint = Reactive(expiresOn(DEFAULT_LIFETIME));
@@ -105,142 +107,148 @@ export default async function ApiKeys() {
             <p>Let scripts and automation use your account with only the permissions you grant.</p>
           </div>
         </div>
-        {canCreate && (
-          <button type='button' className='btn btn--primary' ref={newKeyButton} onclick={openCreate}>
-            <span className='icon add' aria-hidden='true' /> New key
-          </button>
-        )}
+        <button type='button' className='btn btn--primary' ref={newKeyButton} onclick={openCreate}>
+          <span className='icon add' aria-hidden='true' /> New key
+        </button>
       </div>
 
       <div className='card token-card' ref={newToken} hidden />
 
-      {canCreate && (
-        <div className='card create-card' ref={createPanel} hidden>
-          <div className='card-head'>
-            <h2>New API key</h2>
-            <button type='button' className='btn btn--icon' aria-label='Close' onclick={closeCreate}>
-              <span className='icon clear' aria-hidden='true' />
-            </button>
-          </div>
+      <div className='card create-card' ref={createPanel} hidden>
+        <div className='card-head'>
+          <h2>New API key</h2>
+          <button type='button' className='btn btn--icon' aria-label='Close' onclick={closeCreate}>
+            <span className='icon clear' aria-hidden='true' />
+          </button>
+        </div>
 
-          <div className='create-body' ref={detailsStep}>
-            <label className='field'>
-              <span className='field-label'>Name</span>
-              <input ref={nameInput} type='text' maxLength={data.limits.maxNameLength} placeholder='e.g. Release workflow' autocomplete='off' />
-              <span className='field-hint'>Something that tells you where this key is used.</span>
-            </label>
+        <div className='create-body' ref={detailsStep}>
+          <label className='field'>
+            <span className='field-label'>Name</span>
+            <input ref={nameInput} type='text' maxLength={data.limits.maxNameLength} placeholder='e.g. Release workflow' autocomplete='off' />
+            <span className='field-hint'>Something that tells you where this key is used.</span>
+          </label>
 
-            <label className='field'>
-              <span className='field-label'>Expiration</span>
-              <select ref={lifetimeSelect} onchange={updateExpiry}>
-                {data.lifetimeDays.map((days) => (
-                  <option value={days} selected={days === DEFAULT_LIFETIME}>
-                    {lifetimeLabel(days)}
-                  </option>
-                ))}
-              </select>
-              <span className='field-hint'>{expiryHint}</span>
-            </label>
+          <label className='field'>
+            <span className='field-label'>Expiration</span>
+            <select ref={lifetimeSelect} onchange={updateExpiry}>
+              {data.lifetimeDays.map((days) => (
+                <option value={days} selected={days === DEFAULT_LIFETIME}>
+                  {lifetimeLabel(days)}
+                </option>
+              ))}
+            </select>
+            <span className='field-hint'>{expiryHint}</span>
+          </label>
 
-            <div className='field'>
-              <span className='field-label'>Permissions</span>
-              <div className='option-list' ref={scopeList}>
-                {data.scopes.map((scope) => (
-                  <label className='option'>
-                    <input type='checkbox' value={scope.id} checked={scope.default} onchange={updateScopes} />
-                    <span className='option-text'>
-                      <span>{scope.description}</span>
-                      <code>{scope.id}</code>
+          <div className='field'>
+            <span className='field-label'>Permissions</span>
+            <div className='option-list' ref={scopeList}>
+              {data.scopes.map((scope) => (
+                <label className={isUnavailable(scope) ? 'option option--disabled' : 'option'}>
+                  <input
+                    type='checkbox'
+                    value={scope.id}
+                    checked={isPreselected(scope)}
+                    disabled={isUnavailable(scope)}
+                    dataset={{ unavailable: String(isUnavailable(scope)) }}
+                    onchange={updateScopes}
+                  />
+                  <span className='option-text'>
+                    <span>
+                      {scope.description}
+                      {isUnavailable(scope) && <small>Publish a plugin first.</small>}
                     </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className='field' ref={pluginField}>
-              <span className='field-label'>Plugins</span>
-              <details className='picker' ref={pluginPicker}>
-                <summary>
-                  <span className='picker-summary'>{selectedCount}</span>
-                  <span className='picker-action'>
-                    Choose plugins <span className='icon keyboard_arrow_down chevron' aria-hidden='true' />
+                    <code>{scope.id}</code>
                   </span>
-                </summary>
-                <div className='picker-body'>
-                  <div className='picker-tools'>
-                    {data.plugins.length > 6 && (
-                      <input ref={pluginSearch} className='plugin-search' type='search' placeholder='Filter plugins' oninput={filterPlugins} />
-                    )}
-                    <button type='button' className='btn btn--link' ref={selectAllButton} onclick={toggleAll}>
-                      Clear
-                    </button>
-                  </div>
-                  <div className='option-list plugin-list' ref={pluginList}>
-                    {data.plugins.map((plugin) => (
-                      <label className='option' dataset={{ search: `${plugin.name} ${plugin.id}`.toLowerCase() }}>
-                        <input type='checkbox' value={plugin.id} checked onchange={updateSelection} />
-                        <span className='option-text'>
-                          <span>{plugin.name}</span>
-                          <code>{plugin.id}</code>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className='field' ref={pluginField}>
+            <span className='field-label'>Plugins</span>
+            <details className='picker' ref={pluginPicker}>
+              <summary>
+                <span className='picker-summary'>{selectedCount}</span>
+                <span className='picker-action'>
+                  Choose plugins <span className='icon keyboard_arrow_down chevron' aria-hidden='true' />
+                </span>
+              </summary>
+              <div className='picker-body'>
+                <div className='picker-tools'>
+                  {data.plugins.length > 6 && (
+                    <input ref={pluginSearch} className='plugin-search' type='search' placeholder='Filter plugins' oninput={filterPlugins} />
+                  )}
+                  <button type='button' className='btn btn--link' ref={selectAllButton} onclick={toggleAll}>
+                    Clear
+                  </button>
                 </div>
-              </details>
-              <span className='field-hint'>Plugin permissions only apply to these plugins. Plugins you add later aren't included.</span>
-            </div>
-          </div>
-
-          <div className='confirm-step' ref={confirmStep} hidden>
-            <span className='confirm-icon icon mail' aria-hidden='true' />
-            <div>
-              <h3>Check your email</h3>
-              <p>
-                We sent a six-digit code to <strong>{user.email}</strong>. It expires in 10 minutes and only approves the settings above.
-              </p>
-              <div className='code-row'>
-                <input
-                  ref={codeInput}
-                  type='text'
-                  inputMode='numeric'
-                  autocomplete='one-time-code'
-                  maxLength={6}
-                  placeholder='000000'
-                  onkeydown={(e) => {
-                    if (e.key === 'Enter') createKey();
-                  }}
-                />
-                <button type='button' className='btn btn--primary' ref={createButton} onclick={createKey}>
-                  Create key
-                </button>
+                <div className='option-list plugin-list' ref={pluginList}>
+                  {data.plugins.map((plugin) => (
+                    <label className='option' dataset={{ search: `${plugin.name} ${plugin.id}`.toLowerCase() }}>
+                      <input type='checkbox' value={plugin.id} checked onchange={updateSelection} />
+                      <span className='option-text'>
+                        <span>{plugin.name}</span>
+                        <code>{plugin.id}</code>
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
-              <div className='confirm-links'>
-                <button type='button' className='btn btn--link' ref={resendButton} onclick={sendCode}>
-                  Resend code
-                </button>
-                <button type='button' className='btn btn--link' onclick={editDetails}>
-                  Edit settings
-                </button>
-              </div>
-            </div>
+            </details>
+            <span className='field-hint'>Plugin permissions only apply to these plugins. Plugins you add later aren't included.</span>
           </div>
+        </div>
 
-          <div className='card-foot'>
-            <p className='status' ref={statusLine}>
-              {status}
+        <div className='confirm-step' ref={confirmStep} hidden>
+          <span className='confirm-icon icon mail' aria-hidden='true' />
+          <div>
+            <h3>Check your email</h3>
+            <p>
+              We sent a six-digit code to <strong>{user.email}</strong>. It expires in 10 minutes and only approves the settings above.
             </p>
-            <div className='actions' ref={detailsFooter}>
-              <button type='button' className='btn btn--ghost' onclick={closeCreate}>
-                Cancel
+            <div className='code-row'>
+              <input
+                ref={codeInput}
+                type='text'
+                inputMode='numeric'
+                autocomplete='one-time-code'
+                maxLength={6}
+                placeholder='000000'
+                onkeydown={(e) => {
+                  if (e.key === 'Enter') createKey();
+                }}
+              />
+              <button type='button' className='btn btn--primary' ref={createButton} onclick={createKey}>
+                Create key
               </button>
-              <button type='button' className='btn btn--primary' ref={sendButton} onclick={sendCode}>
-                Continue
+            </div>
+            <div className='confirm-links'>
+              <button type='button' className='btn btn--link' ref={resendButton} onclick={sendCode}>
+                Resend code
+              </button>
+              <button type='button' className='btn btn--link' onclick={editDetails}>
+                Edit settings
               </button>
             </div>
           </div>
         </div>
-      )}
+
+        <div className='card-foot'>
+          <p className='status' ref={statusLine}>
+            {status}
+          </p>
+          <div className='actions' ref={detailsFooter}>
+            <button type='button' className='btn btn--ghost' onclick={closeCreate}>
+              Cancel
+            </button>
+            <button type='button' className='btn btn--primary' ref={sendButton} onclick={sendCode}>
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className='card keys-card'>
         <div className='card-head'>
@@ -307,13 +315,7 @@ export default async function ApiKeys() {
         <div className='empty'>
           <span className='icon vpn_key' aria-hidden='true' />
           <strong>No API keys yet</strong>
-          {canCreate ? (
-            <p>Create one to give a script or automation limited access to your account.</p>
-          ) : (
-            <p>
-              The available permissions work with plugins you've published. <a href='/publish'>Publish a plugin</a> to create a key.
-            </p>
-          )}
+          <p>Create one to give a script or automation limited access to your account.</p>
         </div>
       );
       return;
@@ -458,7 +460,7 @@ export default async function ApiKeys() {
   }
 
   function setLocked(locked) {
-    for (const input of detailsStep.el.querySelectorAll('input, select')) input.disabled = locked;
+    for (const input of detailsStep.el.querySelectorAll('input, select')) input.disabled = locked || input.dataset.unavailable === 'true';
     selectAllButton.el.disabled = locked;
     if (locked) pluginPicker.el.open = false;
     pluginPicker.el.classList.toggle('locked', locked);
@@ -476,7 +478,8 @@ export default async function ApiKeys() {
     for (const input of pluginList.el.querySelectorAll('input')) input.checked = true;
     pluginPicker.el.open = false;
     for (const input of scopeList.el.querySelectorAll('input')) {
-      input.checked = data.scopes.find((scope) => scope.id === input.value)?.default === true;
+      const scope = data.scopes.find((item) => item.id === input.value);
+      input.checked = Boolean(scope && isPreselected(scope));
     }
     updateScopes();
     lifetimeSelect.el.value = String(DEFAULT_LIFETIME);
