@@ -77,10 +77,12 @@ function displayPrefix(token) {
  */
 function getBearerToken(req) {
   const header = req.headers.authorization;
-  if (typeof header !== 'string') return null;
-  const match = /^Bearer[ \t]+(\S*)[ \t]*$/i.exec(header);
-  if (!match) return /^Bearer\b/i.test(header) ? '' : null;
-  return match[1];
+  if (typeof header !== 'string' || header.slice(0, 6).toLowerCase() !== 'bearer') return null;
+  // String ops instead of one regex: patterns like /Bearer\s+(\S*)\s*$/ backtrack polynomially on long runs of whitespace.
+  const rest = header.slice(6);
+  if (rest && rest[0] !== ' ' && rest[0] !== '\t') return null;
+  const token = rest.trim();
+  return token && !/\s/.test(token) ? token : '';
 }
 
 /**

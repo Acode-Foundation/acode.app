@@ -44,6 +44,14 @@ describe('API key format', () => {
     expect(getBearerToken({ headers: { authorization: 'bearer   acode_x ' } })).toBe('acode_x');
     expect(getBearerToken({ headers: { authorization: 'Bearer' } })).toBe('');
     expect(getBearerToken({ headers: { authorization: 'Bearer a b' } })).toBe('');
+    expect(getBearerToken({ headers: { authorization: 'Bearerx' } })).toBeNull();
+  });
+
+  it('parses hostile Authorization headers in linear time', () => {
+    const started = performance.now();
+    expect(getBearerToken({ headers: { authorization: `bearer\t${'\t'.repeat(100_000)}x` } })).toBe('x');
+    expect(getBearerToken({ headers: { authorization: `Bearer ${' \t'.repeat(100_000)}` } })).toBe('');
+    expect(performance.now() - started).toBeLessThan(100);
   });
 });
 
