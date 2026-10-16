@@ -661,8 +661,11 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
       [Plugin.MIN_VERSION_CODE, minVersionCode],
     ];
 
-    if (changelogs) {
-      insert.push([Plugin.CHANGELOGS, changelogs]);
+    // Changelogs sent with the upload replace the zip's changelog file, as on updates.
+    // (SQLite keeps the first of duplicate INSERT columns, so only one may be added.)
+    const changelogText = req.body?.changelogs || changelogs;
+    if (changelogText) {
+      insert.push([Plugin.CHANGELOGS, changelogText]);
     }
 
     if (pluginJson.license) {
@@ -679,10 +682,6 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
 
     if (pluginJson.repository) {
       insert.push([Plugin.REPOSITORY, pluginJson.repository]);
-    }
-
-    if (req.body?.changelogs) {
-      insert.push([Plugin.CHANGELOGS, req.body.changelogs]);
     }
 
     const supportedEditor = req.body?.supported_editor && ['cm', 'all'].includes(req.body.supported_editor) ? req.body.supported_editor : 'cm';

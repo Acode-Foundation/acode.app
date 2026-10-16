@@ -67,6 +67,7 @@ beforeEach(() => {
   helpers = {
     getLoggedInUser: vi.fn().mockResolvedValue(null),
     getWebLoggedInUser: vi.fn().mockResolvedValue(null),
+    getPluginSKU: (id) => `plugin_${id}`,
     detectUserCurrency: () => ({ code: 'USD' }),
     formatAmount: (amount) => amount.toFixed(2),
   };
@@ -371,16 +372,17 @@ describe('publishing with an API key', () => {
     plugin.get.mockResolvedValue([{ ...paidPlugin, version: '1.0.0', name: 'Test', price: 100 }]);
   });
 
-  async function publish(manifest, { method = 'put', authorization = 'Bearer acode_key' } = {}) {
+  async function publish(manifest, { method = 'put', authorization = 'Bearer acode_key', body = {}, files = {} } = {}) {
     const zip = new JSZip();
     zip.file('plugin.json', JSON.stringify({ id: paidPlugin.id, name: 'Test', main: 'main.js', version: '0.9.0', price: 100, ...manifest }));
     zip.file('icon.png', 'icon');
     zip.file('readme.md', '# Test');
+    for (const [name, content] of Object.entries(files)) zip.file(name, content);
     const req = {
       headers: { authorization },
       ip: '203.0.113.9',
       files: { plugin: { data: await zip.generateAsync({ type: 'nodebuffer' }) } },
-      body: {},
+      body,
     };
     const res = { statusCode: 200, send: vi.fn() };
     res.status = vi.fn((code) => {
@@ -454,6 +456,18 @@ describe('publishing with an API key', () => {
     expect(res.send.mock.calls[0][0]).toEqual({ message: 'Plugin updated successfully' });
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['the uploaded text over the zip file', { changelogs: 'From CI' }, 'From CI'],
+    ['the zip file when no text is uploaded', {}, 'From zip'],
+  ])('records one changelog for a new plugin, preferring %s', async (_case, body, expected) => {
+    Object.assign(plugin, { CHANGELOGS: 'changelogs', insert: vi.fn() });
+    apiKeyAuth = keyFor([], [apiKeyLib.SCOPE_PLUGIN_CREATE]);
+    plugin.get.mockResolvedValueOnce([]);
+    await publish({ price: 0 }, { method: 'post', body, files: { 'changelogs.md': 'From zip' } });
+    const changelogColumns = plugin.insert.mock.calls[0].filter(([column]) => column === 'changelogs');
+    expect(changelogColumns).toEqual([['changelogs', expected]]);
   });
 
   it('needs the opt-in submit permission to create plugins', async () => {
