@@ -20,7 +20,7 @@ const { createDashboardAnalytics, createDashboardStats } = require('../lib/admin
 const { getAdminExchangeRateResponse } = require('../lib/adminExchangeRate');
 const { getPluginSalesInr } = require('../lib/adminDashboardMetrics');
 const { getSponsorWhereClause } = require('../lib/sponsorScope');
-const { getFeaturedPluginIds, setPluginFeatured } = require('../lib/featuredPlugins');
+const { setPluginFeatured } = require('../lib/featuredPlugins');
 
 const router = Router();
 
@@ -499,11 +499,10 @@ router.get('/plugins', async (req, res) => {
     page: pageNum,
     limit: limitNum,
   });
-  const featuredIds = getFeaturedPluginIds();
 
   res.send({
     pages: Math.ceil(total / limitNum),
-    plugins: plugins.map((p) => ({ ...p, featured: featuredIds.includes(p.id) })),
+    plugins: plugins.map((p) => ({ ...p, featured: p.status === plugin.STATUS_APPROVED && Boolean(p.featured) })),
     total,
   });
 });
