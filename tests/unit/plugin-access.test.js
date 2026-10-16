@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import Database from 'better-sqlite3';
 import { Router } from 'express';
 import JSZip from 'jszip';
+import { FEATURED_PLUGIN_IDS_SQL } from '../../server/lib/featuredPlugins';
 import * as apiKeyLib from '../../server/lib/apiKey';
 
 const filename = path.resolve(import.meta.dirname, '../../server/apis/plugin.js');
@@ -23,6 +25,8 @@ beforeEach(() => {
   sendEmail = vi.fn().mockResolvedValue();
   plugin = {
     ID: 'id',
+    NAME: 'name',
+    AUTHOR: 'author',
     USER_ID: 'user_id',
     STATUS: 'status',
     SUPPORTED_EDITOR: 'supported_editor',
@@ -34,6 +38,7 @@ beforeEach(() => {
     },
     get: vi.fn().mockImplementation(async () => [{ ...paidPlugin }]),
     increment: vi.fn(),
+    count: vi.fn().mockResolvedValue(4),
   };
   order = {
     ID: 'id',
@@ -97,6 +102,7 @@ beforeEach(() => {
     '../lib/modeRegex': {},
     '../lib/pluginScanner': { createKeyedLock: () => (_key, task) => task() },
     '../lib/db': {},
+    '../lib/featuredPlugins': { FEATURED_PLUGIN_IDS_SQL },
     '../lib/pluginLicense': { LICENSES: [], normalizeLicense: (license) => license },
     '../lib/rateLimits': {
       pluginUploadLimiter: (_req, _res, next) => next(),
@@ -314,9 +320,38 @@ describe('plugin list sorting and filters', () => {
     return plugin.get.mock.calls.at(-1)[1];
   };
 
-  it('sorts downloads numerically because the column is stored as text', async () => {
-    expect((await listOptions({ orderBy: 'downloads' })).orderBy).toEqual(['CAST(downloads AS INTEGER) DESC', 'id ASC']);
-    expect((await listOptions({})).orderBy).toContain('CAST(downloads AS INTEGER) DESC');
+  it.each(['popular', 'downloads', 'trending', 'rating'])('puts public featured plugins first and boosts verified authors in %s', async (sort) => {
+    const db = new Database(':memory:');
+    try {
+      db.exec(`CREATE TABLE listing (id TEXT, downloads TEXT, author_verified INTEGER, votes_up INTEGER, votes_down INTEGER,
+          comment_count INTEGER DEFAULT 0, updated_at TEXT DEFAULT '2026-01-01', status INTEGER DEFAULT 1);
+        CREATE TABLE app_config (key TEXT PRIMARY KEY, value TEXT);
+        CREATE TABLE download (plugin_id TEXT, created_at TEXT);
+        INSERT INTO listing (id, downloads, author_verified, votes_up, votes_down) VALUES
+          ('verified', '90', 1, 8, 12), ('regular', '100', 0, 9, 13), ('strong', '150', 0, 15, 0), ('small', '9', NULL, 0, 1);`);
+      const insert = db.prepare("INSERT INTO download VALUES (?, datetime('now'))");
+      for (const [id, count] of [
+        ['verified', 9],
+        ['regular', 10],
+        ['strong', 16],
+        ['small', 1],
+      ]) {
+        for (let i = 0; i < count; i++) insert.run(id);
+      }
+      const { orderBy } = await listOptions({ orderBy: sort });
+      const rankedIds = () =>
+        db
+          .prepare(`SELECT id FROM listing ORDER BY ${orderBy.join(',')}`)
+          .all()
+          .map((r) => r.id);
+      expect(rankedIds()).toEqual(['strong', 'verified', 'regular', 'small']);
+      db.prepare('INSERT INTO app_config VALUES (?, ?)').run('featured_plugins', '["regular", "small"]');
+      expect(rankedIds()).toEqual(['regular', 'small', 'strong', 'verified']);
+      db.prepare('UPDATE listing SET status = 2 WHERE id IN (?, ?)').run('regular', 'small');
+      expect(rankedIds()).toEqual(['strong', 'verified', 'regular', 'small']);
+    } finally {
+      db.close();
+    }
   });
 
   it.each(['trending', 'rating', 'updated', 'newest', 'name'])('supports the %s sort', async (orderBy) => {
@@ -341,6 +376,31 @@ describe('plugin list sorting and filters', () => {
     expect(await listWhere({ price: 'paid' })).toContainEqual(['IFNULL(price, 0)', 0, '>']);
     expect(await listWhere({ price: 'other' })).not.toContainEqual(expect.arrayContaining(['IFNULL(price, 0)']));
   });
+
+  it.each(['/api/plugin', '/api/plugins'])('keeps the home plugin detail reachable through %s', async (prefix) => {
+    plugin.get.mockResolvedValue([{ ...paidPlugin, id: 'home', price: 0 }]);
+    const mounted = Router();
+    mounted.use(prefix, router);
+    const result = await new Promise((resolve, reject) => {
+      const res = { send: resolve, status: () => res };
+      mounted.handle({ method: 'GET', url: `${prefix}/home`, query: {}, headers: {} }, res, reject);
+    });
+    expect(result).toMatchObject({ id: 'home', price: 0 });
+    expect(plugin.count).not.toHaveBeenCalled();
+  });
+
+  it('returns only home card fields for up to 12 public plugins, even for an admin', async () => {
+    helpers.getLoggedInUser.mockResolvedValue({ id: 9, isAdmin: true, authType: 'web' });
+    const cards = [{ id: 'example', name: 'Example', author: 'Author', downloads: '100' }];
+    plugin.get.mockResolvedValue(cards);
+    const res = await request('/home/list', { query: { limit: '1000', page: '2', status: '3' } });
+    expect(plugin.count).toHaveBeenCalledWith(['status', 1]);
+    expect(plugin.get).toHaveBeenCalledWith(['id', 'name', 'author', 'downloads'], ['status', 1], {
+      limit: 12,
+      orderBy: (await listOptions({ orderBy: 'downloads' })).orderBy,
+    });
+    expect(res.send).toHaveBeenCalledWith({ count: 4, plugins: cards });
+  });
 });
 
 describe('plugin list query parsing', () => {
@@ -350,7 +410,7 @@ describe('plugin list query parsing', () => {
     const [, where, options] = plugin.get.mock.calls.at(-1);
     expect(where).not.toContainEqual(expect.arrayContaining(['name']));
     expect(where).not.toContainEqual(expect.arrayContaining(['IFNULL(price, 0)']));
-    expect(options.orderBy).toContain('votes_up DESC');
+    expect(options.orderBy).toEqual(expect.arrayContaining([expect.stringContaining('votes_up *')]));
   });
 
   it('passes page and limit as positive integers only', async () => {

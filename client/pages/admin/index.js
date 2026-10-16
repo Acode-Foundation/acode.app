@@ -243,6 +243,17 @@ function Plugins() {
               <span className={`status-badge status-${p.status_text}`} data-action='update-status' data-plugin-id={p.id} data-status={p.status}>
                 {statusLabels[p.status] || p.status_text} <span className='chevron' />
               </span>
+              {p.status === 1 && (
+                <button
+                  type='button'
+                  className={`feature-toggle icon ${p.featured ? 'star' : 'star_outline'}`}
+                  title={p.featured ? 'Unfeature plugin' : 'Feature plugin (maximum 3)'}
+                  aria-label={p.featured ? 'Unfeature plugin' : 'Feature plugin'}
+                  aria-pressed={Boolean(p.featured)}
+                  data-action='toggle-featured'
+                  data-plugin-id={p.id}
+                />
+              )}
             </td>
             <td>
               <span className='editor-badge' data-action='update-editor' data-plugin-id={p.id} data-editor={p.supported_editor}>
@@ -277,6 +288,24 @@ function Plugins() {
     const target = e.target.closest('[data-action]');
     if (!target) return;
     const { action, pluginId } = target.dataset;
+
+    if (action === 'toggle-featured') {
+      target.disabled = true;
+      try {
+        const res = await fetch('/api/admin/plugin', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: pluginId, featured: target.getAttribute('aria-pressed') !== 'true' }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Failed to update featured plugin');
+        await fetchPlugins(currentPage.value);
+      } catch (err) {
+        target.disabled = false;
+        alert('ERROR', err.message || err);
+      }
+      return;
+    }
 
     if (action === 'update-status') {
       e.stopPropagation();
