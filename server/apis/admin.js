@@ -523,13 +523,14 @@ router.patch('/plugin', async (req, res) => {
       return;
     }
 
+    const where = [[plugin.ID, id]];
     if (status !== undefined && status !== null && status !== '') {
       const statusInt = parseInt(status, 10);
       if (![plugin.STATUS_PENDING, plugin.STATUS_APPROVED, plugin.STATUS_REJECTED, plugin.STATUS_DELETED].includes(statusInt)) {
         res.status(400).send({ error: 'Invalid status' });
         return;
       }
-      await plugin.update([plugin.STATUS, statusInt], [plugin.ID, id]);
+      await plugin.update([plugin.STATUS, statusInt], where);
     }
 
     if (supported_editor) {
@@ -537,10 +538,10 @@ router.patch('/plugin', async (req, res) => {
         res.status(400).send({ error: 'Invalid editor type. Must be cm, ace, or all' });
         return;
       }
-      await plugin.update([plugin.SUPPORTED_EDITOR, supported_editor], [plugin.ID, id]);
+      await plugin.update([plugin.SUPPORTED_EDITOR, supported_editor], where);
     }
 
-    const [updated] = await plugin.get(['*'], [plugin.ID, id]);
+    const [updated] = await plugin.get(['*'], where);
     res.send(updated);
   } catch (err) {
     res.status(500).send({ error: err.message });

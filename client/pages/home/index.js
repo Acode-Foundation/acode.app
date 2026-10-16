@@ -181,7 +181,7 @@ function attach(ref, node) {
 
 async function loadPlugins(mount, pluginCount) {
   try {
-    const { count, plugins } = await (await fetch('/api/plugins/home')).json();
+    const { count, plugins } = await (await fetch('/api/plugins/home/list')).json();
     pluginCount.value = count.toLocaleString();
     if (!Array.isArray(plugins) || plugins.length === 0) return;
 

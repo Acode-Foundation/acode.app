@@ -324,7 +324,7 @@ router.get('/description/:id', async (req, res) => {
   }
 });
 
-router.get('/home', async (_req, res) => {
+router.get('/home/list', async (_req, res) => {
   try {
     const where = [Plugin.STATUS, Plugin.STATUS_APPROVED];
     const [count, plugins] = await Promise.all([

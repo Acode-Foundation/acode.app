@@ -366,11 +366,23 @@ describe('plugin list sorting and filters', () => {
     expect(await listWhere({ price: 'other' })).not.toContainEqual(expect.arrayContaining(['IFNULL(price, 0)']));
   });
 
+  it.each(['/api/plugin', '/api/plugins'])('keeps the home plugin detail reachable through %s', async (prefix) => {
+    plugin.get.mockResolvedValue([{ ...paidPlugin, id: 'home', price: 0 }]);
+    const mounted = Router();
+    mounted.use(prefix, router);
+    const result = await new Promise((resolve, reject) => {
+      const res = { send: resolve, status: () => res };
+      mounted.handle({ method: 'GET', url: `${prefix}/home`, query: {}, headers: {} }, res, reject);
+    });
+    expect(result).toMatchObject({ id: 'home', price: 0 });
+    expect(plugin.count).not.toHaveBeenCalled();
+  });
+
   it('returns only home card fields for up to 12 public plugins, even for an admin', async () => {
     helpers.getLoggedInUser.mockResolvedValue({ id: 9, isAdmin: true, authType: 'web' });
     const cards = [{ id: 'example', name: 'Example', author: 'Author', downloads: '100' }];
     plugin.get.mockResolvedValue(cards);
-    const res = await request('/home', { query: { limit: '1000', page: '2', status: '3' } });
+    const res = await request('/home/list', { query: { limit: '1000', page: '2', status: '3' } });
     expect(plugin.count).toHaveBeenCalledWith(['status', 1]);
     expect(plugin.get).toHaveBeenCalledWith(['id', 'name', 'author', 'downloads'], ['status', 1], {
       limit: 12,
