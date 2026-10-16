@@ -20,6 +20,7 @@ const { createDashboardAnalytics, createDashboardStats } = require('../lib/admin
 const { getAdminExchangeRateResponse } = require('../lib/adminExchangeRate');
 const { getPluginSalesInr } = require('../lib/adminDashboardMetrics');
 const { getSponsorWhereClause } = require('../lib/sponsorScope');
+const { getFeaturedPluginIds, setPluginFeatured } = require('../lib/featuredPlugins');
 
 const router = Router();
 
@@ -498,30 +499,38 @@ router.get('/plugins', async (req, res) => {
     page: pageNum,
     limit: limitNum,
   });
+  const featuredIds = getFeaturedPluginIds();
 
   res.send({
     pages: Math.ceil(total / limitNum),
-    plugins,
+    plugins: plugins.map((p) => ({ ...p, featured: featuredIds.includes(p.id) })),
     total,
   });
 });
 
 router.patch('/plugin', async (req, res) => {
   try {
-    const { id, status, supported_editor } = req.body;
+    const { id, status, supported_editor, featured } = req.body;
 
     if (!id) {
       res.status(400).send({ error: 'Plugin ID is required' });
       return;
     }
 
+    if (featured !== undefined) {
+      const result = setPluginFeatured(id, featured);
+      res.status(result.status || 200).send(result);
+      return;
+    }
+
+    const where = [[plugin.ID, id]];
     if (status !== undefined && status !== null && status !== '') {
       const statusInt = parseInt(status, 10);
       if (![plugin.STATUS_PENDING, plugin.STATUS_APPROVED, plugin.STATUS_REJECTED, plugin.STATUS_DELETED].includes(statusInt)) {
         res.status(400).send({ error: 'Invalid status' });
         return;
       }
-      await plugin.update([plugin.STATUS, statusInt], [plugin.ID, id]);
+      await plugin.update([plugin.STATUS, statusInt], where);
     }
 
     if (supported_editor) {
@@ -529,10 +538,10 @@ router.patch('/plugin', async (req, res) => {
         res.status(400).send({ error: 'Invalid editor type. Must be cm, ace, or all' });
         return;
       }
-      await plugin.update([plugin.SUPPORTED_EDITOR, supported_editor], [plugin.ID, id]);
+      await plugin.update([plugin.SUPPORTED_EDITOR, supported_editor], where);
     }
 
-    const [updated] = await plugin.get(['*'], [plugin.ID, id]);
+    const [updated] = await plugin.get(['*'], where);
     res.send(updated);
   } catch (err) {
     res.status(500).send({ error: err.message });

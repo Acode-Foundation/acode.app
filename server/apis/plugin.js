@@ -19,6 +19,7 @@ const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
 const { pluginUploadLimiter, pluginAdminLimiter, pluginScanReadLimiter } = require('../lib/rateLimits');
 const { LICENSES, normalizeLicense } = require('../lib/pluginLicense');
 const db = require('../lib/db');
+const { FEATURED_PLUGIN_IDS_SQL } = require('../lib/featuredPlugins');
 const {
   scanUpload,
   decideUpdate,
@@ -47,17 +48,22 @@ const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
 const ID_REGEX = /^[a-z][a-z0-9._]{3,49}$/i;
 // `downloads` is stored as TEXT, so it must be cast or "900" sorts above "21004".
 const DOWNLOADS_DESC = 'CAST(downloads AS INTEGER) DESC';
+const FEATURED_DESC = `CASE WHEN status = 1 AND id IN (${FEATURED_PLUGIN_IDS_SQL}) THEN 1 ELSE 0 END DESC`;
+// Verified authors get a 25% boost within the featured and regular groups.
+const RANK_WEIGHT = '(CASE WHEN author_verified = 1 THEN 1.25 ELSE 1 END)';
+const WEIGHTED_DOWNLOADS_DESC = `CAST(downloads AS INTEGER) * ${RANK_WEIGHT} DESC`;
 const LIST_ORDER = Object.fromEntries(
   Object.entries({
-    popular: ['votes_up DESC', DOWNLOADS_DESC, 'comment_count DESC', 'updated_at DESC', 'votes_down ASC'],
+    popular: [FEATURED_DESC, `votes_up * ${RANK_WEIGHT} DESC`, WEIGHTED_DOWNLOADS_DESC, 'comment_count DESC', 'updated_at DESC', 'votes_down ASC'],
     // Unique installs over the last week, read through the (plugin_id, created_at) index.
     trending: [
-      "(SELECT COUNT(*) FROM download d WHERE d.plugin_id = listing.id AND d.created_at >= datetime('now', '-7 days')) DESC",
-      DOWNLOADS_DESC,
+      FEATURED_DESC,
+      `(SELECT COUNT(*) FROM download d WHERE d.plugin_id = listing.id AND d.created_at >= datetime('now', '-7 days')) * ${RANK_WEIGHT} DESC`,
+      WEIGHTED_DOWNLOADS_DESC,
     ],
-    downloads: [DOWNLOADS_DESC],
+    downloads: [FEATURED_DESC, WEIGHTED_DOWNLOADS_DESC, DOWNLOADS_DESC],
     // Smoothed approval ratio, so one upvote doesn't outrank hundreds of mostly positive reviews.
-    rating: ['(votes_up + 1.0) / (votes_up + votes_down + 2) DESC', 'votes_up DESC', DOWNLOADS_DESC],
+    rating: [FEATURED_DESC, `(votes_up + 1.0) / (votes_up + votes_down + 2) * ${RANK_WEIGHT} DESC`, 'votes_up DESC', DOWNLOADS_DESC],
     updated: ['COALESCE(package_updated_at, created_at) DESC'],
     newest: ['created_at DESC'],
     name: ['name COLLATE NOCASE ASC'],
@@ -313,6 +319,22 @@ router.get('/description/:id', async (req, res) => {
     }
 
     res.send({ description: row.description });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+router.get('/home/list', async (_req, res) => {
+  try {
+    const where = [Plugin.STATUS, Plugin.STATUS_APPROVED];
+    const [count, plugins] = await Promise.all([
+      Plugin.count(where),
+      Plugin.get([Plugin.ID, Plugin.NAME, Plugin.AUTHOR, Plugin.DOWNLOADS], where, {
+        limit: 12,
+        orderBy: LIST_ORDER.downloads,
+      }),
+    ]);
+    res.send({ count, plugins });
   } catch (error) {
     res.status(500).send({ error: error.message });
   }
