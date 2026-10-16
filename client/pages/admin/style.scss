@@ -1095,6 +1095,20 @@
   }
 
   .admin-plugins {
+    .feature-toggle {
+      margin: 0 0 0 6px;
+      padding: 0;
+      width: 28px;
+      height: 28px;
+      vertical-align: middle;
+      background: transparent;
+      color: inherit;
+
+      &[aria-pressed='true'] {
+        color: #fbbf24;
+      }
+    }
+
     .status-badge {
       display: inline-flex;
       align-items: center;

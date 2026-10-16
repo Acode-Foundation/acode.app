@@ -20,6 +20,7 @@ const { createDashboardAnalytics, createDashboardStats } = require('../lib/admin
 const { getAdminExchangeRateResponse } = require('../lib/adminExchangeRate');
 const { getPluginSalesInr } = require('../lib/adminDashboardMetrics');
 const { getSponsorWhereClause } = require('../lib/sponsorScope');
+const { getFeaturedPluginIds, setPluginFeatured } = require('../lib/featuredPlugins');
 
 const router = Router();
 
@@ -498,20 +499,27 @@ router.get('/plugins', async (req, res) => {
     page: pageNum,
     limit: limitNum,
   });
+  const featuredIds = getFeaturedPluginIds();
 
   res.send({
     pages: Math.ceil(total / limitNum),
-    plugins,
+    plugins: plugins.map((p) => ({ ...p, featured: featuredIds.includes(p.id) })),
     total,
   });
 });
 
 router.patch('/plugin', async (req, res) => {
   try {
-    const { id, status, supported_editor } = req.body;
+    const { id, status, supported_editor, featured } = req.body;
 
     if (!id) {
       res.status(400).send({ error: 'Plugin ID is required' });
+      return;
+    }
+
+    if (featured !== undefined) {
+      const result = setPluginFeatured(id, featured);
+      res.status(result.status || 200).send(result);
       return;
     }
 

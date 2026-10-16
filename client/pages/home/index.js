@@ -181,10 +181,9 @@ function attach(ref, node) {
 
 async function loadPlugins(mount, pluginCount) {
   try {
-    const { count } = await (await fetch('/api/plugins/count')).json();
+    const { count, plugins } = await (await fetch('/api/plugins/home')).json();
     pluginCount.value = count.toLocaleString();
-    const pluginIds = await (await fetch('/api/plugins?limit=12&orderBy=downloads')).json();
-    if (!Array.isArray(pluginIds) || pluginIds.length === 0) return;
+    if (!Array.isArray(plugins) || plugins.length === 0) return;
 
     attach(
       mount,
@@ -200,7 +199,7 @@ async function loadPlugins(mount, pluginCount) {
         </div>
         <div className='featured-plugins__fade'>
           <ul className='featured-plugins__list'>
-            {pluginIds.map((plugin) => (
+            {plugins.map((plugin) => (
               <Plugin data={plugin} />
             ))}
           </ul>
