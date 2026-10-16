@@ -19,7 +19,6 @@ const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
 const { pluginUploadLimiter, pluginAdminLimiter, pluginScanReadLimiter } = require('../lib/rateLimits');
 const { LICENSES, normalizeLicense } = require('../lib/pluginLicense');
 const db = require('../lib/db');
-const { FEATURED_PLUGIN_IDS_SQL } = require('../lib/featuredPlugins');
 const {
   scanUpload,
   decideUpdate,
@@ -48,7 +47,7 @@ const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
 const ID_REGEX = /^[a-z][a-z0-9._]{3,49}$/i;
 // `downloads` is stored as TEXT, so it must be cast or "900" sorts above "21004".
 const DOWNLOADS_DESC = 'CAST(downloads AS INTEGER) DESC';
-const FEATURED_DESC = `CASE WHEN status = 1 AND id IN (${FEATURED_PLUGIN_IDS_SQL}) THEN 1 ELSE 0 END DESC`;
+const FEATURED_DESC = 'CASE WHEN status = 1 THEN featured ELSE 0 END DESC';
 // Verified authors get a 25% boost within the featured and regular groups.
 const RANK_WEIGHT = '(CASE WHEN author_verified = 1 THEN 1.25 ELSE 1 END)';
 const WEIGHTED_DOWNLOADS_DESC = `CAST(downloads AS INTEGER) * ${RANK_WEIGHT} DESC`;

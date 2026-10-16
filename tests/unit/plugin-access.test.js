@@ -3,7 +3,6 @@ import path from 'node:path';
 import vm from 'node:vm';
 import Database from 'better-sqlite3';
 import { Router } from 'express';
-import { FEATURED_PLUGIN_IDS_SQL } from '../../server/lib/featuredPlugins';
 
 const filename = path.resolve(import.meta.dirname, '../../server/apis/plugin.js');
 const source = fs.readFileSync(filename, 'utf8');
@@ -91,7 +90,6 @@ beforeEach(() => {
     '../lib/modeRegex': {},
     '../lib/pluginScanner': { createKeyedLock: () => (_key, task) => task() },
     '../lib/db': {},
-    '../lib/featuredPlugins': { FEATURED_PLUGIN_IDS_SQL },
     '../lib/pluginLicense': { LICENSES: [], normalizeLicense: (license) => license },
     '../lib/rateLimits': {
       pluginUploadLimiter: (_req, _res, next) => next(),
@@ -313,8 +311,7 @@ describe('plugin list sorting and filters', () => {
     const db = new Database(':memory:');
     try {
       db.exec(`CREATE TABLE listing (id TEXT, downloads TEXT, author_verified INTEGER, votes_up INTEGER, votes_down INTEGER,
-          comment_count INTEGER DEFAULT 0, updated_at TEXT DEFAULT '2026-01-01', status INTEGER DEFAULT 1);
-        CREATE TABLE app_config (key TEXT PRIMARY KEY, value TEXT);
+          comment_count INTEGER DEFAULT 0, updated_at TEXT DEFAULT '2026-01-01', status INTEGER DEFAULT 1, featured INTEGER NOT NULL DEFAULT 0);
         CREATE TABLE download (plugin_id TEXT, created_at TEXT);
         INSERT INTO listing (id, downloads, author_verified, votes_up, votes_down) VALUES
           ('verified', '90', 1, 8, 12), ('regular', '100', 0, 9, 13), ('strong', '150', 0, 15, 0), ('small', '9', NULL, 0, 1);`);
@@ -334,7 +331,7 @@ describe('plugin list sorting and filters', () => {
           .all()
           .map((r) => r.id);
       expect(rankedIds()).toEqual(['strong', 'verified', 'regular', 'small']);
-      db.prepare('INSERT INTO app_config VALUES (?, ?)').run('featured_plugins', '["regular", "small"]');
+      db.prepare('UPDATE listing SET featured = 1 WHERE id IN (?, ?)').run('regular', 'small');
       expect(rankedIds()).toEqual(['regular', 'small', 'strong', 'verified']);
       db.prepare('UPDATE listing SET status = 2 WHERE id IN (?, ?)').run('regular', 'small');
       expect(rankedIds()).toEqual(['strong', 'verified', 'regular', 'small']);
