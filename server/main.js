@@ -120,8 +120,9 @@ async function main() {
       next();
       return;
     }
-    // Accept if custom header is present (triggers CORS preflight for cross-origin)
-    if (req.headers['x-auth-token'] || req.headers['x-requested-with']) {
+    // Accept if custom header is present (triggers CORS preflight for cross-origin).
+    // API keys travel in Authorization, which forms can't set and CORS here doesn't allow.
+    if (req.headers['x-auth-token'] || req.headers['x-requested-with'] || /^Bearer\b/i.test(req.headers.authorization || '')) {
       next();
       return;
     }

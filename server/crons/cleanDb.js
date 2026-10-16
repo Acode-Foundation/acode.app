@@ -2,6 +2,7 @@
 const moment = require('moment');
 const Otp = require('../entities/otp');
 const Login = require('../entities/login');
+const ApiKey = require('../entities/apiKey');
 const Download = require('../entities/download');
 const RazorpayOrder = require('../entities/razorpayOrder');
 const Order = require('../entities/purchaseOrder');
@@ -18,6 +19,13 @@ async function cleanOtp() {
 async function cleanLogin() {
   await Login.delete([Login.EXPIRED_AT, moment().format(FORMAT), '<']);
   console.log('Deleted expired logins');
+}
+
+async function cleanApiKeys() {
+  // Expired keys stay listed for 30 days so users can see why CI stopped working.
+  const cutoff = moment().subtract(30, 'days').toISOString();
+  ApiKey.deleteExpiredBefore(cutoff);
+  console.log('Deleted expired api keys');
 }
 
 async function cleanDownload() {
@@ -37,6 +45,7 @@ async function cleanRazorpayOrders() {
 async function cleanDb() {
   await cleanOtp();
   await cleanLogin();
+  await cleanApiKeys();
   await cleanDownload();
   await cleanRazorpayOrders();
 }

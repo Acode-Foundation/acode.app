@@ -37,6 +37,10 @@ function createDatabase() {
     CREATE TABLE login (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES user(id), token TEXT);
     CREATE TABLE app_auth_code (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES user(id), code TEXT);
     CREATE TABLE otp (id INTEGER PRIMARY KEY, email TEXT UNIQUE, otp TEXT);
+    CREATE TABLE IF NOT EXISTS api_key (
+      id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES user(id), name TEXT, token_hash TEXT, token_prefix TEXT,
+      scopes TEXT, plugin_ids TEXT, created_at TEXT, expires_at TEXT
+    );
     CREATE TABLE payment_method (
       id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES user(id), paypal_email TEXT, bank_name TEXT,
       bank_ifsc_code TEXT, bank_swift_code TEXT, bank_account_number TEXT, bank_account_holder TEXT,
@@ -68,6 +72,9 @@ function createDatabase() {
     INSERT INTO app_auth_code VALUES (1, 2, 'auth-code');
     INSERT INTO otp VALUES (1, 'normal@example.com', '123456');
     INSERT INTO otp VALUES (2, 'account-delete:2:fixture-session', 'hashed-code');
+    INSERT INTO otp VALUES (3, 'api-key:2:fixture-session', 'hashed-code');
+    INSERT INTO api_key (id, user_id, name, token_hash, token_prefix, scopes, plugin_ids, created_at, expires_at)
+      VALUES (1, 2, 'CI', 'hashed-key', 'acode_abcd', '[]', '[]', '2026-01-01', '2027-01-01');
     INSERT INTO payment_method VALUES
       (1, 2, 'paypal@example.com', 'Bank', 'IFSC', 'SWIFT', '1234', 'Normal User', 'Savings', 'wallet', 'btc', 1, 0);
     INSERT INTO plugin VALUES ('plugin.one', 2, 'Plugin One', 10, 0);
@@ -156,6 +163,8 @@ describe('User.delete anonymization', () => {
     expect(db.prepare('SELECT COUNT(*) count FROM app_auth_code WHERE user_id = 2').get().count).toBe(0);
     expect(db.prepare("SELECT COUNT(*) count FROM otp WHERE email = 'normal@example.com'").get().count).toBe(0);
     expect(db.prepare("SELECT COUNT(*) count FROM otp WHERE email LIKE 'account-delete:2:%'").get().count).toBe(0);
+    expect(db.prepare("SELECT COUNT(*) count FROM otp WHERE email LIKE 'api-key:2:%'").get().count).toBe(0);
+    expect(db.prepare('SELECT COUNT(*) count FROM api_key WHERE user_id = 2').get().count).toBe(0);
     expect(await User.getUsersByFilter()).toEqual([{ name: 'Axch1l13s', email: 'reported@example.com' }]);
     expect(await User.countUsersByFilter()).toBe(1);
     for (const filter of ['with_plugins', 'with_paid_plugins', 'with_payment']) {

@@ -148,6 +148,10 @@ export default ({ routes }) => (
         <span className='icon shopping_cart' />
         My Orders
       </a>
+      <a href='/api-keys' data-google-vignette='false'>
+        <span className='icon vpn_key' />
+        API Keys
+      </a>
       <span className='divider' />
       <a href='/logout' className='danger-text' data-google-vignette='false'>
         <span className='icon logout' />

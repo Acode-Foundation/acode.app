@@ -10,8 +10,11 @@ const User = require('../entities/user');
 const Order = require('../entities/purchaseOrder');
 const Download = require('../entities/download');
 const PluginScan = require('../entities/pluginScan');
+const ApiKey = require('../entities/apiKey');
 const badWords = require('../badWords.json');
 const { getLoggedInUser, getWebLoggedInUser, getPluginSKU, detectUserCurrency, formatAmount } = require('../lib/helpers');
+const { getApiKeyAuth } = require('../lib/apiKeyAuth');
+const { SCOPE_PLUGIN_CREATE, SCOPE_PLUGIN_PUBLISH, MAX_PLUGINS_PER_KEY, hasScope } = require('../lib/apiKey');
 const getRazorpay = require('../lib/razorpay');
 const sendEmail = require('../lib/sendEmail');
 const { convertPrice } = require('../lib/exchangeRates');
@@ -572,7 +575,16 @@ router.post('/order', async (req, res) => {
 
 router.post('/', pluginUploadLimiter, async (req, res) => {
   try {
-    const user = await getWebLoggedInUser(req);
+    const apiKey = await getApiKeyAuth(req);
+    if (apiKey?.error) {
+      res.status(apiKey.status).send({ error: apiKey.error });
+      return;
+    }
+    if (apiKey && !hasScope(apiKey.key, SCOPE_PLUGIN_CREATE)) {
+      res.status(403).send({ error: 'This API key cannot submit new plugins. Create a key with the "Submit plugins" permission.' });
+      return;
+    }
+    const user = apiKey ? apiKey.user : await getWebLoggedInUser(req);
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
@@ -613,6 +625,12 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
 
     if (typeof minVersionCode !== 'number') {
       res.status(400).send({ error: `minVersionCode should be a number but got ${typeof minVersionCode}` });
+      return;
+    }
+
+    // Pricing affects buyers and earnings, so it stays a signed-in, interactive change.
+    if (apiKey && price) {
+      res.status(403).send({ error: 'Paid plugins cannot be submitted with an API key. Submit it from the website.' });
       return;
     }
 
@@ -674,12 +692,25 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
 
     await savePlugin(pluginId, pluginZip.data, icon);
 
+    // A key that can publish updates keeps working for the plugin it just submitted.
+    if (apiKey && hasScope(apiKey.key, SCOPE_PLUGIN_PUBLISH)) {
+      try {
+        ApiKey.addPlugin(apiKey.key.id, pluginId, MAX_PLUGINS_PER_KEY);
+      } catch (error) {
+        console.error('Failed to add submitted plugin to API key:', error.message);
+      }
+    }
+
     const response = { message: 'Plugin uploaded successfully' };
     if (skuErrors.length) {
       response.warning = 'Plugin created but Google Play SKU registration had errors';
       response.skuErrors = skuErrors;
     }
     res.send(response);
+    notifyApiKeyUse(apiKey, req, {
+      subject: `New plugin "${name}" submitted with an API key`,
+      summary: `${pluginLink(pluginId, name)} was submitted and is waiting for admin review.`,
+    });
 
     // New plugins already wait for admin approval; the scan gives the reviewer evidence.
     const decision = await recordScan({
@@ -693,7 +724,7 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
     });
     notifyAdmins(
       'New plugin waiting for approval',
-      `A new plugin <a href='https://acode.app/plugin/${pluginId}'><strong>${escapeHtml(name)}</strong></a> is waiting for approval.${scanSummaryHtml(decision)}`,
+      `A new plugin <a href='https://acode.app/plugin/${pluginId}'><strong>${escapeHtml(name)}</strong></a> is waiting for approval.${apiKey ? ' It was submitted with an API key.' : ''}${scanSummaryHtml(decision)}`,
     );
   } catch (error) {
     console.error('Error uploading plugin:', error);
@@ -703,7 +734,17 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
 
 router.put('/', pluginUploadLimiter, async (req, res) => {
   try {
-    const user = await getWebLoggedInUser(req);
+    // CI can publish updates with an API key instead of a browser session.
+    const apiKey = await getApiKeyAuth(req);
+    if (apiKey?.error) {
+      res.status(apiKey.status).send({ error: apiKey.error });
+      return;
+    }
+    if (apiKey && !hasScope(apiKey.key, SCOPE_PLUGIN_PUBLISH)) {
+      res.status(403).send({ error: 'This API key cannot publish plugins.' });
+      return;
+    }
+    const user = apiKey ? apiKey.user : await getWebLoggedInUser(req);
 
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
@@ -745,9 +786,25 @@ router.put('/', pluginUploadLimiter, async (req, res) => {
     }
 
     const [row] = await Plugin.get([Plugin.ID, Plugin.USER_ID, Plugin.VERSION, Plugin.NAME, Plugin.PRICE, Plugin.STATUS], [Plugin.ID, pluginId]);
+
+    if (apiKey && !apiKey.key.plugin_ids.includes(pluginId)) {
+      if (row) {
+        res.status(403).send({ error: `This API key cannot publish "${pluginId}". Create a key that includes it.`, code: 'plugin_not_allowed' });
+      } else {
+        // `code` lets tools such as the publish Action fall back to submitting a new plugin.
+        res.status(403).send({ error: `Plugin "${pluginId}" doesn't exist yet. Submit it with POST /api/plugin first.`, code: 'plugin_not_found' });
+      }
+      return;
+    }
     // Deleted plugins can't be updated: that would publish outside the scan gate.
     if (!row || row.user_id !== user.id || row.status === Plugin.STATUS_DELETED) {
       res.status(404).send({ error: 'Plugin not found' });
+      return;
+    }
+
+    // Pricing affects buyers and earnings, so it stays a signed-in, interactive change.
+    if (apiKey && price !== undefined && (Number(price) || 0) !== (Number(row.price) || 0)) {
+      res.status(403).send({ error: 'Price changes cannot be published with an API key. Update the price from the website.' });
       return;
     }
 
@@ -857,7 +914,7 @@ router.put('/', pluginUploadLimiter, async (req, res) => {
           review: true,
           reasons: outcome.decision.reasons,
         });
-        notifyHeldUpdate({ pluginId, name, version, user, decision: outcome.decision });
+        notifyHeldUpdate({ pluginId, name, version, user, decision: outcome.decision, apiKeyHtml: apiKey ? apiKeyUseHtml(apiKey, req) : '' });
         return;
       }
       skuErrors = outcome.skuErrors;
@@ -872,6 +929,16 @@ router.put('/', pluginUploadLimiter, async (req, res) => {
       console.error('Google Play SKU registration had errors:', skuErrors);
     }
     res.send(response);
+    notifyApiKeyUse(
+      apiKey,
+      req,
+      packageChanged
+        ? {
+            subject: `"${name}" ${version} published with an API key`,
+            summary: `Version ${escapeHtml(version)} of ${pluginLink(pluginId, name)} was published.`,
+          }
+        : { subject: `"${name}" updated with an API key`, summary: `The details of ${pluginLink(pluginId, name)} were updated.` },
+    );
   } catch (error) {
     console.error('Error updating plugin:', error);
     if (!res.headersSent) {
@@ -1667,8 +1734,8 @@ function notifyDeveloper(userId, { subject, html }) {
     .catch((error) => console.error('Failed to notify developer:', error));
 }
 
-function notifyHeldUpdate({ pluginId, name, version, user, decision }) {
-  const link = `<a href='https://acode.app/plugin/${pluginId}'><strong>${escapeHtml(name)}</strong></a>`;
+function notifyHeldUpdate({ pluginId, name, version, user, decision, apiKeyHtml = '' }) {
+  const link = pluginLink(pluginId, name);
   notifyAdmins(
     'Plugin update waiting for review',
     `Version ${escapeHtml(version)} of ${link} was held by the security scan. Review it in the admin panel (Plugin updates).${scanSummaryHtml(decision)}`,
@@ -1677,8 +1744,30 @@ function notifyHeldUpdate({ pluginId, name, version, user, decision }) {
     user.email,
     user.name,
     'Plugin update submitted for review',
-    `Version ${escapeHtml(version)} of ${link} needs a manual review before it goes live. You will get an email when it is reviewed.${scanSummaryHtml(decision)}`,
+    `Version ${escapeHtml(version)} of ${link} needs a manual review before it goes live. You will get an email when it is reviewed.${scanSummaryHtml(decision)}${apiKeyHtml}`,
   );
+}
+
+/**
+ * Emails the key owner every time a key publishes or submits, so a leaked key
+ * gets noticed. Never blocks or fails the request.
+ * @param {import('../lib/apiKeyAuth').ApiKeyAuth | null} apiKey
+ */
+function notifyApiKeyUse(apiKey, req, { subject, summary }) {
+  if (!apiKey?.key) return;
+  Promise.resolve()
+    .then(() => sendEmail(apiKey.user.email, apiKey.user.name, subject, `<p>${summary}</p>${apiKeyUseHtml(apiKey, req)}`))
+    .catch((error) => console.error('Failed to send API key use notice:', error.message));
+}
+
+function apiKeyUseHtml(apiKey, req) {
+  const { name, token_prefix: prefix } = apiKey.key;
+  return `<p>This was done with your API key <strong>${escapeHtml(name)}</strong> (${escapeHtml(prefix)}…) from IP address ${escapeHtml(req.ip)} at ${new Date().toUTCString()}.</p>
+<p>If this wasn't you, revoke the key now at <a href='https://acode.app/api-keys'>acode.app/api-keys</a> and change your password.</p>`;
+}
+
+function pluginLink(pluginId, name) {
+  return `<a href='https://acode.app/plugin/${encodeURIComponent(pluginId)}'><strong>${escapeHtml(name)}</strong></a>`;
 }
 
 function escapeHtml(value) {
