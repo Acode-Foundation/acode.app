@@ -14,6 +14,7 @@ const table = `CREATE TABLE IF NOT EXISTS plugin (
   price INTEGER DEFAULT 0,
   downloads TEXT DEFAULT '0',
   status INTEGER DEFAULT (0),
+  featured INTEGER NOT NULL DEFAULT 0,
   status_change_message text,
   votes_up integer default 0, 
   votes_down integer default 0, 
@@ -51,6 +52,7 @@ class Plugin extends Entity {
   ICON = 'icon';
   PRICE = 'price';
   STATUS = 'status';
+  FEATURED = 'featured';
   STATUS_TEXT = 'status_text';
   AUTHOR = 'author';
   VERSION = 'version';
@@ -230,6 +232,7 @@ class Plugin extends Entity {
       this.PACKAGE_UPDATED_AT,
       this.STATUS_CHANGE_MESSAGE,
       this.STATUS,
+      this.FEATURED,
       "CASE WHEN status = 0 THEN 'pending' WHEN status = 1 THEN 'approved' WHEN status = 2 THEN 'rejected' WHEN status = 3 THEN 'deleted' END as status_text",
       `'${process.env.HOST}/plugin-icon/' || id as icon`,
     ];
@@ -250,6 +253,7 @@ class Plugin extends Entity {
       'p.created_at as created_at',
       'p.updated_at as updated_at',
       'p.status as status',
+      'p.featured as featured',
       'p.status_text as status_text',
       'p.supported_editor as supported_editor',
       'p.min_version_code as min_version_code',
