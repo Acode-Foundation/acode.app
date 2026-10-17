@@ -128,6 +128,7 @@
       font-size: clamp(2.75rem, 8vw, 5.4rem);
       font-weight: 500;
       letter-spacing: -0.055em;
+      word-spacing: 0.18em;
       line-height: 0.95;
       text-wrap: balance;
       color: #fff;
@@ -212,8 +213,8 @@
     &:disabled {
       opacity: 1;
       cursor: default;
-      background: transparent;
-      border-color: var(--home-line);
+      background: #f4f6f8;
+      color: #111216;
     }
   }
 

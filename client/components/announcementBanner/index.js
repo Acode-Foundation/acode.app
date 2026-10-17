@@ -1,6 +1,6 @@
 import './style.scss';
 import shellularLogo from 'res/shellular-logo.png';
-import { isAdFreeRoute } from '../../../shared/adPolicy';
+import { isAccountRoute } from '../../../shared/adPolicy';
 
 const BANNERS = [
   {
@@ -43,7 +43,7 @@ const BANNERS = [
 const TOGGLE_INTERVAL = 8000;
 
 export default function AnnouncementBanner() {
-  if (isAdFreeRoute(location.pathname)) {
+  if (isAccountRoute(location.pathname)) {
     document.documentElement.style.setProperty('--announcement-height', '0px');
     return null;
   }

@@ -14,7 +14,8 @@ const features = [
     id: 'workspace',
     eyebrow: 'TERMINALS & AGENTS',
     title: ['Your tools.', 'One workspace.'],
-    description: 'Run a Linux terminal and AI agents beside your files. Split editors, configs, and tools into panes that fit the way you work.',
+    description:
+      'Run a Linux terminal and AI coding agents beside your files on Android and iOS. Split editors, configs, and tools into panes that fit the way you work.',
     shots: [screenshots.panes, screenshots.agent],
     wide: true,
   },

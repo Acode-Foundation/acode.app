@@ -179,7 +179,7 @@ async function main() {
 
   app.get('/og/default.png', async (req, res, next) => {
     try {
-      const etag = createEtag('acode-default-og-v1');
+      const etag = createEtag('acode-default-og-v2');
       if (req.headers['if-none-match'] === etag) {
         res.status(304).end();
         return;

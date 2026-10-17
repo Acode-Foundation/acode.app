@@ -1,8 +1,9 @@
-import { isAdFreeRoute } from '../../shared/adPolicy';
+import { isAccountRoute, isAdFreeRoute } from '../../shared/adPolicy';
 import { withAppSource } from './appSource';
 
 class Router {
   #adFreeDocument = isAdFreeRoute(location.pathname);
+  #accountDocument = isAccountRoute(location.pathname);
   #thisSite = new RegExp(`(^https?://(www.)?${location.hostname}(/.*)?)|(^/)`);
   #customEvent = new CustomEvent('locationchange');
   #routes = {};
@@ -48,8 +49,8 @@ class Router {
   navigate(url) {
     const { location } = window;
     url = (typeof url === 'string' ? url : location.pathname).split(/[?#]/, 1)[0];
-    // A new document discards any running ad SDK when entering account flows.
-    if (isAdFreeRoute(url) !== this.#adFreeDocument) {
+    // Reload when the ad SDK or account-page header policy changes.
+    if (isAdFreeRoute(url) !== this.#adFreeDocument || isAccountRoute(url) !== this.#accountDocument) {
       location.reload();
       return;
     }
@@ -263,6 +264,7 @@ class Router {
     const { location, history } = window;
     if (!this.#thisSite.test(href)) {
       window.location.href = href;
+      return;
     }
 
     const currentUrl = location.pathname + location.search;
@@ -286,7 +288,7 @@ class Router {
     path = withAppSource(path);
     const { history } = window;
     history.pushState(history.state, document.title, path);
-    if (isAdFreeRoute(location.pathname) !== this.#adFreeDocument) location.reload();
+    if (isAdFreeRoute(location.pathname) !== this.#adFreeDocument || isAccountRoute(location.pathname) !== this.#accountDocument) location.reload();
   }
 }
 

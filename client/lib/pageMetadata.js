@@ -84,13 +84,13 @@ export function resolveRouteMetadata(pathname, origin = window.location.origin, 
     description = namedRoute.description.replace(/\{\{count\}\}/g, count);
   } else if (pluginMatch) {
     title = 'Acode Plugin - Acode';
-    description = 'Explore this plugin for Acode, the extensible Android code editor.';
+    description = 'Explore this plugin for Acode, the extensible code editor for Android and iOS.';
     canonicalPath = `/plugin/${pluginMatch[1]}`;
   } else {
     const lastSegment = path.split('/').filter(Boolean).at(-1);
     const pageName = lastSegment ? pathToTitle(lastSegment) : 'Acode';
     title = lastSegment ? `${pageName} - Acode` : metadataConfig.fallback.title;
-    description = lastSegment ? `${pageName} on Acode, the extensible Android code editor.` : metadataConfig.fallback.description;
+    description = lastSegment ? `${pageName} on Acode, the extensible code editor for Android and iOS.` : metadataConfig.fallback.description;
   }
 
   return {
@@ -102,7 +102,7 @@ export function resolveRouteMetadata(pathname, origin = window.location.origin, 
     imageWidth: IMAGE_WIDTH,
     imageHeight: IMAGE_HEIGHT,
     imageType: 'image/png',
-    imageAlt: 'Acode - code, build, and run projects on Android',
+    imageAlt: 'Acode - code editor for Android, iPhone, and iPad',
     siteName: SITE_NAME,
     type: 'website',
   };

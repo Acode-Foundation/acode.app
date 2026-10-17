@@ -22,7 +22,9 @@ export default async function UpdatePluginEditor({ id }) {
         <div className='error-container'>
           <h1>Error</h1>
           <p>{plugin.error}</p>
-          <a href='/'>Go Home</a>
+          <a href='/' data-google-vignette='false'>
+            Go Home
+          </a>
         </div>
       </section>
     );

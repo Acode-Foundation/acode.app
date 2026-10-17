@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import { transformAsync } from '@babel/core';
 import Handlebars from 'handlebars';
 import { safeAccountRedirect } from '../../client/lib/appSource';
-import { isAdFreeRoute } from '../../shared/adPolicy';
+import { isAccountRoute, isAdFreeRoute } from '../../shared/adPolicy';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const compiled = new Map();
@@ -135,17 +135,26 @@ it('keeps successful website sign-in on-site even when the incoming redirect is 
   }
 });
 
-describe('ad-free account flows', () => {
+describe('ad-free home and account flows', () => {
   const accountPaths = ['/login', '/register', '/change-password', '/api-keys', '/logout', '/profile/edit', '/user/edit', '/oauth/google'];
 
-  it('omits the ad SDK from account documents while retaining it on public pages', () => {
+  it('omits the ad SDK from home and account documents while retaining it on other public pages', () => {
     const render = Handlebars.compile(fs.readFileSync(path.join(root, 'server/index.hbs'), 'utf8'));
-    for (const pathname of [...accountPaths, '/LOGIN', '/register/']) {
+    for (const pathname of [...accountPaths, '/LOGIN', '/register/', '/', '/index.htm', '/index.html', '/INDEX.HTML/']) {
       expect(render({ adsDisabled: isAdFreeRoute(pathname) })).not.toContain('adsbygoogle.js');
     }
-    for (const pathname of ['/', '/plugins', '/plugin/example', '/profile/7', '/login-guide']) {
+    for (const pathname of ['/plugins', '/plugin/example', '/profile/7', '/login-guide', '/index.html-guide']) {
       expect(render({ adsDisabled: isAdFreeRoute(pathname) })).toContain('adsbygoogle.js');
     }
+  });
+
+  it('keeps server-rendered landing pages free of the ad SDK', () => {
+    const render = Handlebars.compile(fs.readFileSync(path.join(root, 'server/landing.hbs'), 'utf8'));
+    const html = render({});
+    expect(html).not.toContain('adsbygoogle');
+    const homeLinks = html.match(/<a\b[^>]*href="\/"[^>]*>/g);
+    expect(homeLinks).toHaveLength(3);
+    for (const link of homeLinks) expect(link).toContain('data-google-vignette="false"');
   });
 
   it('does not create promotional banners or their rotation timers on account pages', async () => {
@@ -155,7 +164,7 @@ describe('ad-free account flows', () => {
     for (const pathname of accountPaths) {
       const banner = await loadClient(
         'client/components/announcementBanner/index.js',
-        { './style.scss': {}, 'res/shellular-logo.png': '', '../../../shared/adPolicy': { isAdFreeRoute } },
+        { './style.scss': {}, 'res/shellular-logo.png': '', '../../../shared/adPolicy': { isAccountRoute } },
         { location: { pathname }, document: { documentElement: { style: { setProperty } } }, tag, setInterval },
       );
       expect(banner.default()).toBeNull();
@@ -163,9 +172,17 @@ describe('ad-free account flows', () => {
     expect(setProperty).toHaveBeenCalledWith('--announcement-height', '0px');
     expect(tag).not.toHaveBeenCalled();
     expect(setInterval).not.toHaveBeenCalled();
+    expect(isAccountRoute('/')).toBe(false);
   });
 
-  it.each(['/', '/login'])('reloads across the ad boundary, including history navigation from %s', async (initialPath) => {
+  it.each([
+    ['/plugins', '/faqs', '/login?redirect=app&state=StateValue'],
+    ['/login', '/register?redirect=app&state=StateValue', '/plugins'],
+    ['/', '/index.html', '/plugins'],
+    ['/plugins', '/faqs', '/'],
+    ['/', '/index.html', '/login?redirect=app&state=StateValue'],
+    ['/login', '/register?redirect=app&state=StateValue', '/'],
+  ])('reloads when ad or account policy changes, including history navigation from %s', async (initialPath, samePolicyPath, destination) => {
     const location = new URL(initialPath, 'https://acode.app');
     location.reload = vi.fn();
     const history = {
@@ -176,15 +193,17 @@ describe('ad-free account flows', () => {
     const router = (
       await loadClient(
         'client/lib/Router.js',
-        { './appSource': { withAppSource: (href) => href }, '../../shared/adPolicy': { isAdFreeRoute } },
+        { './appSource': { withAppSource: (href) => href }, '../../shared/adPolicy': { isAccountRoute, isAdFreeRoute } },
         { location, window: { location, history }, document: { title: 'Acode' }, CustomEvent },
       )
     ).default;
     const render = vi.fn();
     router.add('/plugins', render);
+    router.add('/faqs', render);
+    router.add('/index.html', render);
     router.add('/register', render);
 
-    router.loadUrl(initialPath === '/' ? '/plugins' : '/register?redirect=app&state=StateValue');
+    router.loadUrl(samePolicyPath);
     expect(render).toHaveBeenCalledOnce();
     expect(location.reload).not.toHaveBeenCalled();
 
@@ -192,7 +211,6 @@ describe('ad-free account flows', () => {
     expect(location.reload).not.toHaveBeenCalled();
     expect(render).toHaveBeenCalledTimes(2);
 
-    const destination = initialPath === '/' ? '/login?redirect=app&state=StateValue' : '/plugins';
     router.loadUrl(destination);
     expect(location.pathname + location.search).toBe(destination);
     expect(location.reload).toHaveBeenCalledOnce();
@@ -208,6 +226,22 @@ describe('ad-free account flows', () => {
     expect(location.reload).not.toHaveBeenCalled();
     router.setUrl(destination);
     expect(location.reload).toHaveBeenCalledOnce();
+  });
+
+  it('leaves external links to the browser without changing SPA history', async () => {
+    const location = new URL('https://acode.app/');
+    location.reload = vi.fn();
+    const history = { pushState: vi.fn() };
+    const router = (
+      await loadClient(
+        'client/lib/Router.js',
+        { './appSource': { withAppSource: (href) => href }, '../../shared/adPolicy': { isAccountRoute, isAdFreeRoute } },
+        { location, window: { location, history }, document: { title: 'Acode' }, CustomEvent },
+      )
+    ).default;
+    router.loadUrl('https://example.com/docs');
+    expect(location.href).toBe('https://example.com/docs');
+    expect(history.pushState).not.toHaveBeenCalled();
   });
 });
 

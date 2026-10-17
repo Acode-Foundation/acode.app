@@ -45,15 +45,13 @@ export default function home() {
 
       <div className='home-hero'>
         <h1>
-          Code on{' '}
-          <span className='home-brand-word' role='img' aria-label='Android'>
+          Code{' '}
+          <span className='home-brand-word' role='img' aria-label='Anywhere'>
             <LogoA />
-            {'ndroid.'}
+            {'nywhere'}
           </span>
         </h1>
-        <p className='home-lede'>
-          An extensible, powerful and open-source code editor for Android, with a Linux terminal and AI agents. Coming soon to iOS.
-        </p>
+        <p className='home-lede'>A powerful, extensible, open-source code editor for Android and iOS.</p>
         <div className='home-actions'>
           <a className='home-btn home-btn-primary' href={PLAY_URL} target='_blank' rel='noopener'>
             <span className='icon googleplay' />
@@ -108,7 +106,7 @@ export default function home() {
             {'code'}
           </span>
         </h2>
-        <p>Free on Google Play and F-Droid. Coming soon to iOS. Open source.</p>
+        <p>For Android, iPhone, and iPad. Free on Android. iOS release coming soon.</p>
         <div className='home-actions'>
           <a className='home-btn home-btn-primary' href={PLAY_URL} target='_blank' rel='noopener'>
             <span className='icon googleplay' />
@@ -135,12 +133,12 @@ export default function home() {
 
 function IosInstallButton() {
   return (
-    <button type='button' className='home-btn home-btn-ghost home-btn-ios' disabled>
+    <button type='button' className='home-btn home-btn-primary home-btn-ios' disabled>
       <span className='home-btn-ios-label'>
-        <span className='icon ios' aria-hidden='true' />
+        <span className='icon app-store' aria-hidden='true' />
         App Store
       </span>
-      <span className='home-btn-ios-status'>soon</span>
+      <span className='home-btn-ios-status'>Coming soon</span>
     </button>
   );
 }

@@ -103,7 +103,7 @@ function getMetadata(pathname, origin = getPublicOrigin()) {
     const pageName = pathToTitle(lastSegment);
     return {
       title: `${pageName} - Acode`,
-      description: `${pageName}. Acode is a code editor with a full Alpine Linux terminal, AI coding support, and 250+ plugins.`,
+      description: `${pageName}. Acode is an extensible code editor for Android and iOS with a Linux terminal and community plugins.`,
     };
   }
 
@@ -118,7 +118,7 @@ function getHomeSchemas(origin) {
       '@type': 'SoftwareApplication',
       name: 'Acode',
       applicationCategory: 'DeveloperApplication',
-      operatingSystem: 'Android',
+      operatingSystem: ['Android', 'iOS', 'iPadOS'],
       description: FALLBACK_DESC,
       url: publicOrigin,
       image: publicUrl('/og/default.png', publicOrigin),
