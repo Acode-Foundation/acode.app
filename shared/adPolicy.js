@@ -1,6 +1,10 @@
-// Account flows must stay free of both advertising and promotional banners.
-function isAdFreeRoute(pathname) {
+// Account flows also omit the site's own promotional banners and upgrade button.
+function isAccountRoute(pathname) {
   return /^\/(?:login|register|logout|change-password|(?:profile|user)\/edit|oauth(?:\/.*)?)\/?$/i.test(pathname);
 }
 
-module.exports = { isAdFreeRoute };
+function isAdFreeRoute(pathname) {
+  return /^\/(?:index\.html?\/?)?$/i.test(pathname) || isAccountRoute(pathname);
+}
+
+module.exports = { isAccountRoute, isAdFreeRoute };

@@ -6,7 +6,7 @@ import { isIOSSource } from 'lib/appSource';
 import { gravatar } from 'lib/helpers';
 import digitalOceanLogo from 'res/digitalocean-icon.svg';
 import logo from 'res/logo.svg';
-import { isAdFreeRoute } from '../shared/adPolicy';
+import { isAccountRoute } from '../shared/adPolicy';
 
 const accountButtonRef = Ref();
 const userMenuRef = Ref();
@@ -19,7 +19,7 @@ export default ({ routes }) => (
     <header id='main-header' data-name='header'>
       <label attr-for='nav-menu-toggler' className='icon menu' />
       <nav>
-        <a className='logo' href='/'>
+        <a className='logo' href='/' data-google-vignette='false'>
           <img src={logo} alt='Acode' />
           <span className='text'>Acode</span>
         </a>
@@ -45,7 +45,7 @@ export default ({ routes }) => (
             <img src={logo} alt='Acode' />
             <span>Acode</span>
           </div>
-          <p className='footer-description'>An extensible, powerful and open-source code editor for Android.</p>
+          <p className='footer-description'>A powerful, extensible, open-source code editor for Android and iOS.</p>
           <div className='footer-social'>
             <a href='https://github.com/acode-foundation/acode' target='_blank' rel='noreferrer' title='GitHub'>
               <svg width='20' height='20' viewBox='0 0 24 24' fill='currentColor'>
@@ -212,7 +212,7 @@ export function addProButton(user) {
 
   const navUser = header.get('nav:last-of-type');
 
-  if (isIOSSource() || isAdFreeRoute(location.pathname)) {
+  if (isIOSSource() || isAccountRoute(location.pathname)) {
     navUser?.get('.get-pro-btn')?.remove();
     return;
   }

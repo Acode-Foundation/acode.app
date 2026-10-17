@@ -81,15 +81,18 @@ function baseSvg(content) {
 }
 
 async function logoBuffer(size) {
-  return sharp(logoPath).resize(size, size, { fit: 'contain' }).png().toBuffer();
+  return sharp(logoPath)
+    .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
 }
 
 async function renderDefaultOgImage() {
   return getCached('default', async () => {
     const svg = baseSvg(`
       <text x="86" y="180" fill="#ffffff" font-family="Arial, sans-serif" font-size="76" font-weight="700">Code anywhere.</text>
-      <text x="86" y="266" fill="#66b3ff" font-family="Arial, sans-serif" font-size="76" font-weight="700">Build anything.</text>
-      <text x="86" y="352" fill="#b8c2d8" font-family="Arial, sans-serif" font-size="29">Android code editor with Linux terminal and AI coding.</text>
+      <text x="86" y="266" fill="#66b3ff" font-family="Arial, sans-serif" font-size="76" font-weight="700">Android &amp; iOS.</text>
+      <text x="86" y="352" fill="#b8c2d8" font-family="Arial, sans-serif" font-size="29">Your projects, terminal, and plugins. In your pocket.</text>
       <g transform="translate(86 420)">
         <rect width="410" height="72" rx="36" fill="#3399ff"/>
         <text x="205" y="46" text-anchor="middle" fill="#07111f" font-family="Arial, sans-serif" font-size="27" font-weight="700">Open source, 250+ plugins</text>

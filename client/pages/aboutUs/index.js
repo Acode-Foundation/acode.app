@@ -22,9 +22,9 @@ export default async function AboutUs() {
         <span className='section-label'>The Product</span>
         <h2>About Acode</h2>
         <p className='section-body'>
-          Acode is a powerful, extensible, and open-source code editor for Android. It brings a full Alpine Linux terminal, AI coding assistants
-          (Claude Code, Codex, OpenCode), and 250+ community plugins to your phone. Build React, Next.js, Node.js, and Python projects with Git and
-          SSH right from your Android device.
+          Acode is a powerful, extensible, open-source code editor for Android and iOS. Edit projects, preview websites and Markdown, and make your
+          workspace your own with themes and community plugins. Use a full Alpine Linux terminal and AI coding assistants alongside your projects on
+          Android, iPhone, and iPad.
         </p>
       </div>
 
@@ -33,7 +33,7 @@ export default async function AboutUs() {
         <h2>Foxbiz Software</h2>
         <p className='section-body'>
           <strong style='color: #ffffff'>Foxbiz Software Pvt. Ltd.</strong> is the company behind Acode. We build developer tools for coding on mobile
-          devices, starting with Android.
+          devices, including Android, iPhone, and iPad.
         </p>
       </div>
 

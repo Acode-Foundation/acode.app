@@ -68,6 +68,7 @@ describe('server-rendered metadata', () => {
     expect(metadata.schema.url).toBe('https://dev.acode.app');
     expect(metadata.schema.image).toBe('https://dev.acode.app/og/default.png');
     expect(metadata.orgSchema.logo).toBe('https://dev.acode.app/logo-512.png');
+    expect(metadata.schema.operatingSystem).toEqual(['Android', 'iOS', 'iPadOS']);
   });
 
   it('renders user-name profile metadata with the canonical profile URL and default image', () => {

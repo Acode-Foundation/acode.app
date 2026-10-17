@@ -1,7 +1,7 @@
 {
   "fallback": {
-    "title": "Acode - Code Editor with Linux Terminal & AI Coding",
-    "description": "Acode is a code editor with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Build with Node.js, React, Next.js, Python, Git, and 250+ plugins. Open source with 3.6M+ downloads."
+    "title": "Acode - Code Editor for Android & iOS",
+    "description": "Acode is an open-source code editor for Android and iOS. Edit projects, preview websites, use a Linux terminal, and extend your workspace with community plugins."
   },
   "pluginsFallback": {
     "title": "Acode Plugins - Community Extensions",
@@ -9,8 +9,8 @@
   },
   "routes": {
     "/": {
-      "title": "Acode - Code Editor with Linux Terminal & AI Coding",
-      "description": "Acode is a code editor with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Build with Node.js, React, Next.js, Python, Git, and 250+ plugins. Open source with 3.6M+ downloads."
+      "title": "Acode - Code Editor for Android & iOS",
+      "description": "Acode is an open-source code editor for Android and iOS. Edit projects, preview websites, use a Linux terminal, and extend your workspace with community plugins."
     },
     "/plugins": {
       "title": "Acode Plugins - {{count}} Community Extensions",
@@ -18,23 +18,23 @@
     },
     "/faqs": {
       "title": "Frequently Asked Questions - Acode Code Editor",
-      "description": "Find answers about Acode, including AI coding, Linux terminal setup, web development, Git, SSH, plugins, and pricing."
+      "description": "Find answers about Acode for Android and iOS, including platform support, Linux terminal setup, plugins, web development, and pricing."
     },
     "/sponsors": {
       "title": "Sponsors - Support Acode Development",
-      "description": "Meet the people and companies supporting Acode, the open-source Android code editor with Linux terminal and AI coding capabilities."
+      "description": "Meet the people and companies supporting Acode, the open-source code editor for Android and iOS with Linux terminal and AI coding capabilities."
     },
     "/pro": {
       "title": "Acode Pro - Premium Code Editor Features",
-      "description": "Get premium features in Acode, the Android code editor with a Linux terminal and AI coding support."
+      "description": "Get premium features in Acode, the code editor for Android and iOS with a Linux terminal and AI coding support."
     },
     "/policy": {
       "title": "Privacy Policy - Acode Code Editor",
-      "description": "Read the privacy policy for Acode, the open-source Android code editor."
+      "description": "Read the privacy policy for Acode, the open-source code editor for Android and iOS."
     },
     "/terms": {
       "title": "Terms of Service - Acode Code Editor",
-      "description": "Read the terms of service for Acode, the open-source Android code editor."
+      "description": "Read the terms of service for Acode, the open-source code editor for Android and iOS."
     },
     "/refund": {
       "title": "Refund Policy - Acode Code Editor",
