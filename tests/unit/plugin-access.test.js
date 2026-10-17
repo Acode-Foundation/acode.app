@@ -18,10 +18,12 @@ let razorpayPayment;
 let router;
 let apiKeyAuth;
 let sendEmail;
+let apiKeyEntity;
 
 beforeEach(() => {
   apiKeyAuth = null;
   sendEmail = vi.fn().mockResolvedValue();
+  apiKeyEntity = { addPlugin: vi.fn().mockReturnValue(true) };
   plugin = {
     ID: 'id',
     NAME: 'name',
@@ -79,7 +81,7 @@ beforeEach(() => {
   razorpayPayment = vi.fn().mockResolvedValue({ status: 'captured' });
   const dependencies = {
     'node:crypto': {},
-    'node:fs': {},
+    'node:fs': { promises: { writeFile: vi.fn() } },
     'node:path': path,
     jszip: JSZip,
     moment: {},
@@ -90,7 +92,7 @@ beforeEach(() => {
     '../entities/purchaseOrder': order,
     '../entities/download': download,
     '../entities/pluginScan': {},
-    '../entities/apiKey': { addPlugin: vi.fn() },
+    '../entities/apiKey': apiKeyEntity,
     '../badWords.json': [],
     '../lib/helpers': helpers,
     '../lib/apiKeyAuth': { getApiKeyAuth: async () => apiKeyAuth },
@@ -99,7 +101,7 @@ beforeEach(() => {
     '../lib/sendEmail': sendEmail,
     '../lib/exchangeRates': { convertPrice: async (amount) => ({ amount: amount / 10, currency: 'USD', symbol: '$' }) },
     '../lib/modeRegex': {},
-    '../lib/pluginScanner': { createKeyedLock: () => (_key, task) => task() },
+    '../lib/pluginScanner': { createKeyedLock: () => (_key, task) => task(), fileInDir: (dir, name) => path.join(dir, name) },
     '../lib/db': {},
     '../lib/pluginLicense': { LICENSES: [], normalizeLicense: (license) => license },
     '../lib/rateLimits': {
@@ -525,6 +527,19 @@ describe('publishing with an API key', () => {
     await publish({ price: 0 }, { method: 'post', body, files: { 'changelogs.md': 'From zip' } });
     const changelogColumns = plugin.insert.mock.calls[0].filter(([column]) => column === 'changelogs');
     expect(changelogColumns).toEqual([['changelogs', expected]]);
+  });
+
+  it.each([
+    ['adds the new plugin to the key', true, undefined],
+    ['warns when the key is full', false, expect.stringMatching(/already covers 100 plugins.*Create a new key/)],
+  ])('after a key submits a plugin, %s', async (_case, added, warning) => {
+    Object.assign(plugin, { insert: vi.fn() });
+    apiKeyEntity.addPlugin.mockReturnValue(added);
+    apiKeyAuth = keyFor([], [apiKeyLib.SCOPE_PLUGIN_CREATE, apiKeyLib.SCOPE_PLUGIN_PUBLISH]);
+    plugin.get.mockResolvedValueOnce([]);
+    const res = await publish({ price: 0 }, { method: 'post' });
+    expect(apiKeyEntity.addPlugin).toHaveBeenCalledWith(1, paidPlugin.id, apiKeyLib.MAX_PLUGINS_PER_KEY);
+    expect(res.send.mock.calls[0][0]).toEqual({ message: 'Plugin uploaded successfully', ...(warning && { warning }) });
   });
 
   it('needs the opt-in submit permission to create plugins', async () => {

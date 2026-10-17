@@ -713,11 +713,16 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
     await savePlugin(pluginId, pluginZip.data, icon);
 
     // A key that can publish updates keeps working for the plugin it just submitted.
+    let keyWarning;
     if (apiKey && hasScope(apiKey.key, SCOPE_PLUGIN_PUBLISH)) {
+      let added = false;
       try {
-        ApiKey.addPlugin(apiKey.key.id, pluginId, MAX_PLUGINS_PER_KEY);
+        added = ApiKey.addPlugin(apiKey.key.id, pluginId, MAX_PLUGINS_PER_KEY);
       } catch (error) {
         console.error('Failed to add submitted plugin to API key:', error.message);
+      }
+      if (!added) {
+        keyWarning = `This API key already covers ${MAX_PLUGINS_PER_KEY} plugins, so it can't publish updates to "${pluginId}". Create a new key that includes it.`;
       }
     }
 
@@ -725,6 +730,9 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
     if (skuErrors.length) {
       response.warning = 'Plugin created but Google Play SKU registration had errors';
       response.skuErrors = skuErrors;
+    }
+    if (keyWarning) {
+      response.warning = response.warning ? `${response.warning}. ${keyWarning}` : keyWarning;
     }
     res.send(response);
     notifyApiKeyUse(apiKey, req, {
