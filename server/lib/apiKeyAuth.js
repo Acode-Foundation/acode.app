@@ -54,7 +54,7 @@ async function resolve(token) {
   if (!user || user.role === User.ROLE_DELETED) return INVALID;
 
   // Admin powers are never available through a key.
-  return { key, user: { ...user, isAdmin: false, authType: 'api_key' } };
+  return { key, user: { ...user, role: user.role === 'admin' ? 'user' : user.role, isAdmin: false, authType: 'api_key' } };
 }
 
 module.exports = { getApiKeyAuth };

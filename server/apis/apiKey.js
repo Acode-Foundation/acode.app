@@ -45,6 +45,7 @@ route.get('/', async (req, res) => {
   try {
     const keys = ApiKey.listForUser(req.keyOwner.id).map(presentKey);
     const plugins = await ownedPlugins(req.keyOwner.id);
+    res.set('Cache-Control', 'no-store');
     res.send({
       keys,
       plugins: plugins.map(({ id, name }) => ({ id, name })),
@@ -101,6 +102,7 @@ route.post('/', apiKeyCreateLimiter, async (req, res) => {
     if (checked.error) return res.status(checked.status || 400).send({ error: checked.error });
     const { spec } = checked;
 
+    const invalidCode = { error: 'Invalid or expired confirmation code. Codes only work for the exact key settings they were sent for.' };
     const code = req.body?.code;
     const [pending] = await Otp.for('internal').get([Otp.EMAIL, req.confirmationKey]);
     const sentAt = Date.parse(pending?.created_at);
@@ -112,18 +114,14 @@ route.post('/', apiKeyCreateLimiter, async (req, res) => {
       Date.now() - sentAt >= codeLifetime ||
       !matches(codeHash(req.confirmationKey, spec, code), pending?.otp)
     ) {
-      return res.status(400).send({ error: 'Invalid or expired confirmation code. Codes only work for the exact key settings they were sent for.' });
+      return res.status(400).send(invalidCode);
     }
-    // Single use: delete before creating so a replay can't mint a second key.
-    await Otp.delete([
-      [Otp.EMAIL, req.confirmationKey],
-      [Otp.OTP, pending.otp],
-    ]);
 
     const token = generateApiKey();
     const now = Date.now();
     const createdAt = new Date(now).toISOString();
-    const id = ApiKey.createWithinLimit(
+    // Consumes the code in the same transaction as the insert, so it can only ever mint one key.
+    const created = ApiKey.createWithinLimit(
       {
         userId: req.keyOwner.id,
         name: spec.name,
@@ -135,8 +133,11 @@ route.post('/', apiKeyCreateLimiter, async (req, res) => {
         expiresAt: new Date(now + spec.lifetimeDays * DAY).toISOString(),
       },
       MAX_ACTIVE_KEYS,
+      { email: req.confirmationKey, otp: pending.otp },
     );
-    if (id === null) return res.status(400).send({ error: activeLimitMessage() });
+    if (created.error === 'limit') return res.status(400).send({ error: activeLimitMessage() });
+    if (created.error) return res.status(400).send(invalidCode);
+    const { id } = created;
 
     const [key] = ApiKey.listForUser(req.keyOwner.id).filter((row) => row.id === id);
     res.set('Cache-Control', 'no-store');

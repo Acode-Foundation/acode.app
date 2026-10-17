@@ -97,7 +97,6 @@ describe('API key authentication and management', () => {
   let ApiKey;
   let user;
   let users;
-  let otpRows;
   let sendEmail;
   let router;
   let getApiKeyAuth;
@@ -105,11 +104,13 @@ describe('API key authentication and management', () => {
   beforeEach(() => {
     db = new Database(':memory:');
     db.pragma('foreign_keys = ON');
-    db.exec('CREATE TABLE user (id INTEGER PRIMARY KEY); INSERT INTO user VALUES (7), (8);');
+    db.exec(`
+      CREATE TABLE user (id INTEGER PRIMARY KEY); INSERT INTO user VALUES (7), (8);
+      CREATE TABLE otp (id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE, otp TEXT NOT NULL, created_at TEXT);
+    `);
     ApiKey = loadApiKeyEntity(db);
     user = { id: 7, name: 'Dev', email: 'dev@example.com', role: 'user' };
     users = new Map([[7, { ...user }]]);
-    otpRows = new Map();
     sendEmail = vi.fn();
 
     const User = {
@@ -125,13 +126,17 @@ describe('API key authentication and management', () => {
       for() {
         return this;
       },
-      get: vi.fn(async ([, key]) => (otpRows.has(key) ? [otpRows.get(key)] : [])),
+      // Backed by the same database the entity consumes codes from.
+      get: vi.fn(async ([, key]) => db.prepare('SELECT * FROM otp WHERE email = ?').all(key)),
       insert: vi.fn(async (...values) => {
         const row = Object.fromEntries(values);
-        otpRows.set(row.email, row);
+        db.prepare('INSERT INTO otp (email, otp, created_at) VALUES (?, ?, ?)').run(row.email, row.otp, row.created_at);
       }),
-      update: vi.fn(async (values, [, key]) => otpRows.set(key, { ...otpRows.get(key), ...Object.fromEntries(values) })),
-      delete: vi.fn(async ([[, key]]) => otpRows.delete(key)),
+      update: vi.fn(async (values, [, key]) => {
+        const row = Object.fromEntries(values);
+        db.prepare('UPDATE otp SET otp = ?, created_at = ? WHERE email = ?').run(row.otp, row.created_at, key);
+      }),
+      delete: vi.fn(async ([[, key], [, otp]]) => db.prepare('DELETE FROM otp WHERE email = ? AND otp = ?').run(key, otp)),
     };
     const Plugin = {
       ID: 'id',
@@ -204,6 +209,33 @@ describe('API key authentication and management', () => {
     expect(JSON.stringify(listed.body)).not.toContain(stored.token_hash);
   });
 
+  it('mints one key from one code even when requests race', async () => {
+    await request('post', '/confirmation-code', validSpec);
+    const code = getCode();
+    const responses = await Promise.all(Array.from({ length: 5 }, () => request('post', '/', { ...validSpec, code })));
+    expect(responses.map((res) => res.statusCode).sort()).toEqual([200, 400, 400, 400, 400]);
+    expect(db.prepare('SELECT COUNT(*) AS count FROM api_key').get().count).toBe(1);
+    expect(db.prepare('SELECT COUNT(*) AS count FROM otp').get().count).toBe(0);
+  });
+
+  it('keeps the code when the key limit is hit so it can be used after revoking one', async () => {
+    await request('post', '/confirmation-code', validSpec);
+    const code = getCode();
+    for (let i = 0; i < apiKeyLib.MAX_ACTIVE_KEYS; i++) insertKey({ name: `k${i}` });
+    const limited = await request('post', '/', { ...validSpec, code });
+    expect(limited.statusCode).toBe(400);
+    expect(limited.body.error).toMatch(/at most/);
+    expect(db.prepare('SELECT COUNT(*) AS count FROM otp').get().count).toBe(1);
+
+    const [oldest] = ApiKey.listForUser(7);
+    ApiKey.revoke(oldest.id, 7);
+    expect((await request('post', '/', { ...validSpec, code })).statusCode).toBe(200);
+  });
+
+  it('marks the key list uncacheable', async () => {
+    expect((await request('get', '/')).headers['Cache-Control']).toBe('no-store');
+  });
+
   it('rejects plugins the user does not own', async () => {
     const res = await request('post', '/confirmation-code', { ...validSpec, pluginIds: ['someone.else'] });
     expect(res.statusCode).toBe(400);
@@ -239,6 +271,7 @@ describe('API key authentication and management', () => {
     const auth = await getApiKeyAuth(bearer(token));
     expect(auth.user).toMatchObject({ id: 7, authType: 'api_key' });
     expect(auth.user.isAdmin).toBe(false);
+    expect(auth.user.role).toBe('user');
     expect(auth.key.plugin_ids).toEqual(['acode.plugin']);
     expect(ApiKey.listForUser(7)[0].last_used_at).toBeTruthy();
   });
@@ -258,7 +291,7 @@ describe('API key authentication and management', () => {
   });
 
   async function createKey() {
-    otpRows.clear();
+    db.exec('DELETE FROM otp');
     await request('post', '/confirmation-code', validSpec);
     return (await request('post', '/', { ...validSpec, code: getCode() })).body.token;
   }

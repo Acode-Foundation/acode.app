@@ -57,21 +57,31 @@ class ApiKey extends Entity {
   }
 
   /**
-   * Inserts a key unless the user already has `max` unexpired keys. The count and
-   * insert share one transaction so parallel requests can't exceed the limit.
-   * @returns {number | null} the new row id, or null when the limit is reached
+   * Inserts a key unless the user already has `max` unexpired keys. With `confirmation`,
+   * it also consumes that OTP row, which must still exist. The limit check, the OTP
+   * consumption and the insert share one immediate transaction, so concurrent requests
+   * (even from other processes) can't exceed the limit or reuse a code, and a request
+   * that hits the limit keeps its code.
+   * @param {object} key
+   * @param {number} max
+   * @param {{ email: string, otp: string }} [confirmation] OTP row to consume
+   * @returns {{ id: number } | { error: 'limit' | 'confirmation' }}
    */
-  createWithinLimit({ userId, name, tokenHash, tokenPrefix, scopes, pluginIds, createdAt, expiresAt }, max) {
+  createWithinLimit({ userId, name, tokenHash, tokenPrefix, scopes, pluginIds, createdAt, expiresAt }, max, confirmation) {
     const create = db.transaction(() => {
       const { count } = db.prepare(`SELECT COUNT(*) AS count FROM ${this.table} WHERE user_id = ? AND expires_at > ?`).get(userId, createdAt);
-      if (count >= max) return null;
+      if (count >= max) return { error: 'limit' };
+      if (confirmation) {
+        const consumed = db.prepare('DELETE FROM otp WHERE email = ? AND otp = ?').run(confirmation.email, confirmation.otp).changes;
+        if (consumed !== 1) return { error: 'confirmation' };
+      }
       const result = db
         .prepare(
           `INSERT INTO ${this.table} (user_id, name, token_hash, token_prefix, scopes, plugin_ids, created_at, expires_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(userId, name, tokenHash, tokenPrefix, JSON.stringify(scopes), JSON.stringify(pluginIds), createdAt, expiresAt);
-      return Number(result.lastInsertRowid);
+      return { id: Number(result.lastInsertRowid) };
     });
     return create.immediate();
   }
