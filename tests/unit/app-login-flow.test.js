@@ -519,6 +519,7 @@ async function start() {
     {
       'express-rate-limit': rateLimit,
       './helpers': helpers,
+      './apiKeyAuth': { getApiKeyAuth: async () => null },
     },
     { process: { env: {} } },
   );

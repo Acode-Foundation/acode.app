@@ -5,6 +5,8 @@ const db = require('../lib/db');
 const { revokeAppleToken, logAppleError } = require('../lib/appleOAuth');
 const { encryptPassword } = require('../password');
 const Entity = require('./entity');
+// Loaded for its table: account deletion revokes the user's API keys.
+require('./apiKey');
 
 config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -113,7 +115,12 @@ class User extends Entity {
     const anonymize = db.transaction(() => {
       db.prepare('DELETE FROM login WHERE user_id = ?').run(row.id);
       db.prepare('DELETE FROM app_auth_code WHERE user_id = ?').run(row.id);
-      db.prepare('DELETE FROM otp WHERE email = ? OR email LIKE ?').run(row.email, `account-delete:${row.id}:%`);
+      db.prepare('DELETE FROM api_key WHERE user_id = ?').run(row.id);
+      db.prepare('DELETE FROM otp WHERE email = ? OR email LIKE ? OR email LIKE ?').run(
+        row.email,
+        `account-delete:${row.id}:%`,
+        `api-key:${row.id}:%`,
+      );
       db.prepare(
         `UPDATE payment_method
          SET paypal_email = NULL,

@@ -81,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.add('/logout', logout);
   Router.add('/register', (_params, query) => loadModule('account', query));
   Router.add('/change-password', (_params, query) => loadModule('changePassword', query));
+  Router.add('/api-keys', () => loadModule('apiKeys'));
   Router.add('/publish', (_params, query) => loadModule('publishPlugin', query));
   Router.add('/plugin/:id/:section?', (params, queries) => loadModule('plugin', { ...params, ...queries }));
   Router.add('/user/:userId?', () => Router.loadUrl(window.location.pathname.replace('/user', '/profile') + window.location.search));

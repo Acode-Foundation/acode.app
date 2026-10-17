@@ -9,6 +9,7 @@ vm.runInNewContext(fs.readFileSync(new URL('../../server/lib/rateLimits.js', imp
   require(name) {
     if (name === 'express-rate-limit') return rateLimit;
     if (name === './helpers') return { getLoginSession: async () => null };
+    if (name === './apiKeyAuth') return { getApiKeyAuth: async () => null };
     throw new Error(`Unmocked dependency: ${name}`);
   },
 });

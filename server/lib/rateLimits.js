@@ -1,5 +1,6 @@
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const { getLoginSession } = require('./helpers');
+const { getApiKeyAuth } = require('./apiKeyAuth');
 
 /**
  * Bucket key for a request. Signed-in users are keyed by account, so developers
@@ -15,13 +16,24 @@ function createUserOrIpKey(lookupSession) {
   };
 }
 
+/**
+ * API-key requests are bucketed by the key owner, so CI runners that share an IP
+ * don't throttle each other. Requests with a rejected key fall back to the IP.
+ * @param {object} req
+ */
+async function getRequesterSession(req) {
+  const apiKey = await getApiKeyAuth(req);
+  if (apiKey) return apiKey.key ? { user_id: apiKey.key.user_id } : null;
+  return getLoginSession(req);
+}
+
 function limiter(limit, windowMinutes, options = {}) {
   return rateLimit({
     windowMs: windowMinutes * 60 * 1000,
     limit,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: createUserOrIpKey(getLoginSession),
+    keyGenerator: createUserOrIpKey(getRequesterSession),
     message: { error: 'Too many requests, please try again later.' },
     ...options,
   });
@@ -43,6 +55,8 @@ module.exports = {
   appleUnlinkLimiter: limiter(5, 10),
   accountDeletionCodeLimiter: limiter(5, 10),
   accountDeletionLimiter: limiter(5, 10),
+  apiKeyCodeLimiter: limiter(5, 10),
+  apiKeyCreateLimiter: limiter(10, 10),
   // Each upload is unzipped and run through the plugin scanner.
   pluginUploadLimiter: limiter(10, 15),
   // Admin moderation and deletion touch plugin files on disk.

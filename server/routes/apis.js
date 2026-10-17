@@ -6,6 +6,7 @@ const apis = Router();
 
 apis.use('/user', require('../apis/user'));
 apis.use('/account', require('../apis/account'));
+apis.use('/api-keys', require('../apis/apiKey'));
 apis.use('/login', require('../apis/login'));
 apis.use(['/plugin', '/plugins'], require('../apis/plugin'));
 apis.use('/password', require('../apis/password'));
