@@ -13,6 +13,7 @@ const PLUGINS_PATH = '/plugins';
 const INDEX_ROBOTS = 'index, follow';
 const NOINDEX_ROBOTS = 'noindex, follow';
 const PROFILE_PATH_PATTERN = /^\/profile(?:\/|$)/i;
+const NOINDEX_PATH_PATTERN = /^\/api-keys$/i;
 
 let latestRouteMetadataRequest = 0;
 let latestProfileMetadataRequest = 0;
@@ -95,7 +96,7 @@ export function resolveRouteMetadata(pathname, origin = window.location.origin, 
   return {
     title,
     description,
-    robots: isProfilePath(path) ? NOINDEX_ROBOTS : INDEX_ROBOTS,
+    robots: isProfilePath(path) || NOINDEX_PATH_PATTERN.test(path) ? NOINDEX_ROBOTS : INDEX_ROBOTS,
     canonicalUrl: absoluteUrl(canonicalPath, origin),
     imageUrl: absoluteUrl(DEFAULT_IMAGE_PATH, origin),
     imageWidth: IMAGE_WIDTH,

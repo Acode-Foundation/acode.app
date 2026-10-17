@@ -1,6 +1,6 @@
 // Account flows also omit the site's own promotional banners and upgrade button.
 function isAccountRoute(pathname) {
-  return /^\/(?:login|register|logout|change-password|(?:profile|user)\/edit|oauth(?:\/.*)?)\/?$/i.test(pathname);
+  return /^\/(?:login|register|logout|change-password|api-keys|(?:profile|user)\/edit|oauth(?:\/.*)?)\/?$/i.test(pathname);
 }
 
 function isAdFreeRoute(pathname) {

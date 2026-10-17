@@ -136,7 +136,7 @@ it('keeps successful website sign-in on-site even when the incoming redirect is 
 });
 
 describe('ad-free home and account flows', () => {
-  const accountPaths = ['/login', '/register', '/change-password', '/logout', '/profile/edit', '/user/edit', '/oauth/google'];
+  const accountPaths = ['/login', '/register', '/change-password', '/api-keys', '/logout', '/profile/edit', '/user/edit', '/oauth/google'];
 
   it('omits the ad SDK from home and account documents while retaining it on other public pages', () => {
     const render = Handlebars.compile(fs.readFileSync(path.join(root, 'server/index.hbs'), 'utf8'));

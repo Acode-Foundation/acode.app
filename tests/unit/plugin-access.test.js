@@ -3,6 +3,8 @@ import path from 'node:path';
 import vm from 'node:vm';
 import Database from 'better-sqlite3';
 import { Router } from 'express';
+import JSZip from 'jszip';
+import * as apiKeyLib from '../../server/lib/apiKey';
 
 const filename = path.resolve(import.meta.dirname, '../../server/apis/plugin.js');
 const source = fs.readFileSync(filename, 'utf8');
@@ -14,8 +16,14 @@ let helpers;
 let googlePurchase;
 let razorpayPayment;
 let router;
+let apiKeyAuth;
+let sendEmail;
+let apiKeyEntity;
 
 beforeEach(() => {
+  apiKeyAuth = null;
+  sendEmail = vi.fn().mockResolvedValue();
+  apiKeyEntity = { addPlugin: vi.fn().mockReturnValue(true) };
   plugin = {
     ID: 'id',
     NAME: 'name',
@@ -64,6 +72,8 @@ beforeEach(() => {
   };
   helpers = {
     getLoggedInUser: vi.fn().mockResolvedValue(null),
+    getWebLoggedInUser: vi.fn().mockResolvedValue(null),
+    getPluginSKU: (id) => `plugin_${id}`,
     detectUserCurrency: () => ({ code: 'USD' }),
     formatAmount: (amount) => amount.toFixed(2),
   };
@@ -71,9 +81,9 @@ beforeEach(() => {
   razorpayPayment = vi.fn().mockResolvedValue({ status: 'captured' });
   const dependencies = {
     'node:crypto': {},
-    'node:fs': {},
+    'node:fs': { promises: { writeFile: vi.fn() } },
     'node:path': path,
-    jszip: {},
+    jszip: JSZip,
     moment: {},
     express: { Router },
     googleapis: { google: { androidpublisher: () => ({ purchases: { products: { get: googlePurchase } } }) } },
@@ -82,13 +92,16 @@ beforeEach(() => {
     '../entities/purchaseOrder': order,
     '../entities/download': download,
     '../entities/pluginScan': {},
+    '../entities/apiKey': apiKeyEntity,
     '../badWords.json': [],
     '../lib/helpers': helpers,
+    '../lib/apiKeyAuth': { getApiKeyAuth: async () => apiKeyAuth },
+    '../lib/apiKey': apiKeyLib,
     '../lib/razorpay': () => ({ payments: { fetch: razorpayPayment } }),
-    '../lib/sendEmail': vi.fn(),
+    '../lib/sendEmail': sendEmail,
     '../lib/exchangeRates': { convertPrice: async (amount) => ({ amount: amount / 10, currency: 'USD', symbol: '$' }) },
     '../lib/modeRegex': {},
-    '../lib/pluginScanner': { createKeyedLock: () => (_key, task) => task() },
+    '../lib/pluginScanner': { createKeyedLock: () => (_key, task) => task(), fileInDir: (dir, name) => path.join(dir, name) },
     '../lib/db': {},
     '../lib/pluginLicense': { LICENSES: [], normalizeLicense: (license) => license },
     '../lib/rateLimits': {
@@ -404,5 +417,148 @@ describe('plugin list query parsing', () => {
     expect(plugin.get.mock.calls.at(-1)[2]).toMatchObject({ page: 2, limit: 30 });
     await request('{/:pluginId}', { query: { page: '-1', limit: 'abc' } });
     expect(plugin.get.mock.calls.at(-1)[2]).toMatchObject({ page: undefined, limit: undefined });
+  });
+});
+
+describe('publishing with an API key', () => {
+  const owner = { id: 2, name: 'Dev', email: 'dev@example.com', isAdmin: false, authType: 'api_key' };
+  const keyFor = (pluginIds, scopes = [apiKeyLib.SCOPE_PLUGIN_PUBLISH]) => ({
+    key: { id: 1, user_id: 2, name: 'Release <CI>', token_prefix: 'acode_Ab12', scopes, plugin_ids: pluginIds },
+    user: owner,
+  });
+
+  beforeEach(() => {
+    plugin.get.mockResolvedValue([{ ...paidPlugin, version: '1.0.0', name: 'Test', price: 100 }]);
+  });
+
+  async function publish(manifest, { method = 'put', authorization = 'Bearer acode_key', body = {}, files = {} } = {}) {
+    const zip = new JSZip();
+    zip.file('plugin.json', JSON.stringify({ id: paidPlugin.id, name: 'Test', main: 'main.js', version: '0.9.0', price: 100, ...manifest }));
+    zip.file('icon.png', 'icon');
+    zip.file('readme.md', '# Test');
+    for (const [name, content] of Object.entries(files)) zip.file(name, content);
+    const req = {
+      headers: { authorization },
+      ip: '203.0.113.9',
+      files: { plugin: { data: await zip.generateAsync({ type: 'nodebuffer' }) } },
+      body,
+    };
+    const res = { statusCode: 200, send: vi.fn() };
+    res.status = vi.fn((code) => {
+      res.statusCode = code;
+      return res;
+    });
+    const route = router.stack.find((layer) => layer.route?.path === '/' && layer.route.methods[method]).route;
+    await route.stack.at(-1).handle(req, res);
+    return res;
+  }
+
+  it('passes a rejected key error through without falling back to the session', async () => {
+    apiKeyAuth = { status: 401, error: 'Invalid API key.' };
+    helpers.getWebLoggedInUser.mockResolvedValue(owner);
+    expect((await publish()).statusCode).toBe(401);
+    expect(helpers.getWebLoggedInUser).not.toHaveBeenCalled();
+  });
+
+  it('requires the publish scope', async () => {
+    apiKeyAuth = keyFor([paidPlugin.id], []);
+    expect((await publish()).statusCode).toBe(403);
+  });
+
+  it('only publishes plugins the key was created for', async () => {
+    apiKeyAuth = keyFor(['other.plugin']);
+    const res = await publish();
+    expect(res.statusCode).toBe(403);
+    expect(res.send.mock.calls[0][0].error).toMatch(/cannot publish/);
+  });
+
+  it('explains that keys cannot submit plugins that do not exist yet', async () => {
+    apiKeyAuth = keyFor(['other.plugin']);
+    plugin.get.mockResolvedValue([]);
+    const res = await publish();
+    expect(res.statusCode).toBe(403);
+    expect(res.send.mock.calls[0][0]).toMatchObject({ code: 'plugin_not_found', error: expect.stringMatching(/doesn't exist yet/) });
+  });
+
+  it('refuses price changes', async () => {
+    apiKeyAuth = keyFor([paidPlugin.id]);
+    expect((await publish({ price: 200 })).statusCode).toBe(403);
+    expect((await publish({ price: 0 })).statusCode).toBe(403);
+  });
+
+  it('lets an allowed key through to the normal update checks', async () => {
+    apiKeyAuth = keyFor([paidPlugin.id]);
+    const res = await publish();
+    expect(res.statusCode).toBe(400);
+    expect(res.send.mock.calls[0][0].error).toMatch(/greater than the current version/);
+    expect(helpers.getWebLoggedInUser).not.toHaveBeenCalled();
+  });
+
+  it('emails the owner, naming the key and IP, when a key updates a plugin', async () => {
+    Object.assign(plugin, { PRICE: 'price', DESCRIPTION: 'description', update: vi.fn() });
+    apiKeyAuth = keyFor([paidPlugin.id]);
+    const res = await publish({ version: '1.0.0' });
+    expect(res.statusCode).toBe(200);
+    await vi.waitFor(() => expect(sendEmail).toHaveBeenCalledOnce());
+    const [to, , subject, html] = sendEmail.mock.calls[0];
+    expect(to).toBe(owner.email);
+    expect(subject).toContain('with an API key');
+    expect(html).toContain('Release &lt;CI&gt;');
+    expect(html).toContain('acode_Ab12');
+    expect(html).toContain('203.0.113.9');
+  });
+
+  it('does not send key notices for website uploads', async () => {
+    Object.assign(plugin, { PRICE: 'price', DESCRIPTION: 'description', update: vi.fn() });
+    helpers.getWebLoggedInUser.mockResolvedValue(owner);
+    const res = await publish({ version: '1.0.0' }, { authorization: undefined });
+    expect(res.send.mock.calls[0][0]).toEqual({ message: 'Plugin updated successfully' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['the uploaded text over the zip file', { changelogs: 'From CI' }, 'From CI'],
+    ['the zip file when no text is uploaded', {}, 'From zip'],
+  ])('records one changelog for a new plugin, preferring %s', async (_case, body, expected) => {
+    Object.assign(plugin, { CHANGELOGS: 'changelogs', insert: vi.fn() });
+    apiKeyAuth = keyFor([], [apiKeyLib.SCOPE_PLUGIN_CREATE]);
+    plugin.get.mockResolvedValueOnce([]);
+    await publish({ price: 0 }, { method: 'post', body, files: { 'changelogs.md': 'From zip' } });
+    const changelogColumns = plugin.insert.mock.calls[0].filter(([column]) => column === 'changelogs');
+    expect(changelogColumns).toEqual([['changelogs', expected]]);
+  });
+
+  it.each([
+    ['adds the new plugin to the key', true, undefined],
+    ['warns when the key is full', false, expect.stringMatching(/already covers 100 plugins.*Create a new key/)],
+  ])('after a key submits a plugin, %s', async (_case, added, warning) => {
+    Object.assign(plugin, { insert: vi.fn() });
+    apiKeyEntity.addPlugin.mockReturnValue(added);
+    apiKeyAuth = keyFor([], [apiKeyLib.SCOPE_PLUGIN_CREATE, apiKeyLib.SCOPE_PLUGIN_PUBLISH]);
+    plugin.get.mockResolvedValueOnce([]);
+    const res = await publish({ price: 0 }, { method: 'post' });
+    expect(apiKeyEntity.addPlugin).toHaveBeenCalledWith(1, paidPlugin.id, apiKeyLib.MAX_PLUGINS_PER_KEY);
+    expect(res.send.mock.calls[0][0]).toEqual({ message: 'Plugin uploaded successfully', ...(warning && { warning }) });
+  });
+
+  it('needs the opt-in submit permission to create plugins', async () => {
+    helpers.getWebLoggedInUser.mockResolvedValue(owner);
+    apiKeyAuth = keyFor([paidPlugin.id]);
+    const res = await publish({ price: 0 }, { method: 'post' });
+    expect(res.statusCode).toBe(403);
+    expect(res.send.mock.calls[0][0].error).toMatch(/cannot submit new plugins/);
+    expect(helpers.getWebLoggedInUser).not.toHaveBeenCalled();
+  });
+
+  it('refuses paid submissions and lets free ones through to the normal checks', async () => {
+    apiKeyAuth = keyFor([], [apiKeyLib.SCOPE_PLUGIN_CREATE]);
+    plugin.get.mockResolvedValueOnce([]);
+    const paid = await publish({ price: 100 }, { method: 'post' });
+    expect(paid.statusCode).toBe(403);
+    expect(paid.send.mock.calls[0][0].error).toMatch(/Paid plugins/);
+    const res = await publish({ price: 0 }, { method: 'post' });
+    expect(res.statusCode).toBe(400);
+    expect(res.send.mock.calls[0][0].error).toMatch(/already exists/);
   });
 });

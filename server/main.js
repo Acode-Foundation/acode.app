@@ -34,6 +34,7 @@ const LEGACY_NATIVE_CSRF_EXEMPT_PATHS = new Set(['/api/plugin/order', '/api/plug
 const PLUGIN_ICONS = path.resolve(__dirname, '../data/icons');
 const OG_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
 const PUBLIC_ORIGIN = getPublicOrigin();
+const NOINDEX_PATH = /^\/api-keys\/?$/i;
 const renderIndexTemplate = compileTemplate('index.hbs');
 const renderLandingTemplate = compileTemplate('landing.hbs');
 
@@ -120,8 +121,9 @@ async function main() {
       next();
       return;
     }
-    // Accept if custom header is present (triggers CORS preflight for cross-origin)
-    if (req.headers['x-auth-token'] || req.headers['x-requested-with']) {
+    // Accept if custom header is present (triggers CORS preflight for cross-origin).
+    // API keys travel in Authorization, which forms can't set and CORS here doesn't allow.
+    if (req.headers['x-auth-token'] || req.headers['x-requested-with'] || /^Bearer\b/i.test(req.headers.authorization || '')) {
       next();
       return;
     }
@@ -481,6 +483,8 @@ async function main() {
   });
 
   app.get('*path', (req, res) => {
+    // Account pages that must stay out of search results, even when linked from elsewhere.
+    const robots = NOINDEX_PATH.test(req.path) ? 'noindex, follow' : 'index, follow';
     const metadata = getMetadata(req.path, PUBLIC_ORIGIN);
     const context = metadata
       ? {
@@ -488,14 +492,14 @@ async function main() {
           title: metadata.title,
           description: metadata.description,
           image_alt: metadata.iconAlt || metadata.title || defaultOg.image_alt,
-          robots: 'index, follow',
+          robots,
           pageSchema: metadata.schema ? safeSchema(JSON.stringify(metadata.schema)) : null,
           orgSchema: metadata.orgSchema ? JSON.stringify(metadata.orgSchema) : null,
         }
       : {
           ...createMetadataContext(defaultOg, { canonicalPath: req.path, origin: PUBLIC_ORIGIN }),
           title: FALLBACK_TITLE,
-          robots: 'index, follow',
+          robots,
           orgSchema: null,
           pageSchema: null,
         };
