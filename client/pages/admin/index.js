@@ -11,7 +11,7 @@ import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { createChartSafely, drawBarValueLabels, drawDoughnutPercentLabels } from 'lib/dashboardCharts';
 import { convertInrToUsd, formatCompactNumber, formatCompactUsd, formatExactNumber, formatExactUsd } from 'lib/formatNumber';
-import { getLoggedInUser, since } from 'lib/helpers';
+import { downloadFile, getLoggedInUser, since } from 'lib/helpers';
 import moment from 'moment';
 
 export default async function Admin({ queries = {} }) {
@@ -291,7 +291,11 @@ function Plugins() {
     const { action, pluginId } = target.dataset;
 
     if (action === 'download-zip') {
-      window.location.assign(`/api/plugin/zip/${pluginId}`);
+      try {
+        await downloadFile(`/api/plugin/zip/${pluginId}`);
+      } catch (err) {
+        alert('ERROR', err.message);
+      }
       return;
     }
 
