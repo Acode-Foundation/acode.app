@@ -192,3 +192,23 @@ export function since(date) {
 export function withRedirect(url, redirect) {
   return withAccountRedirect(url, redirect);
 }
+
+/**
+ * Download a file without leaving the page; throws the server's error instead.
+ * @param {string} url
+ */
+export async function downloadFile(url) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `Download failed (${res.status})`);
+  }
+
+  const name = /filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') || '')?.[1] || 'download.zip';
+  const href = URL.createObjectURL(await res.blob());
+  const link = document.createElement('a');
+  link.href = href;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(href), 1000);
+}

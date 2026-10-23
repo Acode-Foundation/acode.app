@@ -2,7 +2,7 @@ import './style.scss';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import prompt from 'components/dialogs/prompt';
-import { since } from 'lib/helpers';
+import { downloadFile, since } from 'lib/helpers';
 
 const RECOMMENDATION_LABELS = {
   pass: 'Passed',
@@ -129,12 +129,31 @@ export function ReviewActions({ scan, onReviewed }) {
       <span className='icon clear' /> Reject
     </button>
   );
+  const $download = (
+    <button type='button' className='scan-download' onclick={download}>
+      <span className='icon download' /> Download zip
+    </button>
+  );
   return (
     <div className='scan-actions'>
       {$approve}
       {$reject}
+      {$download}
     </div>
   );
+
+  async function download() {
+    $download.disabled = true;
+    try {
+      await downloadFile(`/api/plugin/scans/${scan.id}/zip`);
+    } catch (error) {
+      // The held update may have been replaced or reviewed since the queue loaded.
+      alert('ERROR', error.message);
+      onReviewed?.();
+    } finally {
+      $download.disabled = false;
+    }
+  }
 
   async function review(action) {
     let reason = '';
