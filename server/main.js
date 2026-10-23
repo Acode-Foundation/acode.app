@@ -160,6 +160,8 @@ async function main() {
     express.json({ limit: '50mb' })(req, res, next);
   });
 
+  app.get('/p/:id', require('./lib/promotionRedirect')());
+
   app.get('/ai/oauth/openrouter', aiOAuthCallback);
 
   app.get('/sitemap.xml', (_req, res) => {
@@ -233,7 +235,8 @@ async function main() {
 
   app.use('/oauth', oauth);
 
-  app.get('/.well-known/assetlinks.json', (_req, res) => {
+  app.get('/.well-known/assetlinks.json', (req, res) => {
+    if (req.hostname === 'go.acode.app' || req.hostname === 'go.dev.acode.app') return res.status(404).end();
     res.send([
       {
         relation: ['delegate_permission/common.handle_all_urls'],
@@ -520,7 +523,19 @@ async function main() {
 }
 
 async function start() {
+  try {
+    require('./lib/promotions').trackingOrigin();
+  } catch (error) {
+    console.error(`Promotion tracking unavailable: ${error.message}. Configure PROMOTION_TRACKING_ORIGIN before serving promotions.`);
+  }
   await migrationRunner.run();
+  // Retry legacy data even if migration 18 was recorded before the source file was available or valid.
+  const promotionImport = require('./lib/importPromotions')(require('./lib/db'));
+  if (promotionImport.status !== 'complete')
+    console.warn(
+      `Promotion import pending (${promotionImport.status}): ${promotionImport.filename}. ${promotionImport.error || 'File not found.'} It will retry on the next start.`,
+    );
+  else if (promotionImport.imported) console.log(`Imported ${promotionImport.imported} legacy promotions.`);
   // Settle plugin updates interrupted by a previous shutdown before serving requests.
   const pluginApi = require('./apis/plugin');
   await pluginApi.reconcilePublishingScans().catch((error) => console.error('Failed to reconcile plugin scans:', error));

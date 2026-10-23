@@ -349,39 +349,26 @@ router.put('/config', async (req, res) => {
   }
 });
 
-const promotionsFile = path.resolve(__dirname, '../../data/promotions.json');
-
-router.get('/promotions', async (_req, res) => {
+const promotionStore = require('../lib/promotions');
+router.get('/promotions', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
   try {
-    const raw = await fs.readFile(promotionsFile, 'utf8');
-    const data = JSON.parse(raw);
-    res.json(Array.isArray(data) ? data : []);
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      res.json([]);
-      return;
-    }
-    res.status(500).json({ error: 'Failed to read promotions' });
+    res.json(promotionStore.listPromotions(req.query.status === 'archived').map((row) => ({ ...row, analytics: promotionStore.analytics(row.id) })));
+  } catch (error) {
+    next(error);
   }
 });
-
-router.put('/promotions', async (req, res) => {
+router.put('/promotions', (req, res, next) => {
   try {
-    const { promotions } = req.body;
-    if (!Array.isArray(promotions)) {
-      res.status(400).json({ error: 'promotions must be an array' });
-      return;
+    if (req.body?.promotion) {
+      const promotion = promotionStore.savePromotion(req.body.promotion);
+      return res.json({ message: 'success', promotion: { ...promotion, analytics: promotionStore.analytics(promotion.id) } });
     }
-    for (const promo of promotions) {
-      if (!promo.url || !promo.label || !promo.icon || !promo.link_text) {
-        res.status(400).json({ error: 'Each promotion must have url, label, icon, and link_text' });
-        return;
-      }
-    }
-    await fs.writeFile(promotionsFile, JSON.stringify(promotions, null, 2));
-    res.json({ message: 'success', promotions });
-  } catch {
-    res.status(500).json({ error: 'Failed to save promotions' });
+    const promotions = promotionStore.savePromotions(req.body?.promotions);
+    res.json({ message: 'success', promotions: promotions.map((row) => ({ ...row, analytics: promotionStore.analytics(row.id) })) });
+  } catch (error) {
+    if (error instanceof promotionStore.PromotionValidationError) return res.status(400).json({ error: error.message });
+    next(error);
   }
 });
 

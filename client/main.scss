@@ -1,3 +1,7 @@
+html:not(.optional-ads-enabled) [data-acode-ad] {
+  display: none !important;
+}
+
 :root {
   color-scheme: dark;
   font-family: 'Instrument Sans', 'Montserrat', sans-serif;

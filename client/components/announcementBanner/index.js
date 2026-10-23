@@ -1,158 +1,94 @@
 import './style.scss';
-import shellularLogo from 'res/shellular-logo.png';
 import { isAccountRoute } from '../../../shared/adPolicy';
 
-const BANNERS = [
-  {
-    id: 'shellular',
-    logo: shellularLogo,
-    url: 'https://shellular.dev',
-    alt: 'Shellular',
-    badge: 'NEW',
-    mobileTitle: 'Shellular - Remote control for your AI agents & terminals',
-    title: 'Try Shellular',
-    subtitle: 'Access your Codex, Claude Code, OpenCode, terminals, files, and ports from your phone.',
-    cta: 'Get now',
-    theme: 'shellular',
-  },
-  {
-    id: 'betterkeep',
-    logo: 'https://betterkeep.app/icons/logo.png',
-    url: 'https://betterkeep.app/welcome?utm_source=acode_announcement_banner',
-    alt: 'Better Keep Notes',
-    badge: 'NEW',
-    mobileTitle: 'Better Keep Notes - Secure & Private',
-    title: 'Introducing Better Keep Notes',
-    subtitle: 'A private note-taking app. Try it free.',
-    cta: 'Learn More',
-    theme: 'betterkeep',
-  },
-  // {
-  //   id: 'hangingpiece',
-  //   logo: hpLogo,
-  //   url: 'https://www.hangingpiece.com?utm_source=acode_announcement_banner',
-  //   alt: 'Hanging Piece',
-  //   badge: 'NEW',
-  //   title: 'Hanging Piece - Claude Code for Chess',
-  //   subtitle: 'Understand WHY you blundered and HOW to improve!',
-  //   cta: 'Try Now',
-  //   theme: 'hangingpiece',
-  // },
-];
-
-const TOGGLE_INTERVAL = 8000;
-
 export default function AnnouncementBanner() {
-  if (isAccountRoute(location.pathname)) {
-    document.documentElement.style.setProperty('--announcement-height', '0px');
-    return null;
-  }
-
-  let currentIndex = 0;
-
-  const $logo = <img alt='App Logo' className='announcement-banner__logo' />;
-  const $badge = <span className='announcement-banner__new-badge' />;
-  const $mobileTitle = <span className='announcement-banner__mobile-title' />;
-  const $title = <span className='announcement-banner__title' />;
-  const $subtitle = <span className='announcement-banner__subtitle' />;
-  const $ctaText = <span className='announcement-banner__cta-text' />;
-
-  const $closeBtn = (
-    <button type='button' className='announcement-banner__close' aria-label='Close announcement'>
-      <span className='icon clear' />
-    </button>
-  );
-
-  const $link = (
-    // biome-ignore lint/a11y/useValidAnchor: URL is dynamic
-    <a target='_blank' rel='noopener noreferrer' data-visible='true' className='announcement-banner'>
-      <div className='announcement-banner__content'>
-        <div className='announcement-banner__logo-wrapper'>{$logo}</div>
-        <div className='announcement-banner__text'>
-          {$badge}
-          {$mobileTitle}
-          {$title}
-          {$subtitle}
-        </div>
-        <div className='announcement-banner__cta'>
-          {$ctaText}
-          <span className='announcement-banner__arrow icon navigate_next' aria-hidden='true' />
-        </div>
-      </div>
-      <div className='announcement-banner__indicators'>
-        {BANNERS.map((_, index) => (
-          <span className={`announcement-banner__indicator ${index === 0 ? 'active' : ''}`} data-index={index} />
-        ))}
-      </div>
-      {$closeBtn}
-    </a>
-  );
-
-  let intervalId;
-
-  $closeBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    $link.classList.add('hidden');
-    clearInterval(intervalId);
-    sessionStorage.setItem('announcement-banner-closed', 'true');
-    $link.removeAttribute('data-visible');
-    document.documentElement.style.setProperty('--announcement-height', '0px');
-  });
-
-  // Check if banner was closed in this session
-  if (sessionStorage.getItem('announcement-banner-closed') === 'true') {
-    $link.classList.add('hidden');
-    document.documentElement.style.setProperty('--announcement-height', '0px');
-  }
-
-  const $content = $link.querySelector('.announcement-banner__content');
-
-  const updateBanner = (index, animate = false) => {
-    const b = BANNERS[index];
-
-    const applyContent = () => {
-      $link.href = b.url;
-      $link.className = `announcement-banner announcement-banner--${b.theme}`;
-      $logo.src = b.logo;
-      $logo.alt = b.alt;
-      $badge.textContent = b.badge;
-      $mobileTitle.textContent = b.mobileTitle || b.title;
-      $title.textContent = b.title;
-      $subtitle.textContent = b.subtitle;
-      $ctaText.textContent = b.cta;
-
-      // Update indicators
-      $link.querySelectorAll('.announcement-banner__indicator').forEach((indicator, i) => {
-        indicator.classList.toggle('active', i === index);
-      });
-    };
-
-    if (animate && $content) {
-      // Slide out
-      $content.classList.add('slide-out');
-      $content.classList.remove('slide-in');
-
-      setTimeout(() => {
-        applyContent();
-        $content.classList.remove('slide-out');
-        $content.classList.add('slide-in');
-
-        setTimeout(() => {
-          $content.classList.remove('slide-in');
-        }, 300);
-      }, 300);
-    } else {
-      applyContent();
-    }
+  const setHeight = (value) => document.documentElement.style.setProperty('--announcement-height', value);
+  setHeight('0px');
+  if (isAccountRoute(location.pathname) || sessionStorage.getItem('announcement-banner-closed') === 'true') return null;
+  const root = document.createElement('div');
+  root.className = 'announcement-banner hidden';
+  const link = document.createElement('a');
+  link.className = 'announcement-banner__content';
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer sponsored';
+  const icon = document.createElement('img');
+  icon.className = 'announcement-banner__logo';
+  icon.alt = '';
+  icon.referrerPolicy = 'no-referrer';
+  icon.onerror = () => {
+    icon.hidden = true;
   };
-
-  updateBanner(0);
-
-  intervalId = setInterval(() => {
-    currentIndex = (currentIndex + 1) % BANNERS.length;
-    updateBanner(currentIndex, true);
-  }, TOGGLE_INTERVAL);
-
-  return $link;
+  const text = document.createElement('span');
+  text.className = 'announcement-banner__text';
+  const title = document.createElement('span');
+  title.className = 'announcement-banner__title';
+  const description = document.createElement('span');
+  description.className = 'announcement-banner__subtitle';
+  const cta = document.createElement('span');
+  cta.className = 'announcement-banner__cta';
+  cta.setAttribute('aria-hidden', 'true');
+  const ctaLabel = document.createElement('span');
+  ctaLabel.className = 'announcement-banner__cta-label';
+  ctaLabel.textContent = 'Learn more';
+  cta.append(ctaLabel);
+  text.append(title, description);
+  link.append(icon, text, cta);
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'announcement-banner__close';
+  close.setAttribute('aria-label', 'Close announcement');
+  root.append(link, close);
+  let timer;
+  let transitionTimer;
+  let closed = false;
+  close.onclick = () => {
+    closed = true;
+    clearInterval(timer);
+    clearTimeout(transitionTimer);
+    root.classList.add('hidden');
+    root.removeAttribute('data-visible');
+    sessionStorage.setItem('announcement-banner-closed', 'true');
+    setHeight('0px');
+  };
+  fetch('/api/promotions')
+    .then((response) => {
+      if (!response.ok) throw new Error('Promotions unavailable');
+      return response.json();
+    })
+    .then((items) => {
+      if (closed || !Array.isArray(items) || !items.length) return;
+      const promotions = items.slice(0, 3);
+      let index = 0;
+      const show = () => {
+        const promotion = promotions[index];
+        link.href = promotion.url;
+        icon.hidden = false;
+        icon.src = promotion.icon;
+        title.textContent = promotion.label;
+        description.textContent = promotion.link_text;
+      };
+      show();
+      root.classList.remove('hidden');
+      root.dataset.visible = 'true';
+      setHeight('40px');
+      if (promotions.length > 1)
+        timer = setInterval(() => {
+          if (closed || !root.isConnected) {
+            clearInterval(timer);
+            return;
+          }
+          if (document.hidden) return;
+          link.classList.add('slide-out');
+          transitionTimer = setTimeout(() => {
+            link.classList.remove('slide-out');
+            if (closed || !root.isConnected) return;
+            index = (index + 1) % promotions.length;
+            show();
+            link.classList.add('slide-in');
+            transitionTimer = setTimeout(() => link.classList.remove('slide-in'), 300);
+          }, 300);
+        }, 8000);
+    })
+    .catch(() => {});
+  return root;
 }

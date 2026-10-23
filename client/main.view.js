@@ -95,6 +95,9 @@ export default ({ routes }) => (
           <nav className='footer-links'>
             <a href='https://foxbiz.io'>Foxbiz Software</a>
             <a href='/policy'>Privacy Policy</a>
+            <button type='button' data-cookie-settings>
+              Cookie settings
+            </button>
             <a href='/terms'>Terms of Service</a>
             <a href='/refund'>Refund Policy</a>
             <a href='/about'>About Us</a>

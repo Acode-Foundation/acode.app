@@ -1,0 +1,46 @@
+.promotion-manager {
+  &, * { box-sizing: border-box; }
+  min-width: 0; width: 100%; max-width: none; min-height: 0; margin: 0; padding: 0;
+  container-type: inline-size;
+  .promotion-intro { margin-bottom: 24px; }
+  h2 { font-size: 1.35rem; margin: 0 0 8px; letter-spacing: -.02em; }
+  .promotion-intro p, .promotion-empty { color: var(--secondary-text-color); opacity: .65; line-height: 1.6; font-size: .9rem; margin: 0; }
+  .promotion-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 20px; }
+  .promotion-toolbar > span { margin-right: auto; font-size: .85rem; color: #a9b2c2; }
+  button { margin: 0; padding: 9px 14px; font-size: .85rem; border-radius: 8px; cursor: pointer; background: transparent; border: 1px solid var(--border-color); color: inherit; }
+  button:hover:not(:disabled) { background: rgba(255,255,255,.06); }
+  button.promotion-primary { background: var(--button-color); border-color: transparent; color: #fff; }
+  button:disabled { opacity: .4; cursor: default; }
+  [hidden] { display: none; }
+  .promotion-card-actions { display: flex; justify-content: flex-end; padding: 0 24px 20px; }
+  .promotion-card-actions[hidden] { display: none; }
+  [role=status]:empty { display: none; }
+  [role=status] { font-size: .9rem; margin: 12px 0; }
+  .promotion-card { margin-bottom: 24px; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; background: var(--secondary-color); }
+  .promotion-card-header { display: flex; align-items: center; gap: 12px; padding: 20px 24px; border-bottom: 1px solid var(--border-color); }
+  .promotion-card-header img { width: 40px; height: 40px; object-fit: contain; border-radius: 9px; }
+  .promotion-identity { flex: 1; min-width: 0; }
+  h3 { font-size: 1rem; line-height: 1.4; margin: 0 0 4px; overflow-wrap: anywhere; }
+  .promotion-state { font-size: .75rem; color: #9ba9bc; }
+  .promotion-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; padding: 24px; }
+  label { display: flex; flex-direction: column; gap: 8px; min-width: 0; font-size: .8rem; color: #aeb8c8; }
+  input { box-sizing: border-box; width: 100%; min-width: 0; height: 42px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; background: var(--primary-color); color: var(--primary-text-color); font: inherit; font-size: .9rem; }
+  input:focus { outline: 2px solid var(--button-color); outline-offset: 1px; }
+  .promotion-analytics { width: 100%; max-width: none; min-height: 0; margin: 0; padding: 22px 24px; border-top: 1px solid var(--border-color); background: rgba(0,0,0,.09); }
+  h4 { font-size: .85rem; font-weight: 500; margin: 0 0 16px; color: #bec8d7; }
+  .promotion-metrics { display: flex; gap: 48px; margin-bottom: 20px; }
+  .promotion-metrics strong { display: block; font-size: 1.65rem; font-weight: 500; margin-bottom: 4px; }
+  .promotion-metrics span { font-size: .75rem; color: #93a0b4; }
+  .promotion-breakdowns { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; overflow-wrap: anywhere; font-size: .8rem; line-height: 1.8; }
+  .promotion-breakdowns strong { display: block; color: #93a0b4; font-size: .75rem; font-weight: 500; margin-bottom: 8px; }
+  .promotion-trend { display: flex; height: 64px; align-items: flex-end; gap: 4px; margin: 8px 0; border-bottom: 1px solid var(--border-color); }
+  .promotion-trend span { flex: 1; background: var(--button-color); min-width: 0; border-radius: 2px 2px 0 0; opacity: .7; }
+  .promotion-chart-dates { display: flex; justify-content: space-between; font-size: .7rem; color: #93a0b4; margin-bottom: 20px; }
+  details > summary { cursor: pointer; padding: 8px 0; font-size: .85rem; color: #aeb8c8; }
+  @container (max-width: 520px) {
+    .promotion-fields, .promotion-breakdowns { grid-template-columns: minmax(0,1fr); }
+    .promotion-card-header, .promotion-fields, .promotion-analytics { width: 100%; max-width: none; min-height: 0; margin: 0; padding: 18px; }
+    .promotion-toolbar > span { width: 100%; margin-bottom: 6px; }
+    .promotion-metrics { gap: 24px; }
+  }
+}

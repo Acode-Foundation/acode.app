@@ -36,6 +36,13 @@ async function loadClient(file, dependencies, globals = {}) {
 }
 
 describe('page startup', () => {
+  it.each(['index', 'landing'])('uses consent-gated scripts in the %s template', (name) => {
+    const html = Handlebars.compile(fs.readFileSync(path.join(root, `server/${name}.hbs`), 'utf8'))({});
+    expect(html).toContain('/consent.min.js');
+    expect(html).toContain('/consent.css');
+    expect(html).not.toContain('googletagmanager.com/gtag');
+    expect(html).not.toContain('adsbygoogle.js');
+  });
   it.each(['resolve', 'reject'])('starts routing before window load and before account lookup can %s', async (result) => {
     const document = new EventTarget();
     const window = { location: { pathname: '/' } };
@@ -59,7 +66,6 @@ describe('page startup', () => {
         './main.scss': {},
         './common.scss': {},
         'res/icons/style.css': {},
-        'lib/adUnits': { observeAdUnits: vi.fn() },
         'lib/headerTitle': { setupHeaderTitle: vi.fn() },
         'lib/helpers': { getLoggedInUser, showLoading: vi.fn(), hideLoading: vi.fn() },
         'lib/pageMetadata': { applyRouteMetadata: vi.fn() },
@@ -137,14 +143,17 @@ it('keeps successful website sign-in on-site even when the incoming redirect is 
 
 describe('ad-free home and account flows', () => {
   const accountPaths = ['/login', '/register', '/change-password', '/api-keys', '/logout', '/profile/edit', '/user/edit', '/oauth/google'];
+  const adminPaths = ['/admin', '/admin/', '/ADMIN', '/admin/promotions'];
 
   it('omits the ad SDK from home and account documents while retaining it on other public pages', () => {
     const render = Handlebars.compile(fs.readFileSync(path.join(root, 'server/index.hbs'), 'utf8'));
-    for (const pathname of [...accountPaths, '/LOGIN', '/register/', '/', '/index.htm', '/index.html', '/INDEX.HTML/']) {
-      expect(render({ adsDisabled: isAdFreeRoute(pathname) })).not.toContain('adsbygoogle.js');
+    for (const pathname of [...accountPaths, ...adminPaths, '/LOGIN', '/register/', '/', '/index.htm', '/index.html', '/INDEX.HTML/']) {
+      expect(isAdFreeRoute(pathname)).toBe(true);
+      expect(render({ adsDisabled: isAdFreeRoute(pathname) })).toContain('data-ads-disabled="true"');
     }
-    for (const pathname of ['/plugins', '/plugin/example', '/profile/7', '/login-guide', '/index.html-guide']) {
-      expect(render({ adsDisabled: isAdFreeRoute(pathname) })).toContain('adsbygoogle.js');
+    for (const pathname of ['/plugins', '/plugin/example', '/profile/7', '/login-guide', '/index.html-guide', '/administrator']) {
+      expect(isAdFreeRoute(pathname)).toBe(false);
+      expect(render({ adsDisabled: isAdFreeRoute(pathname) })).toContain('data-ads-disabled="false"');
     }
   });
 
@@ -180,6 +189,8 @@ describe('ad-free home and account flows', () => {
     ['/login', '/register?redirect=app&state=StateValue', '/plugins'],
     ['/', '/index.html', '/plugins'],
     ['/plugins', '/faqs', '/'],
+    ['/plugins', '/faqs', '/admin?tab=promotions'],
+    ['/admin', '/index.html', '/plugins'],
     ['/', '/index.html', '/login?redirect=app&state=StateValue'],
     ['/login', '/register?redirect=app&state=StateValue', '/'],
   ])('reloads when ad or account policy changes, including history navigation from %s', async (initialPath, samePolicyPath, destination) => {
