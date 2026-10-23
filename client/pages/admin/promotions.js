@@ -86,8 +86,22 @@ export default function Promotions() {
     preview.width = 40;
     preview.height = 40;
     preview.referrerPolicy = 'no-referrer';
-    preview.style.visibility = promotion.icon ? 'visible' : 'hidden';
-    if (promotion.icon) preview.src = promotion.icon;
+    function iconUrl(value) {
+      try {
+        const url = new URL(value);
+        if ((url.protocol === 'https:' || url.protocol === 'http:') && !url.username && !url.password) return url.href;
+      } catch {
+        /* Incomplete URLs should not start image requests. */
+      }
+      return '';
+    }
+    function updatePreview(value) {
+      const url = iconUrl(value);
+      if (url) preview.setAttribute('src', url);
+      else preview.removeAttribute('src');
+      preview.style.visibility = url ? 'visible' : 'hidden';
+    }
+    updatePreview(promotion.icon);
     preview.onerror = () => {
       preview.style.visibility = 'hidden';
     };
@@ -114,6 +128,7 @@ export default function Promotions() {
       const label = document.createElement('label');
       label.textContent = title;
       const input = document.createElement('input');
+      input.name = key;
       input.type = key === 'url' || key === 'icon' ? 'url' : 'text';
       input.value = promotion[key] || '';
       input.required = true;
@@ -125,11 +140,19 @@ export default function Promotions() {
         save.hidden = cardActions.hidden = !isDirty(promotion);
         retry.disabled = [...active, ...archived].some(isDirty);
       };
-      if (key === 'icon')
+      if (key === 'icon') {
+        const validate = () =>
+          input.setCustomValidity(
+            input.value && !iconUrl(input.value) ? 'Enter a complete HTTP or HTTPS image URL without a username or password.' : '',
+          );
+        input.addEventListener('input', validate);
         input.onchange = () => {
-          preview.style.visibility = input.value ? 'visible' : 'hidden';
-          if (input.value) preview.src = input.value;
+          validate();
+          updatePreview(input.value);
+          if (input.value && !input.validity.valid) input.reportValidity();
         };
+        validate();
+      }
       label.append(input);
       fields.append(label);
     }

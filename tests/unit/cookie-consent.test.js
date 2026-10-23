@@ -145,10 +145,22 @@ describe('cookie consent', () => {
     expect(state.observeAds).not.toHaveBeenCalled();
     expect(state.setAdsVisible).toHaveBeenLastCalledWith(false);
   });
-  it('marks initial and dynamic owned links but leaves ad markup alone', () => {
-    const owned = { closest: () => null, setAttribute: vi.fn() };
-    const ad = { closest: () => ({}), setAttribute: vi.fn() };
-    const links = [owned, ad];
+  it('marks only new or changed owned links without rescanning the page or touching ad markup', () => {
+    function element({ link = false, ad = false, children = [] } = {}) {
+      const attributes = new Map();
+      return {
+        nodeType: 1,
+        matches: () => link,
+        closest: () => (ad ? {} : null),
+        getAttribute: (key) => attributes.get(key) ?? null,
+        setAttribute: vi.fn((key, value) => attributes.set(key, value)),
+        querySelectorAll: vi.fn(() => children),
+      };
+    }
+    const owned = element({ link: true });
+    const ad = element({ link: true, ad: true });
+    const root = element({ children: [owned, ad] });
+    root.contains = (node) => !node.detached;
     let update;
     const disconnect = vi.fn();
     vi.stubGlobal(
@@ -161,13 +173,30 @@ describe('cookie consent', () => {
         disconnect = disconnect;
       },
     );
-    const stop = suppressVignettes({ querySelectorAll: () => links });
+    const stop = suppressVignettes(root);
     expect(owned.setAttribute).toHaveBeenCalledWith('data-google-vignette', 'false');
     expect(ad.setAttribute).not.toHaveBeenCalled();
-    const dynamic = { ...owned, setAttribute: vi.fn() };
-    links.push(dynamic);
-    update();
+    const dynamic = element({ link: true });
+    const nested = element({ link: true });
+    const container = element({ children: [nested] });
+    const adContainer = element({ ad: true, children: [ad] });
+    const detached = { ...element({ link: true }), detached: true };
+    update([{ type: 'childList', addedNodes: [dynamic, container, adContainer, detached, { nodeType: 3 }] }]);
     expect(dynamic.setAttribute).toHaveBeenCalledOnce();
+    expect(nested.setAttribute).toHaveBeenCalledOnce();
+    expect(adContainer.querySelectorAll).not.toHaveBeenCalled();
+    expect(detached.setAttribute).not.toHaveBeenCalled();
+    const changed = element({ link: true });
+    update([owned, changed, ad, detached].map((target) => ({ type: 'attributes', target })));
+    expect(changed.setAttribute).toHaveBeenCalledWith('data-google-vignette', 'false');
+    expect(changed.querySelectorAll).not.toHaveBeenCalled();
+    update([
+      { type: 'childList', addedNodes: [] },
+      { type: 'childList', addedNodes: [element(), { nodeType: 3 }] },
+    ]);
+    expect(root.querySelectorAll).toHaveBeenCalledOnce();
+    expect(owned.setAttribute).toHaveBeenCalledOnce();
+    expect(ad.setAttribute).not.toHaveBeenCalled();
     stop();
     expect(disconnect).toHaveBeenCalledOnce();
     vi.unstubAllGlobals();

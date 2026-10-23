@@ -16,6 +16,7 @@ const { getMetadata, getPluginsMetadata, getFaqsMetadata, FALLBACK_TITLE } = req
 const Plugin = require('./entities/plugin');
 const User = require('./entities/user');
 const { getLoggedInUser } = require('./lib/helpers');
+const { promotionRedirectLimiter } = require('./lib/rateLimits');
 const apis = require('./routes/apis');
 const oauth = require('./apis/oauth');
 const aiOAuthCallback = require('./lib/aiOAuthCallback');
@@ -160,7 +161,7 @@ async function main() {
     express.json({ limit: '50mb' })(req, res, next);
   });
 
-  app.get('/p/:id', require('./lib/promotionRedirect')());
+  app.get('/p/:id', promotionRedirectLimiter, require('./lib/promotionRedirect')());
 
   app.get('/ai/oauth/openrouter', aiOAuthCallback);
 

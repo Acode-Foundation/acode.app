@@ -122,13 +122,26 @@ export function createConsentController({ storage, adsAllowed, loadScript, obser
 }
 
 export function suppressVignettes(root) {
-  const update = () => {
-    for (const link of root.querySelectorAll('a[href]')) {
-      if (!link.closest('[data-acode-ad], .adsbygoogle')) link.setAttribute('data-google-vignette', 'false');
-    }
+  const mark = (link) => {
+    if (link.matches('a[href]') && !link.closest('[data-acode-ad], .adsbygoogle') && link.getAttribute('data-google-vignette') !== 'false')
+      link.setAttribute('data-google-vignette', 'false');
   };
-  update();
-  const observer = new MutationObserver(update);
+  const update = (node) => {
+    if (node.nodeType !== 1 || !root.contains(node) || node.closest('[data-acode-ad], .adsbygoogle')) return;
+    mark(node);
+    for (const link of node.querySelectorAll('a[href]')) mark(link);
+  };
+  update(root);
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      if (record.type === 'attributes') {
+        if (root.contains(record.target)) mark(record.target);
+      } else {
+        for (const node of record.addedNodes) update(node);
+      }
+    }
+  });
+  // Ad containers are identified when links are added; class changes do not reclassify them.
   observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['href'] });
   return () => observer.disconnect();
 }
