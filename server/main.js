@@ -530,13 +530,6 @@ async function start() {
     console.error(`Promotion tracking unavailable: ${error.message}. Configure PROMOTION_TRACKING_ORIGIN before serving promotions.`);
   }
   await migrationRunner.run();
-  // Retry legacy data even if migration 18 was recorded before the source file was available or valid.
-  const promotionImport = require('./lib/importPromotions')(require('./lib/db'));
-  if (promotionImport.status !== 'complete')
-    console.warn(
-      `Promotion import pending (${promotionImport.status}): ${promotionImport.filename}. ${promotionImport.error || 'File not found.'} It will retry on the next start.`,
-    );
-  else if (promotionImport.imported) console.log(`Imported ${promotionImport.imported} legacy promotions.`);
   // Settle plugin updates interrupted by a previous shutdown before serving requests.
   const pluginApi = require('./apis/plugin');
   await pluginApi.reconcilePublishingScans().catch((error) => console.error('Failed to reconcile plugin scans:', error));

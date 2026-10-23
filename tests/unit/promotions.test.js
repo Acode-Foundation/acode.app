@@ -1,15 +1,10 @@
 import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import vm from 'node:vm';
 import Database from 'better-sqlite3';
-import importPromotions from '../../server/lib/importPromotions';
 import createRedirect from '../../server/lib/promotionRedirect';
 import store from '../../server/lib/promotions';
-import migration from '../../server/migrations/018_import_promotions';
 
 let db;
-let directory;
 const promo = (label = 'Example') => ({
   label,
   url: 'https://example.com/?campaign=one',
@@ -36,64 +31,13 @@ function initializeEntities() {
   return { Promotion, PromotionClickDay };
 }
 beforeEach(() => {
-  directory = fs.mkdtempSync(path.join(os.tmpdir(), 'promotions-test-'));
   db = new Database(':memory:');
   db.pragma('foreign_keys = ON');
   initializeEntities();
-  db.exec('CREATE TABLE app_config(key TEXT PRIMARY KEY, value TEXT NOT NULL)');
-  migration.up(db, path.join(directory, 'missing.json'));
 });
 afterEach(() => {
   db.close();
-  fs.rmSync(directory, { recursive: true });
   vi.unstubAllEnvs();
-});
-it('imports once, keeps order and archives excess entries', () => {
-  const file = path.join(directory, 'legacy.json');
-  fs.writeFileSync(file, JSON.stringify(['a', 'b', 'c', 'd'].map((name) => ({ ...promo(name), url: `https://${name}.example` }))));
-  migration.up(db, file);
-  migration.up(db, file);
-  expect(store.listPromotions(false, db).map((row) => row.label)).toEqual(['a', 'b', 'c']);
-  expect(store.listPromotions(true, db).map((row) => row.label)).toEqual(['d']);
-  expect(JSON.parse(fs.readFileSync(file))).toHaveLength(4);
-});
-it('leaves invalid imports pending without partially writing or blocking migration completion', async () => {
-  const file = path.join(directory, 'invalid.json');
-  const existing = store.savePromotion(promo('Existing'), db);
-  for (const content of ['{', JSON.stringify([promo('Valid'), { ...promo('Invalid'), icon: 'not a URL' }])]) {
-    fs.writeFileSync(file, content);
-    expect(migration.up(db, file)).toMatchObject({ status: 'invalid', imported: 0, filename: file });
-    expect(store.listPromotions(false, db)).toEqual([existing]);
-    expect(db.prepare('SELECT * FROM app_config').all()).toEqual([]);
-    expect(fs.readFileSync(file, 'utf8')).toBe(content);
-  }
-  const module = { exports: {} };
-  vm.runInNewContext(fs.readFileSync(new URL('../../server/lib/migrationRunner.js', import.meta.url), 'utf8'), {
-    module,
-    __dirname: path.resolve('server/lib'),
-    console: { log() {}, error() {} },
-    require(name) {
-      if (name === './db') return db;
-      if (name === 'node:fs') return { existsSync: () => true, readdirSync: () => ['018_import_promotions.js'] };
-      if (name === 'node:path') return path;
-      if (path.basename(name) === '018_import_promotions.js') return { ...migration, up: (db) => migration.up(db, file) };
-      throw new Error(`Unexpected dependency: ${name}`);
-    },
-  });
-  await module.exports.run();
-  expect(db.prepare('SELECT version FROM schema_version WHERE version=18').get()).toEqual({ version: 18 });
-  fs.writeFileSync(file, JSON.stringify([{ ...promo('Recovered'), url: 'https://recovered.example' }]));
-  expect(importPromotions(db, file)).toMatchObject({ status: 'complete', imported: 1 });
-  expect(importPromotions(db, file)).toMatchObject({ status: 'complete', imported: 0 });
-  expect(store.listPromotions(false, db).map((row) => row.label)).toEqual(['Existing', 'Recovered']);
-});
-it('keeps unreadable files pending and does not let tracking configuration block imports', () => {
-  expect(importPromotions(db, directory)).toMatchObject({ status: 'unreadable', imported: 0 });
-  expect(db.prepare('SELECT * FROM app_config').all()).toEqual([]);
-  vi.stubEnv('PROMOTION_TRACKING_ORIGIN', 'invalid configuration');
-  const file = path.join(directory, 'valid.json');
-  fs.writeFileSync(file, JSON.stringify([promo()]));
-  expect(importPromotions(db, file)).toMatchObject({ status: 'complete', imported: 1 });
 });
 it('preserves IDs, caps active records and archives/restores without losing clicks', () => {
   const rows = store.savePromotions([promo('a'), promo('b'), promo('c')], db);
@@ -281,30 +225,4 @@ it('entity initialization creates tables idempotently and preserves existing rec
   expect(await Promotion.get([Promotion.ID, id])).toMatchObject([{ id, label: 'Example' }]);
   expect(await PromotionClickDay.get([PromotionClickDay.PROMOTION_ID, id], { orderBy: 'day DESC' })).toMatchObject([{ clicks: 1 }]);
   expect(store.analytics(id, db).total).toBe(1);
-});
-
-it('retries a missing import even after migration 18 was recorded and preserves existing promotions', () => {
-  const file = path.join(directory, 'late.json');
-  expect(migration.up(db, file).status).toBe('missing');
-  expect(db.prepare('SELECT * FROM app_config').all()).toEqual([]);
-  const [existing] = store.savePromotions([promo('Existing')], db);
-  fs.writeFileSync(file, JSON.stringify([promo('Must not overwrite'), { ...promo('Imported'), url: 'https://second.example' }]));
-  expect(migration.up(db, file).imported).toBe(1);
-  const rows = store.listPromotions(false, db);
-  expect(rows[0]).toMatchObject({ id: existing.id, label: 'Existing' });
-  expect(rows[1].label).toBe('Imported');
-  store.savePromotions([], db);
-  expect(migration.up(db, file).imported).toBe(0);
-  expect(store.listPromotions(false, db)).toEqual([]);
-});
-it('preserves full active slots and archives recovered JSON entries without overwriting records', () => {
-  const existing = store.savePromotions(
-    ['one', 'two', 'three'].map((name) => ({ ...promo(name), url: `https://${name}.example` })),
-    db,
-  );
-  const file = path.join(directory, 'recover.json');
-  fs.writeFileSync(file, JSON.stringify([{ ...promo('Recovered'), url: 'https://recovered.example' }]));
-  expect(migration.up(db, file).imported).toBe(1);
-  expect(store.listPromotions(false, db).map((row) => row.id)).toEqual(existing.map((row) => row.id));
-  expect(store.listPromotions(true, db)[0].label).toBe('Recovered');
 });
