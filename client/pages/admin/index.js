@@ -262,6 +262,7 @@ function Plugins() {
             </td>
             <td>{moment(p.created_at).format('DD-MM-YY')}</td>
             <td style={{ textAlign: 'center' }}>
+              <span data-action='download-zip' data-plugin-id={p.id} className='icon download plugin-zip' title='Download zip' />
               <span data-action='delete' data-plugin-id={p.id} className='icon delete' />
             </td>
           </tr>
@@ -288,6 +289,11 @@ function Plugins() {
     const target = e.target.closest('[data-action]');
     if (!target) return;
     const { action, pluginId } = target.dataset;
+
+    if (action === 'download-zip') {
+      window.location.assign(`/api/plugin/zip/${pluginId}`);
+      return;
+    }
 
     if (action === 'toggle-featured') {
       target.disabled = true;
@@ -394,7 +400,7 @@ function Plugins() {
               </th>
               <th>Editor</th>
               <th>Date</th>
-              <th>Delete</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody ref={tblBody} onclick={rowClickHandler} />

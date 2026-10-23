@@ -239,6 +239,28 @@ router.get('/download/:id', async (req, res) => {
   }
 });
 
+// Lets admins grab the live zip for review without touching download counts.
+router.get('/zip/:id', pluginAdminLimiter, async (req, res) => {
+  try {
+    const user = await getWebLoggedInUser(req);
+    if (!user?.isAdmin) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const [plugin] = await Plugin.get([Plugin.ID, Plugin.VERSION], [Plugin.ID, req.params.id]);
+    const file = plugin ? livePath(plugin.id) : null;
+    if (!file || !fs.existsSync(file)) {
+      res.status(404).send({ error: 'This plugin has no live zip' });
+      return;
+    }
+
+    res.download(file, `${plugin.id}-${plugin.version}.zip`);
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
 router.get('/orders/:pluginId/:year/:month', async (req, res) => {
   try {
     const { pluginId, year, month } = req.params;
@@ -995,6 +1017,28 @@ router.get('/scans/pending', async (req, res) => {
         author: byId.get(row.plugin_id)?.author || '',
       })),
     );
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+// Lets admins inspect a held update's staged zip before approving it.
+router.get('/scans/:scanId/zip', pluginAdminLimiter, async (req, res) => {
+  try {
+    const user = await getWebLoggedInUser(req);
+    if (!user?.isAdmin) {
+      res.status(401).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const [scan] = await PluginScan.get([PluginScan.ID, Number(req.params.scanId)]);
+    const file = scan?.status === PluginScan.STATUS_PENDING && scan.zip_sha256 ? stagedZipPath(scan.plugin_id, scan.zip_sha256) : null;
+    if (!file || !fs.existsSync(file)) {
+      res.status(404).send({ error: 'No staged zip found for this scan' });
+      return;
+    }
+
+    res.download(file, `${scan.plugin_id}-${scan.version}.zip`);
   } catch (error) {
     res.status(500).send({ error: error.message });
   }

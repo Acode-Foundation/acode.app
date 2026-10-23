@@ -133,6 +133,9 @@ export function ReviewActions({ scan, onReviewed }) {
     <div className='scan-actions'>
       {$approve}
       {$reject}
+      <button type='button' className='scan-download' onclick={() => window.location.assign(`/api/plugin/scans/${scan.id}/zip`)}>
+        <span className='icon download' /> Download zip
+      </button>
     </div>
   );
 

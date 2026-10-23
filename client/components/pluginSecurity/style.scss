@@ -64,6 +64,11 @@
   .scan-reject {
     background: #b91c1c;
   }
+
+  .scan-download {
+    background: transparent;
+    border: 1px solid currentColor;
+  }
 }
 
 .scan-details {
