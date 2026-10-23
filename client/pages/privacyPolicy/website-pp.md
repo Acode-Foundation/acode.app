@@ -18,6 +18,14 @@ We use your personal information to provide you with our services, manage your a
 
 Plugins that interfere with or disrupt the app's monetization methods, including but not limited to plugins that disable, block, or alter advertisements, are strictly prohibited. Any developer found to be distributing or promoting such plugins will face potential account suspension or other appropriate actions.
 
+## Cookies and privacy choices
+
+Essential cookies support sign-in, account sessions, and security checks during Google or Apple sign-in. They remain enabled when you reject optional cookies.
+
+With your permission, we use Google Analytics to understand website usage and Google AdSense to display advertising. These services may use cookies and process information about your visits. Advertising may require an additional regional consent choice from Google. Your choice on this website does not override that choice.
+
+You can accept, reject, or choose Analytics and Advertising separately. Optional services stay off until you enable them. Open **Cookie settings** in the footer to change your preferences at any time. Withdrawing permission reloads the page to stop services already running. Other open tabs apply the updated choice; if advertising is already running, they ask you to save unfinished work and reload. We store your preferences in your browser for 180 days, separately on each site origin. Clearing browser storage resets your choice. Sign-in continues to work when you reject optional cookies.
+
 ## Data Security
 
 We take reasonable measures to protect your personal information from unauthorized access, use, or disclosure. However, no system can guarantee complete security.

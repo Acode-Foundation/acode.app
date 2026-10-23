@@ -45,13 +45,8 @@
   <script type="application/ld+json">{{{pageSchema}}}</script>
   {{/if}}
 
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YX6J9WVCDP"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-YX6J9WVCDP');
-  </script>
+  <link rel="stylesheet" href="/consent.css" />
+  <script defer src="/consent.min.js" data-ads-disabled="true"></script>
 
    <style>
      * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -348,6 +343,7 @@
        <a href="https://docs.acode.app">Docs</a>
        <a href="/sponsors">Sponsors</a>
        <a href="/policy">Privacy</a>
+       <button type="button" data-cookie-settings>Cookie settings</button>
        <a href="/terms">Terms</a>
      </div>
      <p>&copy; 2026 Foxbiz Software Pvt. Ltd. Acode is open source under the <a href="https://github.com/AcodeOrg/acode/blob/main/LICENSE">MIT License</a>.</p>

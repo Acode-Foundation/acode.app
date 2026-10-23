@@ -4,7 +4,7 @@ function isAccountRoute(pathname) {
 }
 
 function isAdFreeRoute(pathname) {
-  return /^\/(?:index\.html?\/?)?$/i.test(pathname) || isAccountRoute(pathname);
+  return /^\/(?:index\.html?\/?)?$/i.test(pathname) || /^\/admin(?:\/|$)/i.test(pathname) || isAccountRoute(pathname);
 }
 
 module.exports = { isAccountRoute, isAdFreeRoute };

@@ -16,6 +16,7 @@ const { getMetadata, getPluginsMetadata, getFaqsMetadata, FALLBACK_TITLE } = req
 const Plugin = require('./entities/plugin');
 const User = require('./entities/user');
 const { getLoggedInUser } = require('./lib/helpers');
+const { promotionRedirectLimiter } = require('./lib/rateLimits');
 const apis = require('./routes/apis');
 const oauth = require('./apis/oauth');
 const aiOAuthCallback = require('./lib/aiOAuthCallback');
@@ -160,6 +161,8 @@ async function main() {
     express.json({ limit: '50mb' })(req, res, next);
   });
 
+  app.get('/p/:id', promotionRedirectLimiter, require('./lib/promotionRedirect')());
+
   app.get('/ai/oauth/openrouter', aiOAuthCallback);
 
   app.get('/sitemap.xml', (_req, res) => {
@@ -233,7 +236,8 @@ async function main() {
 
   app.use('/oauth', oauth);
 
-  app.get('/.well-known/assetlinks.json', (_req, res) => {
+  app.get('/.well-known/assetlinks.json', (req, res) => {
+    if (req.hostname === 'go.acode.app' || req.hostname === 'go.dev.acode.app') return res.status(404).end();
     res.send([
       {
         relation: ['delegate_permission/common.handle_all_urls'],
@@ -520,6 +524,11 @@ async function main() {
 }
 
 async function start() {
+  try {
+    require('./lib/promotions').trackingOrigin();
+  } catch (error) {
+    console.error(`Promotion tracking unavailable: ${error.message}. Configure PROMOTION_TRACKING_ORIGIN before serving promotions.`);
+  }
   await migrationRunner.run();
   // Settle plugin updates interrupted by a previous shutdown before serving requests.
   const pluginApi = require('./apis/plugin');

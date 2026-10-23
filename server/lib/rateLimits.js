@@ -41,6 +41,11 @@ function limiter(limit, windowMinutes, options = {}) {
 
 module.exports = {
   createUserOrIpKey,
+  // Shared-IP allowance, before database access; spoofable bot/prefetch headers get no exemption.
+  // Like the other limiters, this quota is per process and resets on restart.
+  promotionRedirectLimiter: limiter(120, 1, {
+    keyGenerator: (req) => ipKeyGenerator(req.ip),
+  }),
   appAuthCodeLimiter: limiter(process.env.NODE_ENV === 'development' ? 200 : 20, 15),
   appTokenExchangeLimiter: limiter(process.env.NODE_ENV === 'development' ? 400 : 120, 15, {
     keyGenerator: (req) => ipKeyGenerator(req.ip),

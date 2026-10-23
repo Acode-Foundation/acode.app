@@ -13,6 +13,7 @@ import { createChartSafely, drawBarValueLabels, drawDoughnutPercentLabels } from
 import { convertInrToUsd, formatCompactNumber, formatCompactUsd, formatExactNumber, formatExactUsd } from 'lib/formatNumber';
 import { downloadFile, getLoggedInUser, since } from 'lib/helpers';
 import moment from 'moment';
+import Promotions from './promotions';
 
 export default async function Admin({ queries = {} }) {
   const usersList = Ref();
@@ -1441,103 +1442,6 @@ function Payments() {
           {currentPage}/{totalPages}
         </span>
         <button ref={nextBtn} type='button' onclick={() => goTo(currentPage.value + 1)} title='Next page' className='icon navigate_next' />
-      </div>
-    </div>
-  );
-}
-
-function Promotions() {
-  const listRef = Ref();
-  const statusRef = Ref();
-
-  const createFormRow = (promo = {}) => {
-    const row = (
-      <div className='promo-form-row'>
-        <input type='url' placeholder='URL' value={promo.url || ''} className='promo-url' />
-        <input type='text' placeholder='Label' value={promo.label || ''} className='promo-label' />
-        <input type='text' placeholder='Icon' value={promo.icon || ''} className='promo-icon' />
-        <input type='text' placeholder='Link Text' value={promo.link_text || ''} className='promo-link-text' />
-        <button
-          type='button'
-          className='icon delete promo-delete'
-          onclick={(e) => {
-            e.target.closest('.promo-form-row').remove();
-          }}
-        />
-      </div>
-    );
-    return row;
-  };
-
-  (async () => {
-    try {
-      const res = await fetch('/api/admin/promotions');
-      if (!res.ok) {
-        if (statusRef.el) statusRef.el.textContent = 'Failed to load promotions';
-        return;
-      }
-      const json = await res.json();
-      if (Array.isArray(json)) {
-        for (const promo of json) {
-          const row = createFormRow(promo);
-          listRef.el.append(row);
-        }
-      }
-    } catch {
-      if (statusRef.el) statusRef.el.textContent = 'Failed to load promotions';
-    }
-  })();
-
-  const onAdd = () => {
-    const row = createFormRow();
-    listRef.el.append(row);
-  };
-
-  const onSave = async () => {
-    const rows = listRef.el.querySelectorAll('.promo-form-row');
-    const promotions = [];
-    for (const row of rows) {
-      const url = row.querySelector('.promo-url').value.trim();
-      const label = row.querySelector('.promo-label').value.trim();
-      const icon = row.querySelector('.promo-icon').value.trim();
-      const link_text = row.querySelector('.promo-link-text').value.trim();
-      if (!url || !label || !icon || !link_text) {
-        alert('ERROR', 'All fields (url, label, icon, link_text) are required for each promotion');
-        return;
-      }
-      promotions.push({ url, label, icon, link_text });
-    }
-    try {
-      const res = await fetch('/api/admin/promotions', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promotions }),
-      });
-      const json = await res.json();
-      if (json.error) {
-        alert('ERROR', json.error);
-      } else {
-        statusRef.el.textContent = 'Saved!';
-        setTimeout(() => {
-          if (statusRef.el) statusRef.el.textContent = '';
-        }, 2000);
-      }
-    } catch {
-      alert('ERROR', 'Failed to save promotions');
-    }
-  };
-
-  return (
-    <div className='promotions'>
-      <div ref={listRef} className='promo-list' />
-      <div className='promo-actions'>
-        <button type='button' onclick={onAdd} className='promo-add-btn'>
-          + Add Promotion
-        </button>
-        <button type='button' onclick={onSave} className='promo-save-btn'>
-          Save All
-        </button>
-        <span ref={statusRef} className='status' />
       </div>
     </div>
   );

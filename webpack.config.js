@@ -91,6 +91,7 @@ module.exports = (_env, options) => {
     ...common,
     entry: {
       main: './client/main.js',
+      consent: './client/consent.js',
     },
     module: {
       rules,
