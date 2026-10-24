@@ -6,6 +6,7 @@ const db = require('../lib/db');
  * @property {number} page
  * @property {number} limit
  * @property {'AND' | 'OR'} operator
+ * @property {any[]} [orderValues] values for `?` placeholders in orderBy
  */
 
 /**
@@ -74,9 +75,16 @@ class Entity {
     let page = Entity.default_page;
     let orderBy = Entity.default_order_by;
     let operator = Entity.default_operator;
+    let orderValues = [];
 
     if (typeof options === 'object') {
-      ({ page = Entity.default_page, limit = Entity.default_limit, orderBy = Entity.default_order_by, operator = Entity.default_operator } = options);
+      ({
+        page = Entity.default_page,
+        limit = Entity.default_limit,
+        orderBy = Entity.default_order_by,
+        operator = Entity.default_operator,
+        orderValues = [],
+      } = options);
     } else if (typeof options === 'string') {
       operator = options;
     }
@@ -87,6 +95,7 @@ class Entity {
       limit,
       orderBy,
       operator,
+      orderValues,
     });
 
     return Entity.execSql(sql, values, this);
@@ -113,7 +122,13 @@ class Entity {
     columns,
     where,
     values,
-    { page = Entity.default_page, limit = Entity.default_limit, orderBy = Entity.default_order_by, operator = Entity.default_operator },
+    {
+      page = Entity.default_page,
+      limit = Entity.default_limit,
+      orderBy = Entity.default_order_by,
+      operator = Entity.default_operator,
+      orderValues = [],
+    },
   ) {
     let sql = `SELECT ${columns.join(',')} FROM ${this.table}`;
 
@@ -127,6 +142,7 @@ class Entity {
 
     if (this.mode === 'api') {
       sql += ` ORDER BY ${Array.isArray(orderBy) ? orderBy.join(',') : orderBy} LIMIT ? OFFSET ?`;
+      values.push(...orderValues);
       values.push(limit);
       values.push((page - 1) * limit);
     }
