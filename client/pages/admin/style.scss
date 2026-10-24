@@ -1,6 +1,8 @@
 #admin {
   display: flex;
   flex-direction: column;
+  max-width: 1200px;
+  container: admin / inline-size;
 
   h1 {
     margin: 0;
@@ -11,70 +13,62 @@
     color: #fff;
   }
 
-  .admin-tabs {
-    display: flex;
-    gap: 4px;
-    padding: 6px;
-    background-color: var(--page-surface, rgba(255, 255, 255, 0.035));
-    border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
-    border-radius: 12px;
-    margin: 12px 0 0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+  > .tabs {
+    min-width: 0;
 
-    &::-webkit-scrollbar {
-      display: none;
-    }
+    > .tabs-nav .tab-btn {
+      margin: 0;
 
-    .tab-btn {
-      margin-top: 0;
-      flex-shrink: 0;
-      padding: 8px 16px;
-      border-radius: 9px;
-      border: none;
-      background: transparent;
-      color: rgba(255, 255, 255, 0.5);
-      font-size: 0.88em;
-      font-weight: 500;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s ease;
-
-      &.active {
-        background-color: rgba(255, 255, 255, 0.08);
-        color: #fff;
-        box-shadow: none;
-      }
-
-      &:not(.active):hover {
-        color: rgba(255, 255, 255, 0.8);
-        background-color: rgba(255, 255, 255, 0.06);
+      .icon {
+        display: none;
       }
     }
 
-    @media (max-width: 600px) {
-      gap: 2px;
-      padding: 5px;
-      border-radius: 10px;
-
-      .tab-btn {
-        padding: 7px 12px;
-        font-size: 0.82em;
-        border-radius: 7px;
-      }
+    > .tabs-content {
+      min-width: 0;
     }
   }
 
-  .tab-content {
-    margin-top: 20px;
-  }
+  @container admin (min-width: 1100px) {
+    > .tabs {
+      display: grid;
+      grid-template-columns: 200px minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+      margin-top: 20px;
 
-  .tab-panel {
-    display: none;
+      > .tabs-nav {
+        position: sticky;
+        top: calc(68px + var(--announcement-height));
+        max-height: calc(100dvh - 84px - var(--announcement-height));
+        box-sizing: border-box;
+        overflow-y: auto;
+        flex-direction: column;
+        align-items: stretch;
+        margin: 0;
 
-    &.active {
-      display: block;
+        .tab-btn {
+          justify-content: flex-start;
+
+          .icon {
+            display: inline-block;
+            flex-shrink: 0;
+          }
+
+          &.active {
+            background-color: var(--primary-color);
+          }
+        }
+
+        // The shared indicator measures horizontal offsets only.
+        .tabs-indicator {
+          display: none;
+        }
+      }
+
+      > .tabs-content {
+        margin-top: 0;
+      }
     }
   }
 

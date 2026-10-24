@@ -801,7 +801,13 @@ footer {
     flex-direction: column;
     gap: 10px;
 
-    a {
+    [data-cookie-settings] {
+      background: none;
+      text-align: inherit;
+    }
+
+    a,
+    [data-cookie-settings] {
       color: rgba(255, 255, 255, 0.5);
       text-decoration: none;
       font-size: 0.85rem;
