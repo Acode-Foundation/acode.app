@@ -59,9 +59,19 @@ function consumeEmailCode(email, purpose, code) {
   return Otp.consume(row.id, row.otp);
 }
 
-/** Remove the code for `email`, e.g. when the email carrying it couldn't be sent. */
-async function discardEmailCode(email) {
-  await Otp.delete([Otp.EMAIL, email]);
+/**
+ * Remove one issued code, e.g. when the email carrying it couldn't be sent. Only
+ * that code is removed: a slow send can fail after a newer code was delivered.
+ * @param {string} email
+ * @param {'signup' | 'reset'} purpose
+ * @param {string} code
+ */
+async function discardEmailCode(email, purpose, code) {
+  assertPurpose(purpose);
+  await Otp.delete([
+    [Otp.EMAIL, email],
+    [Otp.OTP, codeHash(email, purpose, code)],
+  ]);
 }
 
 function assertPurpose(purpose) {

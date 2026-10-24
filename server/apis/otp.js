@@ -33,7 +33,7 @@ route.post('/', emailCodeLimiter, async (req, res) => {
     try {
       await sendOtpToEmail(email, user?.[0]?.name, code, type);
     } catch (error) {
-      await discardEmailCode(email);
+      await discardEmailCode(email, type, code);
       throw error;
     }
 

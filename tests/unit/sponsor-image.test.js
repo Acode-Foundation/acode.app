@@ -2,10 +2,11 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
+import express from 'express';
 import sharp from 'sharp';
 
 const require = createRequire(import.meta.url);
-const { SPONSOR_IMAGE_EXTENSION, decodeSponsorImage, saveSponsorImage } = require('../../server/lib/sponsorImage');
+const { decodeSponsorImage, saveSponsorImage, sendSponsorImage, sponsorImageType } = require('../../server/lib/sponsorImage');
 
 const pixel = { width: 2, height: 2, channels: 3, background: '#3499fe' };
 
@@ -83,7 +84,64 @@ it('writes stored logos under a random name with their real extension', async ()
   }
 });
 
-it('serves only raster image extensions', () => {
-  for (const name of ['a.png', 'a.jpg', 'a.jpeg', 'a.webp', 'a.gif', 'A.PNG']) expect(SPONSOR_IMAGE_EXTENSION.test(name)).toBe(true);
-  for (const name of ['a.html', 'a.svg', 'a.png.html', 'a.js', 'png']) expect(SPONSOR_IMAGE_EXTENSION.test(name)).toBe(false);
+it('serves raster types stored by earlier uploads, never active content', () => {
+  const served = {
+    'a.png': 'image/png',
+    'A.PNG': 'image/png',
+    'a.jpg': 'image/jpeg',
+    'a.jpeg': 'image/jpeg',
+    'a.webp': 'image/webp',
+    'a.gif': 'image/gif',
+    'a.avif': 'image/avif',
+    'a.bmp': 'image/bmp',
+    'a.x-icon': 'image/x-icon',
+    'a.vnd.microsoft.icon': 'image/x-icon',
+    'a.tiff': 'image/tiff',
+    'a.heic': 'image/heic',
+  };
+  for (const [name, type] of Object.entries(served)) expect(sponsorImageType(name)).toBe(type);
+  for (const name of ['a.html', 'a.svg', 'a.svg+xml', 'a.png.html', 'a.js', 'a.xml', 'png', '.png', 'a.icon', null])
+    expect(sponsorImageType(name)).toBeNull();
+});
+
+describe('sponsor image route', () => {
+  let dir;
+  let server;
+  let base;
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sponsor-route-'));
+    const app = express();
+    app.get('/sponsor/image/:filename', sendSponsorImage(dir));
+    server = app.listen(0);
+    base = `http://127.0.0.1:${server.address().port}/sponsor/image/`;
+  });
+
+  afterEach(() => {
+    server.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('keeps serving an existing AVIF logo, as an image that cannot run script', async () => {
+    const avif = await image('avif');
+    fs.writeFileSync(path.join(dir, 'legacy.avif'), avif);
+
+    const res = await fetch(`${base}legacy.avif`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('image/avif');
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(res.headers.get('content-security-policy')).toContain('sandbox');
+    expect(Buffer.from(await res.arrayBuffer()).equals(avif)).toBe(true);
+  });
+
+  it('refuses active content, missing files and paths outside the folder', async () => {
+    fs.writeFileSync(path.join(dir, 'planted.html'), '<script>alert(1)</script>');
+    fs.writeFileSync(path.join(dir, 'planted.svg'), '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+    fs.writeFileSync(path.join(path.dirname(dir), `${path.basename(dir)}-outside.png`), 'x');
+
+    for (const name of ['planted.html', 'planted.svg', 'missing.png', `..%2F${path.basename(dir)}-outside.png`]) {
+      expect((await fetch(`${base}${name}`)).status).toBe(404);
+    }
+    fs.rmSync(path.join(path.dirname(dir), `${path.basename(dir)}-outside.png`), { force: true });
+  });
 });

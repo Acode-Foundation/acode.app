@@ -1,5 +1,8 @@
+import fs from 'node:fs';
 import Module, { createRequire } from 'node:module';
+import vm from 'node:vm';
 import Database from 'better-sqlite3';
+import express, { Router } from 'express';
 
 const require = createRequire(import.meta.url);
 const migration = require('../../server/migrations/018_add_otp_attempts');
@@ -83,8 +86,62 @@ it('enforces a resend cooldown, and a new code replaces the old one', async () =
 
 it('discards a code, e.g. when its email could not be sent', async () => {
   const code = await emailCode.issueEmailCode(email, 'signup');
-  await emailCode.discardEmailCode(email);
+  await emailCode.discardEmailCode(email, 'signup', code);
   expect(emailCode.consumeEmailCode(email, 'signup', code)).toBe(false);
+});
+
+it('discarding an older code leaves a newer one usable', async () => {
+  const older = await emailCode.issueEmailCode(email, 'signup');
+  age(storedRow(), emailCode.RESEND_COOLDOWN_MS + 1);
+  const newer = await emailCode.issueEmailCode(email, 'signup');
+
+  if (older !== newer) await emailCode.discardEmailCode(email, 'signup', older);
+  expect(emailCode.consumeEmailCode(email, 'signup', newer)).toBe(true);
+});
+
+it('a late send failure for an older code does not remove the newer, delivered code', async () => {
+  const sends = [];
+  const sendEmail = vi.fn(
+    (_to, _name, _subject, html) =>
+      new Promise((resolve, reject) => sends.push({ code: /<strong>(\d{6})<\/strong>/.exec(html)[1], resolve, reject })),
+  );
+  const module = { exports: {} };
+  vm.runInNewContext(fs.readFileSync(new URL('../../server/apis/otp.js', import.meta.url), 'utf8'), {
+    module,
+    console: { error: () => {} },
+    require: (name) =>
+      ({
+        express: { Router },
+        '../entities/user': { EMAIL: 'email', get: async () => [] },
+        '../lib/emailCode': emailCode,
+        '../lib/rateLimits': { emailCodeLimiter: (_req, _res, next) => next() },
+        '../lib/sendEmail': sendEmail,
+      })[name],
+  });
+  const app = express();
+  app.use(express.json());
+  app.use('/api/otp', module.exports);
+  const server = app.listen(0);
+  const url = `http://127.0.0.1:${server.address().port}/api/otp?type=signup`;
+  const request = () => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+
+  try {
+    const first = request();
+    await vi.waitFor(() => expect(sends).toHaveLength(1));
+    age(storedRow(), emailCode.RESEND_COOLDOWN_MS + 1);
+
+    const second = request();
+    await vi.waitFor(() => expect(sends).toHaveLength(2));
+    sends[1].resolve();
+    expect((await second).status).toBe(200);
+
+    sends[0].reject(new Error('SMTP timeout'));
+    expect((await first).status).toBe(500);
+
+    expect(emailCode.consumeEmailCode(email, 'signup', sends[1].code)).toBe(true);
+  } finally {
+    server.close();
+  }
 });
 
 it('rejects unknown purposes', async () => {

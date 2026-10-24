@@ -24,7 +24,7 @@ const setAuth = require('./lib/gapis');
 const migrationRunner = require('./lib/migrationRunner');
 const { renderDefaultOgImage, renderPluginOgImage } = require('./lib/ogImage');
 const { fileInDir } = require('./lib/pluginScanner');
-const { SPONSOR_IMAGES_DIR: SPONSOR_IMAGES, SPONSOR_IMAGE_EXTENSION } = require('./lib/sponsorImage');
+const { sendSponsorImage } = require('./lib/sponsorImage');
 const { createMetadataContext, createPluginDescription, getPublicOrigin, localizeStructuredData, publicUrl } = require('./lib/publicMetadata');
 
 const app = express();
@@ -289,16 +289,7 @@ async function main() {
     res.status(404).send({ error: 'File not found' });
   });
 
-  app.get('/sponsor/image/:filename', async (req, res) => {
-    const imagePath = SPONSOR_IMAGE_EXTENSION.test(req.params.filename) ? resolveFileIn(SPONSOR_IMAGES, req.params.filename) : null;
-
-    if (!imagePath) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.sendFile(imagePath);
-  });
+  app.get('/sponsor/image/:filename', sendSponsorImage());
 
   app.get('/manifest.json', (_req, res) => {
     res.sendFile(path.resolve(__dirname, './manifest.json'));
