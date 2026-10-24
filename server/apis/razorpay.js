@@ -17,6 +17,7 @@ const { convertPrice } = require('../lib/exchangeRates');
 const ensurePurchaseOwnership = require('../lib/ensurePurchaseOwnership');
 const notifyRefund = require('../lib/notifyRefund');
 const notifyPurchase = require('../lib/notifyPurchase');
+const { decodeSponsorImage } = require('../lib/sponsorImage');
 
 const router = Router();
 
@@ -1438,16 +1439,16 @@ router.post('/create-sponsor-order', async (req, res) => {
     }
 
     let imageFilename = null;
-    let imageBase64 = null;
+    let imageData = null;
     if (image) {
-      const match = image.match(/^data:image\/(\w+);base64,/);
-      if (!match) {
+      // Checked before payment, so an unusable image can simply be rejected.
+      const decoded = await decodeSponsorImage(image);
+      if (!decoded) {
         res.status(400).send({ error: 'Invalid image format' });
         return;
       }
-      const ext = match[1];
-      imageFilename = `s_${crypto.randomUUID()}.${ext}`;
-      imageBase64 = image.replace(/^data:image\/\w+;base64,/, '');
+      imageFilename = `s_${crypto.randomUUID()}.${decoded.extension}`;
+      imageData = decoded.buffer;
     }
 
     const converted = await convertPrice(price, currency.code);
@@ -1475,7 +1476,7 @@ router.post('/create-sponsor-order', async (req, res) => {
       if (!fs.existsSync(sponsorsDir)) {
         fs.mkdirSync(sponsorsDir, { recursive: true });
       }
-      fs.writeFileSync(path.join(sponsorsDir, filename), data, 'base64');
+      fs.writeFileSync(path.join(sponsorsDir, filename), data);
     }
 
     function removeImageFile(filename) {
@@ -1523,7 +1524,7 @@ router.post('/create-sponsor-order', async (req, res) => {
           sponsorUpdateCols.push([Sponsor.IMAGE, imageFilename]);
         }
 
-        if (imageBase64) writeImageFile(imageFilename, imageBase64);
+        if (imageData) writeImageFile(imageFilename, imageData);
         await Sponsor.update(sponsorUpdateCols, [Sponsor.ORDER_ID, existingOrder.razorpay_order_id]);
         if (oldImage && imageFilename) removeImageFile(oldImage);
       } catch (err) {
@@ -1550,7 +1551,7 @@ router.post('/create-sponsor-order', async (req, res) => {
           [Sponsor.PACKAGE_NAME, 'web'],
         );
 
-        if (imageBase64) writeImageFile(imageFilename, imageBase64);
+        if (imageData) writeImageFile(imageFilename, imageData);
       } catch (err) {
         removeImageFile(imageFilename);
         console.error('Failed to insert sponsor record:', err);

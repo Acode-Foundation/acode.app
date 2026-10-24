@@ -16,7 +16,7 @@ const { getMetadata, getPluginsMetadata, getFaqsMetadata, FALLBACK_TITLE } = req
 const Plugin = require('./entities/plugin');
 const User = require('./entities/user');
 const { getLoggedInUser } = require('./lib/helpers');
-const { promotionRedirectLimiter } = require('./lib/rateLimits');
+const { promotionRedirectLimiter, sponsorImageLimiter } = require('./lib/rateLimits');
 const apis = require('./routes/apis');
 const oauth = require('./apis/oauth');
 const aiOAuthCallback = require('./lib/aiOAuthCallback');
@@ -24,6 +24,7 @@ const setAuth = require('./lib/gapis');
 const migrationRunner = require('./lib/migrationRunner');
 const { renderDefaultOgImage, renderPluginOgImage } = require('./lib/ogImage');
 const { fileInDir } = require('./lib/pluginScanner');
+const { sendSponsorImage } = require('./lib/sponsorImage');
 const { createMetadataContext, createPluginDescription, getPublicOrigin, localizeStructuredData, publicUrl } = require('./lib/publicMetadata');
 
 const app = express();
@@ -36,7 +37,6 @@ const LEGACY_NATIVE_CSRF_EXEMPT_PATHS = new Set(['/api/plugin/order', '/api/plug
 const PLUGIN_ICONS = path.resolve(__dirname, '../data/icons');
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
 const SCHEMAS_DIR = path.resolve(__dirname, './schemas');
-const SPONSOR_IMAGES = path.resolve(__dirname, '../data/sponsors');
 const OG_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
 const PUBLIC_ORIGIN = getPublicOrigin();
 const NOINDEX_PATH = /^\/api-keys\/?$/i;
@@ -289,15 +289,7 @@ async function main() {
     res.status(404).send({ error: 'File not found' });
   });
 
-  app.get('/sponsor/image/:filename', async (req, res) => {
-    const imagePath = resolveFileIn(SPONSOR_IMAGES, req.params.filename);
-
-    if (!imagePath) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    res.sendFile(imagePath);
-  });
+  app.get('/sponsor/image/:filename', sponsorImageLimiter, sendSponsorImage());
 
   app.get('/manifest.json', (_req, res) => {
     res.sendFile(path.resolve(__dirname, './manifest.json'));

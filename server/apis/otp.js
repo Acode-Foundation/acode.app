@@ -1,20 +1,25 @@
 const { Router } = require('express');
-const Otp = require('../entities/otp');
 const User = require('../entities/user');
+const { EmailCodeCooldownError, discardEmailCode, issueEmailCode } = require('../lib/emailCode');
+const { emailCodeLimiter } = require('../lib/rateLimits');
 const sendEmail = require('../lib/sendEmail');
 
 const route = Router();
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-route.post('/', async (req, res) => {
+route.post('/', emailCodeLimiter, async (req, res) => {
   const { email } = req.body;
-  const { type } = req.query;
+  const type = req.query.type === 'reset' ? 'reset' : 'signup';
 
   if (!email) {
     res.status(400).send({ error: 'Missing required fields' });
     return;
   }
 
-  const otp = Math.floor(100000 + Math.random() * 900000);
+  if (typeof email !== 'string' || email.length > 254 || !EMAIL_PATTERN.test(email)) {
+    res.status(400).send({ error: 'Invalid email' });
+    return;
+  }
 
   try {
     const user = await User.get([User.EMAIL, email]);
@@ -24,19 +29,20 @@ route.post('/', async (req, res) => {
       return;
     }
 
-    const name = user?.[0]?.name;
-    await sendOtpToEmail(email, name, otp, type);
-    const row = await Otp.get([Otp.EMAIL, email]);
-
-    if (row.length) {
-      await Otp.update([Otp.OTP, String(otp)], [Otp.EMAIL, email]);
-      res.send({ message: 'OTP sent' });
-      return;
+    const code = await issueEmailCode(email, type);
+    try {
+      await sendOtpToEmail(email, user?.[0]?.name, code, type);
+    } catch (error) {
+      await discardEmailCode(email, type, code);
+      throw error;
     }
 
-    await Otp.insert([Otp.EMAIL, email], [Otp.OTP, String(otp)]);
     res.send({ message: 'OTP sent' });
   } catch (error) {
+    if (error instanceof EmailCodeCooldownError) {
+      res.status(error.status).send({ error: error.message });
+      return;
+    }
     console.error(error);
     res.status(500).send({ error: 'Something went wrong! Please try again later.' });
   }
@@ -55,8 +61,8 @@ async function sendOtpToEmail(email, name, otp, type) {
     name,
     subject,
     `<div>
-      <p></p>${message}</p>
-      <p>Your OTP is: <strong>${otp}</strong></p>
+      <p>${message}</p>
+      <p>Your OTP is: <strong>${otp}</strong>. It expires in 10 minutes.</p>
     </div>`,
   );
   return res;
