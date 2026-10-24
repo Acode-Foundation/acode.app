@@ -38,6 +38,7 @@ export default async function Tabs({ variant = 'pill', defaultActive, tabs, onCh
       <div
         className='tabs-nav'
         role='tablist'
+        aria-orientation='horizontal'
         on:click={(e) => {
           const btn = e.target.closest('.tab-btn');
           if (!btn) return;
@@ -62,19 +63,29 @@ export default async function Tabs({ variant = 'pill', defaultActive, tabs, onCh
     </div>
   );
 
-  setTimeout(() => initContent(), 0);
+  const nav = wrapper.querySelector('.tabs-nav');
+  setTimeout(() => {
+    updateLayout();
+    initContent();
+  }, 0);
 
-  if (variant === 'pill') {
-    // Button widths change when web fonts load or the viewport resizes.
-    const nav = wrapper.querySelector('.tabs-nav');
-    if (typeof ResizeObserver === 'function') {
-      const observer = new ResizeObserver(() => updateIndicator());
+  if (typeof ResizeObserver === 'function') {
+    const observer = new ResizeObserver(updateLayout);
+    observer.observe(nav);
+    if (variant === 'pill') {
+      // Button widths also change when web fonts load.
       for (const btn of nav.querySelectorAll('.tab-btn')) observer.observe(btn);
     }
-    document.fonts?.ready.then(() => updateIndicator());
   }
+  document.fonts?.ready.then(updateLayout);
 
   return wrapper;
+
+  function updateLayout() {
+    const vertical = getComputedStyle(nav).flexDirection.startsWith('column');
+    nav.setAttribute('aria-orientation', vertical ? 'vertical' : 'horizontal');
+    if (variant === 'pill') updateIndicator();
+  }
 
   function updateIndicator() {
     const nav = wrapper.querySelector('.tabs-nav');
