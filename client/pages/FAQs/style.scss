@@ -138,6 +138,19 @@
       color: var(--secondary-text-color);
       padding-left: 4px;
 
+      // The "Footnotes" heading above an answer's footnotes is for screen readers only.
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
       p {
         margin: 0 0 8px;
 

@@ -1,6 +1,6 @@
 import './style.scss';
 import 'highlight.js/styles/atom-one-dark.css';
-import { renderMarkdown } from 'lib/markdown';
+import { handleAnchorLinks, renderMarkdown } from 'lib/markdown';
 
 /**
  * Plugin readme or changelog, rendered and styled like the Acode app's plugin page.
@@ -15,33 +15,6 @@ export default function Markdown({ content, className = '' }) {
   addCopyButtons($md);
   highlightCode($md);
   return $md;
-}
-
-/** In-page links scroll to their heading or footnote instead of changing the URL. */
-function handleAnchorLinks($md) {
-  for (const link of $md.querySelectorAll("a[href^='#']")) {
-    link.addEventListener('click', (e) => {
-      const id = decodeHash(link.getAttribute('href').slice(1));
-      // A bare `#` (e.g. "Back to top") goes to the start of the readme.
-      const target = id ? $md.querySelector(`[name="${CSS.escape(id)}"]`) || $md.querySelector(`#${CSS.escape(id)}`) : $md;
-      if (!target) return;
-
-      // The router's body listener would otherwise load the fragment as a page URL.
-      e.preventDefault();
-      e.stopPropagation();
-      // Clear the sticky header, which sits below the announcement banner when it is shown.
-      target.style.scrollMarginTop = `${Math.max(0, document.querySelector('header')?.getBoundingClientRect().bottom || 0)}px`;
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
-}
-
-function decodeHash(hash) {
-  try {
-    return decodeURIComponent(hash);
-  } catch {
-    return hash;
-  }
 }
 
 function addCopyButtons($md) {
