@@ -1,5 +1,4 @@
 import './style.scss';
-import 'highlight.js/styles/github-dark.css';
 import AdSense from 'components/adsense';
 import AjaxForm from 'components/ajaxForm';
 import CurrencySelector from 'components/currencySelector';
@@ -9,6 +8,7 @@ import prompt from 'components/dialogs/prompt';
 import EditorType from 'components/editorType';
 import Input from 'components/input';
 import MonthSelect from 'components/MonthSelect';
+import Markdown from 'components/markdown';
 import PluginSecurity from 'components/pluginSecurity';
 import PluginStatus from 'components/pluginStatus';
 import BuyButton, { checkPluginOwnership } from 'components/razorpayCheckout';
@@ -18,7 +18,6 @@ import Ref from 'html-tag-js/ref';
 import { calcRating, getLoggedInUser, gravatar, hideLoading, showLoading, since } from 'lib/helpers';
 import { applyPluginMetadata } from 'lib/pageMetadata';
 import Router from 'lib/Router';
-import { marked } from 'marked';
 import moment from 'moment/moment';
 
 export default async function Plugin({ id: pluginId, section = 'description', callback = '' }) {
@@ -70,7 +69,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   const $description = (
     <article style={{ width: '100%', overflow: 'auto' }}>
       <AdSense name='readme' style={{ position: 'relative' }} />
-      <p className='md' innerHTML={marked.parse(description)} />
+      <Markdown content={description} />
     </article>
   );
   const updateOrder = () => {
@@ -107,25 +106,10 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     }
   }
 
-  const codeBlocks = $description.getAll('pre code');
-  if (codeBlocks.length) {
-    // Syntax highlighting should not hold the plugin content behind its large
-    // language bundle. Keep the readable code visible while it loads.
-    import('highlight.js')
-      .then(({ default: highlighter }) => {
-        for (const code of $description.getAll('pre code')) highlighter.highlightElement(code);
-      })
-      .catch((error) => console.error('Failed to load syntax highlighting:', error));
-  }
-
   renderComments(commentListRef, userId, user, pluginId, author);
 
   if (shouldShowOrders) {
     renderOrders(ordersList, pluginId);
-  }
-
-  for (const table of $description.getAll('table')) {
-    table.replaceWith(<div className='table-wrapper'>{table.cloneNode(true)}</div>);
   }
 
   function PurchaseSection() {
@@ -350,14 +334,12 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
             {
               id: 'changelogs',
               label: 'Changelogs',
-              content: () => {
-                const changelogs = plugin.changelogs ? marked.parse(plugin.changelogs) : '';
-                return (
-                  <p className='md' innerHTML={changelogs}>
-                    {!changelogs && <span style={{ opacity: 0.8, fontSize: 'italic' }}>No changelogs</span>}
-                  </p>
-                );
-              },
+              content: () =>
+                plugin.changelogs ? (
+                  <Markdown content={plugin.changelogs} />
+                ) : (
+                  <span style={{ opacity: 0.8, fontSize: 'italic' }}>No changelogs</span>
+                ),
             },
             { id: 'comments', label: `${commentCount} Reviews`, content: $comments },
             { id: 'orders', label: 'Orders', visible: shouldShowOrders, content: $orders },
