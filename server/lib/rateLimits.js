@@ -46,6 +46,10 @@ module.exports = {
   promotionRedirectLimiter: limiter(120, 1, {
     keyGenerator: (req) => ipKeyGenerator(req.ip),
   }),
+  // Sponsor pages load many logos at once, and the app loads them from shared carrier IPs.
+  sponsorImageLimiter: limiter(600, 1, {
+    keyGenerator: (req) => ipKeyGenerator(req.ip),
+  }),
   appAuthCodeLimiter: limiter(process.env.NODE_ENV === 'development' ? 200 : 20, 15),
   appTokenExchangeLimiter: limiter(process.env.NODE_ENV === 'development' ? 400 : 120, 15, {
     keyGenerator: (req) => ipKeyGenerator(req.ip),

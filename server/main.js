@@ -16,7 +16,7 @@ const { getMetadata, getPluginsMetadata, getFaqsMetadata, FALLBACK_TITLE } = req
 const Plugin = require('./entities/plugin');
 const User = require('./entities/user');
 const { getLoggedInUser } = require('./lib/helpers');
-const { promotionRedirectLimiter } = require('./lib/rateLimits');
+const { promotionRedirectLimiter, sponsorImageLimiter } = require('./lib/rateLimits');
 const apis = require('./routes/apis');
 const oauth = require('./apis/oauth');
 const aiOAuthCallback = require('./lib/aiOAuthCallback');
@@ -289,7 +289,7 @@ async function main() {
     res.status(404).send({ error: 'File not found' });
   });
 
-  app.get('/sponsor/image/:filename', sendSponsorImage());
+  app.get('/sponsor/image/:filename', sponsorImageLimiter, sendSponsorImage());
 
   app.get('/manifest.json', (_req, res) => {
     res.sendFile(path.resolve(__dirname, './manifest.json'));

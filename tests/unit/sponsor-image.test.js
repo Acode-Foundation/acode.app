@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import sharp from 'sharp';
 
 const require = createRequire(import.meta.url);
@@ -112,7 +113,8 @@ describe('sponsor image route', () => {
   beforeEach(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sponsor-route-'));
     const app = express();
-    app.get('/sponsor/image/:filename', sendSponsorImage(dir));
+    // Like the real route, which sits behind sponsorImageLimiter.
+    app.get('/sponsor/image/:filename', rateLimit({ windowMs: 60_000, limit: 5 }), sendSponsorImage(dir));
     server = app.listen(0);
     base = `http://127.0.0.1:${server.address().port}/sponsor/image/`;
   });
@@ -132,6 +134,13 @@ describe('sponsor image route', () => {
     expect(res.headers.get('x-content-type-options')).toBe('nosniff');
     expect(res.headers.get('content-security-policy')).toContain('sandbox');
     expect(Buffer.from(await res.arrayBuffer()).equals(avif)).toBe(true);
+  });
+
+  it('stops serving once the rate limit is reached', async () => {
+    fs.writeFileSync(path.join(dir, 'logo.png'), await image('png'));
+    const statuses = [];
+    for (let i = 0; i < 6; i++) statuses.push((await fetch(`${base}logo.png`)).status);
+    expect(statuses).toEqual([200, 200, 200, 200, 200, 429]);
   });
 
   it('refuses active content, missing files and paths outside the folder', async () => {
