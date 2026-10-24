@@ -534,6 +534,7 @@ async function start() {
     '../entities/user': oauthUserEntity,
     '../entities/appAuthCode': codes,
     '../lib/rateLimits': limits,
+    '../lib/emailCode': {},
     '../lib/calcEarnings': {},
     '../lib/developerDashboard': {},
     '../../constants.mjs': {},

@@ -1,17 +1,13 @@
-const crypto = require('node:crypto');
 const { Router } = require('express');
-const { writeFile, mkdir } = require('node:fs/promises');
 const Sponsor = require('../entities/sponsor');
-const { resolve } = require('node:path');
-const { existsSync } = require('node:fs');
 const { google } = require('googleapis');
 const { getWebLoggedInUser } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
+const { saveSponsorImage } = require('../lib/sponsorImage');
 const { getSponsorQueryOptions, getSponsorScope, getSponsorWhereClause } = require('../lib/sponsorScope');
 
 const router = Router();
 const androidpublisher = google.androidpublisher('v3');
-const sponsorImagesPath = resolve(__dirname, '../../data/sponsors');
 
 router.get('/{:top}', async (req, res) => {
   let page;
@@ -92,23 +88,10 @@ router.post('/', async (req, res) => {
       token: purchaseToken,
     });
 
-    let extension = 'png';
-
-    try {
-      extension = image.split(';')?.[0].split('/')?.[1].split('+')?.[0] || 'png';
-    } catch (_error) {
-      extension = 'png';
-    }
-
-    const filename = `${crypto.randomUUID()}.${extension}`;
-    const path = resolve(sponsorImagesPath, filename);
-
-    if (!existsSync(sponsorImagesPath)) {
-      await mkdir(sponsorImagesPath, { recursive: true });
-    }
-
-    if (image) {
-      await writeFile(path, image.split(';base64,')[1], { encoding: 'base64' });
+    // The purchase is already paid, so an unusable image only drops the logo.
+    const filename = image ? await saveSponsorImage(image) : null;
+    if (image && !filename) {
+      console.warn(`Sponsor "${name}" uploaded an image that is not a supported image; saving without it.`);
     }
 
     const insertValues = [
