@@ -6,8 +6,8 @@ import Input from 'components/input';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { getLoggedInUser, hashString } from 'lib/helpers';
+import { renderMarkdown } from 'lib/markdown';
 import Router from 'lib/Router';
-import { marked } from 'marked';
 
 export default async function FAQs({ mode, oldQ, a, qHash, oldCategory }) {
   const isUpdate = mode === 'update';
@@ -101,7 +101,7 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory }) {
     const mdPreview = Ref();
     const q = Ref();
 
-    mdPreview.innerHTML = marked.parse(a || '');
+    mdPreview.innerHTML = renderAnswer(a);
 
     return (
       <details className='admin-form' open={isUpdate}>
@@ -160,7 +160,7 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory }) {
     }
 
     function oninput(e) {
-      mdPreview.innerHTML = marked.parse(e.target.value);
+      mdPreview.innerHTML = renderAnswer(e.target.value);
     }
 
     function onkeydown(e) {
@@ -188,7 +188,7 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory }) {
         >
           <h2 id={id}>{q}</h2>
         </a>
-        <div className='faq-answer' innerHTML={marked.parse(ans)} />
+        <div className='faq-answer' innerHTML={renderAnswer(ans)} />
         {isAdmin ? (
           <div className='icon-buttons'>
             <span onclick={() => editFaq(q, ans, categoryId)} title='Edit this FAQ' className='link icon create' />
@@ -219,4 +219,9 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory }) {
       alert('Error', error.message);
     }
   }
+}
+
+/** FAQ answers keep GitHub-style links for plain URLs. */
+function renderAnswer(answer) {
+  return renderMarkdown(answer || '', { linkBareUrls: true });
 }

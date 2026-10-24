@@ -59,6 +59,14 @@ it('links <url> autolinks but leaves bare URLs as text, like markdown-it', () =>
   expect($root.textContent).toContain('https://example.com');
 });
 
+it('links bare URLs when asked, still sanitizing the result', () => {
+  const $root = document.createElement('div');
+  $root.innerHTML = renderMarkdown('See https://example.com and <https://acode.app>.\n\n<img src=x onerror="alert(1)">', { linkBareUrls: true });
+
+  expect([...$root.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(['https://example.com', 'https://acode.app']);
+  expect($root.querySelector('[onerror]')).toBeNull();
+});
+
 it('keeps readme HTML but drops scripts, handlers, styles and forms', () => {
   const $root = render(
     [

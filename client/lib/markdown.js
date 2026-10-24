@@ -12,24 +12,29 @@ const PURIFY_OPTIONS = { FORBID_TAGS: ['style', 'form'] };
  * GitHub alerts, heading anchors, task lists and footnotes), so a readme looks
  * the same on the website and in the app.
  * @param {string} content
+ * @param {object} [options]
+ * @param {boolean} [options.linkBareUrls=false] link plain `https://…` text, as GitHub
+ * does; off by default to match the app
  * @returns {string} sanitized HTML
  */
-export function renderMarkdown(content) {
+export function renderMarkdown(content, { linkBareUrls = false } = {}) {
   if (!content) return '';
-  return DOMPurify.sanitize(createParser().parse(content), PURIFY_OPTIONS);
+  return DOMPurify.sanitize(createParser({ linkBareUrls }).parse(content), PURIFY_OPTIONS);
 }
 
-function createParser() {
+function createParser({ linkBareUrls }) {
   // Heading ids must be unique per document, like markdown-it-anchor's.
   const slugs = new Set();
 
   return new Marked({ gfm: true }).use(markedAlert(), markedFootnote({ refMarkers: true, footnoteDivider: true }), {
     // markdown-it doesn't link bare URLs by default; <https://…> autolinks still work.
-    tokenizer: {
-      url() {
-        return undefined;
-      },
-    },
+    tokenizer: linkBareUrls
+      ? {}
+      : {
+          url() {
+            return undefined;
+          },
+        },
     renderer: {
       heading({ tokens, depth }) {
         const id = uniqueSlug(slugify(plainText(tokens)), slugs);
