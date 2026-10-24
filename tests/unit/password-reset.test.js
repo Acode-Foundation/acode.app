@@ -5,6 +5,7 @@ import express, { Router } from 'express';
 let users;
 let User;
 let login;
+let AppAuthCode;
 let consumeEmailCode;
 let server;
 let base;
@@ -19,6 +20,7 @@ beforeEach(async () => {
     update: vi.fn(async () => {}),
   };
   login = { USER_ID: 'user_id', delete: vi.fn(async () => {}) };
+  AppAuthCode = { USER_ID: 'user_id', delete: vi.fn(async () => {}) };
   consumeEmailCode = vi.fn(() => true);
 
   const module = { exports: {} };
@@ -30,6 +32,7 @@ beforeEach(async () => {
         express: { Router },
         '../entities/user': User,
         '../entities/login': login,
+        '../entities/appAuthCode': AppAuthCode,
         '../lib/emailCode': { consumeEmailCode: (...args) => consumeEmailCode(...args) },
         '../lib/helpers': { getWebLoggedInUser: async () => null },
         '../lib/rateLimits': { emailCodeCheckLimiter: (_req, _res, next) => next() },
@@ -57,13 +60,14 @@ function reset(body) {
   }));
 }
 
-it('changes the password with a valid code and signs out every session', async () => {
+it('changes the password with a valid code, signs out every session and drops pending app codes', async () => {
   const res = await reset({ email: 'dev@example.com', otp: '123456', password: 'new-password' });
 
   expect(res.status).toBe(200);
   expect(consumeEmailCode).toHaveBeenCalledWith('dev@example.com', 'reset', '123456');
   expect(User.update).toHaveBeenCalledWith(['password', 'hash:new-password'], ['id', 7]);
   expect(login.delete).toHaveBeenCalledWith(['user_id', 7]);
+  expect(AppAuthCode.delete).toHaveBeenCalledWith(['user_id', 7]);
 });
 
 it('gives the same answer for a wrong code and an unknown email', async () => {
@@ -75,6 +79,7 @@ it('gives the same answer for a wrong code and an unknown email', async () => {
   expect(unknown).toEqual(wrongCode);
   expect(User.update).not.toHaveBeenCalled();
   expect(login.delete).not.toHaveBeenCalled();
+  expect(AppAuthCode.delete).not.toHaveBeenCalled();
 });
 
 it('checks the request before spending an attempt on the code', async () => {

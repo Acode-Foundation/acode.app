@@ -55,6 +55,17 @@ it('rejects uploads that are not images, whatever type they claim', async () => 
   }
 });
 
+it.each(['png', 'jpeg'])('rejects a %s whose header reads fine but whose pixels are cut off', async (format) => {
+  const full = await sharp({ create: { width: 64, height: 64, channels: 3, noise: { type: 'gaussian', mean: 128, sigma: 30 } } })
+    [format]()
+    .toBuffer();
+  const truncated = full.subarray(0, Math.floor(full.length / 2));
+
+  expect((await sharp(truncated).metadata()).format).toBe(format);
+  expect(await decodeSponsorImage(await dataUrl(`image/${format}`, truncated))).toBeNull();
+  expect(await decodeSponsorImage(await dataUrl(`image/${format}`, full))).not.toBeNull();
+});
+
 it('rejects images over the size limit', async () => {
   expect(await decodeSponsorImage(await dataUrl('image/png', Buffer.alloc(1024 * 1024 + 1)))).toBeNull();
 });

@@ -50,6 +50,7 @@ it('lets anyone read FAQs', async () => {
   const res = await fetch(base);
   expect(res.status).toBe(200);
   expect(await res.json()).toEqual([{ q: 'Existing?', a: 'Yes.', tags: [] }]);
+  expect((await fetch(base, { method: 'HEAD' })).status).toBe(200);
 });
 
 it.each([

@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const User = require('../entities/user');
 const login = require('../entities/login');
+const AppAuthCode = require('../entities/appAuthCode');
 const { consumeEmailCode } = require('../lib/emailCode');
 const { getWebLoggedInUser } = require('../lib/helpers');
 const { emailCodeCheckLimiter } = require('../lib/rateLimits');
@@ -29,8 +30,10 @@ router.put('/reset', emailCodeCheckLimiter, async (req, res) => {
     }
 
     await User.update([User.PASSWORD, encryptPassword(password)], [User.ID, user.id]);
-    // Whoever knew the old password must not stay signed in.
+    // Whoever knew the old password must not stay signed in, or exchange an
+    // app sign-in code they requested before the reset for a new session.
     await login.delete([login.USER_ID, user.id]);
+    await AppAuthCode.delete([AppAuthCode.USER_ID, user.id]);
     res.send({ message: 'Password changed successfully' });
   } catch (error) {
     console.error('Password reset failed:', error);

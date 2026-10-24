@@ -48,7 +48,11 @@ async function decodeSponsorImage(dataUrl) {
   try {
     const { format } = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
     const extension = KEPT_FORMATS[format];
-    if (extension) return { buffer: input, extension };
+    if (extension) {
+      // metadata() reads only the header; decode every pixel so a truncated file isn't kept.
+      await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS }).stats();
+      return { buffer: input, extension };
+    }
     return { buffer: await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS }).png().toBuffer(), extension: 'png' };
   } catch {
     return null;
