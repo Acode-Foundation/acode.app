@@ -23,6 +23,7 @@ const aiOAuthCallback = require('./lib/aiOAuthCallback');
 const setAuth = require('./lib/gapis');
 const migrationRunner = require('./lib/migrationRunner');
 const { renderDefaultOgImage, renderPluginOgImage } = require('./lib/ogImage');
+const { fileInDir } = require('./lib/pluginScanner');
 const { createMetadataContext, createPluginDescription, getPublicOrigin, localizeStructuredData, publicUrl } = require('./lib/publicMetadata');
 
 const app = express();
@@ -33,6 +34,9 @@ const ALLOWED_ORIGINS = new Set(['https://localhost', 'https://acode.app', 'acod
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const LEGACY_NATIVE_CSRF_EXEMPT_PATHS = new Set(['/api/plugin/order', '/api/plugin/refund', '/api/sponsor', '/api/login']);
 const PLUGIN_ICONS = path.resolve(__dirname, '../data/icons');
+const PUBLIC_DIR = path.resolve(__dirname, '../public');
+const SCHEMAS_DIR = path.resolve(__dirname, './schemas');
+const SPONSOR_IMAGES = path.resolve(__dirname, '../data/sponsors');
 const OG_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
 const PUBLIC_ORIGIN = getPublicOrigin();
 const NOINDEX_PATH = /^\/api-keys\/?$/i;
@@ -262,8 +266,8 @@ async function main() {
       res.status(404).send({ error: 'Schema not found' });
       return;
     }
-    const file = path.resolve(__dirname, `./schemas/${type}.v${version}.json`);
-    if (fs.existsSync(file)) {
+    const file = resolveFileIn(SCHEMAS_DIR, `${type}.v${version}.json`);
+    if (file) {
       res.header('Content-Type', 'application/schema+json');
       const schema = JSON.parse(fs.readFileSync(file, 'utf8'));
       res.send(schema);
@@ -277,8 +281,8 @@ async function main() {
       res.status(404).send({ error: 'File not found' });
       return;
     }
-    const file = path.resolve(__dirname, `../public/${req.params.filename}`);
-    if (fs.existsSync(file)) {
+    const file = resolveFileIn(PUBLIC_DIR, req.params.filename);
+    if (file) {
       res.sendFile(file);
       return;
     }
@@ -286,10 +290,9 @@ async function main() {
   });
 
   app.get('/sponsor/image/:filename', async (req, res) => {
-    const { filename } = req.params;
-    const imagePath = path.resolve(__dirname, '../data/sponsors', filename);
+    const imagePath = resolveFileIn(SPONSOR_IMAGES, req.params.filename);
 
-    if (!fs.existsSync(imagePath)) {
+    if (!imagePath) {
       return res.status(404).json({ error: 'Image not found' });
     }
 
@@ -306,8 +309,8 @@ async function main() {
       return;
     }
 
-    const file = path.resolve(__dirname, `../public/${req.params.filename}`);
-    if (fs.existsSync(file)) {
+    const file = resolveFileIn(PUBLIC_DIR, req.params.filename);
+    if (file) {
       res.sendFile(file);
       return;
     }
@@ -315,8 +318,8 @@ async function main() {
   });
 
   app.get('/plugin-icon/:id', (req, res) => {
-    const file = path.resolve(__dirname, `../data/icons/${req.params.id}.png`);
-    if (fs.existsSync(file)) {
+    const file = getPluginIconPath(req.params.id);
+    if (file) {
       res.sendFile(file);
       return;
     }
@@ -561,9 +564,23 @@ function createEtag(value) {
 }
 
 function getPluginIconPath(id) {
-  const iconPath = path.resolve(PLUGIN_ICONS, `${id}.png`);
-  if (!iconPath.startsWith(`${PLUGIN_ICONS}${path.sep}`) || !fs.existsSync(iconPath)) return null;
-  return iconPath;
+  return resolveFileIn(PLUGIN_ICONS, `${id}.png`);
+}
+
+/**
+ * Resolve a request-supplied file name to an existing file directly inside `dir`.
+ * Route params arrive URL-decoded, so `..%2F` would otherwise escape the directory.
+ * @param {string} dir
+ * @param {string} name
+ * @returns {string | null}
+ */
+function resolveFileIn(dir, name) {
+  try {
+    const file = fileInDir(dir, name);
+    return fs.statSync(file).isFile() ? file : null;
+  } catch {
+    return null;
+  }
 }
 
 function sendOgImage(res, image, etag) {
