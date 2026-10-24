@@ -77,6 +77,17 @@ it('ranks the name typed in full first, even when it repeats a word', async () =
   expect((await search('go'))[0]).toBe('acode.go');
 });
 
+it('counts a word once whatever its ASCII case, so case alone does not reorder results', async () => {
+  const insert = db.prepare('INSERT INTO plugin (id, name, keywords, user_id, downloads, status) VALUES (?, ?, ?, 2, ?, 1)');
+  insert.run('acode.go.runner', 'Go Runner', '["tools"]', '1');
+  insert.run('acode.tools.kit', 'Tools Kit', '["go"]', '100');
+  // Neither name holds the phrase and each holds one distinct word, so downloads decide.
+  expect(await search('Go go tools')).toEqual(['acode.tools.kit', 'acode.go.runner']);
+  expect(pluginSearchWhere('Go GO go')).toEqual(pluginSearchWhere('Go'));
+  // Non-ASCII case is not folded by LIKE, so those stay separate words.
+  expect(pluginSearchWhere('Übung übung')).toEqual([...pluginSearchWhere('Übung'), ...pluginSearchWhere('übung')]);
+});
+
 it('matches non-ASCII letters as typed, since LIKE only folds ASCII case', async () => {
   expect(await search('ÜBUNG')).toEqual(['acode.uebung']);
   expect(await search('übung')).toEqual([]);

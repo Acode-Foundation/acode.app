@@ -5,12 +5,18 @@ const MAX_TERMS = 8;
 
 /**
  * Words keep their original characters: SQLite's LIKE folds case for ASCII letters only, so
- * lowercasing here would stop "ÜBUNG" from matching a plugin named "ÜBUNG".
+ * lowercasing here would stop "ÜBUNG" from matching a plugin named "ÜBUNG". Duplicates are
+ * found the way LIKE compares, so "Go go" is one word and scores once.
  * @param {string} query
- * @returns {string[]} the distinct words of the query
+ * @returns {string[]} the distinct words of the query, each as first typed
  */
 function searchTerms(query) {
-  return [...new Set(query.split(/\s+/).filter(Boolean))].slice(0, MAX_TERMS);
+  const terms = new Map();
+  for (const term of query.split(/\s+/)) {
+    const key = term.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+    if (term && !terms.has(key)) terms.set(key, term);
+  }
+  return [...terms.values()].slice(0, MAX_TERMS);
 }
 
 /**
