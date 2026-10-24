@@ -108,7 +108,13 @@ class Plugin extends Entity {
     columns,
     where,
     values,
-    { page = Entity.default_page, limit = Entity.default_limit, orderBy = Entity.default_order_by, operator = Entity.default_operator },
+    {
+      page = Entity.default_page,
+      limit = Entity.default_limit,
+      orderBy = Entity.default_order_by,
+      operator = Entity.default_operator,
+      orderValues = [],
+    },
   ) {
     let sql = `SELECT ${this.#initialColumns.join(',')} FROM ${this.table}`;
 
@@ -130,6 +136,7 @@ class Plugin extends Entity {
 
     if (this.mode === 'api') {
       sql += ` ORDER BY ${Array.isArray(orderBy) ? orderBy.join(',') : orderBy} LIMIT ? OFFSET ?`;
+      values.push(...orderValues);
       values.push(limit);
       values.push((page - 1) * limit);
     }

@@ -21,6 +21,7 @@ const { convertPrice } = require('../lib/exchangeRates');
 const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
 const { pluginUploadLimiter, pluginAdminLimiter, pluginScanReadLimiter } = require('../lib/rateLimits');
 const { LICENSES, normalizeLicense } = require('../lib/pluginLicense');
+const { pluginSearchWhere, pluginSearchRank } = require('../lib/pluginSearch');
 const db = require('../lib/db');
 const {
   scanUpload,
@@ -442,7 +443,7 @@ router.get('{/:pluginId}', async (req, res) => {
             where.push([1, 2]);
           }
         } else {
-          where.push([Plugin.NAME, name, 'LIKE']);
+          where.push(...pluginSearchWhere(name));
         }
       }
 
@@ -494,6 +495,13 @@ router.get('{/:pluginId}', async (req, res) => {
       limit: positiveInt(limit),
       orderBy: Object.hasOwn(LIST_ORDER, orderBy) ? LIST_ORDER[orderBy] : LIST_ORDER.popular,
     };
+
+    // A search in the default order shows the closest matches first; other orders are kept as asked.
+    if (!pluginId && name?.trim() && !name.startsWith('mode:') && options.orderBy === LIST_ORDER.popular) {
+      const rank = pluginSearchRank(name);
+      options.orderBy = [...rank.orderBy, ...options.orderBy];
+      options.orderValues = rank.values;
+    }
 
     const rows = await Plugin.get(columns, where, options);
     const currency = detectUserCurrency(req);

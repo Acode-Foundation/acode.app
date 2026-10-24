@@ -5,6 +5,7 @@ import Database from 'better-sqlite3';
 import { Router } from 'express';
 import JSZip from 'jszip';
 import * as apiKeyLib from '../../server/lib/apiKey';
+import * as pluginSearch from '../../server/lib/pluginSearch';
 
 const filename = path.resolve(import.meta.dirname, '../../server/apis/plugin.js');
 const source = fs.readFileSync(filename, 'utf8');
@@ -104,6 +105,7 @@ beforeEach(() => {
     '../lib/pluginScanner': { createKeyedLock: () => (_key, task) => task(), fileInDir: (dir, name) => path.join(dir, name) },
     '../lib/db': {},
     '../lib/pluginLicense': { LICENSES: [], normalizeLicense: (license) => license },
+    '../lib/pluginSearch': pluginSearch,
     '../lib/rateLimits': {
       pluginUploadLimiter: (_req, _res, next) => next(),
       pluginAdminLimiter: (_req, _res, next) => next(),
@@ -368,6 +370,18 @@ describe('plugin list sorting and filters', () => {
 
   it.each(['unknown', 'constructor', '__proto__'])('falls back to popular for %s', async (orderBy) => {
     expect((await listOptions({ orderBy })).orderBy).toEqual((await listOptions({})).orderBy);
+  });
+
+  it('searches names, ids, keywords and authors, closest matches first in the default order', async () => {
+    const where = await listWhere({ name: 'Python LSP' });
+    expect(where).toEqual(expect.arrayContaining(pluginSearch.pluginSearchWhere('Python LSP')));
+    expect(where).toContainEqual(['keywords', 'LSP', 'LIKE']);
+    const popular = await listOptions({ name: 'Python LSP' });
+    const rank = pluginSearch.pluginSearchRank('Python LSP');
+    expect(popular.orderBy).toEqual([...rank.orderBy, ...(await listOptions({})).orderBy]);
+    expect(popular.orderValues).toEqual(['Python LSP', 'Python LSP%', '%Python LSP%', '%Python%', '%LSP%', '%Python LSP%']);
+    expect(await listOptions({ name: 'Python LSP', orderBy: 'updated' })).not.toHaveProperty('orderValues');
+    expect(await listOptions({ name: 'mode:python' })).not.toHaveProperty('orderValues');
   });
 
   it('filters by price', async () => {
