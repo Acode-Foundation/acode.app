@@ -22,6 +22,41 @@ export function renderMarkdown(content, { linkBareUrls = false } = {}) {
   return DOMPurify.sanitize(createParser({ linkBareUrls }).parse(content), PURIFY_OPTIONS);
 }
 
+/**
+ * Keep in-page links (headings, footnotes) inside `$root`: they scroll to their
+ * target there instead of changing the URL. Ids repeat between documents on one
+ * page, so a target is only looked up in its own document. The listener sits on
+ * `$root`, so content rendered into it later is covered too.
+ * @param {HTMLElement} $root
+ */
+export function handleAnchorLinks($root) {
+  $root.addEventListener('click', (e) => {
+    const link = e.target.closest?.("a[href^='#']");
+    if (!link || !$root.contains(link)) return;
+
+    const id = decodeHash(link.getAttribute('href').slice(1));
+    // A bare `#` (e.g. "Back to top") goes to the start of the document. `[id=…]`
+    // rather than `#…`, which some engines resolve page-wide when ids repeat.
+    const target = id ? $root.querySelector(`[name="${CSS.escape(id)}"]`) || $root.querySelector(`[id="${CSS.escape(id)}"]`) : $root;
+    if (!target) return;
+
+    // The router's body listener would otherwise load the fragment as a page URL.
+    e.preventDefault();
+    e.stopPropagation();
+    // Clear the sticky header, which sits below the announcement banner when it is shown.
+    target.style.scrollMarginTop = `${Math.max(0, document.querySelector('header')?.getBoundingClientRect().bottom || 0)}px`;
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+function decodeHash(hash) {
+  try {
+    return decodeURIComponent(hash);
+  } catch {
+    return hash;
+  }
+}
+
 function createParser({ linkBareUrls }) {
   // Heading ids must be unique per document, like markdown-it-anchor's.
   const slugs = new Set();

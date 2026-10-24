@@ -6,7 +6,7 @@ import Input from 'components/input';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { getLoggedInUser, hashString } from 'lib/helpers';
-import { renderMarkdown } from 'lib/markdown';
+import { handleAnchorLinks, renderMarkdown } from 'lib/markdown';
 import Router from 'lib/Router';
 
 export default async function FAQs({ mode, oldQ, a, qHash, oldCategory }) {
@@ -102,6 +102,7 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory }) {
     const q = Ref();
 
     mdPreview.innerHTML = renderAnswer(a);
+    mdPreview.on('ref', handleAnchorLinks);
 
     return (
       <details className='admin-form' open={isUpdate}>
@@ -177,6 +178,8 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory }) {
 
   function FAQ({ q, a: ans, categoryId }) {
     const id = hashString(q);
+    const $answer = <div className='faq-answer' innerHTML={renderAnswer(ans)} />;
+    handleAnchorLinks($answer);
     return (
       <div className='faq' id={`faqs-${id}`}>
         <a
@@ -188,7 +191,7 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory }) {
         >
           <h2 id={id}>{q}</h2>
         </a>
-        <div className='faq-answer' innerHTML={renderAnswer(ans)} />
+        {$answer}
         {isAdmin ? (
           <div className='icon-buttons'>
             <span onclick={() => editFaq(q, ans, categoryId)} title='Edit this FAQ' className='link icon create' />
