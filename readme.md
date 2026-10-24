@@ -1,10 +1,10 @@
 # Acode - Official Website Repository
 
-Welcome to the repository for Acode's official website. This project contains the source code and content for [acode.app](https://acode.app), the home of Acode—a powerful and versatile code editor for Android devices.
+Welcome to the repository for Acode's official website. This project contains the source code and content for [acode.app](https://acode.app), the home of Acode - a powerful and versatile code editor for Android/IOS devices.
 
 ## About Acode
 
-Acode is a lightweight yet robust code editor designed specifically for Android. It supports a wide range of programming languages, including but not limited to:
+Acode is a lightweight yet robust code editor designed specifically for Android/IOS. It supports a wide range of programming languages, including but not limited to:
 
 - HTML
 - JavaScript
@@ -24,6 +24,7 @@ With Acode, you can:
 - Use the in-app preview for HTML and Markdown files.
 - Debug using the integrated JavaScript console.
 - Enhance functionality with a collection of over 195 plugins.
+- Agentic development, multi pane and many more.
 
 For more details, visit the [Acode website](https://acode.app).
 
