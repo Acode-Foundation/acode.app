@@ -4,11 +4,13 @@ const SEARCH_FIELDS = ['name', 'id', 'keywords', AUTHOR_NAME];
 const MAX_TERMS = 8;
 
 /**
+ * Words keep their original characters: SQLite's LIKE folds case for ASCII letters only, so
+ * lowercasing here would stop "ÜBUNG" from matching a plugin named "ÜBUNG".
  * @param {string} query
- * @returns {string[]} the distinct words of the query, lowercased
+ * @returns {string[]} the distinct words of the query
  */
 function searchTerms(query) {
-  return [...new Set(query.toLowerCase().split(/\s+/).filter(Boolean))].slice(0, MAX_TERMS);
+  return [...new Set(query.split(/\s+/).filter(Boolean))].slice(0, MAX_TERMS);
 }
 
 /**
@@ -30,7 +32,8 @@ function pluginSearchWhere(query) {
  */
 function pluginSearchRank(query) {
   const terms = searchTerms(query);
-  const phrase = terms.join(' ');
+  // The phrase is the query as typed, so "Go Go" stays an exact match for a plugin named "Go Go".
+  const phrase = query.trim();
   return {
     orderBy: [
       'CASE WHEN name LIKE ? THEN 0 WHEN name LIKE ? THEN 1 WHEN name LIKE ? THEN 2 ELSE 3 END',

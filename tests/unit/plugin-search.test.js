@@ -39,6 +39,9 @@ beforeEach(() => {
     ['acode.python.tools', 'Python Tools', '["python"]', 2, '50'],
     ['acode.ai.agent', 'Acode AI Agent', '["ai","agent"]', 1, '3000'],
     ['acode.markdown', 'Markdown Preview', '["md"]', 2, '700'],
+    ['acode.go', 'Go', '["go"]', 2, '800'],
+    ['acode.gogo', 'Go Go', '["go"]', 2, '10'],
+    ['acode.uebung', 'ÜBUNG', '[]', 2, '5'],
   ]) {
     insert.run(...row);
   }
@@ -67,6 +70,17 @@ it('matches every word against any field, ranking name matches before keyword ma
 it('finds plugins by id and keyword, case-insensitively', async () => {
   expect(await search('ACODE.MARKDOWN')).toEqual(['acode.markdown']);
   expect(await search('Types')).toEqual(['acode.pyright']);
+});
+
+it('ranks the name typed in full first, even when it repeats a word', async () => {
+  expect((await search('Go Go'))[0]).toBe('acode.gogo');
+  expect((await search('go'))[0]).toBe('acode.go');
+});
+
+it('matches non-ASCII letters as typed, since LIKE only folds ASCII case', async () => {
+  expect(await search('ÜBUNG')).toEqual(['acode.uebung']);
+  expect(await search('übung')).toEqual([]);
+  expect(await search('Übung')).toEqual(['acode.uebung']);
 });
 
 it('keeps the other filters when the search ORs across fields', async () => {

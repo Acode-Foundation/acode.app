@@ -375,11 +375,11 @@ describe('plugin list sorting and filters', () => {
   it('searches names, ids, keywords and authors, closest matches first in the default order', async () => {
     const where = await listWhere({ name: 'Python LSP' });
     expect(where).toEqual(expect.arrayContaining(pluginSearch.pluginSearchWhere('Python LSP')));
-    expect(where).toContainEqual(['keywords', 'lsp', 'LIKE']);
+    expect(where).toContainEqual(['keywords', 'LSP', 'LIKE']);
     const popular = await listOptions({ name: 'Python LSP' });
     const rank = pluginSearch.pluginSearchRank('Python LSP');
     expect(popular.orderBy).toEqual([...rank.orderBy, ...(await listOptions({})).orderBy]);
-    expect(popular.orderValues).toEqual(['python lsp', 'python lsp%', '%python lsp%', '%python%', '%lsp%', '%python lsp%']);
+    expect(popular.orderValues).toEqual(['Python LSP', 'Python LSP%', '%Python LSP%', '%Python%', '%LSP%', '%Python LSP%']);
     expect(await listOptions({ name: 'Python LSP', orderBy: 'updated' })).not.toHaveProperty('orderValues');
     expect(await listOptions({ name: 'mode:python' })).not.toHaveProperty('orderValues');
   });
