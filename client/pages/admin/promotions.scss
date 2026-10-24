@@ -2,9 +2,7 @@
   &, * { box-sizing: border-box; }
   min-width: 0; width: 100%; max-width: none; min-height: 0; margin: 0; padding: 0;
   container-type: inline-size;
-  .promotion-intro { margin-bottom: 24px; }
-  h2 { font-size: 1.35rem; margin: 0 0 8px; letter-spacing: -.02em; }
-  .promotion-intro p, .promotion-empty { color: var(--secondary-text-color); opacity: .65; line-height: 1.6; font-size: .9rem; margin: 0; }
+  .promotion-empty { color: var(--secondary-text-color); opacity: .65; line-height: 1.6; font-size: .9rem; margin: 0; }
   .promotion-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 20px; }
   .promotion-toolbar > span { margin-right: auto; font-size: .85rem; color: #a9b2c2; }
   button { margin: 0; padding: 9px 14px; font-size: .85rem; border-radius: 8px; cursor: pointer; background: transparent; border: 1px solid var(--border-color); color: inherit; }

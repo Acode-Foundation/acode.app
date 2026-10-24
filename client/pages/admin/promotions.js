@@ -18,13 +18,6 @@ export default function Promotions() {
   });
   const retry = button('Reload', load);
   const count = document.createElement('span');
-  const intro = document.createElement('div');
-  intro.className = 'promotion-intro';
-  const title = document.createElement('h2');
-  title.textContent = 'Promotions';
-  const subtitle = document.createElement('p');
-  subtitle.textContent = 'Manage the promotions shown on Acode and track their clicks.';
-  intro.append(title, subtitle);
   const actions = document.createElement('div');
   actions.className = 'promotion-toolbar';
   actions.append(count, retry, add);
@@ -32,7 +25,7 @@ export default function Promotions() {
   const summary = document.createElement('summary');
   summary.textContent = 'Archived promotions';
   history.append(summary, archiveList);
-  root.append(intro, actions, message, activeList, history);
+  root.append(actions, message, activeList, history);
   load();
   return root;
 

@@ -34,20 +34,74 @@ export default async function Admin({ queries = {} }) {
     <section ref={usersList} id='admin'>
       <h1>Admin Panel</h1>
       <Tabs
+        className='admin-tabs'
         defaultActive={activeTab}
         onChange={onTabChange}
         tabs={[
-          { id: 'dashboard', icon: 'dashboard', label: 'Dashboard', content: <Dashboard /> },
-          { id: 'settings', icon: 'settings', label: 'Settings', content: <AppSettings /> },
-          { id: 'users', icon: 'person', label: 'Users', content: <Users /> },
-          { id: 'email', icon: 'mail', label: 'Email', content: <EmailUsers /> },
-          { id: 'payments', icon: 'payment', label: 'Payments', content: <Payments /> },
-          { id: 'promotions', icon: 'bullhorn', label: 'Promotions', content: <Promotions /> },
-          { id: 'sponsors', icon: 'favorite', label: 'Sponsors', content: <Sponsors /> },
-          { id: 'plugins', icon: 'extension', label: 'Plugins', content: <Plugins /> },
-          { id: 'updates', icon: 'published_with_changes', label: 'Plugin updates', content: <PluginUpdates /> },
-          { id: 'modes', icon: 'code-fork', label: 'Modes', content: <Modes /> },
-        ]}
+          {
+            id: 'dashboard',
+            icon: 'dashboard',
+            description: 'Review activity, revenue, and plugin performance.',
+            label: 'Dashboard',
+            content: <Dashboard />,
+          },
+          {
+            id: 'settings',
+            icon: 'settings',
+            description: 'Manage Acode Pro pricing and the minimum developer payout.',
+            label: 'Settings',
+            content: <AppSettings />,
+          },
+          { id: 'users', icon: 'person', description: 'Find and manage registered accounts.', label: 'Users', content: <Users /> },
+          { id: 'email', icon: 'mail', description: 'Send an announcement to a selected group of users.', label: 'Email', content: <EmailUsers /> },
+          {
+            id: 'payments',
+            icon: 'payment',
+            description: 'Review developer payouts and update payment statuses.',
+            label: 'Payments',
+            content: <Payments />,
+          },
+          {
+            id: 'promotions',
+            icon: 'bullhorn',
+            description: 'Manage the promotions shown on Acode and track their clicks.',
+            label: 'Promotions',
+            content: <Promotions />,
+          },
+          {
+            id: 'sponsors',
+            icon: 'favorite',
+            description: 'Review sponsorships and manage sponsor listings.',
+            label: 'Sponsors',
+            content: <Sponsors />,
+          },
+          { id: 'plugins', icon: 'extension', description: 'Review and manage published plugins.', label: 'Plugins', content: <Plugins /> },
+          {
+            id: 'updates',
+            icon: 'published_with_changes',
+            description: 'Review submitted plugin updates.',
+            label: 'Plugin updates',
+            content: <PluginUpdates />,
+          },
+          {
+            id: 'modes',
+            icon: 'code-fork',
+            description: 'Manage plugin recommendations for each language mode.',
+            label: 'Modes',
+            content: <Modes />,
+          },
+        ].map(({ description, content, ...tab }) => ({
+          ...tab,
+          content: (
+            <div className='admin-panel' role='region' aria-labelledby={`admin-${tab.id}-title`}>
+              <div className='admin-panel-heading'>
+                <h2 id={`admin-${tab.id}-title`}>{tab.label}</h2>
+                <p>{description}</p>
+              </div>
+              {content}
+            </div>
+          ),
+        }))}
       />
     </section>
   );
@@ -936,23 +990,23 @@ function AppSettings() {
   return (
     <div className='app-settings'>
       <div className='setting-row'>
-        <label>Acode Pro Price (INR)</label>
+        <label htmlFor='admin-pro-price'>Acode Pro price (INR)</label>
         <div className='setting-input'>
-          <input ref={priceRef} type='number' min='1' step='1' placeholder='370' />
+          <input id='admin-pro-price' ref={priceRef} type='number' min='1' step='1' placeholder='370' />
           <button type='button' onclick={() => onSave('acode_pro_price')}>
             Save
           </button>
-          <span ref={priceStatusRef} className='status' />
+          <span ref={priceStatusRef} className='status' role='status' />
         </div>
       </div>
       <div className='setting-row'>
-        <label>Payment Threshold (INR)</label>
+        <label htmlFor='admin-payment-threshold'>Payment threshold (INR)</label>
         <div className='setting-input'>
-          <input ref={thresholdRef} type='number' min='1' step='1' placeholder='15000' />
+          <input id='admin-payment-threshold' ref={thresholdRef} type='number' min='1' step='1' placeholder='15000' />
           <button type='button' onclick={() => onSave('payment_threshold')}>
             Save
           </button>
-          <span ref={thresholdStatusRef} className='status' />
+          <span ref={thresholdStatusRef} className='status' role='status' />
         </div>
       </div>
     </div>
