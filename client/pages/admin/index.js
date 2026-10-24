@@ -37,16 +37,16 @@ export default async function Admin({ queries = {} }) {
         defaultActive={activeTab}
         onChange={onTabChange}
         tabs={[
-          { id: 'dashboard', label: 'Dashboard', content: <Dashboard /> },
-          { id: 'settings', label: 'Settings', content: <AppSettings /> },
-          { id: 'users', label: 'Users', content: <Users /> },
-          { id: 'email', label: 'Email', content: <EmailUsers /> },
-          { id: 'payments', label: 'Payments', content: <Payments /> },
-          { id: 'promotions', label: 'Promotions', content: <Promotions /> },
-          { id: 'sponsors', label: 'Sponsors', content: <Sponsors /> },
-          { id: 'plugins', label: 'Plugins', content: <Plugins /> },
-          { id: 'updates', label: 'Plugin updates', content: <PluginUpdates /> },
-          { id: 'modes', label: 'Modes', content: <Modes /> },
+          { id: 'dashboard', icon: 'dashboard', label: 'Dashboard', content: <Dashboard /> },
+          { id: 'settings', icon: 'settings', label: 'Settings', content: <AppSettings /> },
+          { id: 'users', icon: 'person', label: 'Users', content: <Users /> },
+          { id: 'email', icon: 'mail', label: 'Email', content: <EmailUsers /> },
+          { id: 'payments', icon: 'payment', label: 'Payments', content: <Payments /> },
+          { id: 'promotions', icon: 'bullhorn', label: 'Promotions', content: <Promotions /> },
+          { id: 'sponsors', icon: 'favorite', label: 'Sponsors', content: <Sponsors /> },
+          { id: 'plugins', icon: 'extension', label: 'Plugins', content: <Plugins /> },
+          { id: 'updates', icon: 'published_with_changes', label: 'Plugin updates', content: <PluginUpdates /> },
+          { id: 'modes', icon: 'code-fork', label: 'Modes', content: <Modes /> },
         ]}
       />
     </section>

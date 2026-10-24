@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'acode';
-  src: url('acode.ttf?gc7td6') format('truetype');
+  src: url('acode.ttf?21evm8') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -21,6 +21,9 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+.icon.settings:before {
+  content: '\e92c';
+}
 .icon.bullhorn:before {
   content: '\e910';
 }

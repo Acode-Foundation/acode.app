@@ -53,7 +53,7 @@ export default async function Tabs({ variant = 'pill', defaultActive, tabs, onCh
             className={`tab-btn${tab.id === initialTab ? ' active' : ''}`}
             aria-selected={String(tab.id === initialTab)}
           >
-            {tab.icon && <span className={`icon ${tab.icon}`} />}
+            {tab.icon && <span className={`icon ${tab.icon}`} aria-hidden='true' />}
             {tab.label}
           </button>
         ))}
