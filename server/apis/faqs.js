@@ -1,9 +1,22 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const { Router } = require('express');
+const { getWebLoggedInUser } = require('../lib/helpers');
 
 const faqsFile = path.resolve(__dirname, '../../data/faqs.json');
 const router = Router();
+
+// Anyone can read FAQs; only admins can change them.
+router.use(async (req, res, next) => {
+  if (req.method === 'GET') return next();
+  try {
+    const user = await getWebLoggedInUser(req);
+    if (!user?.isAdmin) return res.status(401).json({ error: 'Unauthorized' });
+    next();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 router.get('/', async (req, res) => {
   try {

@@ -58,6 +58,12 @@ module.exports = {
       handler,
     }),
   appleUnlinkLimiter: limiter(5, 10),
+  // Each request emails a sign-up or password reset code.
+  emailCodeLimiter: limiter(5, 10),
+  // Sign-up and password reset check an emailed code.
+  emailCodeCheckLimiter: limiter(20, 15),
+  // Only failed sign-ins count, so people who sign in often aren't locked out.
+  loginLimiter: limiter(10, 15, { skipSuccessfulRequests: true }),
   accountDeletionCodeLimiter: limiter(5, 10),
   accountDeletionLimiter: limiter(5, 10),
   apiKeyCodeLimiter: limiter(5, 10),

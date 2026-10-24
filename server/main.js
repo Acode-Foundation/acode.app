@@ -24,6 +24,7 @@ const setAuth = require('./lib/gapis');
 const migrationRunner = require('./lib/migrationRunner');
 const { renderDefaultOgImage, renderPluginOgImage } = require('./lib/ogImage');
 const { fileInDir } = require('./lib/pluginScanner');
+const { SPONSOR_IMAGES_DIR: SPONSOR_IMAGES, SPONSOR_IMAGE_EXTENSION } = require('./lib/sponsorImage');
 const { createMetadataContext, createPluginDescription, getPublicOrigin, localizeStructuredData, publicUrl } = require('./lib/publicMetadata');
 
 const app = express();
@@ -36,7 +37,6 @@ const LEGACY_NATIVE_CSRF_EXEMPT_PATHS = new Set(['/api/plugin/order', '/api/plug
 const PLUGIN_ICONS = path.resolve(__dirname, '../data/icons');
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
 const SCHEMAS_DIR = path.resolve(__dirname, './schemas');
-const SPONSOR_IMAGES = path.resolve(__dirname, '../data/sponsors');
 const OG_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
 const PUBLIC_ORIGIN = getPublicOrigin();
 const NOINDEX_PATH = /^\/api-keys\/?$/i;
@@ -290,12 +290,13 @@ async function main() {
   });
 
   app.get('/sponsor/image/:filename', async (req, res) => {
-    const imagePath = resolveFileIn(SPONSOR_IMAGES, req.params.filename);
+    const imagePath = SPONSOR_IMAGE_EXTENSION.test(req.params.filename) ? resolveFileIn(SPONSOR_IMAGES, req.params.filename) : null;
 
     if (!imagePath) {
       return res.status(404).json({ error: 'Image not found' });
     }
 
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     res.sendFile(imagePath);
   });
 

@@ -4,7 +4,6 @@ const crypto = require('node:crypto');
 const { encryptPassword, isValidPassword } = require('../password');
 const { getLoggedInUser, getWebLoggedInUser, areSameUser } = require('../lib/helpers');
 const Comment = require('../entities/comment');
-const Otp = require('../entities/otp');
 const User = require('../entities/user');
 const Payment = require('../entities/payment');
 const PaymentMethod = require('../entities/paymentMethod');
@@ -15,7 +14,8 @@ const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
 const AppConfig = require('../entities/appConfig');
 const login = require('../entities/login');
 const AppAuthCode = require('../entities/appAuthCode');
-const { appAuthCodeLimiter, appTokenExchangeLimiter, appleUnlinkLimiter } = require('../lib/rateLimits');
+const { appAuthCodeLimiter, appTokenExchangeLimiter, appleUnlinkLimiter, emailCodeCheckLimiter } = require('../lib/rateLimits');
+const { consumeEmailCode } = require('../lib/emailCode');
 const { logAppleError } = require('../lib/appleOAuth');
 
 const route = Router();
@@ -576,7 +576,7 @@ route.post('/payment-method', async (req, res) => {
   }
 });
 
-route.post('/', async (req, res) => {
+route.post('/', emailCodeCheckLimiter, async (req, res) => {
   const { name, email, password, otp: sentOtp } = req.body;
 
   if (!name) {
@@ -612,10 +612,8 @@ route.post('/', async (req, res) => {
   }
 
   try {
-    const [{ otp: storedOtp }] = await Otp.get([Otp.EMAIL, email]);
-
-    if (storedOtp !== sentOtp) {
-      res.status(400).send({ error: 'Invalid OTP' });
+    if (!consumeEmailCode(email, 'signup', sentOtp)) {
+      res.status(400).send({ error: 'Invalid or expired OTP' });
       return;
     }
 
@@ -684,9 +682,8 @@ route.put('/', async (req, res) => {
         return;
       }
 
-      const [otpRow] = await Otp.get([Otp.EMAIL, email]);
-      if (otpRow?.otp !== sentOtp) {
-        res.status(400).send({ error: 'Invalid OTP' });
+      if (!consumeEmailCode(email, 'signup', sentOtp)) {
+        res.status(400).send({ error: 'Invalid or expired OTP' });
         return;
       }
     }

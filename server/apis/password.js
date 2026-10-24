@@ -1,15 +1,16 @@
 const { Router } = require('express');
 const User = require('../entities/user');
-const Otp = require('../entities/otp');
+const login = require('../entities/login');
+const { consumeEmailCode } = require('../lib/emailCode');
 const { getWebLoggedInUser } = require('../lib/helpers');
+const { emailCodeCheckLimiter } = require('../lib/rateLimits');
 const { comparePassword, encryptPassword, isValidPassword } = require('../password');
 
 const router = Router();
 
-router.put('/reset', async (req, res) => {
+router.put('/reset', emailCodeCheckLimiter, async (req, res) => {
   try {
     const { otp, password, email } = req.body;
-    const [user] = await User.get([User.EMAIL, email]);
 
     if (!otp) {
       res.status(400).send({ error: 'Missing OTP' });
@@ -21,16 +22,19 @@ router.put('/reset', async (req, res) => {
       return;
     }
 
-    const [{ otp: storedOtp }] = await Otp.get([Otp.OTP], [Otp.EMAIL, user.email]);
-    if (storedOtp !== otp) {
-      res.status(400).send({ error: 'Invalid OTP' });
+    const [user] = typeof email === 'string' ? await User.get([User.ID], [User.EMAIL, email]) : [];
+    if (!user || !consumeEmailCode(email, 'reset', otp)) {
+      res.status(400).send({ error: 'Invalid or expired OTP' });
       return;
     }
 
     await User.update([User.PASSWORD, encryptPassword(password)], [User.ID, user.id]);
+    // Whoever knew the old password must not stay signed in.
+    await login.delete([login.USER_ID, user.id]);
     res.send({ message: 'Password changed successfully' });
   } catch (error) {
-    res.status(500).send({ error: error.message });
+    console.error('Password reset failed:', error);
+    res.status(500).send({ error: 'Unable to reset password. Please try again.' });
   }
 });
 
