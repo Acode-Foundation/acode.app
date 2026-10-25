@@ -672,12 +672,6 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
       return;
     }
 
-    // Checked for free plugins too, since a later price change registers the same SKU.
-    if (await findSkuOwner(pluginId)) {
-      res.status(400).send({ error: `Plugin ID "${pluginId}" can't be used. Please choose a different ID.` });
-      return;
-    }
-
     const { name, price, version, minVersionCode = -1 } = pluginJson;
 
     if (!VERSION_REGEX.test(version)) {
@@ -698,22 +692,14 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
       return;
     }
 
-    let skuErrors = [];
-
-    if (price) {
-      if (price < MIN_PRICE || price > MAX_PRICE) {
-        res.status(400).send({
-          error: `Price should be between ₹${MIN_PRICE} and ₹${MAX_PRICE}`,
-        });
-        return;
-      }
-
-      skuErrors = await registerSKU(name, pluginId, price);
-      if (skuErrors.length) {
-        console.error('Google Play SKU registration had errors:', skuErrors);
-      }
+    if (price && (price < MIN_PRICE || price > MAX_PRICE)) {
+      res.status(400).send({
+        error: `Price should be between ₹${MIN_PRICE} and ₹${MAX_PRICE}`,
+      });
+      return;
     }
 
+    const sku = getPluginSKU(pluginId);
     const insert = [
       [Plugin.ID, pluginId],
       [Plugin.NAME, name],
@@ -721,7 +707,7 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
       [Plugin.VERSION, version],
       [Plugin.USER_ID, user.id],
       [Plugin.DESCRIPTION, readme],
-      [Plugin.SKU, getPluginSKU(pluginId)],
+      [Plugin.SKU, sku],
       [Plugin.MIN_VERSION_CODE, minVersionCode],
     ];
 
@@ -751,7 +737,27 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
     const supportedEditor = req.body?.supported_editor && ['cm', 'all'].includes(req.body.supported_editor) ? req.body.supported_editor : 'cm';
     insert.push([Plugin.SUPPORTED_EDITOR, supportedEditor]);
 
-    await Plugin.insert(...insert);
+    // The owner check, Play registration and insert share one lock, so two ids with the same SKU can't both pass the check.
+    let skuErrors = [];
+    const skuTaken = await withSkuLock(sku, async () => {
+      // Checked for free plugins too, since a later price change registers the same SKU.
+      if (await findSkuOwner(pluginId)) return true;
+
+      if (price) {
+        skuErrors = await registerSKU(name, pluginId, price);
+        if (skuErrors.length) {
+          console.error('Google Play SKU registration had errors:', skuErrors);
+        }
+      }
+
+      await Plugin.insert(...insert);
+      return false;
+    });
+
+    if (skuTaken) {
+      res.status(400).send({ error: `Plugin ID "${pluginId}" can't be used. Please choose a different ID.` });
+      return;
+    }
 
     await savePlugin(pluginId, pluginZip.data, icon);
 
@@ -1443,6 +1449,8 @@ const ICONS_DIR = path.resolve(__dirname, '../../data/icons');
 const STAGING_DIR = path.join(PLUGINS_DIR, 'pending');
 
 const withPluginLock = createKeyedLock();
+// Serializes new submissions by Play SKU, since different plugin ids can derive the same one.
+const withSkuLock = createKeyedLock();
 
 const livePath = (id) => fileInDir(PLUGINS_DIR, `${id}.zip`);
 const liveIconPath = (id) => fileInDir(ICONS_DIR, `${id}.png`);
