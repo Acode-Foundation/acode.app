@@ -23,6 +23,7 @@ const { pluginUploadLimiter, pluginAdminLimiter, pluginScanReadLimiter } = requi
 const { LICENSES, normalizeLicense } = require('../lib/pluginLicense');
 const { pluginSearchWhere, pluginSearchRank } = require('../lib/pluginSearch');
 const db = require('../lib/db');
+const { safeRepositoryUrl } = require('../../shared/repositoryUrl');
 const {
   scanUpload,
   decideUpdate,
@@ -1867,7 +1868,7 @@ function validatePlugin(json, icon, readmeFile) {
     throw new Error('Unable to load plugin icon: no icon was provided or the default icon (icon.png) is missing.');
   }
 
-  const { name, version, main, license, contributors, keywords } = json;
+  const { name, version, main, license, contributors, keywords, repository } = json;
   const id = json.id.toLowerCase();
 
   if (!ID_REGEX.test(id) || badWords.includes(id)) {
@@ -1921,6 +1922,11 @@ function validatePlugin(json, icon, readmeFile) {
     if (invalidContributors.length) {
       throw error;
     }
+  }
+
+  // Rendered as a link on the plugin page, so `javascript:` and friends must not get through.
+  if (repository !== undefined && repository !== null && repository !== '' && !safeRepositoryUrl(repository)) {
+    throw new Error('Repository should be an http(s) URL');
   }
 
   if (keywords) {
