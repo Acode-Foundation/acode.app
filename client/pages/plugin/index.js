@@ -19,6 +19,7 @@ import { calcRating, getLoggedInUser, gravatar, hideLoading, showLoading, since 
 import { applyPluginMetadata } from 'lib/pageMetadata';
 import Router from 'lib/Router';
 import moment from 'moment/moment';
+import { safeRepositoryUrl } from '../../../shared/repositoryUrl';
 
 export default async function Plugin({ id: pluginId, section = 'description', callback = '' }) {
   let plugin = null;
@@ -385,22 +386,6 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
       </div>
     );
   }
-}
-
-/**
- * Returns the repository URL only when it is http(s), so stored `javascript:` links never render.
- * @param {string} value
- * @returns {string}
- */
-function safeRepositoryUrl(value) {
-  if (typeof value !== 'string' || !value) return '';
-  try {
-    const url = new URL(value);
-    if (url.protocol === 'https:' || url.protocol === 'http:') return url.href;
-  } catch {
-    /* Invalid URLs are not linked. */
-  }
-  return '';
 }
 
 async function renderOrders(ref, pluginId, year, month) {

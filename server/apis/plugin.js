@@ -23,6 +23,7 @@ const { pluginUploadLimiter, pluginAdminLimiter, pluginScanReadLimiter } = requi
 const { LICENSES, normalizeLicense } = require('../lib/pluginLicense');
 const { pluginSearchWhere, pluginSearchRank } = require('../lib/pluginSearch');
 const db = require('../lib/db');
+const { safeRepositoryUrl } = require('../../shared/repositoryUrl');
 const {
   scanUpload,
   decideUpdate,
@@ -1923,23 +1924,9 @@ function validatePlugin(json, icon, readmeFile) {
     }
   }
 
-  if (repository !== undefined && repository !== null && repository !== '') {
-    const error = new Error('Repository should be an http(s) URL');
-    if (typeof repository !== 'string') {
-      throw error;
-    }
-
-    let url;
-    try {
-      url = new URL(repository);
-    } catch {
-      throw error;
-    }
-
-    // Rendered as a link on the plugin page, so `javascript:` and friends must not get through.
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-      throw error;
-    }
+  // Rendered as a link on the plugin page, so `javascript:` and friends must not get through.
+  if (repository !== undefined && repository !== null && repository !== '' && !safeRepositoryUrl(repository)) {
+    throw new Error('Repository should be an http(s) URL');
   }
 
   if (keywords) {
