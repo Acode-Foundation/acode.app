@@ -6,6 +6,7 @@ import { Router } from 'express';
 import JSZip from 'jszip';
 import * as apiKeyLib from '../../server/lib/apiKey';
 import * as pluginSearch from '../../server/lib/pluginSearch';
+import * as repositoryUrl from '../../shared/repositoryUrl';
 
 const filename = path.resolve(import.meta.dirname, '../../server/apis/plugin.js');
 const source = fs.readFileSync(filename, 'utf8');
@@ -106,6 +107,7 @@ beforeEach(() => {
     '../lib/db': {},
     '../lib/pluginLicense': { LICENSES: [], normalizeLicense: (license) => license },
     '../lib/pluginSearch': pluginSearch,
+    '../../shared/repositoryUrl': repositoryUrl,
     '../lib/rateLimits': {
       pluginUploadLimiter: (_req, _res, next) => next(),
       pluginAdminLimiter: (_req, _res, next) => next(),
@@ -593,6 +595,44 @@ describe('publishing with an API key', () => {
     expect(res.send.mock.calls[0][0].error).toMatch(/can't be used/);
     expect(plugin.get).toHaveBeenLastCalledWith(['id'], ['sku', `plugin_${paidPlugin.id}`]);
     expect(plugin.insert).not.toHaveBeenCalled();
+  });
+
+  describe('repository URLs', () => {
+    const unsafe = ['javascript:alert(1)', 'JaVaScRiPt:alert(1)', 'data:text/html,x', 'github.com/dev/test', 42, { url: 'https://x' }];
+
+    it.each(unsafe)('rejects %j when submitting a plugin', async (repository) => {
+      Object.assign(plugin, { insert: vi.fn() });
+      apiKeyAuth = keyFor([], [apiKeyLib.SCOPE_PLUGIN_CREATE]);
+      plugin.get.mockResolvedValueOnce([]);
+      const res = await publish({ price: 0, repository }, { method: 'post' });
+      expect(res.statusCode).toBe(400);
+      expect(res.send.mock.calls[0][0].error).toBe('Repository should be an http(s) URL');
+      expect(plugin.insert).not.toHaveBeenCalled();
+    });
+
+    it.each(unsafe)('rejects %j when updating a plugin', async (repository) => {
+      Object.assign(plugin, { PRICE: 'price', DESCRIPTION: 'description', REPOSITORY: 'repository', update: vi.fn() });
+      apiKeyAuth = keyFor([paidPlugin.id]);
+      const res = await publish({ version: '1.0.0', repository });
+      expect(res.statusCode).toBe(400);
+      expect(res.send.mock.calls[0][0].error).toBe('Repository should be an http(s) URL');
+      expect(plugin.update).not.toHaveBeenCalled();
+    });
+
+    it('stores an https repository when submitting a plugin', async () => {
+      Object.assign(plugin, { REPOSITORY: 'repository', insert: vi.fn() });
+      apiKeyAuth = keyFor([], [apiKeyLib.SCOPE_PLUGIN_CREATE]);
+      plugin.get.mockResolvedValueOnce([]);
+      await publish({ price: 0, repository: 'https://github.com/dev/test' }, { method: 'post' });
+      expect(plugin.insert.mock.calls[0]).toContainEqual(['repository', 'https://github.com/dev/test']);
+    });
+
+    it.each([undefined, null, '', 'http://example.com/dev/test'])('accepts %j when updating a plugin', async (repository) => {
+      Object.assign(plugin, { PRICE: 'price', DESCRIPTION: 'description', REPOSITORY: 'repository', update: vi.fn() });
+      apiKeyAuth = keyFor([paidPlugin.id]);
+      const res = await publish({ version: '1.0.0', repository });
+      expect(res.send.mock.calls[0][0]).toEqual({ message: 'Plugin updated successfully' });
+    });
   });
 
   it('refuses paid submissions and lets free ones through to the normal checks', async () => {

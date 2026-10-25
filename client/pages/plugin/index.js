@@ -19,6 +19,7 @@ import { calcRating, getLoggedInUser, gravatar, hideLoading, showLoading, since 
 import { applyPluginMetadata } from 'lib/pageMetadata';
 import Router from 'lib/Router';
 import moment from 'moment/moment';
+import { safeRepositoryUrl } from '../../../shared/repositoryUrl';
 
 export default async function Plugin({ id: pluginId, section = 'description', callback = '' }) {
   let plugin = null;
@@ -57,6 +58,8 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   } = plugin;
 
   applyPluginMetadata(plugin);
+
+  const repositoryUrl = safeRepositoryUrl(repository);
 
   const user = await getLoggedInUser();
   const userComment = user ? await getUserComment(pluginId) : null;
@@ -304,8 +307,8 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
             <span className='chip'>
               <a href={`/profile/${userId}`}>{author}</a>&nbsp;{!!authorVerified && <span className='icon verified' />}
             </span>
-            {repository && (
-              <a className='chip' href={repository}>
+            {repositoryUrl && (
+              <a className='chip' href={repositoryUrl} rel='noopener noreferrer nofollow'>
                 repository
               </a>
             )}
