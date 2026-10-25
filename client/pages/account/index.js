@@ -6,7 +6,7 @@ import OAuthButton from 'components/oauthButton';
 import SendOtp from 'components/sendOtp';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
-import { safeAccountRedirect } from 'lib/appSource';
+import { clearAccountRedirect, getAccountRedirect, safeAccountRedirect } from 'lib/appSource';
 import background from 'lib/background';
 import { getLoggedInUser, hideLoading, loadingEnd, loadingStart, showLoading, withRedirect } from 'lib/helpers';
 import Router from 'lib/Router';
@@ -14,11 +14,30 @@ import DeleteAccount from './deleteAccount';
 
 export default async function Profile({ mode = 'register', redirect }) {
   const isRegister = mode === 'register';
+  redirect = isRegister ? getAccountRedirect(redirect) : safeAccountRedirect(redirect);
+  if (isRegister) {
+    let signedInUser;
+    try {
+      signedInUser = await getLoggedInUser({ force: true });
+    } catch {
+      // The server still enforces guest-only registration if this lookup fails.
+    }
+    if (signedInUser) {
+      clearAccountRedirect();
+      window.location.replace(redirect === 'app' ? withRedirect('/login', 'app') : redirect || '/');
+      return null;
+    }
+  }
   const oauthRedirect = redirect === 'app' ? withRedirect('/login', redirect) : safeAccountRedirect(redirect);
-  const buttonText = mode === 'edit' ? 'Update' : 'Register';
+  const buttonText = mode === 'edit' ? 'Update' : 'Create account';
   const method = mode === 'edit' ? 'put' : 'post';
   const errorText = Reactive('');
   const successText = Reactive('');
+  // Keep feedback free of JSX whitespace so :empty hides it until needed.
+  const errorMessage = <div className='error' role='alert' />;
+  const successMessage = <div className='success' role='status' />;
+  errorMessage.append(errorText);
+  successMessage.append(successText);
   const canvas = Ref();
   const otpInput = Ref();
   const sendOtpBtn = Ref();
@@ -57,14 +76,14 @@ export default async function Profile({ mode = 'register', redirect }) {
     <section id='register-user'>
       <canvas ref={canvas} id='background' />
       <AjaxForm
-        className='glass user-form'
+        className={`glass user-form${isRegister ? ' create-account' : ''}`}
         loading={(form) => loadingStart(form, errorText, successText)}
         loadingEnd={(form) => loadingEnd(form, buttonText)}
         onloadend={onloadend}
         onerror={onerror}
         action='/api/user'
         method={method}
-        autofill={!isRegister}
+        autofill={true}
       >
         <div className='glass-layer-1' />
         <div className='glass-layer-2' />
@@ -73,7 +92,7 @@ export default async function Profile({ mode = 'register', redirect }) {
           {isRegister ? (
             <>
               <span className='icon person' />
-              Signup for Acode
+              Create your account
             </>
           ) : (
             <>
@@ -100,35 +119,44 @@ export default async function Profile({ mode = 'register', redirect }) {
               <OAuthButton provider='apple' redirectUrl={oauthRedirect} />
             </div>
             <div className='divider'>
-              <span>or register with email</span>
+              <span>or</span>
             </div>
           </>
         )}
-        <Input value={user?.name} type='text' name='name' label='Name' placeholder='e.g. John Doe' />
+        <Input value={user?.name} type='text' name='name' label='Full name' placeholder='Your name' autocomplete='name' required={isRegister} />
 
         <div className='email-otp-group'>
-          <fieldset>
+          <Input
+            value={user.email}
+            autocomplete='email'
+            required={isRegister}
+            onchange={(e) => {
+              email = e.target.value;
+              updateEmailOtpUi();
+            }}
+            oninput={(e) => {
+              email = e.target.value;
+              updateEmailOtpUi();
+              sendOtpBtn.refresh?.();
+            }}
+            type='email'
+            name='email'
+            label='Email address'
+            placeholder='you@example.com'
+          />
+          <div className='verification-row'>
             <Input
-              value={user.email}
-              autocomplete={isRegister ? 'new-email' : 'email'}
-              onchange={(e) => {
-                email = e.target.value;
-                updateEmailOtpUi();
-              }}
-              oninput={(e) => {
-                if (isRegister) return;
-
-                email = e.target.value;
-                updateEmailOtpUi();
-              }}
-              type='email'
-              name='email'
-              label='Email'
-              placeholder='e.g. john@gmail.com'
+              ref={otpInput}
+              type='text'
+              inputmode='numeric'
+              autocomplete='one-time-code'
+              name='otp'
+              label='Email code'
+              placeholder='Code from email'
+              required={isRegister}
             />
-            <Input ref={otpInput} style={{ width: '140px' }} type='number' name='otp' label='OTP' placeholder='e.g. 1234' />
-          </fieldset>
-          <SendOtp ref={sendOtpBtn} className='otp-send-action' errorText={errorText} getEmail={() => email} />
+            <SendOtp ref={sendOtpBtn} className='otp-send-action' errorText={errorText} getEmail={() => email} />
+          </div>
         </div>
 
         {mode === 'edit' && (
@@ -158,24 +186,22 @@ export default async function Profile({ mode = 'register', redirect }) {
         {mode === 'edit' ? (
           <a href='/change-password'>Change password</a>
         ) : (
-          <Input type='password' name='password' label='Password' placeholder='password' autocomplete={isRegister ? 'new-password' : 'password'} />
+          <Input type='password' name='password' label='Password' placeholder='At least 6 characters' autocomplete='new-password' required={true} />
         )}
 
-        <div className='error'>{errorText}</div>
-        <div className='success'>{successText}</div>
+        {errorMessage}
+        {successMessage}
         <button type='submit'>{buttonText}</button>
         {isRegister && (
           <small className='disclaimer'>
-            By clicking <strong>Register</strong> button above you agree to our <a href='/policy'>Privacy Policy</a> and{' '}
-            <a href='/terms'>Terms and conditions</a>.
+            By creating an account, you agree to our <a href='/terms'>Terms of Service</a> and <a href='/policy'>Privacy Policy</a>.
           </small>
         )}
         {mode !== 'edit' && (
-          <p>
+          <p className='register-signin'>
             <a className='link' href={withRedirect('/login', redirect)}>
-              Sign in
-            </a>{' '}
-            to existing account.
+              Sign in instead
+            </a>
           </p>
         )}
       </AjaxForm>
@@ -201,7 +227,7 @@ export default async function Profile({ mode = 'register', redirect }) {
   }
 
   function onerror(error) {
-    errorText.value = error;
+    errorText.value = error.message || String(error);
   }
 
   function updateEmailOtpUi() {

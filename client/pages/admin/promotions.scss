@@ -9,36 +9,70 @@
   button:hover:not(:disabled) { background: rgba(255,255,255,.06); }
   button.promotion-primary { background: var(--button-color); border-color: transparent; color: #fff; }
   button:disabled { opacity: .4; cursor: default; }
-  [hidden] { display: none; }
-  .promotion-card-actions { display: flex; justify-content: flex-end; padding: 0 24px 20px; }
-  .promotion-card-actions[hidden] { display: none; }
+  [hidden] { display: none !important; }
+  .promotion-card-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 0 24px 20px; }
   [role=status]:empty { display: none; }
   [role=status] { font-size: .9rem; margin: 12px 0; }
   .promotion-card { margin-bottom: 24px; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; background: var(--secondary-color); }
-  .promotion-card-header { display: flex; align-items: center; gap: 12px; padding: 20px 24px; border-bottom: 1px solid var(--border-color); }
-  .promotion-card-header img { width: 40px; height: 40px; object-fit: contain; border-radius: 9px; }
+  .promotion-card-header { display: flex; align-items: flex-start; gap: 12px; padding: 20px 24px; }
+  .promotion-card-header img { width: 40px; height: 40px; flex-shrink: 0; object-fit: contain; border-radius: 9px; }
   .promotion-identity { flex: 1; min-width: 0; }
-  h3 { font-size: 1rem; line-height: 1.4; margin: 0 0 4px; overflow-wrap: anywhere; }
-  .promotion-state { font-size: .75rem; color: #9ba9bc; }
+  .promotion-title-row { display: flex; align-items: center; gap: 8px; }
+  h3 { min-width: 0; font-size: 1rem; line-height: 1.4; margin: 0; overflow-wrap: anywhere; }
+  .promotion-state { flex-shrink: 0; display: inline-block; font-size: .7rem; color: #b5c5da; background: rgba(130,160,200,.1); padding: 2px 8px; border-radius: 20px; }
+  .promotion-controls { display: flex; gap: 6px; flex-shrink: 0; }
+  button.promotion-icon-button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: #b5c5da; }
+  button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--button-color); outline-offset: 3px; }
+  .promotion-details { margin-top: 6px; overflow-wrap: anywhere; }
+  .promotion-description { margin: 0 0 4px; color: #aeb8c8; font-size: .8rem; line-height: 1.5; }
+  .promotion-destination { margin: 0; color: #82bdff; font-size: .75rem; text-decoration: none; }
+  .promotion-destination:hover { text-decoration: underline; }
   .promotion-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; padding: 24px; }
-  label { display: flex; flex-direction: column; gap: 8px; min-width: 0; font-size: .8rem; color: #aeb8c8; }
-  input { box-sizing: border-box; width: 100%; min-width: 0; height: 42px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; background: var(--primary-color); color: var(--primary-text-color); font: inherit; font-size: .9rem; }
-  input:focus { outline: 2px solid var(--button-color); outline-offset: 1px; }
+  .promotion-fields .custom-input { min-width: 0; }
+  .promotion-fields input { font-size: 16px; }
   .promotion-analytics { width: 100%; max-width: none; min-height: 0; margin: 0; padding: 22px 24px; border-top: 1px solid var(--border-color); background: rgba(0,0,0,.09); }
   h4 { font-size: .85rem; font-weight: 500; margin: 0 0 16px; color: #bec8d7; }
-  .promotion-metrics { display: flex; gap: 48px; margin-bottom: 20px; }
-  .promotion-metrics strong { display: block; font-size: 1.65rem; font-weight: 500; margin-bottom: 4px; }
+  .promotion-metrics { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; }
+  .promotion-metrics strong { display: block; font-size: 2rem; font-weight: 600; }
   .promotion-metrics span { font-size: .75rem; color: #93a0b4; }
-  .promotion-breakdowns { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; overflow-wrap: anywhere; font-size: .8rem; line-height: 1.8; }
+  .promotion-breakdowns { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; overflow-wrap: anywhere; font-size: .8rem; line-height: 1.8; }
+  .promotion-breakdowns > div { padding: 14px; border: 1px solid var(--border-color); border-radius: 10px; background: rgba(255,255,255,.015); }
   .promotion-breakdowns strong { display: block; color: #93a0b4; font-size: .75rem; font-weight: 500; margin-bottom: 8px; }
-  .promotion-trend { display: flex; height: 64px; align-items: flex-end; gap: 4px; margin: 8px 0; border-bottom: 1px solid var(--border-color); }
-  .promotion-trend span { flex: 1; background: var(--button-color); min-width: 0; border-radius: 2px 2px 0 0; opacity: .7; }
+  .promotion-breakdown-row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+  .promotion-breakdown-row > span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .promotion-chart-caption { margin: 0 0 24px; color: #93a0b4; font-size: .75rem; }
+  .promotion-plot { display: flex; gap: 12px; }
+  .promotion-chart-scale { display: flex; flex-direction: column; justify-content: space-between; color: #93a0b4; font-size: .65rem; }
+  .promotion-trend { flex: 1; min-width: 0; display: flex; height: 80px; align-items: flex-end; gap: 4px; border-top: 1px dashed var(--border-color); border-bottom: 1px solid var(--border-color); }
+  .promotion-bar { position: relative; flex: 1; background: var(--button-color); min-width: 0; border-radius: 2px 2px 0 0; }
+  .promotion-bar-value { position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); color: #bec8d7; font-size: .65rem; }
   .promotion-chart-dates { display: flex; justify-content: space-between; font-size: .7rem; color: #93a0b4; margin-bottom: 20px; }
+  button.promotion-analytics-toggle { display: none; }
   details > summary { cursor: pointer; padding: 8px 0; font-size: .85rem; color: #aeb8c8; }
+  @container (max-width: 760px) {
+    .promotion-bar-value { display: none; }
+  }
   @container (max-width: 520px) {
     .promotion-fields, .promotion-breakdowns { grid-template-columns: minmax(0,1fr); }
     .promotion-card-header, .promotion-fields, .promotion-analytics { width: 100%; max-width: none; min-height: 0; margin: 0; padding: 18px; }
-    .promotion-toolbar > span { width: 100%; margin-bottom: 6px; }
-    .promotion-metrics { gap: 24px; }
+    .promotion-card-header { display: grid; grid-template-columns: 32px minmax(0,1fr) auto; align-items: center; gap: 8px 10px; padding-bottom: 10px; }
+    .promotion-card-header img { width: 32px; height: 32px; grid-column: 1; grid-row: 1; }
+    .promotion-identity { display: contents; }
+    .promotion-title-row { grid-column: 2 / -1; grid-row: 1; flex-wrap: wrap; gap: 4px 8px; }
+    .promotion-details { grid-column: 1 / 3; grid-row: 2; margin: 0; min-width: 0; }
+    .promotion-description { display: none; }
+    .promotion-controls { grid-column: 3; grid-row: 2; }
+    button.promotion-icon-button { border-color: transparent; }
+    .promotion-overview { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .promotion-overview h4 { margin: 0; font-size: .75rem; }
+    .promotion-metrics { flex-direction: column; align-items: flex-end; gap: 2px; margin: 0; }
+    .promotion-metrics strong { font-size: 1.6rem; }
+    .promotion-breakdowns > div { padding: 0; border: 0; background: none; }
+    .promotion-breakdowns strong { margin-bottom: 4px; }
+    .promotion-analytics:not(.is-expanded) :is(.promotion-chart, .promotion-breakdown-detail) { display: none; }
+    .promotion-chart { margin-top: 20px; }
+    button.promotion-analytics-toggle { display: block; min-height: 44px; width: 100%; max-width: none; margin-top: 10px; border: 0; border-top: 1px solid var(--border-color); border-radius: 0; color: #aeb8c8; }
+    .promotion-analytics { padding-bottom: 6px; }
+    .promotion-card-actions { padding: 0 18px 18px; }
   }
 }

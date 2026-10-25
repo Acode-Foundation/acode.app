@@ -64,7 +64,6 @@ export default async function Admin({ queries = {} }) {
           {
             id: 'promotions',
             icon: 'bullhorn',
-            description: 'Manage the promotions shown on Acode and track their clicks.',
             label: 'Promotions',
             content: <Promotions />,
           },
@@ -96,7 +95,7 @@ export default async function Admin({ queries = {} }) {
             <div className='admin-panel' role='region' aria-labelledby={`admin-${tab.id}-title`}>
               <div className='admin-panel-heading'>
                 <h2 id={`admin-${tab.id}-title`}>{tab.label}</h2>
-                <p>{description}</p>
+                {description && <p>{description}</p>}
               </div>
               {content}
             </div>

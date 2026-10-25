@@ -2,9 +2,10 @@ const crypto = require('node:crypto');
 const { Router, urlencoded } = require('express');
 const { safeAccountRedirect } = require('../../shared/accountRedirect');
 const user = require('../entities/user');
-const { getWebLoggedInUser } = require('../lib/helpers');
+const { getLoggedInUser, getWebLoggedInUser } = require('../lib/helpers');
+const { redirectSignedIn } = require('../lib/guestOnly');
 const apple = require('../lib/appleOAuth');
-const { createAppleSignInLimiter, createAppleCallbackLimiter } = require('../lib/rateLimits');
+const { createAppleSignInLimiter, createAppleCallbackLimiter, createOAuthCallbackLimiter } = require('../lib/rateLimits');
 const {
   getGitHubAuthURL,
   getGitHubToken,
@@ -18,6 +19,10 @@ const {
 } = require('../lib/oauth');
 
 const route = Router();
+route.get(['/github', '/google', '/apple'], (req, res, next) => {
+  if (req.query.intent === 'link') return next();
+  return redirectSignedIn(req, res, next);
+});
 const ID_COL = {
   github: user.GITHUB_ID,
   google: user.GOOGLE_ID,
@@ -31,6 +36,16 @@ function validatedRedirect(url) {
 
 const appleCookie = '__Host-apple_oauth';
 const appleCookieOptions = { httpOnly: true, secure: true, sameSite: 'none', path: '/', maxAge: 10 * 60 * 1000 };
+const oauthCallbackLimiter = createOAuthCallbackLimiter((req, res) => {
+  const message = 'Too many sign-in attempts. Please try again later.';
+  const destination =
+    req.cookies.oauth_intent === 'link'
+      ? `/profile/edit?error=${encodeURIComponent(message)}`
+      : loginErrorRedirect(req.cookies.oauth_redirect, message);
+  for (const name of ['oauth_state', 'oauth_intent', 'oauth_redirect']) res.clearCookie(name);
+  res.set('Cache-Control', 'no-store');
+  res.redirect(303, destination);
+});
 const appleSignInLimiter = createAppleSignInLimiter(appleRateLimitResponse);
 const appleCallbackLimiter = createAppleCallbackLimiter(appleRateLimitResponse, (req) => {
   try {
@@ -115,7 +130,7 @@ route.get('/apple/complete', appleSignInLimiter, async (req, res) => {
     }
     const identity = await apple.exchangeAppleCode(flow.code, flow.nonce, flow.name);
     if (flow.userId) await handleLink('apple', identity, req, res);
-    else await handleLogin('apple', identity, res, flow.redirect);
+    else await handleLogin('apple', identity, req, res, flow.redirect);
   } catch (error) {
     apple.logAppleError('sign-in completion', error);
     res.redirect(loginErrorRedirect(flow?.redirect, 'Unable to sign in with Apple. Please try again.'));
@@ -173,7 +188,7 @@ route.get('/github', (req, res) => {
   res.redirect(withAccountSelection(getGitHubAuthURL(state), redirect));
 });
 
-route.get('/github/callback', async (req, res) => {
+route.get('/github/callback', oauthCallbackLimiter, async (req, res) => {
   const oauthRedirect = req.cookies.oauth_redirect;
   try {
     const { code, state } = req.query;
@@ -198,7 +213,7 @@ route.get('/github/callback', async (req, res) => {
     if (intent === 'link') {
       await handleLink('github', ghUser, req, res);
     } else {
-      await handleLogin('github', ghUser, res, oauthRedirect);
+      await handleLogin('github', ghUser, req, res, oauthRedirect);
     }
   } catch (error) {
     console.error('GitHub OAuth error:', error);
@@ -219,7 +234,7 @@ route.get('/google', (req, res) => {
   res.redirect(withAccountSelection(getGoogleAuthURL(state), redirect));
 });
 
-route.get('/google/callback', async (req, res) => {
+route.get('/google/callback', oauthCallbackLimiter, async (req, res) => {
   const oauthRedirect = req.cookies.oauth_redirect;
   try {
     const { code, state } = req.query;
@@ -244,7 +259,7 @@ route.get('/google/callback', async (req, res) => {
     if (intent === 'link') {
       await handleLink('google', googleUser, req, res);
     } else {
-      await handleLogin('google', googleUser, res, oauthRedirect);
+      await handleLogin('google', googleUser, req, res, oauthRedirect);
     }
   } catch (error) {
     console.error('Google OAuth error:', error);
@@ -313,7 +328,9 @@ async function handleLink(provider, oauthUser, req, res) {
   return res.redirect(`/profile?linked=${provider}`);
 }
 
-async function handleLogin(provider, oauthUser, res, redirect) {
+async function handleLogin(provider, oauthUser, req, res, redirect) {
+  // A different tab may have signed in while the provider's page was open.
+  if (await getLoggedInUser(req)) return res.redirect(validatedRedirect(redirect) || '/');
   const idCol = ID_COL[provider];
   let userRow;
 

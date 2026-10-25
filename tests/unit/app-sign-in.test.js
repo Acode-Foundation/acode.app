@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { transformSync } from '@babel/core';
-import { withAccountRedirect } from '../../client/lib/appSource';
+import * as appSource from '../../client/lib/appSource';
 
 const user = { id: 7, name: 'Alex Morgan', email: 'alex@example.com', github: 'alex-fixture' };
 const query = '?redirect=app&src=ios&authFlow=app-code&state=StateValue&challenge=ChallengeValue&appVersionCode=1017';
@@ -31,6 +31,7 @@ beforeEach(() => {
   vi.stubGlobal('sessionStorage', {
     getItem: (key) => storage.get(key) ?? null,
     setItem: (key, value) => storage.set(key, value),
+    removeItem: (key) => storage.delete(key),
   });
   request = vi.fn(async () => Response.json(user));
   vi.stubGlobal('fetch', request);
@@ -38,7 +39,7 @@ beforeEach(() => {
     gravatar: (github) => `https://avatars.githubusercontent.com/${github}`,
     getLoggedInUser: vi.fn(async () => user),
     invalidateLoggedInUser: vi.fn(),
-    withRedirect: withAccountRedirect,
+    withRedirect: appSource.withAccountRedirect,
     loadingStart: vi.fn(),
     loadingEnd: vi.fn(),
   };
@@ -63,14 +64,32 @@ it.each(['', 'Sign-in was cancelled. Please try again.'])(
 it('returns a fresh email sign-in to confirmation while preserving app and OAuth context', async () => {
   helpers.getLoggedInUser.mockResolvedValue(null);
   const page = await load('index')({ redirect: 'app' });
+  expect(sessionStorage.getItem('redirect')).toBeNull();
   const form = find(page, (node) => node.tagName === 'form');
   const oauth = find(page, (node) => node.provider === 'google');
   expect(new URL(oauth.redirectUrl, location.href).searchParams.get('challenge')).toBe('ChallengeValue');
   form.onloadend({ message: 'Logged in' });
+  expect(sessionStorage.getItem('redirect')).toBeNull();
   expect(helpers.invalidateLoggedInUser).toHaveBeenCalledOnce();
   expect(replace).toHaveBeenCalledOnce();
   expect(new URL(replace.mock.calls[0][0], location.href).search).toContain('redirect=app');
   expect(replace.mock.calls[0][0]).toContain('state=StateValue');
+  expect(request).not.toHaveBeenCalled();
+});
+
+it.each([user, null])('does not resurrect stored app handoffs during ordinary website sign-in (%j)', async (sessionUser) => {
+  vi.useFakeTimers();
+  location.search = '';
+  sessionStorage.setItem('redirect', 'app');
+  helpers.getLoggedInUser.mockResolvedValue(sessionUser);
+  const page = await load('index')({});
+  if (sessionUser) expect(page).toBeNull();
+  else {
+    find(page, (node) => node.tagName === 'form').onloadend({ message: 'Logged in' });
+    await vi.advanceTimersByTimeAsync(1000);
+  }
+  expect(replace).toHaveBeenCalledWith('/');
+  expect(sessionStorage.getItem('redirect')).toBeNull();
   expect(request).not.toHaveBeenCalled();
 });
 
@@ -205,7 +224,7 @@ function load(name, overrides = {}) {
     'html-tag-js/reactive': (value) => ({ value }),
     'html-tag-js/ref': () => ({}),
     'lib/helpers': helpers,
-    'lib/appSource': require('../../shared/accountRedirect'),
+    'lib/appSource': appSource,
     'lib/background': () => {},
     'lib/Router': {},
     'res/logo.svg': '/logo.svg',

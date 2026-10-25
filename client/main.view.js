@@ -2,7 +2,7 @@ import './main.scss';
 import AnnouncementBanner from 'components/announcementBanner';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
-import { isIOSSource } from 'lib/appSource';
+import { getAccountRedirect, isIOSSource, safeAccountRedirect } from 'lib/appSource';
 import { gravatar } from 'lib/helpers';
 import digitalOceanLogo from 'res/digitalocean-icon.svg';
 import logo from 'res/logo.svg';
@@ -178,9 +178,8 @@ export function updateAccountButton(user) {
         href='/login'
         data-google-vignette='false'
         onclick={() => {
-          if (!/\/(logout|login|change-password)/i.test(location.pathname)) {
-            sessionStorage.setItem('redirect', location.pathname);
-          }
+          const redirect = safeAccountRedirect(`${location.pathname}${location.search}${location.hash}`);
+          if (redirect) getAccountRedirect(redirect);
         }}
       >
         <span className='icon person' />

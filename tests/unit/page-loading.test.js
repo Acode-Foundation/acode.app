@@ -115,6 +115,40 @@ describe('page startup', () => {
   });
 });
 
+it('preserves an existing return path when the header Login link is clicked on registration', async () => {
+  const getAccountRedirect = vi.fn();
+  const location = new URL('https://acode.app/register?redirect=/plugins');
+  const refs = [];
+  const view = await loadClient(
+    'client/main.view.js',
+    {
+      './main.scss': {},
+      'components/announcementBanner': {},
+      'html-tag-js/reactive': (value) => ({ value }),
+      'html-tag-js/ref': () => {
+        const ref = { el: { replaceWith: vi.fn() } };
+        refs.push(ref);
+        return ref;
+      },
+      'lib/appSource': { getAccountRedirect, safeAccountRedirect },
+      'lib/helpers': {},
+      'res/digitalocean-icon.svg': '',
+      'res/logo.svg': '',
+      '../shared/adPolicy': {},
+    },
+    {
+      location,
+      tag: (...args) => args.find((arg) => arg && typeof arg === 'object' && !Array.isArray(arg)) || {},
+    },
+  );
+  view.updateAccountButton();
+  refs[0].el.onclick();
+  expect(getAccountRedirect).not.toHaveBeenCalled();
+  location.href = 'https://acode.app/plugins?sort=new';
+  refs[0].el.onclick();
+  expect(getAccountRedirect).toHaveBeenCalledWith('/plugins?sort=new');
+});
+
 it('keeps successful website sign-in on-site even when the incoming redirect is malicious', async () => {
   const replace = vi.fn();
   const login = await loadClient(
@@ -127,18 +161,130 @@ it('keeps successful website sign-in on-site even when the incoming redirect is 
       'components/oauthButton': {},
       'html-tag-js/reactive': (value) => ({ value }),
       'html-tag-js/ref': () => ({}),
-      'lib/appSource': { safeAccountRedirect },
+      'lib/appSource': { safeAccountRedirect, getAccountRedirect: safeAccountRedirect, clearAccountRedirect: vi.fn() },
       'lib/background': {},
       'lib/helpers': { getLoggedInUser: async () => ({ id: 7 }) },
       'lib/Router': {},
       './appSignIn': {},
     },
-    { window: { location: { search: '', replace } }, URLSearchParams, tag: () => ({}), setTimeout: (callback) => callback() },
+    {
+      window: { location: { search: '', replace } },
+      sessionStorage: { removeItem: vi.fn() },
+      URLSearchParams,
+      tag: () => ({}),
+      setTimeout: (callback) => callback(),
+    },
   );
-  for (const redirect of ['https://example.com', '/\\example.com', '/plugins?editor=cm']) {
-    await login.default({ redirect });
+  for (const redirect of ['https://example.com', '/\\example.com', '/register', '/login', '/plugins?editor=cm']) {
+    expect(await login.default({ redirect })).toBeNull();
     expect(replace).toHaveBeenLastCalledWith(redirect.startsWith('/plugins') ? redirect : '/');
   }
+});
+
+it('ignores a stale registration return path when signing in', async () => {
+  const replace = vi.fn();
+  const clearAccountRedirect = vi.fn();
+  const AjaxForm = {};
+  let submit;
+  const login = await loadClient(
+    'client/pages/login/index.js',
+    {
+      './style.scss': {},
+      'components/ajaxForm': AjaxForm,
+      'components/dialogs/alert': {},
+      'components/input': {},
+      'components/oauthButton': {},
+      'html-tag-js/reactive': (value) => ({ value }),
+      'html-tag-js/ref': () => ({}),
+      'lib/appSource': { safeAccountRedirect, getAccountRedirect: safeAccountRedirect, clearAccountRedirect },
+      'lib/background': {},
+      'lib/helpers': { getLoggedInUser: async () => null, invalidateLoggedInUser: vi.fn(), withRedirect: (url) => url },
+      'lib/Router': {},
+      './appSignIn': {},
+    },
+    {
+      window: { location: { search: '', replace } },
+      URLSearchParams,
+
+      tag: (component, props) => {
+        if (component === AjaxForm) submit = props.onloadend;
+        return {};
+      },
+      setTimeout: (callback) => callback(),
+    },
+  );
+  await login.default({ redirect: '/register' });
+  expect(clearAccountRedirect).not.toHaveBeenCalled();
+  submit({ message: 'Logged in' });
+  expect(clearAccountRedirect).toHaveBeenCalledOnce();
+  expect(replace).toHaveBeenCalledWith('/');
+});
+
+it('redirects an authenticated registration visitor before building the form', async () => {
+  const replace = vi.fn();
+  const getLoggedInUser = vi.fn(async () => ({ id: 7 }));
+  const render = vi.fn();
+  const profile = await loadClient(
+    'client/pages/account/index.js',
+    {
+      './style.scss': {},
+      'components/ajaxForm': {},
+      'components/dialogs/alert': {},
+      'components/input': {},
+      'components/oauthButton': {},
+      'components/sendOtp': {},
+      'html-tag-js/reactive': {},
+      'html-tag-js/ref': {},
+      'lib/appSource': { safeAccountRedirect, getAccountRedirect: safeAccountRedirect, clearAccountRedirect: vi.fn() },
+      'lib/background': {},
+      'lib/helpers': { getLoggedInUser, withRedirect: (url, redirect) => `${url}?redirect=${redirect}` },
+      'lib/Router': {},
+      './deleteAccount': {},
+    },
+    { window: { location: { replace } }, sessionStorage: { getItem: () => '/register', removeItem: vi.fn() }, tag: render },
+  );
+  expect(await profile.default({})).toBeNull();
+  expect(replace).toHaveBeenLastCalledWith('/');
+  expect(getLoggedInUser).toHaveBeenCalledWith({ force: true });
+  expect(render).not.toHaveBeenCalled();
+  await profile.default({ redirect: 'app' });
+  expect(replace).toHaveBeenLastCalledWith('/login?redirect=app');
+});
+
+it('still renders registration when the session lookup fails', async () => {
+  const AjaxForm = {};
+  const form = vi.fn();
+  const profile = await loadClient(
+    'client/pages/account/index.js',
+    {
+      './style.scss': {},
+      'components/ajaxForm': AjaxForm,
+      'components/dialogs/alert': {},
+      'components/input': {},
+      'components/oauthButton': {},
+      'components/sendOtp': {},
+      'html-tag-js/reactive': (value) => ({ value }),
+      'html-tag-js/ref': () => ({}),
+      'lib/appSource': { safeAccountRedirect, getAccountRedirect: safeAccountRedirect },
+      'lib/background': {},
+      'lib/helpers': {
+        getLoggedInUser: async () => {
+          throw new Error('Network unavailable');
+        },
+        withRedirect: (url) => url,
+      },
+      'lib/Router': {},
+      './deleteAccount': {},
+    },
+    {
+      tag: (component, props) => {
+        if (component === AjaxForm) form(props);
+        return { append: vi.fn() };
+      },
+    },
+  );
+  expect(await profile.default({})).toBeTruthy();
+  expect(form).toHaveBeenCalledWith(expect.objectContaining({ action: '/api/user', method: 'post' }));
 });
 
 describe('ad-free home and account flows', () => {
@@ -272,6 +418,14 @@ describe('shared account lookup during page loading', () => {
         Date: { now: () => now },
       },
     );
+  });
+
+  it('refreshes the cached guest state when entering an authentication page', async () => {
+    fetch.mockResolvedValueOnce({ json: async () => ({ error: 'Not logged in' }) });
+    expect(await session.getLoggedInUser()).toBeNull();
+    fetch.mockResolvedValueOnce({ json: async () => ({ id: 42 }) });
+    expect(await session.getLoggedInUser({ force: true })).toEqual({ id: 42 });
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it.each([{ id: 42 }, { error: 'Not logged in' }])('shares concurrent lookups and briefly caches %j', async (response) => {

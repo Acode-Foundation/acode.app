@@ -1,3 +1,5 @@
+import './sendOtp.scss';
+
 /**
  *
  * @param {object} props
@@ -10,8 +12,9 @@
  */
 export default function SendOtp({ errorText, getEmail, type = 'signup', ref, className = '' }) {
   const cooldowns = new Map();
-  const defaultText = 'Send OTP';
+  const defaultText = 'Send code';
   let button;
+  let pending = false;
 
   if (ref) {
     const existingOnRef = ref.onref;
@@ -26,26 +29,29 @@ export default function SendOtp({ errorText, getEmail, type = 'signup', ref, cla
   }
 
   return (
-    <span style={{ marginTop: 0 }} className={`link ${className}`.trim()} on:click={sendOtp} ref={ref}>
+    <button type='button' className={`send-otp ${className}`.trim()} onclick={sendOtp} ref={ref}>
       {defaultText}
-    </span>
+    </button>
   );
 
   async function sendOtp(e) {
-    const email = normalizeEmail(getEmail());
+    if (pending) return;
+    const target = e.currentTarget || e.target;
+    button = target;
+    const emailInput = target.closest('form')?.querySelector('input[type=email]');
+    if (emailInput && !emailInput.reportValidity()) return;
+    const email = currentEmail();
+    if (getRemainingSeconds(cooldowns.get(normalizeEmail(email))) > 0) return;
     if (!email) {
       errorText.value = 'Email is required';
       return;
     }
 
-    const { target } = e;
-    button = target;
     errorText.value = '';
+    pending = true;
+    renderState();
 
     try {
-      target.classList.remove('link');
-      target.textContent = 'Sending...';
-      target.onclick = null;
       const formData = new FormData();
       formData.append('email', email);
       const res = await fetch(`/api/otp?type=${type}`, {
@@ -55,13 +61,13 @@ export default function SendOtp({ errorText, getEmail, type = 'signup', ref, cla
       const data = await res.json();
       if (data.error) {
         errorText.value = data.error;
-        renderState();
         return;
       }
-      startCooldown(email);
-      renderState();
+      startCooldown(normalizeEmail(email));
     } catch (error) {
       errorText.value = error.message;
+    } finally {
+      pending = false;
       renderState();
     }
   }
@@ -90,24 +96,27 @@ export default function SendOtp({ errorText, getEmail, type = 'signup', ref, cla
     const target = button || ref?.el;
     if (!target) return;
 
-    const email = normalizeEmail(getEmail());
+    const email = normalizeEmail(currentEmail());
     const cooldown = cooldowns.get(email);
     const remaining = cooldown ? getRemainingSeconds(cooldown) : 0;
-
-    if (remaining > 0) {
-      target.classList.remove('link');
-      target.classList.add('success');
-      target.style.pointerEvents = 'none';
-      target.textContent = `Resend OTP (${remaining})`;
-      target.onclick = null;
+    target.disabled = pending || remaining > 0;
+    if (pending) {
+      target.textContent = 'Sending…';
       return;
     }
 
-    target.style.pointerEvents = 'auto';
-    target.classList.remove('success');
-    target.classList.add('link');
+    if (remaining > 0) {
+      target.textContent = `Resend in ${remaining}s`;
+      return;
+    }
+
     target.textContent = defaultText;
-    target.onclick = sendOtp;
+  }
+
+  function currentEmail() {
+    const field = button?.closest('form')?.querySelector('input[type=email]');
+    // Match the form submission exactly: the server binds codes to this string.
+    return String(field?.value ?? getEmail() ?? '');
   }
 }
 
@@ -118,5 +127,6 @@ function normalizeEmail(email) {
 }
 
 function getRemainingSeconds(cooldown) {
+  if (!cooldown) return 0;
   return Math.max(0, Math.ceil((cooldown.expiresAt - Date.now()) / 1000));
 }

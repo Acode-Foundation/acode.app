@@ -2,6 +2,37 @@ import { safeAccountRedirect } from '../../shared/accountRedirect';
 
 const sourceKey = 'acode-app-source';
 
+// Retain a safe return destination across refreshes until sign-in completes.
+export function getAccountRedirect(value) {
+  const fromStorage = value == null;
+  if (fromStorage) {
+    try {
+      value = sessionStorage.getItem('redirect');
+    } catch {
+      /* Storage is optional for account navigation. */
+    }
+  }
+  let redirect = safeAccountRedirect(value);
+  // App handoffs need their URL-bound state and challenge, never a stored fallback.
+  const appRedirect = redirect === 'app' || redirect.startsWith('/login?');
+  if (fromStorage && appRedirect) redirect = '';
+  try {
+    if (redirect && !appRedirect) sessionStorage.setItem('redirect', redirect);
+    else sessionStorage.removeItem('redirect');
+  } catch {
+    /* Explicit URL redirects still work when storage is blocked. */
+  }
+  return redirect;
+}
+
+export function clearAccountRedirect() {
+  try {
+    sessionStorage.removeItem('redirect');
+  } catch {
+    /* Storage is optional for account navigation. */
+  }
+}
+
 // Presentation only: never use this flag to authorize account access or purchases.
 export function isIOSSource() {
   const source = new URLSearchParams(location.search).get('src');

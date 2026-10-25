@@ -1,0 +1,17 @@
+button.send-otp {
+  height: auto;
+  min-height: 36px;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--page-accent, #3499fe);
+  font: inherit;
+  font-size: .9rem;
+  text-decoration: none;
+
+  &:hover { background: transparent; }
+  &:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+}
