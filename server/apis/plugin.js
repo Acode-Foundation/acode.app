@@ -200,6 +200,12 @@ router.get('/download/:id', async (req, res) => {
         return;
       }
 
+      // A token unlocks only the plugin it was recorded for, even when another plugin shares its SKU.
+      if (order && String(order.plugin_id) !== String(row.id)) {
+        res.status(403).send({ error: 'Forbidden' });
+        return;
+      }
+
       try {
         const purchase = await androidpublisher.purchases.products.get({
           packageName,
@@ -662,6 +668,12 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
 
     if (row) {
       res.status(400).send({ error: `Plugin "${pluginId}" already exists.` });
+      return;
+    }
+
+    // Checked for free plugins too, since a later price change registers the same SKU.
+    if (await findSkuOwner(pluginId)) {
+      res.status(400).send({ error: `Plugin ID "${pluginId}" can't be used. Please choose a different ID.` });
       return;
     }
 
@@ -1971,10 +1983,26 @@ async function getRegionPricing(price) {
   }
 }
 
+/**
+ * Another plugin whose stored SKU matches the one `pluginId` derives. SKUs are a
+ * 32-bit hash of the id, so different ids can collide and would share one Play product.
+ * @param {string} pluginId
+ * @returns {Promise<{ id: string } | undefined>}
+ */
+async function findSkuOwner(pluginId) {
+  const rows = await Plugin.get([Plugin.ID], [Plugin.SKU, getPluginSKU(pluginId)]);
+  return rows.find((row) => row.id !== pluginId);
+}
+
 async function registerSKU(name, id, price) {
   const sku = getPluginSKU(id);
   if (!isValidPrice(price)) {
     throw new Error('Invalid price');
+  }
+
+  // Never rename or reprice a Play product that belongs to another plugin.
+  if (await findSkuOwner(id)) {
+    throw new Error(`SKU ${sku} belongs to another plugin`);
   }
 
   const regionPricing = await getRegionPricing(price);

@@ -225,6 +225,21 @@ describe('paid plugin download access', () => {
     expect(googlePurchase).not.toHaveBeenCalled();
   });
 
+  it('does not let a token recorded for another plugin unlock this one', async () => {
+    order.get.mockResolvedValue([{ state: order.STATE_PURCHASED, plugin_id: 'other.plugin' }]);
+    const res = await downloadPlugin({ token: 'valid', package: 'com.foxdebug.acode' });
+    expect(res.statusCode).toBe(403);
+    expect(res.sendFile).not.toHaveBeenCalled();
+    expect(googlePurchase).not.toHaveBeenCalled();
+  });
+
+  it('accepts a token recorded for this plugin', async () => {
+    order.get.mockResolvedValue([{ state: order.STATE_PURCHASED, plugin_id: paidPlugin.id }]);
+    const res = await downloadPlugin({ token: 'valid', package: 'com.foxdebug.acode' });
+    expect(res.sendFile).toHaveBeenCalledOnce();
+    expect(order.insert).not.toHaveBeenCalled();
+  });
+
   it('retains the missing-plugin response for admins', async () => {
     helpers.getLoggedInUser.mockResolvedValue({ id: 9, isAdmin: true });
     plugin.get.mockResolvedValue([]);
@@ -565,6 +580,21 @@ describe('publishing with an API key', () => {
     expect(helpers.getWebLoggedInUser).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['a free', 'key', 0],
+    ['a paid', 'web', 100],
+  ])('rejects %s plugin whose SKU another plugin already uses', async (_case, auth, price) => {
+    Object.assign(plugin, { SKU: 'sku', insert: vi.fn() });
+    if (auth === 'key') apiKeyAuth = keyFor([], [apiKeyLib.SCOPE_PLUGIN_CREATE]);
+    else helpers.getWebLoggedInUser.mockResolvedValue({ ...owner, authType: 'web' });
+    plugin.get.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: 'victim.plugin' }]);
+    const res = await publish({ price }, { method: 'post', authorization: auth === 'key' ? 'Bearer acode_key' : undefined });
+    expect(res.statusCode).toBe(400);
+    expect(res.send.mock.calls[0][0].error).toMatch(/can't be used/);
+    expect(plugin.get).toHaveBeenLastCalledWith(['id'], ['sku', `plugin_${paidPlugin.id}`]);
+    expect(plugin.insert).not.toHaveBeenCalled();
+  });
+
   it('refuses paid submissions and lets free ones through to the normal checks', async () => {
     apiKeyAuth = keyFor([], [apiKeyLib.SCOPE_PLUGIN_CREATE]);
     plugin.get.mockResolvedValueOnce([]);
@@ -574,5 +604,14 @@ describe('publishing with an API key', () => {
     const res = await publish({ price: 0 }, { method: 'post' });
     expect(res.statusCode).toBe(400);
     expect(res.send.mock.calls[0][0].error).toMatch(/already exists/);
+  });
+});
+
+describe('registering a Play SKU', () => {
+  it('refuses a SKU stored for another plugin before contacting Google Play', async () => {
+    Object.assign(plugin, { SKU: 'sku' });
+    plugin.get.mockResolvedValue([{ id: 'victim.plugin' }]);
+    await expect(router.registerSKU('Test', paidPlugin.id, 100)).rejects.toThrow(/belongs to another plugin/);
+    expect(plugin.get).toHaveBeenCalledWith(['id'], ['sku', `plugin_${paidPlugin.id}`]);
   });
 });
