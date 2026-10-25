@@ -58,6 +58,8 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
 
   applyPluginMetadata(plugin);
 
+  const repositoryUrl = safeRepositoryUrl(repository);
+
   const user = await getLoggedInUser();
   const userComment = user ? await getUserComment(pluginId) : null;
   const pluginSectionRef = Ref();
@@ -304,8 +306,8 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
             <span className='chip'>
               <a href={`/profile/${userId}`}>{author}</a>&nbsp;{!!authorVerified && <span className='icon verified' />}
             </span>
-            {repository && (
-              <a className='chip' href={repository}>
+            {repositoryUrl && (
+              <a className='chip' href={repositoryUrl} rel='noopener noreferrer nofollow'>
                 repository
               </a>
             )}
@@ -383,6 +385,22 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
       </div>
     );
   }
+}
+
+/**
+ * Returns the repository URL only when it is http(s), so stored `javascript:` links never render.
+ * @param {string} value
+ * @returns {string}
+ */
+function safeRepositoryUrl(value) {
+  if (typeof value !== 'string' || !value) return '';
+  try {
+    const url = new URL(value);
+    if (url.protocol === 'https:' || url.protocol === 'http:') return url.href;
+  } catch {
+    /* Invalid URLs are not linked. */
+  }
+  return '';
 }
 
 async function renderOrders(ref, pluginId, year, month) {
