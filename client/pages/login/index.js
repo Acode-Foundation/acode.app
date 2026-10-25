@@ -5,14 +5,14 @@ import Input from 'components/input';
 import OAuthButton from 'components/oauthButton';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
-import { safeAccountRedirect } from 'lib/appSource';
+import { clearAccountRedirect, getAccountRedirect } from 'lib/appSource';
 import background from 'lib/background';
 import { getLoggedInUser, invalidateLoggedInUser, loadingEnd, loadingStart, withRedirect } from 'lib/helpers';
 import Router from 'lib/Router';
 import AppSignIn from './appSignIn';
 
-export default async function Login({ redirect = sessionStorage.getItem('redirect') }) {
-  redirect = safeAccountRedirect(redirect);
+export default async function Login({ redirect }) {
+  redirect = getAccountRedirect(redirect);
   const errorText = Reactive('');
   const successText = Reactive('');
   const button = Ref();
@@ -22,18 +22,12 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
   if (search.get('accountDeleted') === '1') successText.value = 'Your account has been deleted.';
 
   try {
-    const user = await getLoggedInUser();
+    const user = await getLoggedInUser({ force: true });
     if (user) {
+      clearAccountRedirect();
       if (redirect === 'app') return <AppSignIn user={user} />;
-      redirectAfterDone();
-      return (
-        <section id='user-login'>
-          <div className='redirect-message'>
-            <div className='error'>{errorText}</div>
-            <div className='success'>{successText}</div>
-          </div>
-        </section>
-      );
+      window.location.replace(redirect || '/');
+      return null;
     }
   } catch (error) {
     return <div>{error.message}</div>;
@@ -111,6 +105,7 @@ export default async function Login({ redirect = sessionStorage.getItem('redirec
     }
 
     invalidateLoggedInUser();
+    clearAccountRedirect();
     if (redirect === 'app') {
       window.location.replace(withRedirect('/login', 'app'));
     } else {

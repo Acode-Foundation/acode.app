@@ -3,6 +3,7 @@ const moment = require('moment');
 const crypto = require('node:crypto');
 const { encryptPassword, isValidPassword } = require('../password');
 const { getLoggedInUser, getWebLoggedInUser, areSameUser } = require('../lib/helpers');
+const { rejectSignedIn } = require('../lib/guestOnly');
 const Comment = require('../entities/comment');
 const User = require('../entities/user');
 const Payment = require('../entities/payment');
@@ -576,7 +577,7 @@ route.post('/payment-method', async (req, res) => {
   }
 });
 
-route.post('/', emailCodeCheckLimiter, async (req, res) => {
+route.post('/', emailCodeCheckLimiter, rejectSignedIn, async (req, res) => {
   const { name, email, password, otp: sentOtp } = req.body;
 
   if (!name) {

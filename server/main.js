@@ -17,6 +17,7 @@ const Plugin = require('./entities/plugin');
 const User = require('./entities/user');
 const { getLoggedInUser } = require('./lib/helpers');
 const { promotionRedirectLimiter, sponsorImageLimiter } = require('./lib/rateLimits');
+const { redirectSignedIn } = require('./lib/guestOnly');
 const apis = require('./routes/apis');
 const oauth = require('./apis/oauth');
 const aiOAuthCallback = require('./lib/aiOAuthCallback');
@@ -147,6 +148,7 @@ async function main() {
   });
 
   app.use(cookieParser());
+  app.get(['/login', '/register'], redirectSignedIn);
   app.use(
     fileUpload({
       abortOnLimit: true,

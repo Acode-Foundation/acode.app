@@ -32,6 +32,7 @@ import Reactive from 'html-tag-js/reactive';
  * @param {Ref} [props.ref]
  * @param {number} [props.maxlength]
  * @param {string} [props.autocomplete]
+ * @param {string} [props.inputmode]
  * @param {boolean} [props.autofill]
  * @param {Function} [props.onkeydown]
  * @param {Function} [props.oninput]
@@ -50,6 +51,7 @@ export default function Input({
   inputRef,
   ref,
   autocomplete = 'on',
+  inputmode,
   autofill = true,
   onkeydown,
   oninput,
@@ -102,6 +104,7 @@ export default function Input({
   }
 
   inputField.autocomplete = autocomplete;
+  if (inputmode) inputField.inputMode = inputmode;
 
   if (type === 'file') {
     inputField.addEventListener('change', () => {

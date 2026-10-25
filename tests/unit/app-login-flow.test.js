@@ -31,6 +31,61 @@ afterEach(async () => {
   vi.unstubAllEnvs();
 });
 
+it('redirects signed-in visitors away from guest pages and keeps app confirmation available', async () => {
+  await start();
+  const get = (path, token = 'web-session') => fetch(`${origin}${path}`, { headers: { Cookie: `token=${token}` }, redirect: 'manual' });
+  for (const path of ['/login', '/REGISTER/', '/register?redirect=/login', '/login?redirect=/register']) {
+    const response = await get(path);
+    expect(response.status).toBe(303);
+    expect(response.headers.get('Location')).toBe('/');
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+  }
+  expect((await get('/register?redirect=%2Fplugins%3Fsort%3Dnew')).headers.get('Location')).toBe('/plugins?sort=new');
+  expect(await (await get('/login', '')).text()).toBe('Guest form');
+  expect(await (await get('/register', 'expired-token')).text()).toBe('Guest form');
+  const context = `redirect=app&src=ios&state=${state}&challenge=${challenge}`;
+  expect((await get(`/register?${context}`)).headers.get('Location')).toBe(`/login?${context}`);
+  expect((await get(`/login/?${context}`)).headers.get('Location')).toBe(`/login?${context}`);
+  expect(await (await get(`/login?${context}`)).text()).toBe('App confirmation');
+});
+
+it('rejects login and registration submissions from active web and app sessions before account writes', async () => {
+  await start();
+  sessions.set(99, { id: 99, user_id: 7, type: 'app', token: 'app-session' });
+  for (const path of ['/api/login', '/api/user']) {
+    for (const token of ['web-session', 'app-session']) {
+      const response = await fetch(`${origin}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: `token=${token}` },
+        body: '{}',
+      });
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({ error: 'You are already signed in.' });
+    }
+    const guest = await fetch(`${origin}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    expect(guest.status).toBe(400); // Guests still reach the existing field validation.
+  }
+  expect(sessions.size).toBe(1);
+  expect(oauthUserEntity.insert).not.toHaveBeenCalled();
+});
+
+it('prevents OAuth sign-in from replacing an active session, including a session created during the provider flow', async () => {
+  await start();
+  for (const provider of ['github', 'google', 'apple']) {
+    const response = await fetch(`${origin}/oauth/${provider}`, { headers: { Cookie: 'token=web-session' }, redirect: 'manual' });
+    expect(response.status).toBe(303);
+    expect(response.headers.get('Location')).toBe('/');
+  }
+  expect(appleStart).not.toHaveBeenCalled();
+  const completed = await fetch(`${origin}/oauth/github/callback?code=code&state=fixture-state`, {
+    headers: { Cookie: 'token=web-session; oauth_state=fixture-state; oauth_redirect=%2Fplugins' },
+    redirect: 'manual',
+  });
+  expect(completed.headers.get('Location')).toBe('/plugins');
+  expect(completed.headers.get('Set-Cookie')).not.toContain('token=fixture-session');
+  expect(oauthUserEntity.insert).not.toHaveBeenCalled();
+});
+
 it('supports repeated login/logout with an existing browser session, without spending the exchange limit on code issuance', async () => {
   await start();
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -338,8 +393,8 @@ it('preserves safe app-return context on throttled browser legs and separates au
   expect(limitedLocation(expired)).toBe('/login');
   expect(appleStart).toHaveBeenCalledTimes(120);
   expect(appleExchange).not.toHaveBeenCalled();
-  expect((await beginApple('', 'web-session')).status).toBe(302);
-  expect((await beginApple('', 'other-web-session')).status).toBe(302);
+  expect((await beginApple('?intent=link', 'web-session')).status).toBe(302);
+  expect((await beginApple('?intent=link', 'other-web-session')).status).toBe(302);
   expect((await post('/app-auth-code', { state, challenge })).status).toBe(200);
 });
 
@@ -347,11 +402,11 @@ it('keeps throttled Apple linking on account settings and shares its account bud
   await start();
   const begun = await beginApple('?intent=link', 'web-session');
   const callback = await applePost(begun, { code: 'code' });
-  for (let attempt = 1; attempt < 120; attempt++) expect((await beginApple('', 'renewed-web-session')).status).toBe(302);
+  for (let attempt = 1; attempt < 120; attempt++) expect((await beginApple('?intent=link', 'renewed-web-session')).status).toBe(302);
   expect(limitedLocation(await beginApple('?intent=link', 'web-session'))).toBe('/profile/edit');
   expect(limitedLocation(await completeApple(callback, 'renewed-web-session'))).toBe('/profile/edit');
   expect(appleExchange).not.toHaveBeenCalled();
-  expect((await beginApple('', 'other-web-session')).status).toBe(302);
+  expect((await beginApple('?intent=link', 'other-web-session')).status).toBe(302);
   expect((await beginApple()).status).toBe(302);
 });
 
@@ -529,6 +584,10 @@ async function start() {
     'node:crypto': crypto,
     '../password': {},
     '../lib/helpers': helpers,
+    '../lib/guestOnly': load('../../server/lib/guestOnly.js', {
+      './helpers': helpers,
+      '../../shared/accountRedirect': { safeAccountRedirect },
+    }),
     '../lib/appleOAuth': appleCrypto,
     '../entities/login': login,
     '../entities/user': oauthUserEntity,
@@ -563,6 +622,9 @@ async function start() {
   });
   const app = express();
   app.use(express.json(), cookieParser());
+  app.get(['/login', '/register'], dependencies['../lib/guestOnly'].redirectSignedIn, (req, res) => {
+    res.send(req.query.redirect === 'app' ? 'App confirmation' : 'Guest form');
+  });
   app.use('/api/user', router);
   app.use('/api/login', account);
   app.use('/oauth', oauth);

@@ -6,10 +6,12 @@ const login = require('../entities/login');
 const user = require('../entities/user');
 const { getLoggedInUser } = require('../lib/helpers');
 const { loginLimiter } = require('../lib/rateLimits');
+const { rejectSignedIn } = require('../lib/guestOnly');
 
 const route = Router();
 
 route.get('/', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   try {
     const loggedInUser = await getLoggedInUser(req);
 
@@ -24,7 +26,7 @@ route.get('/', async (req, res) => {
   }
 });
 
-route.post('/', loginLimiter, async (req, res) => {
+route.post('/', loginLimiter, rejectSignedIn, async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {

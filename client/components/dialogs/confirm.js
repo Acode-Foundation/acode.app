@@ -6,9 +6,10 @@ export default function confirm(title, message) {
       <DialogBox
         title={title}
         message={message}
+        onhide={() => resolve(false)}
         onok={(hide) => {
-          hide();
           resolve(true);
+          hide();
         }}
         oncancel={(hide) => {
           hide();

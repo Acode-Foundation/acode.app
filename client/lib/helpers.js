@@ -72,10 +72,11 @@ export function capitalize(string) {
 }
 
 /**
+ * Force bypasses the completed-result cache; concurrent callers share a pending lookup.
  * @returns {Promise<User>}
  */
-export async function getLoggedInUser() {
-  if (Date.now() < loggedInUserExpiresAt) {
+export async function getLoggedInUser({ force = false } = {}) {
+  if (!force && Date.now() < loggedInUserExpiresAt) {
     return loggedInUser;
   }
 
