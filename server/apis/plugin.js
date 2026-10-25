@@ -201,6 +201,12 @@ router.get('/download/:id', async (req, res) => {
         return;
       }
 
+      // A token unlocks only the plugin it was recorded for, even when another plugin shares its SKU.
+      if (order && String(order.plugin_id) !== String(row.id)) {
+        res.status(403).send({ error: 'Forbidden' });
+        return;
+      }
+
       try {
         const purchase = await androidpublisher.purchases.products.get({
           packageName,
@@ -686,22 +692,14 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
       return;
     }
 
-    let skuErrors = [];
-
-    if (price) {
-      if (price < MIN_PRICE || price > MAX_PRICE) {
-        res.status(400).send({
-          error: `Price should be between ₹${MIN_PRICE} and ₹${MAX_PRICE}`,
-        });
-        return;
-      }
-
-      skuErrors = await registerSKU(name, pluginId, price);
-      if (skuErrors.length) {
-        console.error('Google Play SKU registration had errors:', skuErrors);
-      }
+    if (price && (price < MIN_PRICE || price > MAX_PRICE)) {
+      res.status(400).send({
+        error: `Price should be between ₹${MIN_PRICE} and ₹${MAX_PRICE}`,
+      });
+      return;
     }
 
+    const sku = getPluginSKU(pluginId);
     const insert = [
       [Plugin.ID, pluginId],
       [Plugin.NAME, name],
@@ -709,7 +707,7 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
       [Plugin.VERSION, version],
       [Plugin.USER_ID, user.id],
       [Plugin.DESCRIPTION, readme],
-      [Plugin.SKU, getPluginSKU(pluginId)],
+      [Plugin.SKU, sku],
       [Plugin.MIN_VERSION_CODE, minVersionCode],
     ];
 
@@ -739,7 +737,27 @@ router.post('/', pluginUploadLimiter, async (req, res) => {
     const supportedEditor = req.body?.supported_editor && ['cm', 'all'].includes(req.body.supported_editor) ? req.body.supported_editor : 'cm';
     insert.push([Plugin.SUPPORTED_EDITOR, supportedEditor]);
 
-    await Plugin.insert(...insert);
+    // The owner check, Play registration and insert share one lock, so two ids with the same SKU can't both pass the check.
+    let skuErrors = [];
+    const skuTaken = await withSkuLock(sku, async () => {
+      // Checked for free plugins too, since a later price change registers the same SKU.
+      if (await findSkuOwner(pluginId)) return true;
+
+      if (price) {
+        skuErrors = await registerSKU(name, pluginId, price);
+        if (skuErrors.length) {
+          console.error('Google Play SKU registration had errors:', skuErrors);
+        }
+      }
+
+      await Plugin.insert(...insert);
+      return false;
+    });
+
+    if (skuTaken) {
+      res.status(400).send({ error: `Plugin ID "${pluginId}" can't be used. Please choose a different ID.` });
+      return;
+    }
 
     await savePlugin(pluginId, pluginZip.data, icon);
 
@@ -1431,6 +1449,8 @@ const ICONS_DIR = path.resolve(__dirname, '../../data/icons');
 const STAGING_DIR = path.join(PLUGINS_DIR, 'pending');
 
 const withPluginLock = createKeyedLock();
+// Serializes new submissions by Play SKU, since different plugin ids can derive the same one.
+const withSkuLock = createKeyedLock();
 
 const livePath = (id) => fileInDir(PLUGINS_DIR, `${id}.zip`);
 const liveIconPath = (id) => fileInDir(ICONS_DIR, `${id}.png`);
@@ -1977,10 +1997,26 @@ async function getRegionPricing(price) {
   }
 }
 
+/**
+ * Another plugin whose stored SKU matches the one `pluginId` derives. SKUs are a
+ * 32-bit hash of the id, so different ids can collide and would share one Play product.
+ * @param {string} pluginId
+ * @returns {Promise<{ id: string } | undefined>}
+ */
+async function findSkuOwner(pluginId) {
+  const rows = await Plugin.get([Plugin.ID], [Plugin.SKU, getPluginSKU(pluginId)]);
+  return rows.find((row) => row.id !== pluginId);
+}
+
 async function registerSKU(name, id, price) {
   const sku = getPluginSKU(id);
   if (!isValidPrice(price)) {
     throw new Error('Invalid price');
+  }
+
+  // Never rename or reprice a Play product that belongs to another plugin.
+  if (await findSkuOwner(id)) {
+    throw new Error(`SKU ${sku} belongs to another plugin`);
   }
 
   const regionPricing = await getRegionPricing(price);
