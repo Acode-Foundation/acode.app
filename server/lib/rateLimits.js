@@ -54,6 +54,8 @@ module.exports = {
   appTokenExchangeLimiter: limiter(process.env.NODE_ENV === 'development' ? 400 : 120, 15, {
     keyGenerator: (req) => ipKeyGenerator(req.ip),
   }),
+  // Unsealed OAuth cookies/state must not create fresh buckets or trigger session lookups.
+  createOAuthCallbackLimiter: (handler) => limiter(120, 15, { keyGenerator: (req) => ipKeyGenerator(req.ip), handler }),
   // Start/completion use account-or-IP; callbacks can use only a verified sealed flow.
   createAppleSignInLimiter: (handler) => limiter(120, 15, { handler }),
   createAppleCallbackLimiter: (handler, flowKey) =>

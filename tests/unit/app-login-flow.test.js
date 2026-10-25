@@ -198,6 +198,51 @@ it.each(['github', 'google'])('preserves the %s return path on exchange failures
   expect(invalid.headers.get('Location')).toMatch(/^\/login\?error=/);
 });
 
+it.each(['github', 'google'])('throttles %s callbacks before provider access and preserves safe return paths', async (provider) => {
+  await start();
+  const callback = (target, cookies) =>
+    fetch(`${origin}/oauth/${target}/callback?state=fixture-state&code=fixture-code`, {
+      headers: { Cookie: cookies },
+      redirect: 'manual',
+    });
+  // Invalid state still spends the IP budget; changing cookies cannot reset it.
+  for (let attempt = 0; attempt < 119; attempt++) {
+    const response = await callback(provider, `oauth_state=wrong-${attempt}; token=forged-${attempt}`);
+    expect(response.status).toBe(302);
+  }
+  expect(oauthTokens[provider]).not.toHaveBeenCalled();
+  const valid = await callback(provider, 'oauth_state=fixture-state');
+  expect(valid.headers.get('Set-Cookie')).toContain('token=fixture-session');
+  expect(oauthTokens[provider]).toHaveBeenCalledOnce();
+
+  const appReturn = `/login?redirect=app&authFlow=app-code&state=${state}&challenge=${challenge}`;
+  for (const [cookies, destination] of [
+    [`oauth_redirect=${encodeURIComponent(appReturn)}`, appReturn],
+    ['oauth_redirect=%2Fplugins', '/login?redirect=%2Fplugins'],
+    ['oauth_redirect=https%3A%2F%2Fattacker.example', '/login'],
+    ['oauth_intent=link; token=web-session', '/profile/edit'],
+  ]) {
+    const limited = await callback(provider, `oauth_state=fixture-state; ${cookies}`);
+    expect(limited.status).toBe(303);
+    expect(Number(limited.headers.get('Retry-After'))).toBeGreaterThan(0);
+    expect(limited.headers.get('Cache-Control')).toBe('no-store');
+    for (const name of ['oauth_state', 'oauth_intent', 'oauth_redirect']) {
+      expect(limited.headers.getSetCookie()).toContainEqual(expect.stringMatching(new RegExp(`^${name}=;.*Expires=Thu, 01 Jan 1970`)));
+    }
+    const target = new URL(limited.headers.get('Location'), origin);
+    expect(target.origin).toBe(origin);
+    expect(target.searchParams.get('error')).toContain('Too many sign-in attempts');
+    target.searchParams.delete('error');
+    expect(`${target.pathname}${target.search}`).toBe(destination);
+  }
+  // Switching providers must not bypass the callback budget.
+  const otherProvider = provider === 'github' ? 'google' : 'github';
+  expect((await callback(otherProvider, 'oauth_state=fixture-state')).status).toBe(303);
+  expect(oauthTokens[otherProvider]).not.toHaveBeenCalled();
+  expect(oauthTokens[provider]).toHaveBeenCalledOnce();
+  expect(oauthUserEntity.update).not.toHaveBeenCalled();
+});
+
 it.each(['github', 'google'])('clears a cancelled linking request before starting a new %s sign-in', async (provider) => {
   await start();
   const response = await fetch(`${origin}/oauth/${provider}`, {

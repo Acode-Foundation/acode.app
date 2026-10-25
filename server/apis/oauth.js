@@ -5,7 +5,7 @@ const user = require('../entities/user');
 const { getLoggedInUser, getWebLoggedInUser } = require('../lib/helpers');
 const { redirectSignedIn } = require('../lib/guestOnly');
 const apple = require('../lib/appleOAuth');
-const { createAppleSignInLimiter, createAppleCallbackLimiter } = require('../lib/rateLimits');
+const { createAppleSignInLimiter, createAppleCallbackLimiter, createOAuthCallbackLimiter } = require('../lib/rateLimits');
 const {
   getGitHubAuthURL,
   getGitHubToken,
@@ -36,6 +36,16 @@ function validatedRedirect(url) {
 
 const appleCookie = '__Host-apple_oauth';
 const appleCookieOptions = { httpOnly: true, secure: true, sameSite: 'none', path: '/', maxAge: 10 * 60 * 1000 };
+const oauthCallbackLimiter = createOAuthCallbackLimiter((req, res) => {
+  const message = 'Too many sign-in attempts. Please try again later.';
+  const destination =
+    req.cookies.oauth_intent === 'link'
+      ? `/profile/edit?error=${encodeURIComponent(message)}`
+      : loginErrorRedirect(req.cookies.oauth_redirect, message);
+  for (const name of ['oauth_state', 'oauth_intent', 'oauth_redirect']) res.clearCookie(name);
+  res.set('Cache-Control', 'no-store');
+  res.redirect(303, destination);
+});
 const appleSignInLimiter = createAppleSignInLimiter(appleRateLimitResponse);
 const appleCallbackLimiter = createAppleCallbackLimiter(appleRateLimitResponse, (req) => {
   try {
@@ -178,7 +188,7 @@ route.get('/github', (req, res) => {
   res.redirect(withAccountSelection(getGitHubAuthURL(state), redirect));
 });
 
-route.get('/github/callback', async (req, res) => {
+route.get('/github/callback', oauthCallbackLimiter, async (req, res) => {
   const oauthRedirect = req.cookies.oauth_redirect;
   try {
     const { code, state } = req.query;
@@ -224,7 +234,7 @@ route.get('/google', (req, res) => {
   res.redirect(withAccountSelection(getGoogleAuthURL(state), redirect));
 });
 
-route.get('/google/callback', async (req, res) => {
+route.get('/google/callback', oauthCallbackLimiter, async (req, res) => {
   const oauthRedirect = req.cookies.oauth_redirect;
   try {
     const { code, state } = req.query;

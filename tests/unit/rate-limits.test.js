@@ -16,7 +16,10 @@ vm.runInNewContext(fs.readFileSync(new URL('../../server/lib/rateLimits.js', imp
   },
 });
 
-it('limits promotion requests without session lookups or header-based bypasses', async () => {
+it.each([
+  ['promotion', module.exports.promotionRedirectLimiter],
+  ['OAuth callback', module.exports.createOAuthCallbackLimiter((_req, res) => res.status(429).send({ error: 'Rate limited' }))],
+])('limits %s requests without session lookups or header-based bypasses', async (_label, limiter) => {
   const downstream = vi.fn();
   const send = async (ip, headers = {}, method = 'GET') => {
     const req = { ip, method, headers, cookies: { token: headers.authorization } };
@@ -24,7 +27,7 @@ it('limits promotion requests without session lookups or header-based bypasses',
     const next = vi.fn((error) => {
       if (!error) downstream();
     });
-    await module.exports.promotionRedirectLimiter(req, res, next);
+    await limiter(req, res, next);
     if (next.mock.calls.length) expect(next).toHaveBeenCalledWith();
     return { res, next };
   };
