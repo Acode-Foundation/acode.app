@@ -62,7 +62,12 @@
   .team-grid {
     position: relative;
     margin-top: 36px;
-    visibility: hidden;
+
+    &[aria-busy='true'] {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
   }
 
   .team-card {
@@ -74,7 +79,8 @@
     border-radius: 16px;
     text-decoration: none;
     cursor: pointer;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background 0.35s, border-color 0.35s, transform 0.35s, box-shadow 0.35s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     box-sizing: border-box;
     position: relative;
@@ -247,6 +253,7 @@
   }
 
   .error-state {
+    grid-column: 1 / -1;
     width: 100%;
     text-align: center;
     padding: 40px 0;
@@ -266,6 +273,10 @@
 
   @media screen and (max-width: 600px) {
     padding: 40px 20px 40px;
+
+    .team-grid[aria-busy='true'] {
+      grid-template-columns: minmax(0, 1fr);
+    }
 
     .hero {
       margin-bottom: 50px;

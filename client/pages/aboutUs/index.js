@@ -41,9 +41,9 @@ export default async function AboutUs() {
         <span className='section-label'>The People</span>
         <h2>Our Team</h2>
         <p className='section-body'>Meet the developers who build and maintain Acode.</p>
-        <div className='team-grid' ref={teamGrid}>
+        <div className='team-grid' ref={teamGrid} aria-busy='true'>
           {Array.from({ length: 4 }, (_, i) => (
-            <div className='team-card skeleton' key={i}>
+            <div className='team-card skeleton' key={i} aria-hidden='true'>
               <div className='avatar-placeholder' />
               <div className='team-info'>
                 <div className='name-placeholder' />
@@ -72,13 +72,14 @@ export default async function AboutUs() {
           </a>
         </div>
       );
+    } finally {
+      teamGrid.el.setAttribute('aria-busy', 'false');
     }
   }
 
   function initMasonry() {
     setTimeout(() => {
       layoutMasonry();
-      teamGrid.el.style.visibility = 'visible';
     }, 0);
 
     if (moduleResizeHandler) {
