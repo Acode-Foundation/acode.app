@@ -6,6 +6,7 @@ const fs = require('node:fs'),
 const express = require('express'),
   Handlebars = require('handlebars'),
   puppeteer = require('puppeteer');
+const { rateLimit } = require('express-rate-limit');
 const { sendPublicAsset } = require('../server/lib/publicAssets');
 if (!process.argv[2] || !process.argv[3])
   throw new Error('Usage: node scripts/benchmark-public-site.cjs BASELINE_SNAPSHOT OPTIMIZED_PUBLIC_DIR [REPORT_JSON]');
@@ -32,6 +33,9 @@ const plugin = {
 };
 async function fixture(build) {
   const app = express();
+  // Allow normal benchmark bursts while bounding filesystem work on loopback.
+  // Omit rate-limit headers so they do not inflate transfer measurements.
+  app.use(rateLimit({ windowMs: 60000, limit: 1000, standardHeaders: false, legacyHeaders: false }));
   const html = Handlebars.compile(fs.readFileSync(build.template, 'utf8'))({ title: 'Acode performance fixture', adsDisabled: true });
   app.get('/api/login', (_q, r) => r.json({ error: 'Not signed in' }));
   app.get('/api/promotions', (_q, r) => r.json([]));
@@ -115,7 +119,7 @@ async function fixture(build) {
             await page.waitForNetworkIdle({ idleTime: 1000, timeout: 90000 });
             const row = await page.evaluate(() => ({
               ...window.metrics,
-              posterReady: document.querySelector('.home-demo__poster').complete,
+              posterReady: document.querySelector('.home-demo__poster')?.complete ?? null,
               overflow: document.querySelector('#app').scrollWidth > innerWidth,
             }));
             const item = {
@@ -134,6 +138,13 @@ async function fixture(build) {
             fs.writeFileSync(report, JSON.stringify(result, null, 2));
           }
         // Dedicated playback measurement, separate from the initial-page runs.
+        const hasDemo = await page.evaluate(() => Boolean(document.querySelector('.home-demo video')));
+        if (!hasDemo) {
+          result.video.push({ build: name, profile: profile.name, skipped: 'No demo video in this build' });
+          fs.writeFileSync(report, JSON.stringify(result, null, 2));
+          await page.close();
+          continue;
+        }
         await cdp.send('Network.clearBrowserCache');
         requests = [];
         await page.$eval('.home-demo', (el) => el.scrollIntoView({ block: 'center' }));
