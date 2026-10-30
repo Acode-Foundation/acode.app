@@ -4,11 +4,11 @@ import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import Router from 'lib/Router';
 import { fetchSponsorMix } from 'lib/sponsors';
-import { TIER_ORDER } from 'lib/sponsorTiers';
 import FeatureSections from './featureSections';
 import { setupHomeInteractions } from './homeInteractions';
 import ScreenshotGallery from './screenshotGallery';
 import { heroScreenshots } from './screenshots';
+import { HOME_MIN_SPONSORS, setupSponsorGrid } from './sponsorGrid';
 
 const PLAY_URL =
   'https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1';
@@ -23,6 +23,7 @@ export default function home() {
   const pluginsMount = Ref();
   const sponsorsMount = Ref();
   const contributorsMount = Ref();
+  const lifecycle = new AbortController();
 
   fetch('https://api.github.com/repos/acode-foundation/acode')
     .then((res) => res.json())
@@ -36,7 +37,7 @@ export default function home() {
     });
 
   loadPlugins(pluginsMount, pluginCount);
-  loadSponsors(sponsorsMount);
+  loadSponsors(sponsorsMount, lifecycle.signal);
   loadContributors(contributorsMount);
 
   const page = (
@@ -124,6 +125,7 @@ export default function home() {
 
   const disposeInteractions = setupHomeInteractions(page);
   const cleanup = () => {
+    lifecycle.abort();
     disposeInteractions();
     Router.off('navigate', cleanup);
   };
@@ -209,13 +211,18 @@ async function loadPlugins(mount, pluginCount) {
   }
 }
 
-async function loadSponsors(mount) {
+async function loadSponsors(mount, signal) {
   try {
-    const sponsors = await fetchSponsorMix({ totalLimit: 6, expiredLimit: 6 });
-    if (!sponsors.length) return;
+    const sponsors = (await fetchSponsorMix({ expiredLimit: 12 })).filter(
+      (sponsor) => typeof sponsor.name === 'string' && sponsor.name.trim() && typeof sponsor.tier === 'string',
+    );
+    if (!sponsors.length || signal.aborted) return;
 
     const allExpired = sponsors.every((sponsor) => sponsor.expired);
-    sponsors.sort((a, b) => Number(a.expired) - Number(b.expired) || TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier));
+    const grid = <div className='sponsors-grid'>{sponsors.map(renderSponsorCard)}</div>;
+    [...grid.children].forEach((card, index) => {
+      card.hidden = index >= HOME_MIN_SPONSORS;
+    });
 
     attach(
       mount,
@@ -226,9 +233,10 @@ async function loadSponsors(mount) {
             View all <span className='icon navigate_next' />
           </a>
         </div>
-        <div className='sponsors-grid'>{sponsors.map(renderSponsorCard)}</div>
+        {grid}
       </div>,
     );
+    setupSponsorGrid(grid, signal);
   } catch {
     // ignore
   }

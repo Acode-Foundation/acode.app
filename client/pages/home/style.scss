@@ -1096,6 +1096,10 @@
     }
 
     .sponsor-card {
+      &[hidden] {
+        display: none;
+      }
+
       position: relative;
       display: flex;
       align-items: center;

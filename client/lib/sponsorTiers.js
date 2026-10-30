@@ -1,3 +1,5 @@
+import { TIER_ORDER } from '../../shared/sponsorTiers';
+
 const FALLBACK = {
   crystal: { label: 'Crystal', price: 100, description: 'Get your name listed on our sponsors page' },
   bronze: { label: 'Bronze', price: 200, description: 'Get your name listed on our sponsors page as a supporter' },
@@ -6,8 +8,6 @@ const FALLBACK = {
   platinum: { label: 'Platinum', price: 2000, description: 'Premium placement with logo, name, website link, and tagline' },
   titanium: { label: 'Titanium', price: 5000, description: 'Premium placement, large logo, website link, and tagline' },
 };
-
-const TIER_ORDER = ['titanium', 'platinum', 'gold', 'silver', 'bronze', 'crystal'];
 
 export { FALLBACK, TIER_ORDER };
 
