@@ -287,17 +287,38 @@ it('still renders registration when the session lookup fails', async () => {
   expect(form).toHaveBeenCalledWith(expect.objectContaining({ action: '/api/user', method: 'post' }));
 });
 
-describe('ad-free home and account flows', () => {
+describe('ad-free routes and account flows', () => {
   const accountPaths = ['/login', '/register', '/change-password', '/api-keys', '/logout', '/profile/edit', '/user/edit', '/oauth/google'];
   const adminPaths = ['/admin', '/admin/', '/ADMIN', '/admin/promotions'];
+  const companyPaths = ['/policy', '/terms', '/refund', '/about', '/contact'];
 
-  it('omits the ad SDK from home and account documents while retaining it on other public pages', () => {
+  it('disables ads on ad-free documents while retaining them on other public pages', () => {
     const render = Handlebars.compile(fs.readFileSync(path.join(root, 'server/index.hbs'), 'utf8'));
-    for (const pathname of [...accountPaths, ...adminPaths, '/LOGIN', '/register/', '/', '/index.htm', '/index.html', '/INDEX.HTML/']) {
+    const companyVariants = companyPaths.flatMap((pathname) => [pathname, `${pathname}/`, pathname.toUpperCase()]);
+    for (const pathname of [
+      ...accountPaths,
+      ...adminPaths,
+      ...companyVariants,
+      '/LOGIN',
+      '/register/',
+      '/',
+      '/index.htm',
+      '/index.html',
+      '/INDEX.HTML/',
+    ]) {
       expect(isAdFreeRoute(pathname)).toBe(true);
       expect(render({ adsDisabled: isAdFreeRoute(pathname) })).toContain('data-ads-disabled="true"');
     }
-    for (const pathname of ['/plugins', '/plugin/example', '/profile/7', '/login-guide', '/index.html-guide', '/administrator']) {
+    for (const pathname of [
+      '/plugins',
+      '/plugin/example',
+      '/profile/7',
+      '/login-guide',
+      '/index.html-guide',
+      '/administrator',
+      '/about-guide',
+      '/policy/example',
+    ]) {
       expect(isAdFreeRoute(pathname)).toBe(false);
       expect(render({ adsDisabled: isAdFreeRoute(pathname) })).toContain('data-ads-disabled="false"');
     }
@@ -339,6 +360,10 @@ describe('ad-free home and account flows', () => {
     ['/admin', '/index.html', '/plugins'],
     ['/', '/index.html', '/login?redirect=app&state=StateValue'],
     ['/login', '/register?redirect=app&state=StateValue', '/'],
+    ...companyPaths.flatMap((pathname) => [
+      ['/plugins', '/faqs', pathname],
+      [pathname, '/index.html', '/plugins'],
+    ]),
   ])('reloads when ad or account policy changes, including history navigation from %s', async (initialPath, samePolicyPath, destination) => {
     const location = new URL(initialPath, 'https://acode.app');
     location.reload = vi.fn();

@@ -101,12 +101,15 @@ it('loads both permitted scripts from the entry point and hides the panel after 
   expect(ui.panel.hidden).toBe(true);
 });
 
-it('preserves site-wide advertising choice without loading ads on admin', () => {
-  const ui = mount('/admin');
-  ui.click('accept');
-  expect(ui.document.head.append).toHaveBeenCalledTimes(1);
-  expect(ui.controller.getChoice().advertising).toBe(true);
-});
+it.each(['/admin', '/policy', '/terms', '/refund', '/about', '/contact'])(
+  'preserves site-wide advertising choice without loading ads on %s',
+  (pathname) => {
+    const ui = mount(pathname);
+    ui.click('accept');
+    expect(ui.document.head.append.mock.calls.map(([script]) => script.src)).toEqual([expect.stringContaining('googletagmanager.com')]);
+    expect(ui.controller.getChoice().advertising).toBe(true);
+  },
+);
 
 it('reopens settings from the footer and restores focus on Escape without changing consent', () => {
   const ui = mount();

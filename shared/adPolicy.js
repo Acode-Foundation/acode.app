@@ -4,7 +4,13 @@ function isAccountRoute(pathname) {
 }
 
 function isAdFreeRoute(pathname) {
-  return /^\/(?:index\.html?\/?)?$/i.test(pathname) || /^\/admin(?:\/|$)/i.test(pathname) || isAccountRoute(pathname);
+  // Router reloads across this boundary so an already-loaded ad SDK cannot run on ad-free pages.
+  return (
+    /^\/(?:index\.html?\/?)?$/i.test(pathname) ||
+    /^\/(?:policy|terms|refund|about|contact)\/?$/i.test(pathname) ||
+    /^\/admin(?:\/|$)/i.test(pathname) ||
+    isAccountRoute(pathname)
+  );
 }
 
 module.exports = { isAccountRoute, isAdFreeRoute };

@@ -28,7 +28,7 @@ Acode Pro is a one-time purchase that unlocks an ad-free experience and exclusiv
 
 ### Refunds
 
-Plugin purchases and Acode Pro purchases made via Razorpay are eligible for a **self-service refund within 2 hours** of purchase. After the 2-hour window, refunds are handled on a case-by-case basis by our support team. For full details, please see our [Refund Policy](/refund-policy).
+Plugin purchases and Acode Pro purchases made via Razorpay are eligible for a **self-service refund within 2 hours** of purchase. After the 2-hour window, refunds are handled on a case-by-case basis by our support team. For full details, please see our [Refund Policy](/refund).
 
 For purchases made through Google Play, refunds are subject to Google Play's refund policies.
 
