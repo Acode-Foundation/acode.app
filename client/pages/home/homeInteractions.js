@@ -2,7 +2,7 @@ import { hover, press, spring } from 'motion';
 import { animate } from 'motion/mini';
 
 const CONTRIBUTORS = '.home-contributors__faces a';
-const CONTROLS = `.home-btn, .home-btn-text, .featured-plugins__list a, .see-all, .home-feature__link, .home-contributors__link, ${CONTRIBUTORS}`;
+const CONTROLS = `.home-btn:not(.home-demo__play), .home-btn-text, .featured-plugins__list a, .see-all, .home-feature__link, .home-contributors__link, ${CONTRIBUTORS}`;
 const RESTING_SHADOW = '0 0 0 rgba(0, 0, 0, 0)';
 
 // Interaction feedback only: no page-load or scroll entrance animations.

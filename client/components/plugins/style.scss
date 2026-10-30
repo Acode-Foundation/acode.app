@@ -94,9 +94,10 @@
     .plugin-icon {
       height: 120px;
       width: 120px;
-      background-repeat: no-repeat;
-      background-position: center;
-      background-size: 100px;
+      display: block;
+      object-fit: contain;
+      box-sizing: border-box;
+      padding: 10px;
       margin: auto;
     }
   }

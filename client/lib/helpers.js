@@ -1,4 +1,3 @@
-import moment from 'moment';
 import userImage from 'res/user.svg';
 import { withAccountRedirect } from './appSource';
 
@@ -175,11 +174,6 @@ export function gravatar(github) {
  */
 export function calcRating(votesUp, votesDown) {
   return !votesUp && !votesDown ? 'Unrated' : `${Math.round((votesUp / (votesDown + votesUp)) * 100)}%`;
-}
-
-export function since(date) {
-  const now = moment().add(new Date().getTimezoneOffset(), 'minutes');
-  return moment(date).from(now);
 }
 
 /**

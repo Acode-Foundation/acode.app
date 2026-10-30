@@ -32,9 +32,8 @@ export default function ScreenshotGallery({
                   aria-haspopup='dialog'
                 >
                   <picture>
-                    <source srcset={shot.webp} type='image/webp' />
+                    <source type='image/webp' />
                     <img
-                      src={shot.src}
                       alt={shot.alt}
                       width={shot.width}
                       height={shot.height}
@@ -108,7 +107,7 @@ export default function ScreenshotGallery({
     </section>
   );
 
-  const dispose = setupScreenshotCarousel(gallery, shots, { autoplay });
+  const dispose = setupScreenshotCarousel(gallery, shots, { autoplay, priority });
   const cleanup = () => {
     dispose();
     Router.off('navigate', cleanup);

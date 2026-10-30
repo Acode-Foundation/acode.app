@@ -1,6 +1,6 @@
 import { deletePlugin } from 'components/plugins';
 import { formatCompactNumber, formatExactNumber } from 'lib/formatNumber';
-import { since } from 'lib/helpers';
+import { since } from 'lib/relativeTime';
 
 const SEARCH_THRESHOLD = 5;
 const STATUS = {

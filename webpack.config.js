@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const { EnvironmentPlugin, IgnorePlugin } = require('webpack');
+const CompressPublicAssets = require('./dev/compressPublicAssets.cjs');
 
 const PUBLIC = path.resolve(__dirname, 'public');
 // Extracted CSS modules are concatenated. A Sass BOM in the middle of that
@@ -10,8 +11,9 @@ const PUBLIC = path.resolve(__dirname, 'public');
 const sassLoader = { loader: 'sass-loader', options: { sassOptions: { charset: false } } };
 
 module.exports = (_env, options) => {
-  if (fs.existsSync(PUBLIC)) {
-    fs.rmSync(PUBLIC, { recursive: true });
+  const outputDirectory = _env?.outputDir ? path.resolve(_env.outputDir) : PUBLIC;
+  if (fs.existsSync(outputDirectory)) {
+    fs.rmSync(outputDirectory, { recursive: true, maxRetries: 3 });
   }
 
   const { mode } = options;
@@ -25,7 +27,7 @@ module.exports = (_env, options) => {
       ignored: ['**/node_modules', '**/server', '**/public', '**/tools'],
     },
     output: {
-      path: PUBLIC,
+      path: outputDirectory,
       filename: '[name].min.js',
       chunkFilename: '[name].chunk.js',
       publicPath: '/',
@@ -39,6 +41,7 @@ module.exports = (_env, options) => {
       ],
     },
     plugins: [
+      ...(mode === 'production' ? [new CompressPublicAssets()] : []),
       // The site uses Moment's built-in English locale only.
       new IgnorePlugin({ resourceRegExp: /^\.\/locale$/, contextRegExp: /moment$/ }),
       new MiniCssExtractPlugin({
@@ -82,8 +85,11 @@ module.exports = (_env, options) => {
       ],
     },
     {
-      test: /\.(png|gif|svg|jpg|jpeg|ico|ttf|webp|eot|woff)(\?.*)?$/,
+      test: /\.(png|gif|svg|jpg|jpeg|ico|ttf|webp|eot|woff2?|mp4)(\?.*)?$/,
       type: 'asset/resource',
+      generator: {
+        filename: (data) => (data.filename.includes('/optimized/') ? '[name].[contenthash:8][ext]' : '[name][ext]'),
+      },
     },
   ];
 

@@ -66,6 +66,7 @@ function mount(pathname = '/plugins') {
     './lib/cookieConsent': {
       ...consent,
       suppressVignettes: vi.fn(),
+      suppressAdIntents: vi.fn(),
       createConsentController(options) {
         controller = consent.createConsentController({ ...options, win });
         return controller;

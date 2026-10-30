@@ -5,8 +5,8 @@ import vm from 'node:vm';
 import { compileString } from 'sass';
 import { describe, expect, it } from 'vitest';
 
-const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, '../..');
+const require = createRequire(path.join(root, 'webpack.config.js'));
 
 function getStylesheetRules() {
   const config = { exports: {} };

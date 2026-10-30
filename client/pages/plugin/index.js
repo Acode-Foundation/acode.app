@@ -1,3 +1,4 @@
+import { since } from 'lib/relativeTime';
 import './style.scss';
 import AdSense from 'components/adsense';
 import AjaxForm from 'components/ajaxForm';
@@ -15,7 +16,7 @@ import BuyButton, { checkPluginOwnership } from 'components/razorpayCheckout';
 import Tabs from 'components/tabs';
 import YearSelect from 'components/YearSelect';
 import Ref from 'html-tag-js/ref';
-import { calcRating, getLoggedInUser, gravatar, hideLoading, showLoading, since } from 'lib/helpers';
+import { calcRating, getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers';
 import { applyPluginMetadata } from 'lib/pageMetadata';
 import Router from 'lib/Router';
 import moment from 'moment/moment';
@@ -256,7 +257,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
 
   return (
     <section ref={pluginSectionRef} id='plugin' className={user?.isAdmin && status_text ? 'has-status-actions' : ''}>
-      <div className='row plugin-head'>
+      <div className='row plugin-head google-anno-skip'>
         <div className='plugin-logo'>
           <img src={`/plugin-icon/${id}`} alt={name} attr-fetchpriority='high' />
           {canInstall && (

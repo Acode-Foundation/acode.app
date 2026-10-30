@@ -1,3 +1,5 @@
+@use './publicFonts';
+
 html:not(.optional-ads-enabled) [data-acode-ad] {
   display: none !important;
 }

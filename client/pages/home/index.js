@@ -4,10 +4,16 @@ import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import Router from 'lib/Router';
 import { fetchSponsorMix } from 'lib/sponsors';
+import { whenNear } from 'lib/whenNear';
+import demoLow from 'res/optimized/acode-demo-480.mp4';
+import demoVideo from 'res/optimized/acode-demo-720.mp4';
+import posterSmall from 'res/optimized/acode-poster-480.webp';
+import posterMedium from 'res/optimized/acode-poster-800.webp';
+import demoPoster from 'res/optimized/acode-poster-1024.webp';
+import { setupContributorRow } from './contributorRow';
 import FeatureSections from './featureSections';
+import { setupHeroVideo } from './heroVideo';
 import { setupHomeInteractions } from './homeInteractions';
-import ScreenshotGallery from './screenshotGallery';
-import { heroScreenshots } from './screenshots';
 import { HOME_MIN_SPONSORS, setupSponsorGrid } from './sponsorGrid';
 
 const PLAY_URL =
@@ -38,7 +44,6 @@ export default function home() {
 
   loadPlugins(pluginsMount, pluginCount);
   loadSponsors(sponsorsMount, lifecycle.signal);
-  loadContributors(contributorsMount);
 
   const page = (
     <section id='home'>
@@ -70,7 +75,71 @@ export default function home() {
         </div>
       </div>
 
-      <ScreenshotGallery shots={heroScreenshots} />
+      <div className='home-demo'>
+        {/* biome-ignore lint/a11y/useMediaCaption: This user-supplied demo has no caption track. */}
+        <video width='1920' height='1080' playsinline preload='none' tabIndex={-1} aria-label='Acode demo video'>
+          <a href={demoVideo}>Watch the Acode demo</a>
+        </video>
+        <img
+          className='home-demo__poster'
+          src={demoPoster}
+          srcset={`${posterSmall} 480w, ${posterMedium} 800w, ${demoPoster} 1024w`}
+          sizes='(max-width: 1168px) calc(100vw - 48px), 1120px'
+          attr-fetchpriority='high'
+          decoding='async'
+          alt=''
+          width='1024'
+          height='500'
+          aria-hidden='true'
+        />
+        <button type='button' className='home-demo__play home-btn home-btn-primary' data-play-demo aria-label='Watch demo: Acode, 30 seconds'>
+          <svg attr-class='home-demo__loading-outline' aria-hidden='true' focusable='false'>
+            <rect x='1.5' y='1.5' rx='11' attr-pathLength='100' />
+          </svg>
+          <span className='home-demo__play-icon' aria-hidden='true'>
+            <svg viewBox='0 0 24 24' fill='currentColor' aria-hidden='true' focusable='false'>
+              <path d='M8 5.5v13a.75.75 0 0 0 1.14.64l10.5-6.5a.75.75 0 0 0 0-1.28l-10.5-6.5A.75.75 0 0 0 8 5.5Z' />
+            </svg>
+          </span>
+          <span className='home-demo__play-label' data-demo-label>
+            Watch demo
+          </span>
+        </button>
+        <div className='home-demo__controls' data-demo-controls hidden role='group' aria-label='Video controls'>
+          <button type='button' data-demo-toggle aria-label='Pause video'>
+            <svg
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              stroke-width='2'
+              stroke-linecap='round'
+              stroke-linejoin='round'
+              aria-hidden='true'
+              focusable='false'
+            >
+              <path data-demo-toggle-icon d='M8 5v14M16 5v14' />
+            </svg>
+          </button>
+          <button type='button' data-demo-mute aria-label='Mute video' aria-pressed='false'>
+            <svg
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              stroke-width='2'
+              stroke-linecap='round'
+              stroke-linejoin='round'
+              aria-hidden='true'
+              focusable='false'
+            >
+              <path data-demo-mute-icon d='M11 5 6 9H3v6h3l5 4V5ZM15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14' />
+            </svg>
+          </button>
+        </div>
+        <div className='home-demo__buffering' data-demo-buffering role='status' aria-label='Buffering video' hidden />
+        <p className='home-demo__error' data-demo-error role='status' hidden>
+          Unable to play here. Try again or <a href={demoVideo}>open the video</a>.
+        </p>
+      </div>
 
       <ul className='home-proof'>
         <li>
@@ -95,7 +164,7 @@ export default function home() {
 
       <FeatureSections />
 
-      <div ref={contributorsMount} hidden />
+      <div ref={contributorsMount} className='home-contributors-mount' />
       <div ref={pluginsMount} hidden />
       <div ref={sponsorsMount} hidden />
 
@@ -123,6 +192,8 @@ export default function home() {
     </section>
   );
 
+  setupHeroVideo(page.querySelector('.home-demo'), lifecycle.signal, { low: demoLow, high: demoVideo });
+  whenNear(page.querySelector('.home-contributors-mount'), () => loadContributors(contributorsMount, lifecycle.signal), lifecycle.signal);
   const disposeInteractions = setupHomeInteractions(page);
   const cleanup = () => {
     lifecycle.abort();
@@ -242,32 +313,36 @@ async function loadSponsors(mount, signal) {
   }
 }
 
-async function loadContributors(mount) {
+async function loadContributors(mount, signal) {
   try {
-    const contributorList = await (await fetch(CONTRIBUTORS_URL)).json();
-    if (!Array.isArray(contributorList)) return;
+    const contributorList = await (await fetch(CONTRIBUTORS_URL, { signal })).json();
+    if (!Array.isArray(contributorList) || signal.aborted) return;
 
-    const contributors = contributorList.filter((person) => person?.login && !person.login.includes('[bot]')).slice(0, 24);
+    const contributors = contributorList.filter((person) => person?.login && !person.login.includes('[bot]'));
     if (!contributors.length) return;
+    const faces = (
+      <div className='home-contributors__faces'>
+        {contributors.map((person) => (
+          <a href={person.html_url} target='_blank' rel='noopener' title={person.login}>
+            <img src={avatarUrl(person.avatar_url)} alt={person.login} width='40' height='40' loading='lazy' />
+          </a>
+        ))}
+      </div>
+    );
 
     attach(
       mount,
       <div className='home-contributors'>
         <h2>Built in the open.</h2>
         <p>Acode is MIT-licensed. These are some of the people who ship it.</p>
-        <div className='home-contributors__faces'>
-          {contributors.map((person) => (
-            <a href={person.html_url} target='_blank' rel='noopener' title={person.login}>
-              <img src={avatarUrl(person.avatar_url)} alt={person.login} width='40' height='40' loading='lazy' />
-            </a>
-          ))}
-        </div>
+        {faces}
         <a className='home-contributors__link' href={GITHUB_URL} target='_blank' rel='noopener'>
           <span className='icon github' />
           View the repo
         </a>
       </div>,
     );
+    setupContributorRow(faces, signal);
   } catch {
     // ignore
   }
@@ -331,7 +406,7 @@ function Plugin({ data }) {
   return (
     <li>
       <a href={`/plugin/${id}`}>
-        <img src={`/plugin-icon/${id}`} alt='' width='28' height='28' />
+        <img src={`/plugin-icon/${id}`} alt='' width='28' height='28' loading='lazy' decoding='async' />
         <span className='plugin-meta'>
           <span className='plugin-top'>
             <span className='plugin-name'>{name}</span>

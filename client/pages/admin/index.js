@@ -11,7 +11,8 @@ import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { createChartSafely, drawBarValueLabels, drawDoughnutPercentLabels } from 'lib/dashboardCharts';
 import { convertInrToUsd, formatCompactNumber, formatCompactUsd, formatExactNumber, formatExactUsd } from 'lib/formatNumber';
-import { downloadFile, getLoggedInUser, since } from 'lib/helpers';
+import { downloadFile, getLoggedInUser } from 'lib/helpers';
+import { since } from 'lib/relativeTime';
 import moment from 'moment';
 import Promotions from './promotions';
 

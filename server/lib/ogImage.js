@@ -2,6 +2,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const sharp = require('sharp');
 const { pluginRevision } = require('../../shared/ogImage.json');
+const { formatMilestoneCount } = require('../../shared/metadataText');
+const { icons } = require('../../client/res/icons/selection.json');
 
 const WIDTH = 1200;
 const HEIGHT = 630;
@@ -81,28 +83,38 @@ function baseSvg(content) {
 }
 
 async function logoBuffer(size) {
-  return sharp(logoPath)
-    .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .png()
-    .toBuffer();
+  return sharp(logoPath).ensureAlpha().resize({ width: size }).png().toBuffer();
 }
 
-async function renderDefaultOgImage() {
-  return getCached('default', async () => {
+function storeLogoSvg(name, x) {
+  const icon = icons.find(({ properties }) => properties.name === name)?.icon;
+  if (!icon) return '';
+  return `<svg x="${x}" y="502" width="42" height="42" viewBox="0 0 ${icon.width || 1024} 1024" fill="#c7d2e3">${icon.paths.map((d) => `<path d="${escapeXml(d)}"/>`).join('')}</svg>`;
+}
+
+async function renderDefaultOgImage(pluginCount) {
+  const countLabel = formatMilestoneCount(pluginCount);
+  const pluginLabel = countLabel === null ? 'Plugins' : `${countLabel} ${pluginCount === 1 ? 'plugin' : 'plugins'}`;
+  return getCached(`default:${pluginLabel}`, async () => {
     const svg = baseSvg(`
-      <text x="86" y="180" fill="#ffffff" font-family="Arial, sans-serif" font-size="76" font-weight="700">Code anywhere.</text>
-      <text x="86" y="266" fill="#66b3ff" font-family="Arial, sans-serif" font-size="76" font-weight="700">Android &amp; iOS.</text>
-      <text x="86" y="352" fill="#b8c2d8" font-family="Arial, sans-serif" font-size="29">Your projects, terminal, and plugins. In your pocket.</text>
-      <g transform="translate(86 420)">
-        <rect width="410" height="72" rx="36" fill="#3399ff"/>
-        <text x="205" y="46" text-anchor="middle" fill="#07111f" font-family="Arial, sans-serif" font-size="27" font-weight="700">Open source, 250+ plugins</text>
+      <text x="86" y="112" fill="#f1f2f4" font-family="Arial, sans-serif" font-size="34" font-weight="700">Acode</text>
+      <rect x="916" y="70" width="202" height="202" rx="40" fill="#15263b" stroke="#45617f"/>
+      <text x="86" y="235" fill="#ffffff" font-family="Arial, sans-serif" font-size="76" font-weight="700">Code anywhere.</text>
+      <text x="86" y="325" fill="#79baff" font-family="Arial, sans-serif" font-size="76" font-weight="700">Android &amp; iOS.</text>
+      <text x="86" y="395" fill="#c7d2e3" font-family="Arial, sans-serif" font-size="29">Your projects, terminal, and plugins. In your pocket.</text>
+      <g transform="translate(86 446)">
+        <rect width="224" height="58" rx="14" fill="#202e42" stroke="#536981"/>
+        <text x="112" y="38" text-anchor="middle" fill="#f1f5fb" font-family="Arial, sans-serif" font-size="27" font-weight="700">Open source</text>
+        <rect x="240" width="244" height="58" rx="14" fill="#202e42" stroke="#536981"/>
+        <text x="362" y="38" text-anchor="middle" fill="#f1f5fb" font-family="Arial, sans-serif" font-size="27" font-weight="700">${escapeXml(pluginLabel)}</text>
       </g>
-      <text x="1020" y="550" text-anchor="end" fill="#ffffff" font-family="Arial, sans-serif" font-size="34" font-weight="700">Acode</text>
-      <text x="1020" y="585" text-anchor="end" fill="#a8b3c7" font-family="Arial, sans-serif" font-size="22">acode.app</text>
+      ${storeLogoSvg('app-store', 1016)}
+      ${storeLogoSvg('googleplay', 1076)}
+      <text x="1118" y="585" text-anchor="end" fill="#c7d2e3" font-family="Arial, sans-serif" font-size="25">acode.app</text>
     `);
-    const logo = await logoBuffer(128);
+    const logo = await logoBuffer(142);
     return sharp(svg)
-      .composite([{ input: logo, left: 930, top: 90 }])
+      .composite([{ input: logo, left: 946, top: 118 }])
       .png()
       .toBuffer();
   });

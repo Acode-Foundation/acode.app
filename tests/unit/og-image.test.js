@@ -51,4 +51,35 @@ describe('Open Graph image rendering', () => {
     const second = await renderPluginOgImage(input);
     expect(second).toBe(first);
   });
+
+  it('refreshes the default image at the same plugin milestones used by page metadata', async () => {
+    const first = await renderDefaultOgImage(287);
+    expect(await renderDefaultOgImage(499)).toBe(first);
+    const next = await renderDefaultOgImage(500);
+    expect(next.equals(first)).toBe(false);
+    expect(await renderDefaultOgImage(999)).toBe(next);
+    expect((await renderDefaultOgImage(1000)).equals(next)).toBe(false);
+  });
+
+  it('uses a count-free fallback without confusing zero plugins with an unavailable count', async () => {
+    const fallback = await renderDefaultOgImage();
+    expect(await renderDefaultOgImage(null)).toBe(fallback);
+    expect(await renderDefaultOgImage(-1)).toBe(fallback);
+    expect((await renderDefaultOgImage(0)).equals(fallback)).toBe(false);
+    expect((await renderDefaultOgImage(1)).equals(await renderDefaultOgImage(2))).toBe(false);
+  });
+});
+
+it('still renders the default card when a store icon is absent', async () => {
+  const { icons } = require('../../client/res/icons/selection.json');
+  const icon = icons.find(({ properties }) => properties.name === 'app-store');
+  const originalName = icon.properties.name;
+  try {
+    icon.properties.name = 'temporarily-missing';
+    clearOgImageCache();
+    expect((await sharp(await renderDefaultOgImage()).metadata()).width).toBe(1200);
+  } finally {
+    icon.properties.name = originalName;
+    clearOgImageCache();
+  }
 });

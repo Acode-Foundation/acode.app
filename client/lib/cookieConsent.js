@@ -121,6 +121,27 @@ export function createConsentController({ storage, adsAllowed, loadScript, obser
   };
 }
 
+/** Google-supported exclusions for text ads; ordinary display ad slots remain eligible. */
+export function suppressAdIntents(root) {
+  const selector = 'a.plugin, .plugin-head, h1, h2, h3, h4, h5, h6, [role="heading"], .title, .page-title, .plugin-title';
+  const mark = (element) => {
+    if (!element.closest('[data-acode-ad], .adsbygoogle')) element.classList.add('google-anno-skip');
+  };
+  const update = (node) => {
+    if (node.nodeType !== 1 || !root.contains(node)) return;
+    if (node.matches(selector)) mark(node);
+    for (const element of node.querySelectorAll(selector)) mark(element);
+  };
+  update(root);
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      for (const node of record.addedNodes) update(node);
+    }
+  });
+  observer.observe(root, { childList: true, subtree: true });
+  return () => observer.disconnect();
+}
+
 export function suppressVignettes(root) {
   const mark = (link) => {
     if (link.matches('a[href]') && !link.closest('[data-acode-ad], .adsbygoogle') && link.getAttribute('data-google-vignette') !== 'false')
