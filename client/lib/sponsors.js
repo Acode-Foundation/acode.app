@@ -1,9 +1,18 @@
+import { TIER_ORDER } from '../../shared/sponsorTiers';
+
+function tierRank(sponsor) {
+  const rank = TIER_ORDER.indexOf(sponsor.tier);
+  return rank < 0 ? TIER_ORDER.length : rank;
+}
+
 export function mergeSponsors(activeSponsors, expiredSponsors, { totalLimit = Number.POSITIVE_INFINITY } = {}) {
   const active = Array.isArray(activeSponsors) ? activeSponsors.map((sponsor) => ({ ...sponsor, expired: false })) : [];
   const seen = new Set(active.map((sponsor) => String(sponsor.id)));
+  // The API supplies expired sponsors by latest expiry; preserve that order.
   const expired = Array.isArray(expiredSponsors)
     ? expiredSponsors.filter((sponsor) => !seen.has(String(sponsor.id))).map((sponsor) => ({ ...sponsor, expired: true }))
     : [];
+  active.sort((a, b) => tierRank(a) - tierRank(b));
   return [...active, ...expired].slice(0, totalLimit);
 }
 
