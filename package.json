@@ -74,6 +74,7 @@
   "scripts": {
     "prepare": "husky",
     "config-build": "node ./dev/config",
+    "media:optimize": "node scripts/optimize-public-media.cjs",
     "build": "npm run config-build p && webpack --mode production",
     "dev": "node ./dev/start-dev",
     "start": "node ./server/main",

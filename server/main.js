@@ -26,6 +26,8 @@ const migrationRunner = require('./lib/migrationRunner');
 const { renderDefaultOgImage, renderPluginOgImage } = require('./lib/ogImage');
 const { fileInDir } = require('./lib/pluginScanner');
 const { sendSponsorImage } = require('./lib/sponsorImage');
+const { sendPublicAsset } = require('./lib/publicAssets');
+const errorHandler = require('./lib/errorHandler');
 const { createMetadataContext, createPluginDescription, getPublicOrigin, localizeStructuredData, publicUrl } = require('./lib/publicMetadata');
 
 const app = express();
@@ -39,6 +41,7 @@ const PLUGIN_ICONS = path.resolve(__dirname, '../data/icons');
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
 const SCHEMAS_DIR = path.resolve(__dirname, './schemas');
 const OG_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
+const DEFAULT_OG_CACHE_CONTROL = 'public, max-age=300, must-revalidate';
 const PUBLIC_ORIGIN = getPublicOrigin();
 const NOINDEX_PATH = /^\/api-keys\/?$/i;
 const renderIndexTemplate = compileTemplate('index.hbs');
@@ -188,13 +191,16 @@ async function main() {
 
   app.get('/og/default.png', async (req, res, next) => {
     try {
-      const etag = createEtag('acode-default-og-v2');
+      const count = await Plugin.count([Plugin.STATUS, Plugin.STATUS_APPROVED]).catch(() => null);
+      const image = await renderDefaultOgImage(count);
+      const etag = createEtag(image);
+      res.setHeader('Cache-Control', DEFAULT_OG_CACHE_CONTROL);
+      res.setHeader('ETag', etag);
       if (req.headers['if-none-match'] === etag) {
         res.status(304).end();
         return;
       }
-      const image = await renderDefaultOgImage();
-      sendOgImage(res, image, etag);
+      sendOgImage(res, image, etag, DEFAULT_OG_CACHE_CONTROL);
     } catch (error) {
       next(error);
     }
@@ -278,14 +284,14 @@ async function main() {
     res.status(404).send({ error: 'Schema not found' });
   });
 
-  app.get('/res/:filename', (req, res) => {
+  app.get('/res/:filename', (req, res, next) => {
     if (!/\.(png|jpg|jpeg|ico|svg|webp)$/.test(req.params.filename)) {
       res.status(404).send({ error: 'File not found' });
       return;
     }
     const file = resolveFileIn(PUBLIC_DIR, req.params.filename);
     if (file) {
-      res.sendFile(file);
+      sendPublicAsset(req, res, file, next);
       return;
     }
     res.status(404).send({ error: 'File not found' });
@@ -305,7 +311,7 @@ async function main() {
 
     const file = resolveFileIn(PUBLIC_DIR, req.params.filename);
     if (file) {
-      res.sendFile(file);
+      sendPublicAsset(req, res, file, next);
       return;
     }
     next();
@@ -509,15 +515,7 @@ async function main() {
     res.send(renderIndexTemplate({ ...context, adsDisabled: isAdFreeRoute(req.path) }));
   });
 
-  // eslint-disable-next-line no-unused-vars
-  app.use((err, _req, res, _next) => {
-    if (err.message === 'Unexpected end of form') {
-      res.status(400).send({ error: 'Upload was interrupted. Please try again.' });
-      return;
-    }
-    console.error('Unhandled error:', err);
-    res.status(500).send({ error: 'Internal server error' });
-  });
+  app.use(errorHandler);
 }
 
 async function start() {
@@ -577,9 +575,9 @@ function resolveFileIn(dir, name) {
   }
 }
 
-function sendOgImage(res, image, etag) {
+function sendOgImage(res, image, etag, cacheControl = OG_CACHE_CONTROL) {
   res.setHeader('Content-Type', 'image/png');
-  res.setHeader('Cache-Control', OG_CACHE_CONTROL);
+  res.setHeader('Cache-Control', cacheControl);
   res.setHeader('ETag', etag);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.send(image);

@@ -10,19 +10,28 @@ import panesJpg from 'res/acode-shot-panes.jpg';
 import panesWebp from 'res/acode-shot-panes.webp';
 import pluginsPng from 'res/acode-shot-plugins.png';
 import pluginsWebp from 'res/acode-shot-plugins.webp';
-import searchPng from 'res/acode-shot-search.png';
-import searchWebp from 'res/acode-shot-search.webp';
-import sftpPng from 'res/acode-shot-sftp.png';
-import sftpWebp from 'res/acode-shot-sftp.webp';
-import terminalJpg from 'res/acode-shot-terminal.jpg';
-import terminalWebp from 'res/acode-shot-terminal.webp';
 import themesPng from 'res/acode-shot-themes.png';
 import themesWebp from 'res/acode-shot-themes.webp';
+import agentSmall from 'res/optimized/acode-shot-agent-640.webp';
+import agentLarge from 'res/optimized/acode-shot-agent-1280.webp';
+import commandsSmall from 'res/optimized/acode-shot-commands-360.webp';
+import commandsLarge from 'res/optimized/acode-shot-commands-720.webp';
+import editorSmall from 'res/optimized/acode-shot-editor-360.webp';
+import editorLarge from 'res/optimized/acode-shot-editor-720.webp';
+import formatterSmall from 'res/optimized/acode-shot-formatter-360.webp';
+import formatterLarge from 'res/optimized/acode-shot-formatter-720.webp';
+import panesSmall from 'res/optimized/acode-shot-panes-640.webp';
+import panesLarge from 'res/optimized/acode-shot-panes-1280.webp';
+import pluginsSmall from 'res/optimized/acode-shot-plugins-360.webp';
+import pluginsLarge from 'res/optimized/acode-shot-plugins-720.webp';
+import themesSmall from 'res/optimized/acode-shot-themes-360.webp';
+import themesLarge from 'res/optimized/acode-shot-themes-720.webp';
 
 const portrait = { width: 720, height: 1387 };
 
 export const screenshots = {
   editor: {
+    previewSet: `${editorSmall} 360w, ${editorLarge} 720w`,
     ...portrait,
     webp: editorWebp,
     src: editorJpg,
@@ -30,23 +39,8 @@ export const screenshots = {
     title: 'Editor & LSP',
     caption: 'Hover docs and completions.',
   },
-  terminal: {
-    ...portrait,
-    webp: terminalWebp,
-    src: terminalJpg,
-    alt: 'Acode Linux terminal installing npm packages',
-    title: 'Linux terminal',
-    caption: 'Alpine. apk, npm, git, python.',
-  },
-  sftp: {
-    ...portrait,
-    webp: sftpWebp,
-    src: sftpPng,
-    alt: 'Acode SFTP connection setup with password and key-file authentication options',
-    title: 'SFTP',
-    caption: 'Connect to your remote files.',
-  },
   commands: {
+    previewSet: `${commandsSmall} 360w, ${commandsLarge} 720w`,
     ...portrait,
     webp: commandsWebp,
     src: commandsPng,
@@ -54,15 +48,8 @@ export const screenshots = {
     title: 'Command palette',
     caption: 'Your next action, a few keys away.',
   },
-  search: {
-    ...portrait,
-    webp: searchWebp,
-    src: searchPng,
-    alt: 'Acode project-wide search panel with case, whole-word, and regular-expression options',
-    title: 'Project-wide search',
-    caption: 'Find it across your project.',
-  },
   formatter: {
+    previewSet: `${formatterSmall} 360w, ${formatterLarge} 720w`,
     ...portrait,
     webp: formatterWebp,
     src: formatterPng,
@@ -71,6 +58,7 @@ export const screenshots = {
     caption: 'Consistent code, in your editor.',
   },
   plugins: {
+    previewSet: `${pluginsSmall} 360w, ${pluginsLarge} 720w`,
     ...portrait,
     webp: pluginsWebp,
     src: pluginsPng,
@@ -79,6 +67,7 @@ export const screenshots = {
     caption: 'More tools. One editor.',
   },
   themes: {
+    previewSet: `${themesSmall} 360w, ${themesLarge} 720w`,
     ...portrait,
     webp: themesWebp,
     src: themesPng,
@@ -87,6 +76,7 @@ export const screenshots = {
     caption: 'A workspace that feels like you.',
   },
   agent: {
+    previewSet: `${agentSmall} 640w, ${agentLarge} 1280w`,
     webp: agentWebp,
     src: agentJpg,
     width: 1800,
@@ -96,6 +86,7 @@ export const screenshots = {
     caption: 'OpenCode beside your project files.',
   },
   panes: {
+    previewSet: `${panesSmall} 640w, ${panesLarge} 1280w`,
     webp: panesWebp,
     src: panesJpg,
     width: 1800,
@@ -105,14 +96,3 @@ export const screenshots = {
     caption: 'Editors, config, and a Linux terminal. One workspace.',
   },
 };
-
-export const heroScreenshots = [
-  screenshots.editor,
-  screenshots.terminal,
-  screenshots.sftp,
-  screenshots.commands,
-  screenshots.search,
-  screenshots.formatter,
-  screenshots.plugins,
-  screenshots.themes,
-];

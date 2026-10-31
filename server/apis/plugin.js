@@ -327,14 +327,14 @@ router.get('/check-update/:id/:version', async (req, res) => {
 router.get('/count{/:type}', async (req, res) => {
   try {
     const { type } = req.params;
-    const where = [];
+    const where = [[Plugin.STATUS, Plugin.STATUS_APPROVED]];
     if (type === 'free') {
-      where.push([Plugin.PRICE, 0], [Plugin.PRICE, null, 'IS']);
+      where.push([Plugin.PRICE, 0], 'OR', [Plugin.PRICE, null, 'IS']);
     } else if (type === 'paid') {
       where.push([Plugin.PRICE, 0, '>']);
     }
 
-    const count = await Plugin.count(where, 'OR');
+    const count = await Plugin.count(where);
     res.send({ count });
   } catch (error) {
     res.status(500).send({ error: error.message });

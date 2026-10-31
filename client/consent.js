@@ -1,11 +1,12 @@
 import './consent.scss';
 import { isAdFreeRoute } from '../shared/adPolicy';
 import { observeAdUnits } from './lib/adUnits';
-import { CONSENT_KEY, createConsentController, suppressVignettes } from './lib/cookieConsent';
+import { CONSENT_KEY, createConsentController, suppressAdIntents, suppressVignettes } from './lib/cookieConsent';
 
 const adsAllowed = document.currentScript?.dataset.adsDisabled === 'false' && !isAdFreeRoute(location.pathname);
 // Do this before injecting either Google script, including on remembered consent.
 suppressVignettes(document.body);
+suppressAdIntents(document.body);
 let storage;
 try {
   storage = window.localStorage;

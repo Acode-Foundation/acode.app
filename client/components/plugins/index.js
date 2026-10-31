@@ -4,8 +4,9 @@ import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import select from 'components/dialogs/select';
 import PluginStatus from 'components/pluginStatus';
-import { calcRating, getLoggedInUser, hideLoading, showLoading, since } from 'lib/helpers';
+import { calcRating, getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
 import Router from 'lib/Router';
+import { since } from 'lib/relativeTime';
 import EditorType from '../editorType';
 
 const PAGE_SIZE = 30;
@@ -148,7 +149,7 @@ function Plugin({
   package_updated_at: updatedAt,
 }) {
   return (
-    <a href={`/plugin/${id}`} className='plugin'>
+    <a href={`/plugin/${id}`} className='plugin google-anno-skip'>
       <EditorType type={editorType} />
       {Boolean(price) &&
         (owned ? (
@@ -162,7 +163,7 @@ function Plugin({
             {price}
           </span>
         ))}
-      <div className='plugin-icon' style={{ backgroundImage: `url(/plugin-icon/${id})` }} />
+      <img className='plugin-icon' src={`/plugin-icon/${id}`} alt='' width='120' height='120' loading='lazy' decoding='async' />
       <div className='plugin-info'>
         <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</h2>
         <div className='info'>

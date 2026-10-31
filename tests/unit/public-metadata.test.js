@@ -1,3 +1,5 @@
+const vm = require('node:vm');
+const { createRequire } = require('node:module');
 const fs = require('node:fs');
 const path = require('node:path');
 const Handlebars = require('handlebars');
@@ -181,4 +183,18 @@ describe('plugin metadata descriptions', () => {
     expect(serialized).toContain('&#x27;');
     expect(serialized.length).toBeLessThanOrEqual(125);
   });
+});
+
+it('uses approved-only counts for server-rendered catalog metadata without opening a database', async () => {
+  const filename = path.resolve(__dirname, '../../server/routeMetadata.js');
+  const localRequire = createRequire(filename);
+  const count = vi.fn().mockResolvedValue(499);
+  const module = { exports: {} };
+  vm.runInNewContext(fs.readFileSync(filename, 'utf8'), {
+    module,
+    __dirname: path.dirname(filename),
+    require: (name) => (name === './entities/plugin' ? { count, STATUS: 'status', STATUS_APPROVED: 1 } : localRequire(name)),
+  });
+  expect((await module.exports.getPluginsMetadata()).title).toBe('Acode Plugins - 100+ Community Extensions');
+  expect(count).toHaveBeenCalledWith(['status', 1]);
 });

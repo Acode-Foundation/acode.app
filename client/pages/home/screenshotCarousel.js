@@ -5,7 +5,7 @@ const SLIDE_INTERVAL = 6000;
 const SLIDE_SPRING = { type: spring, duration: 0.65, bounce: 0 };
 const SOFT_EASE = [0.22, 1, 0.36, 1];
 
-export function setupScreenshotCarousel(gallery, shots, { autoplay = true } = {}) {
+export function setupScreenshotCarousel(gallery, shots, { autoplay = true, priority = true } = {}) {
   const find = (selector) => gallery.querySelector(selector);
   const slides = [...gallery.querySelectorAll('.home-gallery__slide')];
   const dots = [...gallery.querySelectorAll('[data-slide]')];
@@ -69,6 +69,7 @@ export function setupScreenshotCarousel(gallery, shots, { autoplay = true } = {}
     const previousIndex = index;
     index = (next + shots.length) % shots.length;
     const changed = index !== previousIndex;
+    if (manual || visible || priority) loadPreview(index);
     const transform = `translateX(-${index * 100}%)`;
     if (changed) transition(track, { transform }, SLIDE_SPRING);
     else track.style.transform = transform;
@@ -102,6 +103,17 @@ export function setupScreenshotCarousel(gallery, shots, { autoplay = true } = {}
       announcement.textContent = `${index + 1} of ${shots.length}: ${shots[index].title}`;
       schedule();
     }
+  }
+
+  function loadPreview(position) {
+    if (disposed) return;
+    const shot = shots[position];
+    const image = slides[position].querySelector('img');
+    if (image.getAttribute('src')) return;
+    const source = slides[position].querySelector('source');
+    source.sizes = shot.width > 1000 ? '(max-width: 700px) calc(100vw - 48px), 640px' : '(max-width: 700px) calc(100vw - 80px), 360px';
+    source.srcset = shot.previewSet || shot.webp;
+    image.src = shot.src;
   }
 
   function updateViewer() {
@@ -261,10 +273,11 @@ export function setupScreenshotCarousel(gallery, shots, { autoplay = true } = {}
 
   const observer = new IntersectionObserver(
     ([entry]) => {
+      if (entry.isIntersecting) loadPreview(index);
       visible = entry.isIntersecting && entry.intersectionRatio >= 0.5;
       schedule();
     },
-    { threshold: [0, 0.5] },
+    { threshold: [0, 0.5], rootMargin: '300px' },
   );
   observer.observe(viewport);
   show(0);

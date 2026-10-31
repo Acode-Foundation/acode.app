@@ -30,6 +30,7 @@ beforeEach(() => {
   plugin = {
     ID: 'id',
     NAME: 'name',
+    PRICE: 'price',
     AUTHOR: 'author',
     USER_ID: 'user_id',
     STATUS: 'status',
@@ -676,5 +677,23 @@ describe('registering a Play SKU', () => {
     plugin.get.mockResolvedValue([{ id: 'victim.plugin' }]);
     await expect(router.registerSKU('Test', paidPlugin.id, 100)).rejects.toThrow(/belongs to another plugin/);
     expect(plugin.get).toHaveBeenCalledWith(['id'], ['sku', `plugin_${paidPlugin.id}`]);
+  });
+});
+
+describe('public plugin counts', () => {
+  it.each([
+    [undefined, [['status', 1]]],
+    [
+      'paid',
+      [
+        ['status', 1],
+        ['price', 0, '>'],
+      ],
+    ],
+    ['free', [['status', 1], ['price', 0], 'OR', ['price', null, 'IS']]],
+  ])('restricts %s counts to approved plugins, keeping price alternatives grouped', async (type, where) => {
+    const res = await request('/count{/:type}', { params: { type } });
+    expect(plugin.count).toHaveBeenCalledExactlyOnceWith(where);
+    expect(res.send).toHaveBeenCalledWith({ count: 4 });
   });
 });

@@ -50,7 +50,17 @@ function fire(target, type, properties = {}) {
 }
 
 const shots = [
-  { title: 'Editor & LSP', caption: 'Hover docs and completions.', alt: 'Editor', src: 'editor.jpg', webp: 'editor.webp', width: 720, height: 1387 },
+  {
+    title: 'Editor & LSP',
+    caption: 'Hover docs and completions.',
+    alt: 'Editor',
+    src: 'editor.jpg',
+    preview: 'editor-small.webp',
+    previewSet: 'editor-small.webp 360w',
+    webp: 'editor.webp',
+    width: 720,
+    height: 1387,
+  },
   {
     title: 'Linux terminal',
     caption: 'Alpine. apk, npm, git, python.',
@@ -76,6 +86,21 @@ describe('homepage screenshot carousel', () => {
   let dispose;
   const get = (selector) => elements.get(selector);
   const activeTitle = () => get('[data-title]').textContent;
+
+  it('loads only the current offscreen preview when near, then the explicitly selected slide', () => {
+    dispose = setupScreenshotCarousel(gallery, shots, { autoplay: false, priority: false });
+    expect(slides.every((slide) => !slide.child.src)).toBe(true);
+    reportVisibility(false);
+    expect(slides.every((slide) => !slide.child.src)).toBe(true);
+    reportVisibility(true);
+    expect(slides[0].child.src).toBe(shots[0].src);
+    expect(slides[1].child.src).toBeUndefined();
+    expect(gallery.querySelector('[data-viewer-image]').src).toBeUndefined();
+    fire(dots[1], 'click');
+    expect(slides[1].child.src).toBe(shots[1].src);
+    fire(triggers[1], 'click');
+    expect(get('[data-viewer-image]').src).toBe(shots[1].src);
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();

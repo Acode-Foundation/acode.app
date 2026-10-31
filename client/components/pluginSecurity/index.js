@@ -2,7 +2,8 @@ import './style.scss';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import prompt from 'components/dialogs/prompt';
-import { downloadFile, since } from 'lib/helpers';
+import { downloadFile } from 'lib/helpers';
+import { since } from 'lib/relativeTime';
 
 const RECOMMENDATION_LABELS = {
   pass: 'Passed',
