@@ -341,7 +341,7 @@ it('returns to an actionable retry when readiness never arrives and cancels late
     return 8;
   });
   play.click();
-  await vi.advanceTimersByTimeAsync(120_000);
+  await vi.advanceTimersByTimeAsync(30_000);
   expect(play.disabled).toBe(false);
   expect(error.hidden).toBe(false);
   expect(video.cancelVideoFrameCallback).toHaveBeenCalledWith(8);
@@ -413,9 +413,9 @@ it('keeps the completed demo buffered for replay without reloading it', async ()
 
 it('stops a timed-out download and retries the originally selected quality', async () => {
   vi.stubGlobal('innerWidth', 390);
-  readyState = 3;
+  video.play.mockReturnValueOnce(new Promise(() => {}));
   play.click();
-  await vi.advanceTimersByTimeAsync(120_000);
+  await vi.advanceTimersByTimeAsync(30_000);
   expect(error.hidden).toBe(false);
   expect(video.getAttribute('src')).toBeNull();
   vi.stubGlobal('innerWidth', 1280);
@@ -424,4 +424,46 @@ it('stops a timed-out download and retries the originally selected quality', asy
   await vi.advanceTimersByTimeAsync(0);
   expect(video.getAttribute('src')).toBe('/demo-480.mp4');
   expect(container.classList.contains('is-playing')).toBe(true);
+});
+
+it('plays while buffering when paused media never reaches enough data', async () => {
+  const indicator = container.querySelector('[data-demo-buffering]');
+  readyState = 2;
+  play.click();
+  await vi.advanceTimersByTimeAsync(3999);
+  expect(video.paused).toBe(true);
+  expect(play.textContent).toBe('Loading…');
+  expect(container.classList.contains('is-playing')).toBe(false);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(video.paused).toBe(false);
+  expect(container.classList.contains('is-playing')).toBe(true);
+  expect(play.hidden).toBe(true);
+  expect(play.textContent).toBe('Watch demo');
+  expect(indicator.hidden).toBe(false);
+  expect(vi.getTimerCount()).toBe(1);
+});
+
+it('still reveals as soon as enough data arrives within the grace period', async () => {
+  readyState = 3;
+  play.click();
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(container.classList.contains('is-playing')).toBe(false);
+  readyState = 4;
+  video.dispatchEvent(new Event('canplaythrough'));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(container.classList.contains('is-playing')).toBe(true);
+  expect(video.play).toHaveBeenCalledTimes(2);
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(video.play).toHaveBeenCalledTimes(2);
+});
+
+it('cancels the grace fallback when leaving the page while buffering', async () => {
+  readyState = 2;
+  play.click();
+  await vi.advanceTimersByTimeAsync(1000);
+  lifecycle.abort();
+  expect(vi.getTimerCount()).toBe(0);
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(video.play).toHaveBeenCalledOnce();
+  expect(container.classList.contains('is-playing')).toBe(false);
 });

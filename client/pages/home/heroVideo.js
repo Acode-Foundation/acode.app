@@ -1,3 +1,5 @@
+const BUFFER_GRACE_MS = 4000;
+
 export function selectVideoSource(sources, width, connection) {
   const slow =
     connection?.saveData ||
@@ -26,6 +28,8 @@ export function setupHeroVideo(container, signal, sources) {
   let loading = false;
   let loadTimer;
   let readinessTimer;
+  let graceTimer;
+  let graceExpired = false;
   let attempt = 0;
   let focusOrigin;
   video.controls = false;
@@ -53,6 +57,7 @@ export function setupHeroVideo(container, signal, sources) {
     awaitingBuffer = false;
     clearTimeout(loadTimer);
     clearInterval(readinessTimer);
+    clearTimeout(graceTimer);
     setLoading(false);
   }
 
@@ -96,7 +101,7 @@ export function setupHeroVideo(container, signal, sources) {
     if (signal.aborted || !loading) return;
     awaitingBuffer = true;
     // A decoded frame alone can arrive while the rest is still buffering.
-    if (!container.classList.contains('is-playing') && video.readyState < video.HAVE_ENOUGH_DATA) {
+    if (!container.classList.contains('is-playing') && !graceExpired && video.readyState < video.HAVE_ENOUGH_DATA) {
       // Preserve the user's playback permission, but do not consume the demo
       // behind the cover while a slow connection is still filling the buffer.
       video.pause();
@@ -151,10 +156,17 @@ export function setupHeroVideo(container, signal, sources) {
     const currentAttempt = ++attempt;
     loading = true;
     setLoading(true);
-    // Readiness events can be missed or omitted by a browser. Poll the same
-    // readiness condition; never lower it just to escape the loading state.
+    // Readiness events can be missed or omitted by a browser, so poll too.
+    // After a short grace, play while buffering: some browsers stop loading a
+    // paused video, so HAVE_ENOUGH_DATA may never arrive behind the cover.
+    graceExpired = false;
     readinessTimer = setInterval(resumeWhenReady, 500);
-    loadTimer = setTimeout(showPlaybackError, 120_000);
+    graceTimer = setTimeout(() => {
+      if (currentAttempt !== attempt) return;
+      graceExpired = true;
+      resumeWhenReady();
+    }, BUFFER_GRACE_MS);
+    loadTimer = setTimeout(showPlaybackError, 30_000);
     error.hidden = true;
     // Scroll the page itself, not the home's overflow-clipped ancestors.
     const scroller = container.closest('#app') || document.scrollingElement;
@@ -177,7 +189,7 @@ export function setupHeroVideo(container, signal, sources) {
   play.addEventListener('click', start, { signal });
   touch.addEventListener('change', updateControls, { signal });
   function resumeWhenReady() {
-    if (!loading || !awaitingBuffer || signal.aborted || video.readyState < video.HAVE_ENOUGH_DATA) return;
+    if (!loading || !awaitingBuffer || signal.aborted || (!graceExpired && video.readyState < video.HAVE_ENOUGH_DATA)) return;
     awaitingBuffer = false;
     const currentAttempt = attempt;
     playAndReveal().catch(() => {
