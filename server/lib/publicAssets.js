@@ -7,13 +7,18 @@ function sendPublicAsset(req, res, file, next) {
   let selected = file;
   if (/\.(js|css|svg)$/.test(file)) {
     res.vary('Accept-Encoding');
-    // A dev watcher can overwrite the identity asset while older production
-    // companions remain in the output directory.
-    const modified = fs.statSync(file, { throwIfNoEntry: false })?.mtimeMs;
+    // Only dev watchers need the stale-companion guard. Production emission
+    // and deployment copy order do not guarantee matching modification times.
+    const development = process.env.NODE_ENV === 'development';
+    const modified = development && fs.statSync(file, { throwIfNoEntry: false })?.mtimeMs;
     const available = [
       ['br', '.br'],
       ['gzip', '.gz'],
-    ].filter(([, suffix]) => !req.headers.range && fs.statSync(file + suffix, { throwIfNoEntry: false })?.mtimeMs >= modified);
+    ].filter(([, suffix]) => {
+      if (req.headers.range) return false;
+      const companion = fs.statSync(file + suffix, { throwIfNoEntry: false });
+      return companion && (!development || companion.mtimeMs >= modified);
+    });
     const encoding = req.acceptsEncodings(...available.map(([name]) => name), 'identity');
     if (!encoding) return res.sendStatus(406);
     if (encoding !== 'identity') {

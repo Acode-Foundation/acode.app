@@ -11,6 +11,7 @@ beforeAll(() => {
     fs.writeFileSync(path.join(directory, name), 'fixture');
 });
 afterAll(() => fs.rmSync(directory, { recursive: true, force: true }));
+afterEach(() => vi.unstubAllEnvs());
 function serve(name, headers = {}) {
   const responseHeaders = {};
   const req = { headers, acceptsEncodings: request.acceptsEncodings };
@@ -53,6 +54,7 @@ it.each(['demo.1234abcd.mp4', 'poster.1234abcd.webp'])('serves immutable media w
 });
 
 it('ignores compressed companions left behind by an older build', () => {
+  vi.stubEnv('NODE_ENV', 'development');
   const file = path.join(directory, 'updated.js');
   fs.writeFileSync(file, 'new development bundle');
   for (const suffix of ['.br', '.gz']) {
@@ -63,6 +65,32 @@ it('ignores compressed companions left behind by an older build', () => {
   expect(res.sendFile.mock.calls[0][0]).toBe(file);
   expect(headers['Content-Encoding']).toBeUndefined();
   expect(serve('updated.js', { 'accept-encoding': 'br, identity;q=0' }).res.sendStatus).toHaveBeenCalledWith(406);
+});
+
+it.each(['production', undefined])('serves production companions regardless of write order (NODE_ENV=%s)', (environment) => {
+  vi.stubEnv('NODE_ENV', environment);
+  const file = path.join(directory, 'reordered.js');
+  fs.writeFileSync(file, 'production bundle');
+  for (const suffix of ['.br', '.gz']) {
+    fs.writeFileSync(file + suffix, 'compressed production bundle');
+    fs.utimesSync(file + suffix, new Date(1000), new Date(1000));
+  }
+  for (const [accept, suffix] of [
+    ['br', '.br'],
+    ['gzip', '.gz'],
+  ]) {
+    const { res, headers } = serve('reordered.js', { 'accept-encoding': accept });
+    expect(res.sendFile.mock.calls[0][0]).toBe(file + suffix);
+    expect(headers['Content-Encoding']).toBe(accept);
+  }
+});
+
+it('falls back to identity when no compressed companion exists', () => {
+  vi.stubEnv('NODE_ENV', 'production');
+  fs.writeFileSync(path.join(directory, 'identity.js'), 'uncompressed bundle');
+  const { res, headers } = serve('identity.js', { 'accept-encoding': 'br, gzip' });
+  expect(res.sendFile.mock.calls[0][0]).toBe(path.join(directory, 'identity.js'));
+  expect(headers['Content-Encoding']).toBeUndefined();
 });
 
 it.each(['main.js.br', 'main.js.gz'])('does not expose raw companion %s', (file) => {

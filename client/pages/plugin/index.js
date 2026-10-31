@@ -1,4 +1,3 @@
-import { since } from 'lib/relativeTime';
 import './style.scss';
 import AdSense from 'components/adsense';
 import AjaxForm from 'components/ajaxForm';
@@ -19,6 +18,7 @@ import Ref from 'html-tag-js/ref';
 import { calcRating, getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers';
 import { applyPluginMetadata } from 'lib/pageMetadata';
 import Router from 'lib/Router';
+import { since } from 'lib/relativeTime';
 import moment from 'moment/moment';
 import { safeRepositoryUrl } from '../../../shared/repositoryUrl';
 
