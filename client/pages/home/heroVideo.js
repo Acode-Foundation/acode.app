@@ -1,4 +1,4 @@
-const BUFFER_GRACE_MS = 4000;
+const BUFFER_STALL_MS = 4000;
 
 export function selectVideoSource(sources, width, connection) {
   const slow =
@@ -28,8 +28,9 @@ export function setupHeroVideo(container, signal, sources) {
   let loading = false;
   let loadTimer;
   let readinessTimer;
-  let graceTimer;
-  let graceExpired = false;
+  let bufferedEnd = 0;
+  let bufferProgressAt = 0;
+  let bufferStalledOut = false;
   let attempt = 0;
   let focusOrigin;
   video.controls = false;
@@ -57,7 +58,6 @@ export function setupHeroVideo(container, signal, sources) {
     awaitingBuffer = false;
     clearTimeout(loadTimer);
     clearInterval(readinessTimer);
-    clearTimeout(graceTimer);
     setLoading(false);
   }
 
@@ -66,6 +66,22 @@ export function setupHeroVideo(container, signal, sources) {
     // the visitor deliberately moved to another control while waiting.
     if (focusOrigin && [document.body, focusOrigin].includes(document.activeElement)) target.focus({ preventScroll: true });
     focusOrigin = undefined;
+  }
+
+  // Some browsers (notably iOS Safari) stop loading a paused video, so
+  // HAVE_ENOUGH_DATA never arrives. Once the buffer stops growing, stay
+  // stalled for this attempt: playing resumes loading, which must not
+  // send the video back behind the cover.
+  function bufferStalled() {
+    if (bufferStalledOut) return true;
+    const ranges = video.buffered;
+    const end = ranges?.length ? ranges.end(ranges.length - 1) : 0;
+    if (end > bufferedEnd) {
+      bufferedEnd = end;
+      bufferProgressAt = Date.now();
+    }
+    bufferStalledOut = Date.now() - bufferProgressAt >= BUFFER_STALL_MS;
+    return bufferStalledOut;
   }
 
   function showBuffering(show) {
@@ -101,7 +117,7 @@ export function setupHeroVideo(container, signal, sources) {
     if (signal.aborted || !loading) return;
     awaitingBuffer = true;
     // A decoded frame alone can arrive while the rest is still buffering.
-    if (!container.classList.contains('is-playing') && !graceExpired && video.readyState < video.HAVE_ENOUGH_DATA) {
+    if (!container.classList.contains('is-playing') && video.readyState < video.HAVE_ENOUGH_DATA && !bufferStalled()) {
       // Preserve the user's playback permission, but do not consume the demo
       // behind the cover while a slow connection is still filling the buffer.
       video.pause();
@@ -156,17 +172,13 @@ export function setupHeroVideo(container, signal, sources) {
     const currentAttempt = ++attempt;
     loading = true;
     setLoading(true);
-    // Readiness events can be missed or omitted by a browser, so poll too.
-    // After a short grace, play while buffering: some browsers stop loading a
-    // paused video, so HAVE_ENOUGH_DATA may never arrive behind the cover.
-    graceExpired = false;
+    // Readiness events can be missed or omitted by a browser. Poll the same
+    // readiness condition; only a stalled buffer may play before it.
+    bufferedEnd = 0;
+    bufferProgressAt = Date.now();
+    bufferStalledOut = false;
     readinessTimer = setInterval(resumeWhenReady, 500);
-    graceTimer = setTimeout(() => {
-      if (currentAttempt !== attempt) return;
-      graceExpired = true;
-      resumeWhenReady();
-    }, BUFFER_GRACE_MS);
-    loadTimer = setTimeout(showPlaybackError, 30_000);
+    loadTimer = setTimeout(showPlaybackError, 120_000);
     error.hidden = true;
     // Scroll the page itself, not the home's overflow-clipped ancestors.
     const scroller = container.closest('#app') || document.scrollingElement;
@@ -189,7 +201,7 @@ export function setupHeroVideo(container, signal, sources) {
   play.addEventListener('click', start, { signal });
   touch.addEventListener('change', updateControls, { signal });
   function resumeWhenReady() {
-    if (!loading || !awaitingBuffer || signal.aborted || (!graceExpired && video.readyState < video.HAVE_ENOUGH_DATA)) return;
+    if (!loading || !awaitingBuffer || signal.aborted || (video.readyState < video.HAVE_ENOUGH_DATA && !bufferStalled())) return;
     awaitingBuffer = false;
     const currentAttempt = attempt;
     playAndReveal().catch(() => {
@@ -197,6 +209,16 @@ export function setupHeroVideo(container, signal, sources) {
     });
   }
   for (const event of ['canplaythrough', 'canplay', 'progress']) video.addEventListener(event, resumeWhenReady, { signal });
+  video.addEventListener(
+    'suspend',
+    () => {
+      // The browser stopped fetching before enough data arrived.
+      if (!awaitingBuffer || video.readyState >= video.HAVE_ENOUGH_DATA) return;
+      bufferStalledOut = true;
+      resumeWhenReady();
+    },
+    { signal },
+  );
   for (const event of ['waiting', 'stalled']) {
     video.addEventListener(
       event,
