@@ -30,6 +30,7 @@ vi.mock('../../client/components/input', async () => {
 });
 
 let root;
+let lifecycle;
 let failSave;
 const promotion = {
   id: 'test-promotion',
@@ -64,11 +65,15 @@ beforeEach(async () => {
       return { ok: true, json: async () => (url.includes('archived') ? [] : [structuredClone(promotion)]) };
     }),
   );
-  root = Promotions();
+  lifecycle = new AbortController();
+  root = Promotions({ signal: lifecycle.signal });
   document.body.replaceChildren(root);
   await vi.waitFor(() => expect(root.querySelector('.promotion-card')).not.toBeNull());
 });
 afterEach(() => {
+  lifecycle.abort();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   document.body.replaceChildren();
 });
@@ -97,6 +102,7 @@ it('toggles additional mobile analytics without hiding sources or making request
 });
 
 it('prioritizes recent clicks and shows lifetime clicks only when different, including an inactive period', async () => {
+  vi.useFakeTimers();
   expect(root.querySelector('.promotion-metrics strong').textContent).toBe('9');
   expect(root.querySelector('.promotion-metrics span')).toBeNull();
   for (const recent of [4, 0]) {
@@ -104,9 +110,12 @@ it('prioritizes recent clicks and shows lifetime clicks only when different, inc
       ok: true,
       json: async () => [{ ...promotion, analytics: { ...promotion.analytics, recent } }],
     });
-    click('Reload');
+    root.refreshButton.click();
     await vi.waitFor(() => expect(root.querySelector('.promotion-metrics strong').textContent).toBe(String(recent)));
     expect(root.querySelector('.promotion-metrics span').textContent).toBe('9 all time');
+    await vi.advanceTimersByTimeAsync(500);
+    expect(root.refreshButton.dataset.state).toBe('success');
+    await vi.advanceTimersByTimeAsync(5000);
   }
 });
 
@@ -159,16 +168,19 @@ it('requires confirmation before archiving, preserves failed status, and restore
   click('Archive Example');
   await vi.waitFor(() => expect(root.textContent).toContain('Save failed'));
   expect(root.querySelector('.promotion-state').textContent).toBe('Active');
+  expect(root.refreshButton.disabled).toBe(false);
   failSave = false;
   click('Archive Example');
   await vi.waitFor(() => expect(root.textContent).toContain('Promotion archived.'));
   expect(root.querySelector('details .promotion-state').textContent).toBe('Archived');
   expect(root.querySelector('details').open).toBe(true);
+  expect(root.refreshButton.disabled).toBe(false);
   expect(document.activeElement.textContent).toBe('Restore');
   expect(root.textContent).toContain('0 / 3 slots');
   click('Restore');
   await vi.waitFor(() => expect(root.textContent).toContain('Promotion restored.'));
   expect(root.querySelector('.promotion-state').textContent).toBe('Active');
+  expect(root.refreshButton.disabled).toBe(false);
 });
 
 it('keeps edits open when a successful response does not contain the saved promotion', async () => {
@@ -192,7 +204,7 @@ it('opens new drafts for editing and removes cancelled drafts without a request'
   expect(document.activeElement).toBe(draft.querySelector('input'));
   [...draft.querySelectorAll('button')].find((button) => button.textContent === 'Cancel').click();
   expect(root.querySelectorAll('.promotion-card')).toHaveLength(1);
-  expect(document.activeElement.textContent).toBe('Add promotion');
+  expect(document.activeElement.getAttribute('aria-label')).toBe('Add promotion');
   expect(writes()).toHaveLength(0);
 });
 
@@ -234,4 +246,62 @@ it('previews only credential-free HTTP(S) URLs and clears invalid or empty previ
     icon.dispatchEvent(new Event('input'));
     expect(icon.validationMessage).toBe('');
   }
+});
+
+it('refreshes only on click, keeps content still, and preserves expanded analytics', async () => {
+  click('More analytics');
+  const card = root.querySelector('.promotion-card');
+  let finish;
+  fetch.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  window.dispatchEvent(new Event('focus'));
+  document.dispatchEvent(new Event('visibilitychange'));
+  expect(fetch).toHaveBeenCalledTimes(2);
+  root.refreshButton.click();
+  root.refreshButton.click();
+  expect(fetch).toHaveBeenCalledTimes(4);
+  expect(root.querySelector('.promotion-card')).toBe(card);
+  expect(root.querySelector('.promotion-edit').disabled).toBe(true);
+  expect(root.textContent).not.toContain('Loading promotions');
+  finish({ ok: true, json: async () => [{ ...promotion, label: 'Updated' }] });
+  await vi.waitFor(() => expect(root.refreshButton.dataset.state).toBe('success'));
+  expect(root.querySelector('h3').textContent).toBe('Updated');
+  expect(root.querySelector('.promotion-analytics-toggle').getAttribute('aria-expanded')).toBe('true');
+});
+
+it('disables refresh while editing and enables it after cancelling', async () => {
+  click('Edit Example');
+  const input = root.querySelector('input[name=label]');
+  input.value = 'Unsaved draft';
+  input.dispatchEvent(new Event('input'));
+  expect(root.refreshButton.disabled).toBe(true);
+  root.refreshButton.click();
+  expect(fetch).toHaveBeenCalledTimes(2);
+  expect(input.value).toBe('Unsaved draft');
+  click('Cancel');
+  expect(root.refreshButton.disabled).toBe(false);
+  root.refreshButton.click();
+  expect(fetch).toHaveBeenCalledTimes(4);
+});
+
+it('does not refresh during archive confirmation', async () => {
+  let answer;
+  confirm.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+  );
+  click('Archive Example');
+  expect(root.refreshButton.disabled).toBe(true);
+  root.refreshButton.click();
+  expect(fetch).toHaveBeenCalledTimes(2);
+  answer(true);
+  await vi.waitFor(() => expect(root.querySelector('details .promotion-card')).not.toBeNull());
+  expect(root.querySelector('.promotion-toolbar').textContent).toContain('0 / 3 slots');
+  expect(root.refreshButton.disabled).toBe(false);
 });

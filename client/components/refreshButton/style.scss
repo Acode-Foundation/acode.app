@@ -1,0 +1,49 @@
+.refresh-button {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--page-muted, #a9b2c2);
+  background: transparent;
+  cursor: pointer;
+  transition: color 180ms;
+
+  &:hover, &:active { background: transparent; }
+  &[data-state=idle]:hover:not(:disabled) { color: var(--page-text, #fff); }
+  &:focus-visible { outline: 2px solid #82b7ff; outline-offset: 3px; }
+  &:disabled { cursor: default; opacity: .45; }
+  &[data-state=loading] { opacity: 1; color: #82b7ff; }
+  &[data-state=success] { opacity: 1; color: #75e5a7; animation: refresh-celebrate 420ms ease-out; }
+  &[data-state=error] { color: #ff9b9b; }
+
+  .icon, svg { position: absolute; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; margin: 0; font-size: 24px; }
+  .refresh-button-arrow { opacity: 1; transform: rotate(0) scale(1); transition: opacity 160ms, transform 260ms cubic-bezier(.2,.8,.2,1.3); }
+  .refresh-button-check { opacity: 0; transform: scale(.45) rotate(-20deg); transition: opacity 160ms, transform 300ms cubic-bezier(.2,.8,.2,1.4); }
+  .refresh-button-loader { opacity: 0; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; transition: opacity 160ms; }
+  .refresh-button-loader circle { stroke-dasharray: 1 100; }
+  &[data-state=loading] .refresh-button-arrow,
+  &[data-state=success] .refresh-button-arrow { opacity: 0; transform: rotate(120deg) scale(.4); }
+  &[data-state=loading] .refresh-button-loader { opacity: 1; animation: refresh-turn 1.6s linear infinite; }
+  &[data-state=loading] .refresh-button-loader circle { animation: refresh-arc 1.4s ease-in-out infinite; }
+  &[data-state=success] .refresh-button-check { opacity: 1; transform: scale(1) rotate(0); }
+
+  .refresh-button-status { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
+@keyframes refresh-turn { to { transform: rotate(360deg); } }
+@keyframes refresh-arc {
+  0% { stroke-dasharray: 1 100; stroke-dashoffset: 0; }
+  50% { stroke-dasharray: 65 100; stroke-dashoffset: -25; }
+  100% { stroke-dasharray: 1 100; stroke-dashoffset: -100; }
+}
+@keyframes refresh-celebrate {
+  0% { transform: scale(.88); }
+  55% { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}

@@ -91,8 +91,10 @@
   .admin-panel-heading {
     margin-bottom: 24px;
 
+    .admin-panel-title { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+
     h2 {
-      margin: 0 0 8px;
+      margin: 0;
       color: var(--page-text);
       font-size: 1.35rem;
       font-weight: 600;
@@ -175,6 +177,10 @@
         display: flex;
         align-items: center;
         justify-content: center;
+
+        canvas {
+          display: none !important;
+        }
       }
 
       .chart-error {

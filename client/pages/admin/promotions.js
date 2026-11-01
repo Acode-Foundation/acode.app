@@ -1,6 +1,7 @@
 import './promotions.scss';
 import confirm from '../../components/dialogs/confirm';
 import Input from '../../components/input';
+import createRefreshButton from '../../components/refreshButton';
 
 const sourceLabels = new Map([
   ['https://localhost', 'Android app'],
@@ -9,35 +10,47 @@ const sourceLabels = new Map([
   ['unknown', 'Unknown'],
 ]);
 
-export default function Promotions() {
+export default function Promotions({ signal } = {}) {
   const root = document.createElement('section');
   root.className = 'promotion-manager';
   let active = [];
   let archived = [];
   let ready = false;
   let busy = false;
+  let changingStatus = false;
   const saved = new WeakMap();
   const editing = new WeakSet();
   const message = document.createElement('p');
   message.setAttribute('role', 'status');
   const activeList = document.createElement('div');
   const archiveList = document.createElement('div');
-  const add = button('Add promotion', () => {
+  const add = button('New', () => {
     active.push({});
     render();
     activeList.lastElementChild?.querySelector('input')?.focus();
   });
-  const retry = button('Reload', load);
+  add.setAttribute('aria-label', 'Add promotion');
+  const addIcon = document.createElement('span');
+  addIcon.className = 'icon add';
+  addIcon.setAttribute('aria-hidden', 'true');
+  add.prepend(addIcon, ' ');
   const count = document.createElement('span');
   const actions = document.createElement('div');
   actions.className = 'promotion-toolbar';
-  actions.append(count, retry, add);
+  actions.append(count, add);
   const history = document.createElement('details');
   const summary = document.createElement('summary');
   summary.textContent = 'Archived promotions';
   history.append(summary, archiveList);
   root.append(actions, message, activeList, history);
-  load();
+  const refresh = createRefreshButton({
+    label: 'Refresh promotions',
+    onRefresh: load,
+    signal,
+    canRefresh: () => !busy && !changingStatus && !hasEdits(),
+  });
+  root.refreshButton = refresh.button;
+  refresh.run(false);
   return root;
 
   function button(label, action) {
@@ -56,6 +69,9 @@ export default function Promotions() {
   function isDirty(promotion) {
     return saved.get(promotion)?.fields !== snapshot(promotion);
   }
+  function hasEdits() {
+    return [...active, ...archived].some((promotion) => isDirty(promotion) || editing.has(promotion));
+  }
   function slotCount() {
     return active.length;
   }
@@ -63,7 +79,7 @@ export default function Promotions() {
     const drafts = active.filter((row) => !row.id).length;
     count.textContent = `${slotCount()} / 3 slots${drafts ? ` · ${drafts} unsaved` : ''}`;
     add.disabled = !ready || busy || slotCount() >= 3;
-    retry.disabled = busy || [...active, ...archived].some(isDirty);
+    refresh.updateDisabled();
     activeList.replaceChildren(...active.map((promotion) => card(promotion, false)));
     archiveList.replaceChildren(...archived.map((promotion) => card(promotion, true)));
     if (ready && !active.length) activeList.textContent = 'No active promotions.';
@@ -157,7 +173,6 @@ export default function Promotions() {
         promotion[key] = input.value;
         if (key === 'label') name.textContent = input.value || 'New promotion';
         save.disabled = busy || !isDirty(promotion);
-        retry.disabled = [...active, ...archived].some(isDirty);
       };
       if (key === 'icon') {
         const validate = () =>
@@ -189,9 +204,17 @@ export default function Promotions() {
     }
     if (promotion.id) {
       const changeStatus = async () => {
-        if (!isArchived && !(await confirm(`Archive “${promotion.label}”?`, 'You can restore it later. Click history will be kept.'))) return;
-        if (busy) return;
-        await persist(promotion, null, { ...saved.get(promotion).values, archived: Number(!isArchived) });
+        if (busy || changingStatus) return;
+        changingStatus = true;
+        refresh.updateDisabled();
+        try {
+          if (!isArchived && !(await confirm(`Archive “${promotion.label}”?`, 'You can restore it later. Click history will be kept.'))) return;
+          if (busy || signal?.aborted) return;
+          await persist(promotion, null, { ...saved.get(promotion).values, archived: Number(!isArchived) });
+        } finally {
+          changingStatus = false;
+          refresh.updateDisabled();
+        }
       };
       const action = isArchived ? button('Restore', changeStatus) : iconButton(`Archive ${promotion.label}`, 'archive', changeStatus);
       action.disabled = busy || isEditing || (isArchived && slotCount() >= 3);
@@ -357,22 +380,37 @@ export default function Promotions() {
   }
   async function load() {
     busy = true;
-    message.textContent = 'Loading promotions…';
-    render();
+    // Keep the current view still while the request runs; only disable its controls.
+    for (const control of root.querySelectorAll('button, input')) control.disabled = true;
+    const expanded = [...root.querySelectorAll('.promotion-card')]
+      .filter((card) => card.querySelector('.promotion-analytics.is-expanded'))
+      .map((card) => card.dataset.promotionId);
+    if (!ready) {
+      message.textContent = 'Loading promotions…';
+      render();
+    }
     try {
-      const responses = await Promise.all([fetch('/api/admin/promotions'), fetch('/api/admin/promotions?status=archived')]);
-      if (responses.some((response) => !response.ok)) throw new Error('Failed to load promotions. Select Reload to retry.');
+      const responses = await Promise.all([fetch('/api/admin/promotions', { signal }), fetch('/api/admin/promotions?status=archived', { signal })]);
+      if (responses.some((response) => !response.ok)) throw new Error('Failed to load promotions. Use the refresh button to retry.');
       const lists = await Promise.all(responses.map((response) => response.json()));
       if (!lists.every(Array.isArray)) throw new Error('Invalid promotion response');
+      if (signal?.aborted) return false;
       [active, archived] = lists;
       ready = true;
       for (const promotion of [...active, ...archived]) remember(promotion);
       message.textContent = '';
+      return true;
     } catch (error) {
-      message.textContent = error.message;
+      if (!signal?.aborted) message.textContent = error.message;
+      return false;
     } finally {
       busy = false;
-      render();
+      if (!signal?.aborted) {
+        render();
+        for (const card of root.querySelectorAll('.promotion-card')) {
+          if (expanded.includes(card.dataset.promotionId)) card.querySelector('.promotion-analytics-toggle')?.click();
+        }
+      }
     }
   }
   async function persist(promotion, article, payload = promotion) {
