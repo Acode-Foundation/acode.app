@@ -6,12 +6,14 @@ import DialogBox from 'components/dialogs/dialogBox';
 import select from 'components/dialogs/select';
 import Input from 'components/input';
 import { RecommendationBadge, ReviewActions, ScanDetails } from 'components/pluginSecurity';
+import createRefreshButton from 'components/refreshButton';
 import Tabs from 'components/tabs';
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { createChartSafely, drawBarValueLabels, drawDoughnutPercentLabels } from 'lib/dashboardCharts';
 import { convertInrToUsd, formatCompactNumber, formatCompactUsd, formatExactNumber, formatExactUsd } from 'lib/formatNumber';
 import { downloadFile, getLoggedInUser } from 'lib/helpers';
+import Router from 'lib/Router';
 import { since } from 'lib/relativeTime';
 import moment from 'moment';
 import Promotions from './promotions';
@@ -24,6 +26,13 @@ export default async function Admin({ queries = {} }) {
   }
 
   const activeTab = queries.tab || 'dashboard';
+  const lifecycle = new AbortController();
+  const cleanup = () => {
+    if (lifecycle.signal.aborted) return;
+    lifecycle.abort();
+    Router.off('navigate', cleanup);
+  };
+  Router.on('navigate', cleanup);
 
   const onTabChange = (tabId) => {
     const url = new URL(window.location);
@@ -44,7 +53,7 @@ export default async function Admin({ queries = {} }) {
             icon: 'dashboard',
             description: 'Review activity, revenue, and plugin performance.',
             label: 'Dashboard',
-            content: <Dashboard />,
+            content: <Dashboard signal={lifecycle.signal} />,
           },
           {
             id: 'settings',
@@ -53,7 +62,13 @@ export default async function Admin({ queries = {} }) {
             label: 'Settings',
             content: <AppSettings />,
           },
-          { id: 'users', icon: 'person', description: 'Find and manage registered accounts.', label: 'Users', content: <Users /> },
+          {
+            id: 'users',
+            icon: 'person',
+            description: 'Find and manage registered accounts.',
+            label: 'Users',
+            content: <Users signal={lifecycle.signal} />,
+          },
           { id: 'email', icon: 'mail', description: 'Send an announcement to a selected group of users.', label: 'Email', content: <EmailUsers /> },
           {
             id: 'payments',
@@ -66,16 +81,22 @@ export default async function Admin({ queries = {} }) {
             id: 'promotions',
             icon: 'bullhorn',
             label: 'Promotions',
-            content: <Promotions />,
+            content: <Promotions signal={lifecycle.signal} />,
           },
           {
             id: 'sponsors',
             icon: 'favorite',
             description: 'Review sponsorships and manage sponsor listings.',
             label: 'Sponsors',
-            content: <Sponsors />,
+            content: <Sponsors signal={lifecycle.signal} />,
           },
-          { id: 'plugins', icon: 'extension', description: 'Review and manage published plugins.', label: 'Plugins', content: <Plugins /> },
+          {
+            id: 'plugins',
+            icon: 'extension',
+            description: 'Review and manage published plugins.',
+            label: 'Plugins',
+            content: <Plugins signal={lifecycle.signal} />,
+          },
           {
             id: 'updates',
             icon: 'published_with_changes',
@@ -95,7 +116,10 @@ export default async function Admin({ queries = {} }) {
           content: (
             <div className='admin-panel' role='region' aria-labelledby={`admin-${tab.id}-title`}>
               <div className='admin-panel-heading'>
-                <h2 id={`admin-${tab.id}-title`}>{tab.label}</h2>
+                <div className='admin-panel-title'>
+                  <h2 id={`admin-${tab.id}-title`}>{tab.label}</h2>
+                  {content.refreshButton}
+                </div>
                 {description && <p>{description}</p>}
               </div>
               {content}
@@ -107,13 +131,15 @@ export default async function Admin({ queries = {} }) {
   );
 }
 
-function Sponsors() {
+function Sponsors({ signal }) {
   const currentPage = Reactive(1);
   const totalPages = Reactive(0);
   const limit = 10;
-  const ref = Ref(() => goTo(1));
+  const ref = Ref();
+  let requestController;
+  signal.addEventListener('abort', () => requestController?.abort(), { once: true });
 
-  return (
+  const root = (
     <div className='sponsors'>
       <div className='table-container'>
         <table className='info'>
@@ -138,61 +164,81 @@ function Sponsors() {
     </div>
   );
 
+  const refresh = createRefreshButton({ label: 'Refresh sponsors', onRefresh: () => goTo(currentPage.value), signal });
+  root.refreshButton = refresh.button;
+  refresh.run(false);
+  return root;
+
   async function goTo(page) {
+    if (signal.aborted) return false;
+    requestController?.abort();
+    requestController = new AbortController();
+    const requestSignal = requestController.signal;
     if (page < 1) {
       page = 1;
     } else if (totalPages.value > 0 && page > totalPages.value) {
       page = totalPages.value;
     }
 
-    const res = await fetch(`/api/admin/sponsors?page=${page}&limit=${limit}`);
-    if (!res.ok) {
-      ref.innerHTML = 'Failed to load sponsors';
-      return;
-    }
-    const { sponsors, pages } = await res.json();
-    if (!Array.isArray(sponsors)) {
-      ref.innerHTML = 'Failed to load sponsors';
-      return;
-    }
-    const pageCount = pages || 0;
-    totalPages.value = pageCount;
+    try {
+      const res = await fetch(`/api/admin/sponsors?page=${page}&limit=${limit}`, { signal: requestSignal });
+      if (!res.ok) throw new Error('Failed to load sponsors');
+      const { sponsors, pages } = await res.json();
+      if (requestSignal.aborted) return false;
+      if (!Array.isArray(sponsors)) throw new Error('Invalid sponsor response');
+      const pageCount = pages || 0;
+      if (pageCount > 0 && page > pageCount) return goTo(pageCount);
+      totalPages.value = pageCount;
 
-    if (pageCount === 0) {
-      currentPage.value = 0;
+      if (pageCount === 0) {
+        currentPage.value = 0;
+        ref.innerHTML = '';
+        return true;
+      }
+
+      currentPage.value = page;
       ref.innerHTML = '';
-      return;
+      ref.append(
+        ...sponsors.map((s) => {
+          const expired = s.expires_at && new Date(s.expires_at) < new Date();
+          let statusLabel = 'Pending';
+          if (expired) {
+            statusLabel = 'Expired';
+          } else if (s.status === 0) {
+            statusLabel = 'Active';
+          } else if (s.status === 1) {
+            statusLabel = 'Canceled';
+          }
+          const statusClass = expired ? 'status-expired' : '';
+          return (
+            <tr id={`sponsor-${s.id}`}>
+              <td>{s.id}</td>
+              <td>{s.name}</td>
+              <td>{s.tier}</td>
+              <td>{s.email}</td>
+              <td className={statusClass}>{statusLabel}</td>
+              <td>{moment(s.created_at).format('DD-MM-YY')}</td>
+              <td style={{ textAlign: 'center' }}>
+                <span data-action='delete' data-sponsor-id={s.id} className='icon delete' />
+              </td>
+            </tr>
+          );
+        }),
+      );
+      return true;
+    } catch (error) {
+      if (requestSignal.aborted) return false;
+      ref.el.querySelector('[data-load-error]')?.remove();
+      ref.append(
+        <tr data-load-error>
+          <td colSpan='7' role='alert'>
+            Failed to load sponsors. Use the refresh button to retry.
+          </td>
+        </tr>,
+      );
+      console.error('Failed to load sponsors', error);
+      return false;
     }
-
-    currentPage.value = page;
-    ref.innerHTML = '';
-    ref.append(
-      ...sponsors.map((s) => {
-        const expired = s.expires_at && new Date(s.expires_at) < new Date();
-        let statusLabel = 'Pending';
-        if (expired) {
-          statusLabel = 'Expired';
-        } else if (s.status === 0) {
-          statusLabel = 'Active';
-        } else if (s.status === 1) {
-          statusLabel = 'Canceled';
-        }
-        const statusClass = expired ? 'status-expired' : '';
-        return (
-          <tr id={`sponsor-${s.id}`}>
-            <td>{s.id}</td>
-            <td>{s.name}</td>
-            <td>{s.tier}</td>
-            <td>{s.email}</td>
-            <td className={statusClass}>{statusLabel}</td>
-            <td>{moment(s.created_at).format('DD-MM-YY')}</td>
-            <td style={{ textAlign: 'center' }}>
-              <span data-action='delete' data-sponsor-id={s.id} className='icon delete' />
-            </td>
-          </tr>
-        );
-      }),
-    );
   }
 
   async function sponsorClickHandler(e) {
@@ -212,7 +258,7 @@ function Sponsors() {
   }
 }
 
-function Plugins() {
+function Plugins({ signal }) {
   const tblBody = Ref();
   const summaryRef = Ref();
   const prevBtn = Ref();
@@ -237,14 +283,29 @@ function Plugins() {
     fetchPlugins(1);
   };
 
-  tblBody.onref = () => fetchPlugins(1);
+  signal.addEventListener(
+    'abort',
+    () => {
+      clearTimeout(debounceTimer);
+      abortController?.abort();
+    },
+    { once: true },
+  );
 
-  async function fetchPlugins(page) {
-    if (!tblBody.el) return;
+  async function fetchPlugins(page, keepContent = false) {
+    if (!tblBody.el || signal.aborted) return false;
+    if (debounceTimer !== undefined) {
+      clearTimeout(debounceTimer);
+      debounceTimer = undefined;
+      page = 1;
+    }
+    page = Math.max(1, page);
     if (abortController) abortController.abort();
     abortController = new AbortController();
+    const requestSignal = abortController.signal;
 
-    tblBody.el.innerHTML = '<tr><td colspan="6" class="loading-cell">Loading...</td></tr>';
+    const preserveRows = keepContent && Boolean(tblBody.el.querySelector('tr[id], .empty-cell'));
+    if (!preserveRows) tblBody.el.innerHTML = '<tr><td colspan="6" class="loading-cell">Loading...</td></tr>';
 
     let url = `/api/admin/plugins?page=${page}&limit=${limit}`;
     if (statusFilter !== '') {
@@ -255,13 +316,15 @@ function Plugins() {
     }
 
     try {
-      const res = await fetch(url, { signal: abortController.signal });
+      const res = await fetch(url, { signal: requestSignal });
       if (!res.ok) throw new Error(`Server error (${res.status})`);
       const data = await res.json();
+      if (requestSignal.aborted) return false;
       if (data.error) throw new Error(data.error);
 
       const { plugins, pages, total } = data;
-      currentPage.value = page;
+      if (pages > 0 && page > pages) return fetchPlugins(pages, keepContent);
+      currentPage.value = pages > 0 ? page : 0;
       totalPages.value = pages;
       totalCount.value = total;
       updatePaginationButtons();
@@ -274,7 +337,7 @@ function Plugins() {
 
       if (!total) {
         tblBody.el.innerHTML = '<tr><td colspan="6" class="empty-cell">No plugins found</td></tr>';
-        return;
+        return true;
       }
 
       const statusLabels = ['Pending', 'Approved', 'Rejected', 'Deleted'];
@@ -323,8 +386,13 @@ function Plugins() {
           </tr>
         )),
       );
+      return true;
     } catch (err) {
-      if (err?.name === 'AbortError') return;
+      if (requestSignal.aborted || err?.name === 'AbortError') return false;
+      if (preserveRows) {
+        console.error('Failed to refresh plugins', err);
+        return false;
+      }
       currentPage.value = 1;
       totalPages.value = 0;
       totalCount.value = 0;
@@ -332,6 +400,7 @@ function Plugins() {
       if (summaryRef.el) summaryRef.el.textContent = '';
       tblBody.el.innerHTML = '<tr><td colspan="6" class="error-cell"></td></tr>';
       tblBody.el.querySelector('.error-cell').textContent = err.message || 'Failed to load plugins';
+      return false;
     }
   }
 
@@ -438,7 +507,7 @@ function Plugins() {
     fetchPlugins(page);
   };
 
-  return (
+  const root = (
     <div className='admin-plugins'>
       <div className='table-container'>
         <table className='info plugins-table'>
@@ -477,6 +546,14 @@ function Plugins() {
       </div>
     </div>
   );
+  const refresh = createRefreshButton({
+    label: 'Refresh plugins',
+    onRefresh: () => fetchPlugins(currentPage.value, true),
+    signal,
+  });
+  root.refreshButton = refresh.button;
+  refresh.run(false);
+  return root;
 }
 
 /** Updates to published plugins that the security scan held for review. */
@@ -526,30 +603,40 @@ function PluginUpdates() {
   }
 }
 
-function Dashboard() {
-  const ref = Ref();
+function Dashboard({ signal }) {
+  const root = <div className='admin-dashboard' />;
+  const revenueCanvas = Ref();
+  const paymentsCanvas = Ref();
+  const paymentStatusCanvas = Ref();
+  const editorCanvas = Ref();
+  const topDevCanvas = Ref();
+  const providerStatusCanvas = Ref();
+  let ready = false;
+  const destroyCharts = () => {
+    for (const canvas of root.querySelectorAll('canvas')) Chart.getChart(canvas)?.destroy();
+  };
+  signal.addEventListener('abort', destroyCharts, { once: true });
+  const refresh = createRefreshButton({ label: 'Refresh dashboard', onRefresh: load, signal });
+  root.refreshButton = refresh.button;
+  refresh.run(false);
+  return root;
 
-  (async () => {
+  async function load() {
     try {
       const [statsRes, analyticsRes, usdRateRes] = await Promise.all([
-        fetch('api/admin/'),
-        fetch('api/admin/analytics'),
-        fetch('api/admin/exchange-rate/usd').catch(() => null),
+        fetch('/api/admin/', { signal }),
+        fetch('/api/admin/analytics', { signal }),
+        fetch('/api/admin/exchange-rate/usd', { signal }).catch(() => null),
       ]);
+      if (!statsRes.ok || !analyticsRes.ok) throw new Error('Failed to load dashboard data');
       const stats = await statsRes.json();
       const analytics = await analyticsRes.json();
       const usdRateData = usdRateRes?.ok ? await usdRateRes.json() : null;
       const usdRate = Number(usdRateData?.rate);
       const validUsdRate = Number.isFinite(usdRate) && usdRate > 0 ? usdRate : null;
+      if (signal.aborted) return false;
 
-      const revenueCanvas = Ref();
-      const paymentsCanvas = Ref();
-      const paymentStatusCanvas = Ref();
-      const editorCanvas = Ref();
-      const topDevCanvas = Ref();
-      const providerStatusCanvas = Ref();
-
-      ref.append(
+      const cards = (
         <div className='dashboard-grid'>
           <Card title='Total Users' value={stats.users} icon='person' />
           <Card title='Total Plugins' value={stats.plugins || 0} icon='extension' />
@@ -557,46 +644,51 @@ function Dashboard() {
           <Card title='Amount Paid' value={stats.amountPaid || 0} currency={true} usdRate={validUsdRate} icon='account_balance' />
           <Card title='Plugin Sales' value={stats.pluginSales || 0} currency={true} usdRate={validUsdRate} icon='shopping_cart' />
           <Card title='Plugin Downloads' value={stats.pluginDownloads || 0} icon='download' />
-        </div>,
-        <div className='charts-grid'>
-          <div className='chart-card'>
-            <h3>Monthly Revenue (INR)</h3>
-            <div className='chart-container'>
-              <canvas ref={revenueCanvas} />
-            </div>
-          </div>
-          <div className='chart-card'>
-            <h3>Monthly Payments (INR)</h3>
-            <div className='chart-container'>
-              <canvas ref={paymentsCanvas} />
-            </div>
-          </div>
-          <div className='chart-card'>
-            <h3>Top Developers (INR)</h3>
-            <div className='chart-container chart-container--tall'>
-              <canvas ref={topDevCanvas} />
-            </div>
-          </div>
-          <div className='chart-card'>
-            <h3>Orders: Provider vs Status</h3>
-            <div className='chart-container'>
-              <canvas ref={providerStatusCanvas} />
-            </div>
-          </div>
-          <div className='chart-card'>
-            <h3>Payment Status</h3>
-            <div className='chart-container chart-container--small'>
-              <canvas ref={paymentStatusCanvas} />
-            </div>
-          </div>
-          <div className='chart-card'>
-            <h3>Editor Distribution</h3>
-            <div className='chart-container chart-container--small'>
-              <canvas ref={editorCanvas} />
-            </div>
-          </div>
-        </div>,
+        </div>
       );
+      if (ready) root.querySelector('.dashboard-grid').replaceWith(cards);
+      else
+        root.replaceChildren(
+          cards,
+          <div className='charts-grid'>
+            <div className='chart-card'>
+              <h3>Monthly Revenue (INR)</h3>
+              <div className='chart-container'>
+                <canvas ref={revenueCanvas} />
+              </div>
+            </div>
+            <div className='chart-card'>
+              <h3>Monthly Payments (INR)</h3>
+              <div className='chart-container'>
+                <canvas ref={paymentsCanvas} />
+              </div>
+            </div>
+            <div className='chart-card'>
+              <h3>Top Developers (INR)</h3>
+              <div className='chart-container chart-container--tall'>
+                <canvas ref={topDevCanvas} />
+              </div>
+            </div>
+            <div className='chart-card'>
+              <h3>Orders: Provider vs Status</h3>
+              <div className='chart-container'>
+                <canvas ref={providerStatusCanvas} />
+              </div>
+            </div>
+            <div className='chart-card'>
+              <h3>Payment Status</h3>
+              <div className='chart-container chart-container--small'>
+                <canvas ref={paymentStatusCanvas} />
+              </div>
+            </div>
+            <div className='chart-card'>
+              <h3>Editor Distribution</h3>
+              <div className='chart-container chart-container--small'>
+                <canvas ref={editorCanvas} />
+              </div>
+            </div>
+          </div>,
+        );
 
       initChart(revenueCanvas, () => lineChartConfig(analytics.monthlyRevenue, 'Revenue (INR)', '#22c55e', true), 'Monthly Revenue');
       initChart(paymentsCanvas, () => lineChartConfig(analytics.monthlyPayments, 'Payments (INR)', '#3b82f6', true), 'Monthly Payments');
@@ -604,27 +696,39 @@ function Dashboard() {
       initChart(providerStatusCanvas, () => providerStatusChartConfig(analytics.providerStatus), 'Orders by Provider and Status');
       initChart(paymentStatusCanvas, () => doughnutChartConfig(analytics.paymentStatus, 'status', 'count'), 'Payment Status');
       initChart(editorCanvas, () => doughnutChartConfig(analytics.editorDistribution, 'editor', 'count'), 'Editor Distribution');
+      ready = true;
+      return true;
     } catch (error) {
+      if (signal.aborted) return false;
       console.error('Failed to load dashboard data', error);
-      ref.innerHTML = '<div class="error">Failed to load dashboard data</div>';
+      if (!ready) root.innerHTML = '<div class="error">Failed to load dashboard data. Use the refresh button to retry.</div>';
+      return false;
     }
-  })();
-
-  return <div ref={ref} className='admin-dashboard' />;
+  }
 }
 
 function initChart(canvasRef, createConfig, label) {
-  let instance = null;
-  canvasRef.onref = () => {
-    instance = createChartSafely({
-      previousChart: instance,
-      createChart: () => new Chart(canvasRef.el, createConfig()),
-      onError: (error) => {
-        console.error(`Failed to render ${label} chart`, error);
-        showChartFallback(canvasRef.el);
-      },
-    });
-  };
+  const canvas = canvasRef.el;
+  let instance;
+  createChartSafely({
+    createChart: () => {
+      instance = Chart.getChart(canvas);
+      canvas.parentElement?.querySelector('.chart-error')?.remove();
+      canvas.parentElement?.classList.remove('chart-container--error');
+      const config = createConfig();
+      if (!instance) return new Chart(canvas, config);
+      instance.data = config.data;
+      instance.options = config.options;
+      if (instance.config.plugins) instance.config.plugins.splice(0, instance.config.plugins.length, ...(config.plugins || []));
+      instance.update('none');
+      return instance;
+    },
+    onError: (error) => {
+      console.error(`Failed to render ${label} chart`, error);
+      instance?.destroy();
+      showChartFallback(canvas);
+    },
+  });
 }
 
 function showChartFallback(canvas) {
@@ -635,7 +739,8 @@ function showChartFallback(canvas) {
   message.className = 'chart-error';
   message.textContent = 'Chart unavailable';
   container.classList.add('chart-container--error');
-  container.replaceChildren(message);
+  container.querySelector('.chart-error')?.remove();
+  container.append(message);
 }
 
 function lineChartConfig(rows, label, color = '#3b82f6', currency = false) {
@@ -709,7 +814,6 @@ function doughnutChartConfig(rows, labelKey, valueKey) {
           },
         },
       },
-      resizeDelay: 100,
     },
     plugins: [
       {
@@ -754,7 +858,6 @@ function horizontalBarChartConfig(rows, labelKey, valueKey) {
           },
         },
       },
-      resizeDelay: 100,
       scales: {
         x: {
           ticks: {
@@ -815,7 +918,6 @@ function providerStatusChartConfig(rows) {
           },
         },
       },
-      resizeDelay: 100,
       scales: {
         x: {
           ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 }, maxTicksLimit: 6 },
@@ -848,7 +950,6 @@ function chartBaseOptions({ currency = false } = {}) {
   return {
     responsive: true,
     maintainAspectRatio: false,
-    resizeDelay: 100,
     plugins: {
       legend: { display: false },
       tooltip: {
@@ -1013,14 +1114,23 @@ function AppSettings() {
   );
 }
 
-function Users() {
+function Users({ signal }) {
   const currentPage = Reactive(1);
   const totalPages = Reactive(0);
   const limit = 10;
-  const ref = Ref(() => goTo(1));
+  const ref = Ref();
+  let requestController;
   let debounceTimer;
   let name = '';
   let email = '';
+  signal.addEventListener(
+    'abort',
+    () => {
+      clearTimeout(debounceTimer);
+      requestController?.abort();
+    },
+    { once: true },
+  );
 
   const oninput = (e) => {
     const { value } = e.target;
@@ -1033,7 +1143,7 @@ function Users() {
     debounceTimer = setTimeout(() => goTo(1), 500);
   };
 
-  return (
+  const root = (
     <div className='users'>
       <div className='table-container'>
         <table className='info'>
@@ -1060,19 +1170,37 @@ function Users() {
     </div>
   );
 
+  const refresh = createRefreshButton({
+    label: 'Refresh users',
+    onRefresh: () => goTo(currentPage.value),
+    signal,
+  });
+  root.refreshButton = refresh.button;
+  refresh.run(false);
+  return root;
+
   /**
    * Go to a specific page
    * @param {number} page
    * @returns
    */
   async function goTo(page) {
+    if (signal.aborted) return false;
+    if (debounceTimer !== undefined) {
+      clearTimeout(debounceTimer);
+      debounceTimer = undefined;
+      page = 1;
+    }
+    requestController?.abort();
+    requestController = new AbortController();
+    const requestSignal = requestController.signal;
     if (page < 1) {
       page = 1;
     } else if (totalPages.value > 0 && page > totalPages.value) {
       page = totalPages.value;
     }
 
-    let apiUrl = `api/admin/users?page=${page}&limit=${limit}`;
+    let apiUrl = `/api/admin/users?page=${page}&limit=${limit}`;
 
     if (name) {
       apiUrl += `&name=${encodeURIComponent(name)}`;
@@ -1081,31 +1209,50 @@ function Users() {
       apiUrl += `&email=${encodeURIComponent(email)}`;
     }
 
-    const res = await fetch(apiUrl);
-    const { users, pages } = await res.json();
-    const pageCount = pages || 0;
-    totalPages.value = pageCount;
-    currentPage.value = pageCount === 0 ? 0 : page;
-    ref.innerHTML = '';
-    if (!Array.isArray(users) || users.length === 0) {
-      ref.innerHTML = '<tr><td colspan="5" class="empty-cell">No users found</td></tr>';
-      return;
+    try {
+      const res = await fetch(apiUrl, { signal: requestSignal });
+      if (!res.ok) throw new Error('Failed to load users');
+      const { users, pages } = await res.json();
+      if (requestSignal.aborted) return false;
+      if (!Array.isArray(users)) throw new Error('Invalid user response');
+      const pageCount = pages || 0;
+      if (pageCount > 0 && page > pageCount) return goTo(pageCount);
+      totalPages.value = pageCount;
+      currentPage.value = pageCount === 0 ? 0 : page;
+      ref.innerHTML = '';
+      if (users.length === 0) {
+        ref.innerHTML = '<tr><td colspan="5" class="empty-cell">No users found</td></tr>';
+        return true;
+      }
+      ref.append(
+        ...users.map((user) => (
+          <tr id={`user-${user.id}`}>
+            <td>
+              <a href={`/profile/${user.id}`}>{user.id}</a>
+            </td>
+            <td>{user.name}</td>
+            <td>{user.email}</td>
+            <td>{moment(user.created_at).format('DD-MM-YY')}</td>
+            <td style={{ textAlign: 'center' }}>
+              <span data-action='delete' data-user-id={user.id} className='icon delete' />
+            </td>
+          </tr>
+        )),
+      );
+      return true;
+    } catch (error) {
+      if (requestSignal.aborted) return false;
+      ref.el.querySelector('[data-load-error]')?.remove();
+      ref.append(
+        <tr data-load-error>
+          <td colSpan='5' role='alert'>
+            Failed to load users. Use the refresh button to retry.
+          </td>
+        </tr>,
+      );
+      console.error('Failed to load users', error);
+      return false;
     }
-    ref.append(
-      ...users.map((user) => (
-        <tr id={`user-${user.id}`}>
-          <td>
-            <a href={`/profile/${user.id}`}>{user.id}</a>
-          </td>
-          <td>{user.name}</td>
-          <td>{user.email}</td>
-          <td>{moment(user.created_at).format('DD-MM-YY')}</td>
-          <td style={{ textAlign: 'center' }}>
-            <span data-action='delete' data-user-id={user.id} className='icon delete' />
-          </td>
-        </tr>
-      )),
-    );
   }
 }
 
