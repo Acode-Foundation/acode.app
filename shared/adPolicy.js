@@ -8,7 +8,7 @@ function isAdFreeRoute(pathname) {
   return (
     /^\/(?:index\.html?\/?)?$/i.test(pathname) ||
     /^\/(?:policy|terms|refund|about|contact)\/?$/i.test(pathname) ||
-    /^\/admin(?:\/|$)/i.test(pathname) ||
+    /^\/(?:admin|faqs)(?:\/|$)/i.test(pathname) ||
     isAccountRoute(pathname)
   );
 }
