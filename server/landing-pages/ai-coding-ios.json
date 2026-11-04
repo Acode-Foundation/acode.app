@@ -1,0 +1,83 @@
+{
+  "path": "/ai-coding-ios",
+  "isIOS": true,
+  "title": "AI Coding on iPhone and iPad | Acode",
+  "description": "Use Acode’s AI Agent plugin on iPhone and iPad to work with project code. Learn about provider setup, reviewing edits, and iOS limitations.",
+  "heroHeadline": "Work with an AI assistant in your iOS editor",
+  "heroSubheadline": "Use the AI Agent plugin with a supported provider to ask about code and work on project changes without leaving your editor.",
+  "ctaPrimary": "iOS availability",
+  "ctaSecondary": "Explore Acode",
+  "problemHeadline": "Designed for a mobile workflow",
+  "problemPoints": [
+    "Use Acode’s AI Agent plugin on iPhone and iPad to work with project code. Learn about provider setup, reviewing edits, and iOS limitations."
+  ],
+  "solutionHeadline": "What to expect on iOS",
+  "solutionPoints": ["Acode for iPhone and iPad is currently marked Coming soon on the website. Check the home page for release availability."],
+  "featuresHeadline": "AI Coding on iPhone and iPad",
+  "features": [
+    {
+      "title": "Choose a compatible provider",
+      "description": "Configure a provider supported by the plugin. Available models, sign-in methods, and features depend on that provider."
+    },
+    {
+      "title": "Keep changes reviewable",
+      "description": "Start with a small, specific request. Inspect proposed file changes and run the project’s checks before accepting or committing the result."
+    },
+    {
+      "title": "Understand access and costs",
+      "description": "Provider requests send the context needed for your task to that service. Review its terms and pricing; an Acode account or purchase does not include every provider’s usage."
+    }
+  ],
+  "setupHeadline": "Get started in Acode",
+  "setupSteps": [
+    {
+      "title": "Open a project",
+      "description": "Choose the folder you want to work on and make sure important changes are saved or committed."
+    },
+    {
+      "title": "Install AI Agent",
+      "description": "Open Acode’s Plugins page, find AI Agent, and follow the plugin’s setup instructions."
+    },
+    {
+      "title": "Connect a provider",
+      "description": "Configure a supported account or API key. Keep secrets out of source files and prompts."
+    },
+    {
+      "title": "Review the work",
+      "description": "Ask for a focused change, inspect the result, and validate it with your project’s normal checks."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Is AI usage included with Acode?",
+      "answer": "AI providers may require a separate account, subscription, or usage payment. Check the selected provider’s pricing before sending requests."
+    },
+    {
+      "question": "Are all terminal AI tools supported on iOS?",
+      "answer": "No. Command-line tools have their own runtime requirements, and the iOS terminal uses emulation. Plugin support does not guarantee that every CLI tool will run."
+    },
+    {
+      "question": "Will an agent continue after I leave the app?",
+      "answer": "iOS may suspend Acode in the background. Keep the app active while a task runs and check its status when you return."
+    }
+  ],
+  "relatedPages": [
+    {
+      "title": "Code Editor for iPhone and iPad",
+      "url": "/code-editor-ios"
+    },
+    {
+      "title": "Linux Terminal on iPhone and iPad",
+      "url": "/linux-terminal-ios"
+    },
+    {
+      "title": "Git on iPhone and iPad",
+      "url": "/git-ios"
+    },
+    {
+      "title": "Web Development on iPhone and iPad",
+      "url": "/web-development-ios"
+    }
+  ],
+  "pageSchema": "{\"@context\": \"https://schema.org\", \"@type\": \"Article\", \"headline\": \"Work with an AI assistant in your iOS editor\", \"description\": \"Use Acode’s AI Agent plugin on iPhone and iPad to work with project code. Learn about provider setup, reviewing edits, and iOS limitations.\", \"author\": {\"@type\": \"Organization\", \"name\": \"Foxbiz Software Pvt. Ltd.\", \"url\": \"https://acode.app\"}, \"mainEntityOfPage\": {\"@type\": \"WebPage\", \"@id\": \"https://acode.app/ai-coding-ios\"}}"
+}

@@ -4,7 +4,9 @@
 
 Acode is the only Android app that combines a professional code editor with a native Alpine Linux terminal (proot-based, no root required). It supports 100+ languages with syntax highlighting, uses the apk package manager for Linux packages, and enables desktop-grade development workflows entirely on a phone.
 
-Key capabilities:
+Acode for iPhone and iPad is coming soon. The iOS guides below describe its file access, previews, and emulated Linux terminal; Android setup instructions do not necessarily apply to iOS. Check the homepage for availability.
+
+Android capabilities:
 - Native Alpine Linux terminal with bash, zsh, apk package manager
 - Runs Claude Code, OpenAI Codex, and OpenCode natively
 - Node.js, npm, React, Next.js, Python, Git — install and run via terminal
@@ -41,6 +43,14 @@ Key capabilities:
 - [Code Editor Guide](https://acode.app/android-ide): Why Acode is the most complete Android development environment
 - [VS Code Alternative for Android](https://acode.app/vscode-alternative-android): VS Code-like experience on mobile
 - [Spck Editor Alternative](https://acode.app/spck-alternative): How Acode compares to Spck Editor
+
+## iPhone and iPad (Coming Soon)
+
+- [Code Editor for iPhone and iPad](https://acode.app/code-editor-ios): Files, editing, previews, and plugins on iOS
+- [Linux Terminal on iPhone and iPad](https://acode.app/linux-terminal-ios): The emulated Linux environment and its limitations
+- [Git on iPhone and iPad](https://acode.app/git-ios): Repository workflows in the iOS terminal
+- [Web Development on iPhone and iPad](https://acode.app/web-development-ios): Project files and local previews
+- [AI Coding on iPhone and iPad](https://acode.app/ai-coding-ios): AI Agent and compatible terminal tools
 
 ## Optional
 

@@ -228,19 +228,21 @@
 </head>
 <body>
   <nav class="lan-nav">
-    <a href="/" class="logo" data-google-vignette="false"><img src="/logo.svg" alt="Acode" /> <span class="lan-nav-text">Acode</span></a>
+    <a href="/{{#if isIOS}}?src=ios{{/if}}" class="logo" data-google-vignette="false"><img src="/logo.svg" alt="Acode" /> <span class="lan-nav-text">Acode</span></a>
      <div>
-       <a href="/plugins">Plugins</a>
-       <a href="/faqs">FAQs</a>
+       <a href="/plugins{{#if isIOS}}?src=ios{{/if}}">Plugins</a>
+       <a href="/code-editor-ios{{#if isIOS}}?src=ios{{/if}}">iPhone &amp; iPad</a>
+       <a href="/faqs{{#if isIOS}}?src=ios{{/if}}">FAQs</a>
      </div>
   </nav>
 
   <div class="lan-hero">
     <h1>{{heroHeadline}}</h1>
     <p>{{heroSubheadline}}</p>
+    {{#if isIOS}}<p><strong>Coming soon for iPhone and iPad.</strong></p>{{/if}}
     <div class="lan-cta">
-      <a href="https://play.google.com/store/apps/details?id=com.foxdebug.acodefree" class="lan-cta-primary" target="_blank" rel="noopener">{{ctaPrimary}}</a>
-      <a href="/" class="lan-cta-secondary" data-google-vignette="false">{{ctaSecondary}}</a>
+      <a href="{{#if isIOS}}/?src=ios{{else}}https://play.google.com/store/apps/details?id=com.foxdebug.acodefree{{/if}}" class="lan-cta-primary"{{#unless isIOS}} target="_blank" rel="noopener"{{/unless}}>{{ctaPrimary}}</a>
+      <a href="/{{#if isIOS}}?src=ios{{/if}}" class="lan-cta-secondary" data-google-vignette="false">{{ctaSecondary}}</a>
     </div>
   </div>
 
@@ -325,23 +327,24 @@
   </div>
 
   <div class="lan-section" style="text-align:center;">
-    <h2>Ready to Start Coding on Android?</h2>
-    <p style="font-size:18px;margin-bottom:24px;">Acode is free, open source, and trusted by 3.6M+ developers. Get it now.</p>
+    <h2>{{#if isIOS}}Explore Acode for iPhone and iPad{{else}}Ready to Start Coding on Android?{{/if}}</h2>
+    <p style="font-size:18px;margin-bottom:24px;">{{#if isIOS}}The iOS release is coming soon. Check the home page for availability.{{else}}Acode is free, open source, and trusted by 3.6M+ developers. Get it now.{{/if}}</p>
     <div class="lan-cta">
-      <a href="https://play.google.com/store/apps/details?id=com.foxdebug.acodefree" class="lan-cta-primary" target="_blank" rel="noopener">Download Acode for Free</a>
+      <a href="{{#if isIOS}}/?src=ios{{else}}https://play.google.com/store/apps/details?id=com.foxdebug.acodefree{{/if}}" class="lan-cta-primary"{{#unless isIOS}} target="_blank" rel="noopener"{{/unless}}>{{#if isIOS}}iOS availability{{else}}Download Acode for Free{{/if}}</a>
     </div>
   </div>
 
    <div class="lan-footer">
      <div class="lan-footer-links">
-       <a href="/" data-google-vignette="false">Home</a>
-       <a href="/plugins">Plugins</a>
-       <a href="/faqs">FAQs</a>
+       <a href="/{{#if isIOS}}?src=ios{{/if}}" data-google-vignette="false">Home</a>
+       <a href="/plugins{{#if isIOS}}?src=ios{{/if}}">Plugins</a>
+       <a href="/code-editor-ios{{#if isIOS}}?src=ios{{/if}}">iPhone &amp; iPad</a>
+       <a href="/faqs{{#if isIOS}}?src=ios{{/if}}">FAQs</a>
        <a href="https://docs.acode.app">Docs</a>
-       <a href="/sponsors">Sponsors</a>
-       <a href="/policy">Privacy</a>
+       <a href="/sponsors{{#if isIOS}}?src=ios{{/if}}">Sponsors</a>
+       <a href="/policy{{#if isIOS}}?src=ios{{/if}}">Privacy</a>
        <button type="button" data-cookie-settings>Cookie settings</button>
-       <a href="/terms">Terms</a>
+       <a href="/terms{{#if isIOS}}?src=ios{{/if}}">Terms</a>
      </div>
      <p>&copy; 2026 Foxbiz Software Pvt. Ltd. Acode is open source under the <a href="https://github.com/AcodeOrg/acode/blob/main/LICENSE">MIT License</a>.</p>
    </div>

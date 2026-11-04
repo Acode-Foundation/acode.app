@@ -13,6 +13,14 @@ router.use(async (req, res, next) => {
   try {
     const user = await getWebLoggedInUser(req);
     if (!user?.isAdmin) return res.status(401).json({ error: 'Unauthorized' });
+    if (['POST', 'PUT'].includes(req.method)) {
+      if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({ error: 'An FAQ request body is required.' });
+      }
+      if (req.body.platform !== undefined && !['', 'both', 'android', 'ios'].includes(req.body.platform)) {
+        return res.status(400).json({ error: 'platform must be android, ios, or both.' });
+      }
+    }
     next();
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -22,11 +30,23 @@ router.use(async (req, res, next) => {
 router.get('/', async (req, res) => {
   try {
     const data = JSON.parse(fs.readFileSync(faqsFile, 'utf8'));
-    const faqs = Array.isArray(data) ? data : (data.categories || []).flatMap((c) => c.faqs || []);
-    if (req.query.categories === '1') {
-      return res.json(data.categories || []);
+    const { platform } = req.query;
+    if (platform !== undefined && !['android', 'ios', 'both'].includes(platform)) {
+      return res.status(400).json({ error: 'platform must be android, ios, or both.' });
     }
-    res.json(faqs.reverse());
+    const filterByPlatform = platform && platform !== 'both';
+    const visibleFaqs = (faqs) =>
+      filterByPlatform ? faqs.filter((faq) => !faq.platform || faq.platform === 'both' || faq.platform === platform) : faqs;
+    if (req.query.categories === '1') {
+      const categories = data.categories || [];
+      return res.json(
+        filterByPlatform
+          ? categories.map((category) => ({ ...category, faqs: visibleFaqs(category.faqs || []) })).filter((c) => c.faqs.length)
+          : categories,
+      );
+    }
+    const faqs = Array.isArray(data) ? data : (data.categories || []).flatMap((c) => c.faqs || []);
+    res.json(visibleFaqs(faqs).reverse());
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -42,11 +62,11 @@ function findInCategories(categories, q) {
 
 router.post('/', async (req, res) => {
   try {
-    const { q, a, category } = req.body;
+    const { q, a, category, platform } = req.body;
     if (!q) return res.status(400).json({ error: 'q is required.' });
     if (!a) return res.status(400).json({ error: 'a is required.' });
     const data = JSON.parse(fs.readFileSync(faqsFile, 'utf8'));
-    const newFaq = { q, a, tags: [] };
+    const newFaq = { q, a, tags: [], platform: platform || 'both' };
     if (Array.isArray(data)) {
       data.push(newFaq);
     } else if (category && data.categories) {
@@ -65,21 +85,22 @@ router.post('/', async (req, res) => {
 
 router.put('/', async (req, res) => {
   try {
-    const { q, a, old_q: oldQ, category } = req.body;
+    const { q, a, old_q: oldQ, category, platform } = req.body;
     if (!oldQ) return res.status(400).json({ error: 'old_q is required.' });
     if (!q) return res.status(400).json({ error: 'q is required.' });
     if (!a) return res.status(400).json({ error: 'a is required.' });
 
     const data = JSON.parse(fs.readFileSync(faqsFile, 'utf8'));
-    const newFaq = { q, a, tags: [] };
+    const changes = { q, a, ...(platform === undefined ? {} : { platform: platform || 'both' }) };
 
     if (Array.isArray(data)) {
       const index = data.findIndex((faq) => faq.q === oldQ);
       if (index === -1) return res.status(404).json({ error: 'FAQ not found.' });
-      data[index] = newFaq;
+      data[index] = { ...data[index], ...changes };
     } else {
       const found = findInCategories(data.categories || [], oldQ);
       if (!found) return res.status(404).json({ error: 'FAQ not found.' });
+      const newFaq = { ...found.category.faqs[found.index], ...changes };
       if (category && data.categories) {
         found.category.faqs.splice(found.index, 1);
         const targetCat = data.categories.find((c) => c.id === category);
@@ -97,7 +118,7 @@ router.put('/', async (req, res) => {
 
 router.delete('/', async (req, res) => {
   try {
-    const q = req.query.q || req.body.q;
+    const q = req.query.q || req.body?.q;
     if (!q) return res.status(400).json({ error: 'q is required as query param.' });
     const data = JSON.parse(fs.readFileSync(faqsFile, 'utf8'));
     if (Array.isArray(data)) {

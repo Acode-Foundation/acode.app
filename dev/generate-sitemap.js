@@ -90,26 +90,7 @@ const EXCLUDED_PATTERNS = [
 /**
  * Priority mapping for different page types.
  */
-const LANDING_PAGE_PATHS = [
-  'android-ide',
-  'claude-code-android',
-  'codex-android',
-  'opencode-android',
-  'ai-coding-android',
-  'termux-alternative',
-  'linux-terminal-android',
-  'nodejs-android',
-  'npm-android',
-  'react-android',
-  'nextjs-android',
-  'git-android',
-  'ssh-android',
-  'vscode-alternative-android',
-  'cursor-alternative-android',
-  'windsurf-alternative-android',
-  'spck-alternative',
-  'web-development-android',
-];
+const LANDING_PAGE_PATHS = require('../shared/landingPages.json');
 
 function getPriority(url) {
   const path = new URL(url).pathname;

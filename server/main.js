@@ -386,26 +386,7 @@ async function main() {
   });
 
   // Landing pages — fully server-rendered for SEO
-  const LANDING_PAGE_PATHS = [
-    'claude-code-android',
-    'codex-android',
-    'opencode-android',
-    'termux-alternative',
-    'android-ide',
-    'ai-coding-android',
-    'linux-terminal-android',
-    'nodejs-android',
-    'npm-android',
-    'react-android',
-    'nextjs-android',
-    'git-android',
-    'ssh-android',
-    'vscode-alternative-android',
-    'cursor-alternative-android',
-    'windsurf-alternative-android',
-    'spck-alternative',
-    'web-development-android',
-  ];
+  const LANDING_PAGE_PATHS = require('../shared/landingPages.json');
 
   for (const landingPath of LANDING_PAGE_PATHS) {
     app.get(`/${landingPath}`, (_req, res) => {

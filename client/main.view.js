@@ -86,6 +86,7 @@ export default ({ routes }) => (
             <a href='https://docs.acode.app'>Documentation</a>
             <a href='/plugins'>Plugins</a>
             <a href='/faqs'>FAQs</a>
+            <a href='/code-editor-ios'>iPhone &amp; iPad guides</a>
             <a href='https://github.com/acode-foundation/acode'>Source Code</a>
           </nav>
         </div>

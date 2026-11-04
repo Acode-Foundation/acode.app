@@ -5,6 +5,7 @@ import { transformAsync } from '@babel/core';
 import Handlebars from 'handlebars';
 import { safeAccountRedirect } from '../../client/lib/appSource';
 import { isAccountRoute, isAdFreeRoute } from '../../shared/adPolicy';
+import landingPages from '../../shared/landingPages.json';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const compiled = new Map();
@@ -375,8 +376,12 @@ describe('ad-free routes and account flows', () => {
     const router = (
       await loadClient(
         'client/lib/Router.js',
-        { './appSource': { withAppSource: (href) => href }, '../../shared/adPolicy': { isAccountRoute, isAdFreeRoute } },
-        { location, window: { location, history }, document: { title: 'Acode' }, CustomEvent },
+        {
+          './appSource': { withAppSource: (href) => href },
+          '../../shared/adPolicy': { isAccountRoute, isAdFreeRoute },
+          '../../shared/landingPages.json': landingPages,
+        },
+        { location, window: { location, history }, document: { title: 'Acode' }, CustomEvent, URL },
       )
     ).default;
     const render = vi.fn();
@@ -410,19 +415,28 @@ describe('ad-free routes and account flows', () => {
     expect(location.reload).toHaveBeenCalledOnce();
   });
 
-  it('leaves external links to the browser without changing SPA history', async () => {
-    const location = new URL('https://acode.app/');
-    location.reload = vi.fn();
+  it.each([
+    'https://example.com/docs',
+    'https://acode.app/code-editor-ios?src=ios',
+    'https://acode.app/git-android',
+    '/code-editor-ios?src=ios',
+    '/git-android/',
+  ])('loads %s as a full document without changing SPA history', async (destination) => {
+    const location = { href: 'https://acode.app/', pathname: '/', hostname: 'acode.app', reload: vi.fn() };
     const history = { pushState: vi.fn() };
     const router = (
       await loadClient(
         'client/lib/Router.js',
-        { './appSource': { withAppSource: (href) => href }, '../../shared/adPolicy': { isAccountRoute, isAdFreeRoute } },
-        { location, window: { location, history }, document: { title: 'Acode' }, CustomEvent },
+        {
+          './appSource': { withAppSource: (href) => href },
+          '../../shared/adPolicy': { isAccountRoute, isAdFreeRoute },
+          '../../shared/landingPages.json': landingPages,
+        },
+        { location, window: { location, history }, document: { title: 'Acode' }, CustomEvent, URL },
       )
     ).default;
-    router.loadUrl('https://example.com/docs');
-    expect(location.href).toBe('https://example.com/docs');
+    router.loadUrl(destination);
+    expect(location.href).toBe(destination);
     expect(history.pushState).not.toHaveBeenCalled();
   });
 });

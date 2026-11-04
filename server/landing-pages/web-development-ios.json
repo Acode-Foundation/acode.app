@@ -1,0 +1,79 @@
+{
+  "path": "/web-development-ios",
+  "isIOS": true,
+  "title": "Web Development on iPhone and iPad | Acode",
+  "description": "Write HTML, CSS, and JavaScript on iPhone and iPad with Acode. Preview local websites and choose local or remote tools for your project.",
+  "heroHeadline": "Build and preview websites on iOS",
+  "heroSubheadline": "Edit HTML, CSS, and JavaScript in a project folder, preview your changes, and use additional tools when your project needs them.",
+  "ctaPrimary": "iOS availability",
+  "ctaSecondary": "Explore Acode",
+  "problemHeadline": "Designed for a mobile workflow",
+  "problemPoints": [
+    "Write HTML, CSS, and JavaScript on iPhone and iPad with Acode. Preview local websites and choose local or remote tools for your project."
+  ],
+  "solutionHeadline": "What to expect on iOS",
+  "solutionPoints": ["Acode for iPhone and iPad is currently marked Coming soon on the website. Check the home page for release availability."],
+  "featuresHeadline": "Web Development on iPhone and iPad",
+  "features": [
+    {
+      "title": "Start with a local website",
+      "description": "Keep your HTML document, stylesheet, scripts, and images together so relative links resolve in the preview."
+    },
+    {
+      "title": "Check the browser result",
+      "description": "Use Acode’s preview while editing. Test in your target browsers as well before publishing a website."
+    },
+    {
+      "title": "Choose where to build",
+      "description": "The local terminal uses emulation. Framework development servers and builds depend on runtime compatibility; use a remote environment for demanding or unsupported projects."
+    }
+  ],
+  "setupHeadline": "Get started in Acode",
+  "setupSteps": [
+    {
+      "title": "Create a project folder",
+      "description": "Create an HTML file and keep its stylesheets, scripts, and assets alongside it."
+    },
+    {
+      "title": "Open the HTML preview",
+      "description": "Preview the document in Acode and check layout, links, and assets."
+    },
+    {
+      "title": "Make a small change",
+      "description": "Edit a style or a line of text, save it, and check the updated result."
+    },
+    {
+      "title": "Validate before publishing",
+      "description": "Test on the screen sizes and browsers your visitors use. Publishing your site is a separate step."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Do I need Node.js for a simple website?",
+      "answer": "No. A basic HTML, CSS, and browser JavaScript project can be edited and previewed without Node.js."
+    },
+    {
+      "question": "Can I run any framework locally?",
+      "answer": "Not every dependency or build tool is compatible with the iOS terminal. Check your project’s requirements and use a remote development machine when needed."
+    }
+  ],
+  "relatedPages": [
+    {
+      "title": "Code Editor for iPhone and iPad",
+      "url": "/code-editor-ios"
+    },
+    {
+      "title": "Linux Terminal on iPhone and iPad",
+      "url": "/linux-terminal-ios"
+    },
+    {
+      "title": "Git on iPhone and iPad",
+      "url": "/git-ios"
+    },
+    {
+      "title": "AI Coding on iPhone and iPad",
+      "url": "/ai-coding-ios"
+    }
+  ],
+  "pageSchema": "{\"@context\": \"https://schema.org\", \"@type\": \"Article\", \"headline\": \"Build and preview websites on iOS\", \"description\": \"Write HTML, CSS, and JavaScript on iPhone and iPad with Acode. Preview local websites and choose local or remote tools for your project.\", \"author\": {\"@type\": \"Organization\", \"name\": \"Foxbiz Software Pvt. Ltd.\", \"url\": \"https://acode.app\"}, \"mainEntityOfPage\": {\"@type\": \"WebPage\", \"@id\": \"https://acode.app/web-development-ios\"}}"
+}

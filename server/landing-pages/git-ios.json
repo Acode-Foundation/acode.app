@@ -1,0 +1,79 @@
+{
+  "path": "/git-ios",
+  "isIOS": true,
+  "title": "Git on iPhone and iPad | Acode",
+  "description": "Manage Git repositories on iPhone and iPad with Acode’s terminal and editor. Review changes, create commits, and connect to your Git host.",
+  "heroHeadline": "Edit and version your projects on iOS",
+  "heroSubheadline": "Use Git in Acode’s Alpine Linux terminal for small repository workflows, from reviewing a diff to preparing a commit.",
+  "ctaPrimary": "iOS availability",
+  "ctaSecondary": "Explore Acode",
+  "problemHeadline": "Designed for a mobile workflow",
+  "problemPoints": [
+    "Manage Git repositories on iPhone and iPad with Acode’s terminal and editor. Review changes, create commits, and connect to your Git host."
+  ],
+  "solutionHeadline": "What to expect on iOS",
+  "solutionPoints": ["Acode for iPhone and iPad is currently marked Coming soon on the website. Check the home page for release availability."],
+  "featuresHeadline": "Git on iPhone and iPad",
+  "features": [
+    {
+      "title": "Review before committing",
+      "description": "Use <code>git status</code> and <code>git diff</code> to inspect changes before staging files."
+    },
+    {
+      "title": "Keep code and history together",
+      "description": "Work from a repository in the terminal’s filesystem and open its files in Acode to edit them."
+    },
+    {
+      "title": "Connect to your Git host",
+      "description": "Fetching and pushing require a network connection and authentication accepted by your Git host. Keep credentials private and out of project files."
+    }
+  ],
+  "setupHeadline": "Get started in Acode",
+  "setupSteps": [
+    {
+      "title": "Install Git",
+      "description": "In the terminal, run <code>apk update && apk add git</code>."
+    },
+    {
+      "title": "Set your identity",
+      "description": "Set <code>git config --global user.name</code> and <code>git config --global user.email</code> with the name and email you want on commits."
+    },
+    {
+      "title": "Open a repository",
+      "description": "Clone a repository you have permission to access, or work with an existing local repository."
+    },
+    {
+      "title": "Review your edits",
+      "description": "Run <code>git status</code> and <code>git diff</code>, then stage only the files you intend to commit."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Can I work offline?",
+      "answer": "Local edits, status checks, diffs, and commits work without a network connection. Cloning, fetching, and pushing need access to the remote host."
+    },
+    {
+      "question": "Is performance the same as a desktop?",
+      "answer": "The iOS terminal uses emulation. Large repositories and intensive operations may take longer; start with a small project."
+    }
+  ],
+  "relatedPages": [
+    {
+      "title": "Code Editor for iPhone and iPad",
+      "url": "/code-editor-ios"
+    },
+    {
+      "title": "Linux Terminal on iPhone and iPad",
+      "url": "/linux-terminal-ios"
+    },
+    {
+      "title": "Web Development on iPhone and iPad",
+      "url": "/web-development-ios"
+    },
+    {
+      "title": "AI Coding on iPhone and iPad",
+      "url": "/ai-coding-ios"
+    }
+  ],
+  "pageSchema": "{\"@context\": \"https://schema.org\", \"@type\": \"Article\", \"headline\": \"Edit and version your projects on iOS\", \"description\": \"Manage Git repositories on iPhone and iPad with Acode’s terminal and editor. Review changes, create commits, and connect to your Git host.\", \"author\": {\"@type\": \"Organization\", \"name\": \"Foxbiz Software Pvt. Ltd.\", \"url\": \"https://acode.app\"}, \"mainEntityOfPage\": {\"@type\": \"WebPage\", \"@id\": \"https://acode.app/git-ios\"}}"
+}
