@@ -1,0 +1,79 @@
+{
+  "path": "/linux-terminal-ios",
+  "isIOS": true,
+  "title": "Linux Terminal on iPhone and iPad | Acode",
+  "description": "Use Acode’s emulated Alpine Linux terminal on iPhone and iPad. Learn about package installation, project files, and iOS runtime limitations.",
+  "heroHeadline": "A Linux terminal alongside your iOS editor",
+  "heroSubheadline": "Run shell commands in an emulated Alpine Linux environment while keeping your source files and editor close at hand.",
+  "ctaPrimary": "iOS availability",
+  "ctaSecondary": "Explore Acode",
+  "problemHeadline": "Designed for a mobile workflow",
+  "problemPoints": [
+    "Use Acode’s emulated Alpine Linux terminal on iPhone and iPad. Learn about package installation, project files, and iOS runtime limitations."
+  ],
+  "solutionHeadline": "What to expect on iOS",
+  "solutionPoints": ["Acode for iPhone and iPad is currently marked Coming soon on the website. Check the home page for release availability."],
+  "featuresHeadline": "Linux Terminal on iPhone and iPad",
+  "features": [
+    {
+      "title": "An emulated Linux environment",
+      "description": "Acode runs Linux tools through emulation on iOS. Commands and package installation can take time, especially for intensive work."
+    },
+    {
+      "title": "Packages for your workflow",
+      "description": "Alpine uses <code>apk</code> to manage packages. Install only the tools you need and check that they work with the emulated runtime."
+    },
+    {
+      "title": "Plan for app suspension",
+      "description": "Keep Acode in the foreground for terminal work. iOS may suspend the app in the background; do not rely on long-running jobs continuing unattended."
+    }
+  ],
+  "setupHeadline": "Get started in Acode",
+  "setupSteps": [
+    {
+      "title": "Open Terminal",
+      "description": "Open the terminal from Acode and let the initial environment setup finish."
+    },
+    {
+      "title": "Check available packages",
+      "description": "Run <code>apk update</code>, then use <code>apk search</code> to find a package."
+    },
+    {
+      "title": "Start small",
+      "description": "Try a simple command before a larger build. Use a remote machine for workloads that exceed the local runtime’s capabilities."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Is this a native iOS shell?",
+      "answer": "It is an emulated Alpine Linux environment inside Acode, not an unrestricted shell for the iOS operating system."
+    },
+    {
+      "question": "Will every Linux tool work?",
+      "answer": "No. Compatibility depends on the emulator and package requirements. Tools that depend on unsupported kernel features or runtime behavior may not work."
+    },
+    {
+      "question": "Can commands run indefinitely in the background?",
+      "answer": "No. iOS controls the app’s background lifetime. Keep the app active and save your work before switching away."
+    }
+  ],
+  "relatedPages": [
+    {
+      "title": "Code Editor for iPhone and iPad",
+      "url": "/code-editor-ios"
+    },
+    {
+      "title": "Git on iPhone and iPad",
+      "url": "/git-ios"
+    },
+    {
+      "title": "Web Development on iPhone and iPad",
+      "url": "/web-development-ios"
+    },
+    {
+      "title": "AI Coding on iPhone and iPad",
+      "url": "/ai-coding-ios"
+    }
+  ],
+  "pageSchema": "{\"@context\": \"https://schema.org\", \"@type\": \"Article\", \"headline\": \"A Linux terminal alongside your iOS editor\", \"description\": \"Use Acode’s emulated Alpine Linux terminal on iPhone and iPad. Learn about package installation, project files, and iOS runtime limitations.\", \"author\": {\"@type\": \"Organization\", \"name\": \"Foxbiz Software Pvt. Ltd.\", \"url\": \"https://acode.app\"}, \"mainEntityOfPage\": {\"@type\": \"WebPage\", \"@id\": \"https://acode.app/linux-terminal-ios\"}}"
+}

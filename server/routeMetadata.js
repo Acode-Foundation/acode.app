@@ -72,27 +72,8 @@ function getMetadata(pathname, origin = getPublicOrigin()) {
 
   // Landing pages — these have their own server-rendered routes,
   // but this fallback ensures the catch-all can still serve metadata.
-  const landingPages = new Set([
-    '/claude-code-android',
-    '/codex-android',
-    '/opencode-android',
-    '/ai-coding-android',
-    '/termux-alternative',
-    '/android-ide',
-    '/linux-terminal-android',
-    '/nodejs-android',
-    '/npm-android',
-    '/react-android',
-    '/nextjs-android',
-    '/git-android',
-    '/ssh-android',
-    '/vscode-alternative-android',
-    '/cursor-alternative-android',
-    '/windsurf-alternative-android',
-    '/spck-alternative',
-    '/web-development-android',
-  ]);
-  if (landingPages.has(clean)) {
+  const landingPages = require('../shared/landingPages.json');
+  if (landingPages.includes(clean.slice(1))) {
     return null; // landing pages manage their own metadata via JSON
   }
 

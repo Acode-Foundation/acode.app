@@ -31,6 +31,55 @@
     }
   }
 
+  .faq-search-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    .custom-input {
+      flex: 1;
+      min-width: 0;
+      margin: 0;
+    }
+  }
+  .faq-platform-filters {
+    display: flex;
+    flex-shrink: 0;
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid var(--page-line);
+    border-radius: 10px;
+    background: var(--page-surface);
+    button {
+      margin: 0;
+      height: 34px;
+      padding: 0 12px;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--page-muted);
+      cursor: pointer;
+      &[aria-pressed='true'] {
+        background: var(--button-color);
+        color: var(--button-text-color);
+      }
+      &:focus-visible {
+        outline: 2px solid var(--button-color);
+        outline-offset: 2px;
+      }
+    }
+  }
+  .faq-no-results {
+    color: var(--page-muted);
+    padding: 20px 0;
+  }
+  @media (max-width: 480px) {
+    .faq-search-controls {
+      flex-wrap: wrap;
+      .custom-input {
+        flex-basis: 100%;
+      }
+    }
+  }
+
   .faq-categories {
     margin: 0 20px 40px;
   }
@@ -204,95 +253,251 @@
     }
   }
 
-  .admin-form {
-    margin: 20px;
-    padding: 16px;
-    border: 1px dashed var(--button-color, #4fa3e3);
-    border-radius: 8px;
-    background: var(--secondary-color, rgba(255, 255, 255, 0.03));
+  .faq-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
 
-    summary {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--button-color, #4fa3e3);
+    button {
+      margin: 0;
+      height: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border: 1px solid var(--page-line);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--page-muted);
       cursor: pointer;
-      padding: 4px 0;
-      margin-bottom: 12px;
-    }
-
-    .row {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .category-select {
-      width: 100%;
-      padding: 8px 12px;
-      border-radius: 10px;
-      border: 1px solid var(--page-line, rgba(255, 255, 255, 0.08));
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--page-text, #f1f2f4);
-      font-size: 0.9rem;
-    }
-
-    .preview {
-      padding: 12px;
-      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-      border-radius: 6px;
-      min-height: 120px;
-      margin-top: 8px;
-      background: var(--primary-color, #1a1a2e);
-
-      &::before {
-        display: block;
-        width: 100%;
-        content: 'Preview';
-        font-size: 0.8rem;
-        color: var(--secondary-text-color);
-        border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
-        padding-bottom: 6px;
-        margin-bottom: 8px;
+      &:hover {
+        background: var(--page-surface);
+        color: var(--page-text);
       }
-
-      p {
-        margin: 0 0 8px;
-
-        &:last-child {
-          margin-bottom: 0;
-        }
-      }
-
-      code {
-        background: var(--code-bg-color, rgba(255, 255, 255, 0.08));
-        padding: 1px 5px;
-        border-radius: 4px;
-      }
+    }
+    .faq-delete:hover {
+      color: #ff867e;
+      border-color: #ff867e;
     }
   }
 
-  .buttons {
-    display: flex;
-    gap: 10px;
-    margin-top: 12px;
+  .faq-platform {
+    margin-right: auto;
+    padding: 4px 9px;
+    border: 1px solid var(--page-line);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: var(--page-muted);
+  }
 
-    button {
-      padding: 8px 20px;
-      border: none;
-      border-radius: 6px;
+  .admin-form {
+    margin: 20px;
+    border: 1px solid var(--page-line);
+    border-radius: 16px;
+    background: var(--secondary-color, #1c1f27);
+    overflow: hidden;
+
+    > summary {
+      padding: 18px 20px;
+      font-weight: 600;
       cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 500;
+      color: var(--page-text);
+    }
+    &[open] > summary {
+      border-bottom: 1px solid var(--page-line);
+    }
+    form {
+      width: auto;
+      max-width: none;
+      margin: 0;
+      padding: 20px;
+    }
+    .custom-input {
+      margin: 22px 0;
+    }
+    .faq-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .faq-field,
+    .faq-platform-field {
+      flex: 1 1 220px;
+      min-width: 0;
+    }
+    .faq-field {
+      display: grid;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+    .faq-select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border: 1px solid var(--page-line);
+      border-radius: 8px;
+      background-color: var(--page-surface);
+      margin-bottom: 0;
+      color: var(--page-text);
+      font: inherit;
+    }
+    .faq-platform-field {
+      display: block;
+      width: auto;
+      border: 0;
+      padding: 0;
+      margin: 0;
+    }
+    legend {
+      padding: 0;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+    }
+    .faq-platform-toggle {
+      margin-left: 0 !important;
+      display: flex;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 3px;
+      border: 1px solid var(--page-line);
+      border-radius: 9px;
+      background: var(--primary-color-dark, #12141a);
+      label {
+        flex: 1;
+        position: relative;
+        cursor: pointer;
+      }
+      input {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+      }
+      span {
+        display: block;
+        padding: 7px 10px;
+        text-align: center;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        color: var(--page-muted);
+      }
+      input:checked + span {
+        background: var(--button-color);
+        color: var(--button-text-color);
+      }
+      input:focus-visible + span {
+        outline: 2px solid var(--page-text);
+        outline-offset: 2px;
+      }
+    }
+    .faq-answer-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+      span {
+        color: var(--page-muted);
+        font-size: 0.75rem;
+      }
+    }
+    .faq-editor {
+      border: 1px solid var(--page-line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .faq-editor-tabs {
+      margin: 0;
+      .tabs-nav {
+        justify-content: flex-start;
+        flex-direction: row;
+        padding: 0 12px;
+        margin: 0;
+        gap: 8px;
+      }
+      .tab-btn {
+        margin: 0;
+        flex: none;
+        padding: 12px;
+      }
+      .tabs-content {
+        display: none;
+      }
+    }
+    [role='tabpanel'][hidden] {
+      display: none;
+    }
+    textarea {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 220px;
+      resize: vertical;
+      margin: 0;
+      padding: 16px;
+      border: 0;
+      border-radius: 0;
+      background: var(--primary-color-dark, #12141a);
+      color: var(--page-text);
+      font: 0.9rem/1.65 monospace;
+      &:focus {
+        outline: 2px solid var(--button-color);
+        outline-offset: -2px;
+      }
+    }
+    .faq-preview {
+      min-height: 220px;
+      box-sizing: border-box;
+      padding: 16px;
+      overflow-wrap: anywhere;
+      line-height: 1.65;
+      > :first-child {
+        margin-top: 0;
+      }
+      pre {
+        overflow-x: auto;
+      }
+    }
+    .faq-preview-empty {
+      color: var(--page-muted);
+    }
+    .faq-form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+      button {
+        margin: 0;
+        max-width: none;
+        height: auto;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font: inherit;
+        cursor: pointer;
+        border: 1px solid transparent;
+        background: var(--button-color);
+        color: var(--button-text-color);
+      }
+      .faq-cancel {
+        background: transparent;
+        border-color: var(--page-line);
+        color: var(--page-text);
+      }
+    }
+    @media (max-width: 400px) {
+      .faq-form-actions {
+        flex-direction: column-reverse;
+        button {
+          width: 100%;
+        }
+      }
     }
 
-    button[type='submit'] {
-      background: var(--button-color, #4fa3e3);
-      color: var(--button-text-color, #fff);
-    }
-
-    button.danger {
-      background: var(--danger-color, #e74c3c);
-      color: var(--danger-text-color, #fff);
+    button:focus-visible,
+    select:focus-visible {
+      outline: 2px solid var(--button-color);
+      outline-offset: 3px;
     }
   }
 }

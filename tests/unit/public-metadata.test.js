@@ -198,3 +198,46 @@ it('uses approved-only counts for server-rendered catalog metadata without openi
   expect((await module.exports.getPluginsMetadata()).title).toBe('Acode Plugins - 100+ Community Extensions');
   expect(count).toHaveBeenCalledWith(['status', 1]);
 });
+
+describe('iOS landing pages', () => {
+  const landingPaths = require('../../shared/landingPages.json');
+  const iosPaths = landingPaths.filter((slug) => slug.endsWith('-ios'));
+  const template = Handlebars.compile(fs.readFileSync(path.resolve(__dirname, '../../server/landing.hbs'), 'utf8'));
+
+  it.each(iosPaths)('renders %s with matching metadata, iOS navigation and availability', (slug) => {
+    const page = require(`../../server/landing-pages/${slug}.json`);
+    const context = createMetadataContext(defaultOg, { canonicalPath: page.path, origin: 'https://acode.app' });
+    const html = template({ ...context, ...page });
+    expect(html).toContain(`<title>${page.title}</title>`);
+    expect(html).toContain(`<link rel="canonical" href="https://acode.app/${slug}"`);
+    expect(html).toContain(`property="og:title" content="${page.title}"`);
+    expect(html).toContain(`name="twitter:title" content="${page.title}"`);
+    expect(html).toContain('href="/faqs?src=ios"');
+    expect(html).toContain('href="/?src=ios"');
+    for (const route of ['/', '/plugins', '/sponsors', '/policy', '/terms']) {
+      expect(html).toContain(`href="${route}?src=ios"`);
+      expect(html).not.toContain(`href="${route}"`);
+    }
+    expect(html).not.toMatch(/class="lan-cta-primary"[^>]*target="_blank"/);
+    expect(html).toMatch(/class="lan-hero">[\s\S]*?Coming soon for iPhone and iPad\.[\s\S]*?class="lan-cta"/);
+    expect(html).not.toMatch(/play\.google|F-Droid|Coding on Android|Download Acode for Free/);
+    expect(html).toContain('coming soon');
+    expect(JSON.parse(page.pageSchema).mainEntityOfPage['@id']).toBe(`https://acode.app/${slug}`);
+    expect(getMetadata(page.path)).toBeNull();
+    for (const related of page.relatedPages) expect(iosPaths).toContain(related.url.slice(1));
+    expect(fs.readFileSync(path.resolve(__dirname, '../../sitemap.xml'), 'utf8')).toContain(`<loc>https://acode.app/${slug}</loc>`);
+  });
+
+  it('keeps Android downloads and registers every landing page exactly once', () => {
+    const page = require('../../server/landing-pages/git-android.json');
+    expect(template(page)).toContain(
+      'href="https://play.google.com/store/apps/details?id=com.foxdebug.acodefree" class="lan-cta-primary" target="_blank"',
+    );
+    const files = fs
+      .readdirSync(path.resolve(__dirname, '../../server/landing-pages'))
+      .filter((name) => name.endsWith('.json'))
+      .map((name) => name.slice(0, -5));
+    expect([...landingPaths].sort()).toEqual(files.sort());
+    expect(new Set(landingPaths).size).toBe(landingPaths.length);
+  });
+});

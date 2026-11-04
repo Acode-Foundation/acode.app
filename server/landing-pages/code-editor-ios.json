@@ -1,0 +1,75 @@
+{
+  "path": "/code-editor-ios",
+  "isIOS": true,
+  "title": "Code Editor for iPhone and iPad | Acode",
+  "description": "Edit code on iPhone and iPad with Acode. Work with project files, preview HTML and Markdown, and add tools through community plugins.",
+  "heroHeadline": "A workspace for code on iPhone and iPad",
+  "heroSubheadline": "Make a quick fix or work through a small project with a code editor, file browser, previews, and an optional terminal in one app.",
+  "ctaPrimary": "iOS availability",
+  "ctaSecondary": "Explore Acode",
+  "problemHeadline": "Designed for a mobile workflow",
+  "problemPoints": [
+    "Edit code on iPhone and iPad with Acode. Work with project files, preview HTML and Markdown, and add tools through community plugins."
+  ],
+  "solutionHeadline": "What to expect on iOS",
+  "solutionPoints": ["Acode for iPhone and iPad is currently marked Coming soon on the website. Check the home page for release availability."],
+  "featuresHeadline": "Code Editor for iPhone and iPad",
+  "features": [
+    {
+      "title": "Work with project files",
+      "description": "Open files and folders through the system picker. Acode works with locations you authorize; it does not have unrestricted access to your device."
+    },
+    {
+      "title": "Preview as you edit",
+      "description": "Check HTML and Markdown while working on your source files. Keep assets and relative links together in a project folder."
+    },
+    {
+      "title": "Choose your tools",
+      "description": "Use syntax highlighting and editing features on their own, or open the terminal and add compatible plugins when your workflow needs them."
+    }
+  ],
+  "setupHeadline": "Get started in Acode",
+  "setupSteps": [
+    {
+      "title": "Open a workspace",
+      "description": "Open Acode and choose a file or folder using the system picker."
+    },
+    {
+      "title": "Edit and save",
+      "description": "Make your changes in the editor and save them back to your selected location."
+    },
+    {
+      "title": "Check the result",
+      "description": "Preview HTML or Markdown, or use the terminal for tools supported by the iOS runtime."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Does Acode need a terminal to edit code?",
+      "answer": "No. The terminal is optional. You can edit files and preview documents without setting up a command-line workflow."
+    },
+    {
+      "question": "Can Acode access every folder on my iPhone?",
+      "answer": "No. iOS controls file access. Open a supported location through the system picker and grant access to the files you need."
+    }
+  ],
+  "relatedPages": [
+    {
+      "title": "Linux Terminal on iPhone and iPad",
+      "url": "/linux-terminal-ios"
+    },
+    {
+      "title": "Git on iPhone and iPad",
+      "url": "/git-ios"
+    },
+    {
+      "title": "Web Development on iPhone and iPad",
+      "url": "/web-development-ios"
+    },
+    {
+      "title": "AI Coding on iPhone and iPad",
+      "url": "/ai-coding-ios"
+    }
+  ],
+  "pageSchema": "{\"@context\": \"https://schema.org\", \"@type\": \"Article\", \"headline\": \"A workspace for code on iPhone and iPad\", \"description\": \"Edit code on iPhone and iPad with Acode. Work with project files, preview HTML and Markdown, and add tools through community plugins.\", \"author\": {\"@type\": \"Organization\", \"name\": \"Foxbiz Software Pvt. Ltd.\", \"url\": \"https://acode.app\"}, \"mainEntityOfPage\": {\"@type\": \"WebPage\", \"@id\": \"https://acode.app/code-editor-ios\"}}"
+}

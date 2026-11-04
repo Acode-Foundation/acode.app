@@ -1,4 +1,5 @@
 import { isAccountRoute, isAdFreeRoute } from '../../shared/adPolicy';
+import landingPages from '../../shared/landingPages.json';
 import { withAppSource } from './appSource';
 
 class Router {
@@ -262,7 +263,7 @@ class Router {
   loadUrl(href) {
     href = withAppSource(href);
     const { location, history } = window;
-    if (!this.#thisSite.test(href)) {
+    if (!this.#thisSite.test(href) || landingPages.includes(new URL(href, location.href).pathname.replace(/^\/|\/$/g, ''))) {
       window.location.href = href;
       return;
     }
