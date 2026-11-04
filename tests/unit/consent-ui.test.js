@@ -102,7 +102,7 @@ it('loads both permitted scripts from the entry point and hides the panel after 
   expect(ui.panel.hidden).toBe(true);
 });
 
-it.each(['/admin', '/policy', '/terms', '/refund', '/about', '/contact'])(
+it.each(['/admin', '/policy', '/terms', '/refund', '/about', '/contact', '/faqs', '/faqs/question-id'])(
   'preserves site-wide advertising choice without loading ads on %s',
   (pathname) => {
     const ui = mount(pathname);

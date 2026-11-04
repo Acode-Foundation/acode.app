@@ -292,6 +292,7 @@ describe('ad-free routes and account flows', () => {
   const accountPaths = ['/login', '/register', '/change-password', '/api-keys', '/logout', '/profile/edit', '/user/edit', '/oauth/google'];
   const adminPaths = ['/admin', '/admin/', '/ADMIN', '/admin/promotions'];
   const companyPaths = ['/policy', '/terms', '/refund', '/about', '/contact'];
+  const faqPaths = ['/faqs', '/faqs/', '/FAQS', '/faqs/question-id'];
 
   it('disables ads on ad-free documents while retaining them on other public pages', () => {
     const render = Handlebars.compile(fs.readFileSync(path.join(root, 'server/index.hbs'), 'utf8'));
@@ -300,6 +301,7 @@ describe('ad-free routes and account flows', () => {
       ...accountPaths,
       ...adminPaths,
       ...companyVariants,
+      ...faqPaths,
       '/LOGIN',
       '/register/',
       '/',
@@ -319,6 +321,7 @@ describe('ad-free routes and account flows', () => {
       '/administrator',
       '/about-guide',
       '/policy/example',
+      '/faqs-guide',
     ]) {
       expect(isAdFreeRoute(pathname)).toBe(false);
       expect(render({ adsDisabled: isAdFreeRoute(pathname) })).toContain('data-ads-disabled="false"');
@@ -353,16 +356,16 @@ describe('ad-free routes and account flows', () => {
   });
 
   it.each([
-    ['/plugins', '/faqs', '/login?redirect=app&state=StateValue'],
+    ['/plugins', '/plugin/example', '/login?redirect=app&state=StateValue'],
     ['/login', '/register?redirect=app&state=StateValue', '/plugins'],
     ['/', '/index.html', '/plugins'],
-    ['/plugins', '/faqs', '/'],
-    ['/plugins', '/faqs', '/admin?tab=promotions'],
+    ['/plugins', '/plugin/example', '/'],
+    ['/plugins', '/plugin/example', '/admin?tab=promotions'],
     ['/admin', '/index.html', '/plugins'],
     ['/', '/index.html', '/login?redirect=app&state=StateValue'],
     ['/login', '/register?redirect=app&state=StateValue', '/'],
-    ...companyPaths.flatMap((pathname) => [
-      ['/plugins', '/faqs', pathname],
+    ...[...companyPaths, ...faqPaths].flatMap((pathname) => [
+      ['/plugins', '/plugin/example', pathname],
       [pathname, '/index.html', '/plugins'],
     ]),
   ])('reloads when ad or account policy changes, including history navigation from %s', async (initialPath, samePolicyPath, destination) => {
@@ -386,6 +389,7 @@ describe('ad-free routes and account flows', () => {
     ).default;
     const render = vi.fn();
     router.add('/plugins', render);
+    router.add('/plugin/:id', render);
     router.add('/faqs', render);
     router.add('/index.html', render);
     router.add('/register', render);

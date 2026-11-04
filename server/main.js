@@ -429,13 +429,14 @@ async function main() {
   });
 
   // FAQs page — dynamic schema from data/faqs.json
-  app.get('/faqs', (_req, res) => {
+  app.get('/faqs', (req, res) => {
     const faqMeta = getFaqsMetadata();
 
     res.header('Content-Type', 'text/html;charset=utf-8');
     res.send(
       renderIndexTemplate({
         ...createMetadataContext(defaultOg, { canonicalPath: '/faqs', origin: PUBLIC_ORIGIN }),
+        adsDisabled: isAdFreeRoute(req.path),
         title: faqMeta.title,
         description: faqMeta.description,
         robots: 'index, follow',
