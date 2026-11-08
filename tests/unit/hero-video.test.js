@@ -14,6 +14,7 @@ let paused;
 let scroller;
 let readyState;
 let buffered;
+let networkState;
 let touch;
 
 beforeEach(() => {
@@ -45,8 +46,10 @@ beforeEach(() => {
   readyState = 4;
   // Buffering keeps progressing unless a test pins the buffered end.
   buffered = undefined;
+  networkState = video.NETWORK_IDLE;
   Object.defineProperty(video, 'paused', { get: () => paused });
   Object.defineProperty(video, 'readyState', { get: () => readyState });
+  Object.defineProperty(video, 'networkState', { get: () => networkState });
   Object.defineProperty(video, 'buffered', { get: () => ({ length: 1, end: () => buffered ?? Date.now() / 1000 }) });
   video.play = vi.fn(async () => {
     paused = false;
@@ -491,6 +494,26 @@ it('does not pause again when playback resumes a stalled download', async () => 
   await vi.advanceTimersByTimeAsync(4000);
   buffered = 2;
   frame();
+  expect(video.paused).toBe(false);
+  expect(container.classList.contains('is-playing')).toBe(true);
+});
+
+it('keeps waiting while the browser is still fetching, even if the buffer has not grown', async () => {
+  readyState = 3;
+  buffered = 1;
+  networkState = video.NETWORK_LOADING;
+  play.click();
+  for (let ms = 0; ms < 10_000; ms += 500) {
+    await vi.advanceTimersByTimeAsync(500);
+    video.dispatchEvent(new Event('progress'));
+  }
+  expect(video.paused).toBe(true);
+  expect(play.textContent).toBe('Loading…');
+  expect(container.classList.contains('is-playing')).toBe(false);
+  networkState = video.NETWORK_IDLE;
+  await vi.advanceTimersByTimeAsync(3500);
+  expect(container.classList.contains('is-playing')).toBe(false);
+  await vi.advanceTimersByTimeAsync(500);
   expect(video.paused).toBe(false);
   expect(container.classList.contains('is-playing')).toBe(true);
 });

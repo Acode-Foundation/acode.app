@@ -69,15 +69,16 @@ export function setupHeroVideo(container, signal, sources) {
   }
 
   // Some browsers (notably iOS Safari) stop loading a paused video, so
-  // HAVE_ENOUGH_DATA never arrives. Once the buffer stops growing, stay
-  // stalled for this attempt: playing resumes loading, which must not
-  // send the video back behind the cover.
+  // HAVE_ENOUGH_DATA never arrives. Only once the browser has stopped
+  // fetching and the buffer has not grown, stay stalled for this attempt:
+  // playing resumes loading, which must not send the video back behind
+  // the cover.
   function bufferStalled() {
     if (bufferStalledOut) return true;
     const ranges = video.buffered;
     const end = ranges?.length ? ranges.end(ranges.length - 1) : 0;
-    if (end > bufferedEnd) {
-      bufferedEnd = end;
+    if (end > bufferedEnd || video.networkState === video.NETWORK_LOADING) {
+      bufferedEnd = Math.max(bufferedEnd, end);
       bufferProgressAt = Date.now();
     }
     bufferStalledOut = Date.now() - bufferProgressAt >= BUFFER_STALL_MS;
