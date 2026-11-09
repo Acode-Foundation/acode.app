@@ -5,6 +5,7 @@ import metadataConfig from '../../shared/routeMetadata.json';
 const { createPluginMetadataDescription, createProfileMetadata, formatMilestoneCount } = metadataText;
 
 const DEFAULT_IMAGE_PATH = '/og/default.png';
+const PLUGINS_IMAGE_PATH = '/og/plugins.png';
 const IMAGE_WIDTH = 1200;
 const IMAGE_HEIGHT = 630;
 const SITE_NAME = 'Acode';
@@ -98,11 +99,11 @@ export function resolveRouteMetadata(pathname, origin = window.location.origin, 
     description,
     robots: isProfilePath(path) || NOINDEX_PATH_PATTERN.test(path) ? NOINDEX_ROBOTS : INDEX_ROBOTS,
     canonicalUrl: absoluteUrl(canonicalPath, origin),
-    imageUrl: absoluteUrl(DEFAULT_IMAGE_PATH, origin),
+    imageUrl: absoluteUrl(path === PLUGINS_PATH ? PLUGINS_IMAGE_PATH : DEFAULT_IMAGE_PATH, origin),
     imageWidth: IMAGE_WIDTH,
     imageHeight: IMAGE_HEIGHT,
     imageType: 'image/png',
-    imageAlt: 'Acode - code editor for Android, iPhone, and iPad',
+    imageAlt: path === PLUGINS_PATH ? 'Acode plugins' : 'Acode - code editor for Android, iPhone, and iPad',
     siteName: SITE_NAME,
     type: 'website',
   };

@@ -24,7 +24,7 @@ const oauth = require('./apis/oauth');
 const aiOAuthCallback = require('./lib/aiOAuthCallback');
 const setAuth = require('./lib/gapis');
 const migrationRunner = require('./lib/migrationRunner');
-const { renderDefaultOgImage, renderPluginOgImage } = require('./lib/ogImage');
+const { renderDefaultOgImage, renderPluginOgImage, renderPluginsOgImage } = require('./lib/ogImage');
 const { fileInDir } = require('./lib/pluginScanner');
 const { sendSponsorImage } = require('./lib/sponsorImage');
 const { sendPublicAsset } = require('./lib/publicAssets');
@@ -43,6 +43,7 @@ const PUBLIC_DIR = path.resolve(__dirname, '../public');
 const SCHEMAS_DIR = path.resolve(__dirname, './schemas');
 const OG_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
 const DEFAULT_OG_CACHE_CONTROL = 'public, max-age=300, must-revalidate';
+const PLUGINS_OG_IMAGE_PATH = '/og/plugins.png';
 const PUBLIC_ORIGIN = getPublicOrigin();
 const NOINDEX_PATH = /^\/api-keys\/?$/i;
 const renderIndexTemplate = compileTemplate('index.hbs');
@@ -243,6 +244,28 @@ async function main() {
     }
   });
 
+  app.get('/og/plugins.png', async (req, res, next) => {
+    try {
+      const where = [Plugin.STATUS, Plugin.STATUS_APPROVED];
+      const [count, plugins] = await Promise.all([
+        Plugin.count(where).catch(() => null),
+        Plugin.get([Plugin.ID], where, { limit: 24, orderBy: 'CAST(downloads AS INTEGER) DESC' }).catch(() => []),
+      ]);
+      const iconPaths = plugins.map((plugin) => getPluginIconPath(plugin.id)).filter(Boolean);
+      const image = await renderPluginsOgImage({ count, iconPaths: iconPaths.slice(0, 11) });
+      const etag = createEtag(image);
+      res.setHeader('Cache-Control', DEFAULT_OG_CACHE_CONTROL);
+      res.setHeader('ETag', etag);
+      if (req.headers['if-none-match'] === etag) {
+        res.status(304).end();
+        return;
+      }
+      sendOgImage(res, image, etag, DEFAULT_OG_CACHE_CONTROL);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.use('/api', apis);
   app.use('/api/*path', (_req, res) => {
     res.status(404).send({ error: 'Not found' });
@@ -417,7 +440,7 @@ async function main() {
     res.header('Content-Type', 'text/html;charset=utf-8');
     res.send(
       renderIndexTemplate({
-        ...createMetadataContext(defaultOg, { canonicalPath: '/plugins', origin: PUBLIC_ORIGIN }),
+        ...createMetadataContext(defaultOg, { canonicalPath: '/plugins', imagePath: PLUGINS_OG_IMAGE_PATH, origin: PUBLIC_ORIGIN }),
         title: pluginsMeta.title,
         description: pluginsMeta.description,
         image_alt: pluginsMeta.title,

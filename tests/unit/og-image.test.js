@@ -1,6 +1,13 @@
 const sharp = require('sharp');
 const { pluginRevision } = require('../../shared/ogImage.json');
-const { clearOgImageCache, createPluginOgSvg, escapeXml, renderDefaultOgImage, renderPluginOgImage } = require('../../server/lib/ogImage');
+const {
+  clearOgImageCache,
+  createPluginOgSvg,
+  escapeXml,
+  renderDefaultOgImage,
+  renderPluginOgImage,
+  renderPluginsOgImage,
+} = require('../../server/lib/ogImage');
 
 describe('Open Graph image rendering', () => {
   beforeEach(() => clearOgImageCache());
@@ -24,6 +31,17 @@ describe('Open Graph image rendering', () => {
     expect(metadata.format).toBe('png');
     expect(metadata.width).toBe(1200);
     expect(metadata.height).toBe(630);
+  });
+
+  it('renders the plugin store card with and without icons, under the chat-preview size budget', async () => {
+    const path = require('node:path');
+    const icon = path.resolve(__dirname, '../../client/res/logo.svg');
+    for (const iconPaths of [[], [icon, '/missing/icon.png']]) {
+      const image = await renderPluginsOgImage({ count: 287, iconPaths });
+      const metadata = await sharp(image).metadata();
+      expect([metadata.width, metadata.height]).toEqual([1200, 630]);
+      expect(image.length).toBeLessThan(300 * 1024);
+    }
   });
 
   it('escapes text embedded in the generated SVG', () => {

@@ -204,6 +204,25 @@ function initials(name) {
   return letters || 'A';
 }
 
+/**
+ * Small Acode mark for a card's bottom-right corner. The logo keeps a fixed gap before the
+ * wordmark, so an off estimate of the word's width shifts the pair, never the spacing inside it.
+ */
+function footerMark() {
+  const size = 26;
+  const logoHeight = 27;
+  const logoWidth = (logoHeight * 543) / 409;
+  const wordLeft = Math.round(WIDTH - 60 - estimateWidth('Acode', size, -0.3) * 1.04);
+  return `${logoMarkup(wordLeft - 10 - logoWidth, 548, logoHeight)}${text('Acode', {
+    x: wordLeft,
+    y: 571,
+    size,
+    color: COLORS.text,
+    weight: 700,
+    tracking: -0.3,
+  })}`;
+}
+
 // Longer names step down through these sizes before they are cut, so they stay on one line.
 const TITLE_SIZES = [68, 58, 50, 44];
 const TITLE_MAX_WIDTH = WIDTH - 160;
@@ -227,8 +246,7 @@ function createPluginOgSvg({ name, author }) {
       <circle cx="82" cy="562" r="21.5" fill="none" stroke="${COLORS.accent}" stroke-opacity="0.45"/>
       ${text(initials(author || 'Acode'), { x: 82, y: 569, size: 18, color: '#cfe6ff', weight: 700, anchor: 'middle' })}
       ${text(authorName, { x: 118, y: 571, size: 26, color: COLORS.text })}
-      ${logoMarkup(WIDTH - 60 - 84 - 38, 548, 27)}
-      ${text('Acode', { x: WIDTH - 60, y: 571, size: 26, color: COLORS.text, weight: 700, anchor: 'end' })}
+      ${footerMark()}
     `),
   );
 }
@@ -261,6 +279,77 @@ async function renderPluginOgImage({ id, name, author, iconPath, version = 'late
   });
 }
 
+const STORE_TILE = 148;
+const STORE_GAP = 24;
+const STORE_ICON = 92;
+
+// Two staggered rows of icons, centered; the outer tiles fade into the dark like a shelf in shadow.
+function storeSlots() {
+  const rowWidth = (count) => count * STORE_TILE + (count - 1) * STORE_GAP;
+  const rows = [
+    { count: 6, top: 334 },
+    { count: 5, top: 334 + STORE_TILE + STORE_GAP },
+  ];
+  return rows.flatMap(({ count, top }) => {
+    const left = (WIDTH - rowWidth(count)) / 2;
+    return Array.from({ length: count }, (_, index) => ({ x: Math.round(left + index * (STORE_TILE + STORE_GAP)), y: top }));
+  });
+}
+
+/** Share card for the plugin store: a headline over a shelf of the most popular plugin icons. */
+async function renderPluginsOgImage({ count, iconPaths = [] } = {}) {
+  const countLabel = formatMilestoneCount(count);
+  const subline = countLabel === null ? 'Extend Acode with community plugins' : `${countLabel} community plugins for Acode`;
+  const icons = iconPaths.filter((iconPath) => iconPath && fs.existsSync(iconPath));
+  return getCached(`plugins:${subline}:${icons.join('|')}`, async () => {
+    const background = await atmosphere([
+      [660, -240, 200, 900, 34, COLORS.accent, 0.5],
+      [900, -180, 130, 900, 34, '#1d4ed8', 0.45],
+      [220, -260, 150, 820, -34, '#1e40af', 0.35],
+    ]);
+    const slots = storeSlots();
+    const tiles = slots
+      .map(
+        ({ x, y }) =>
+          `<rect x="${x}" y="${y}" width="${STORE_TILE}" height="${STORE_TILE}" rx="36" fill="#ffffff" fill-opacity="0.06"/><rect x="${x + 0.5}" y="${y + 0.5}" width="${STORE_TILE - 1}" height="${STORE_TILE - 1}" rx="36" fill="none" stroke="#ffffff" stroke-opacity="0.14"/>`,
+      )
+      .join('');
+    const iconLayers = await Promise.all(
+      slots.map(async ({ x, y }, index) => {
+        const source = icons.length ? icons[index % icons.length] : logoPath;
+        const size = icons.length ? STORE_ICON : 72;
+        const mask = Buffer.from(
+          `<svg width="${size}" height="${size}"><rect width="${size}" height="${size}" rx="${icons.length ? 22 : 0}"/></svg>`,
+        );
+        const input = await sharp(source)
+          .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+          .composite([{ input: mask, blend: 'dest-in' }])
+          .png()
+          .toBuffer();
+        return { input, left: x + (STORE_TILE - size) / 2, top: y + (STORE_TILE - size) / 2 };
+      }),
+    );
+    const shade = svgDocument(
+      `<rect width="${WIDTH}" height="${HEIGHT}" fill="url(#shelf)"/><rect y="${HEIGHT - 150}" width="${WIDTH}" height="150" fill="url(#floor)"/>
+      ${brandLockup(WIDTH / 2, 62, 40)}
+      <text x="${WIDTH / 2}" y="228" fill="url(#headline)" ${FONT} font-size="100" font-weight="700" letter-spacing="-3.5" text-anchor="middle">Plugins</text>
+      ${text(subline, { x: WIDTH / 2, y: 284, size: 28, color: COLORS.muted, anchor: 'middle' })}`,
+      `<linearGradient id="headline" x1="400" x2="800" y1="0" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8f96a3"/><stop offset="0.35" stop-color="#ffffff"/><stop offset="0.65" stop-color="#ffffff"/><stop offset="1" stop-color="#8f96a3"/></linearGradient>
+       <radialGradient id="shelf" cx="600" cy="460" r="560" gradientUnits="userSpaceOnUse"><stop offset="0.45" stop-color="${COLORS.background}" stop-opacity="0"/><stop offset="1" stop-color="${COLORS.background}" stop-opacity="0.94"/></radialGradient>
+       <linearGradient id="floor" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${COLORS.background}" stop-opacity="0"/><stop offset="1" stop-color="${COLORS.background}" stop-opacity="0.9"/></linearGradient>`,
+    );
+
+    return sharp(background)
+      .composite([{ input: Buffer.from(svgDocument(tiles)) }, ...iconLayers.map(place), { input: Buffer.from(shade) }])
+      .png(OUTPUT)
+      .toBuffer();
+  });
+}
+
+function place({ input, left, top }) {
+  return { input, left: Math.round(left), top: Math.round(top) };
+}
+
 async function getCached(key, create) {
   if (cache.has(key)) {
     const value = cache.get(key);
@@ -289,4 +378,5 @@ module.exports = {
   escapeXml,
   renderDefaultOgImage,
   renderPluginOgImage,
+  renderPluginsOgImage,
 };
