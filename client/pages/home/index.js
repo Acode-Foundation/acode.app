@@ -2,6 +2,7 @@ import './style.scss';
 
 import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
+import { isIOSSource } from 'lib/appSource';
 import Router from 'lib/Router';
 import { fetchSponsorMix } from 'lib/sponsors';
 import { whenNear } from 'lib/whenNear';
@@ -20,7 +21,16 @@ const PLAY_URL =
   'https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1';
 const FDROID_URL = 'https://f-droid.org/en/packages/com.foxdebug.acode/';
 const GITHUB_URL = 'https://github.com/acode-foundation/acode';
+// Leave empty until the iOS app is live; App Store entries then show as "Coming soon".
+const APP_STORE_URL = '';
 const CONTRIBUTORS_URL = 'https://api.github.com/repos/acode-foundation/acode/contributors?per_page=30';
+
+const STORES = {
+  play: { name: 'Google Play', icon: 'googleplay', href: PLAY_URL, detail: 'Android phones and tablets' },
+  appStore: { name: 'App Store', icon: 'app-store', href: APP_STORE_URL, detail: 'iPhone and iPad' },
+  fdroid: { name: 'F-Droid', icon: 'f-droid', href: FDROID_URL, detail: 'Free and open-source build' },
+  github: { name: 'GitHub', icon: 'github', href: `${GITHUB_URL}/releases`, detail: 'Releases and source code' },
+};
 
 export default function home() {
   const pluginCount = Reactive('250+');
@@ -30,6 +40,7 @@ export default function home() {
   const sponsorsMount = Ref();
   const contributorsMount = Ref();
   const lifecycle = new AbortController();
+  const platform = detectPlatform();
 
   fetch('https://api.github.com/repos/acode-foundation/acode')
     .then((res) => res.json())
@@ -58,21 +69,7 @@ export default function home() {
           </span>
         </h1>
         <p className='home-lede'>A powerful, extensible, open-source code editor for Android and iOS.</p>
-        <div className='home-actions'>
-          <a className='home-btn home-btn-primary' href={PLAY_URL} target='_blank' rel='noopener'>
-            <span className='icon googleplay' />
-            Google Play
-          </a>
-          <IosInstallButton />
-          <a className='home-btn home-btn-ghost' href={FDROID_URL} target='_blank' rel='noopener'>
-            <span className='icon f-droid' />
-            F-Droid
-          </a>
-          <a className='home-btn-text' href={GITHUB_URL} target='_blank' rel='noopener'>
-            <span className='icon github' />
-            GitHub
-          </a>
-        </div>
+        <HeroDownload platform={platform} />
       </div>
 
       <div className='home-demo'>
@@ -168,7 +165,7 @@ export default function home() {
       <div ref={pluginsMount} hidden />
       <div ref={sponsorsMount} hidden />
 
-      <div className='home-cta'>
+      <div className='home-cta' id='download'>
         <h2>
           Get{' '}
           <span className='home-brand-word' role='img' aria-label='Acode'>
@@ -177,17 +174,16 @@ export default function home() {
           </span>
         </h2>
         <p>For Android, iPhone, and iPad. Free on Android. iOS release coming soon.</p>
-        <div className='home-actions'>
-          <a className='home-btn home-btn-primary' href={PLAY_URL} target='_blank' rel='noopener'>
-            <span className='icon googleplay' />
-            Google Play
-          </a>
-          <IosInstallButton />
-          <a className='home-btn home-btn-ghost' href={FDROID_URL} target='_blank' rel='noopener'>
-            <span className='icon f-droid' />
-            F-Droid
-          </a>
-        </div>
+        <ul className='home-downloads'>
+          {[STORES.play, STORES.appStore, STORES.fdroid, STORES.github].map((store) => (
+            <li>
+              <DownloadOption
+                store={store}
+                recommended={(platform === 'android' && store === STORES.play) || (platform === 'ios' && store === STORES.appStore)}
+              />
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
@@ -195,6 +191,17 @@ export default function home() {
   setupHeroVideo(page.querySelector('.home-demo'), lifecycle.signal, { low: demoLow, high: demoVideo });
   whenNear(page.querySelector('.home-contributors-mount'), () => loadContributors(contributorsMount, lifecycle.signal), lifecycle.signal);
   const disposeInteractions = setupHomeInteractions(page);
+  page.querySelector('[data-scroll-download]').addEventListener(
+    'click',
+    (event) => {
+      // Keep the Router from treating the in-page anchor as a navigation.
+      event.preventDefault();
+      event.stopPropagation();
+      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      page.querySelector('#download').scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+    },
+    { signal: lifecycle.signal },
+  );
   const cleanup = () => {
     lifecycle.abort();
     disposeInteractions();
@@ -204,15 +211,85 @@ export default function home() {
   return page;
 }
 
-function IosInstallButton() {
+// Presentation only: picks which store leads the hero.
+function detectPlatform() {
+  const agent = navigator.userAgent;
+  if (/iphone|ipad|ipod/i.test(agent) || (/macintosh/i.test(agent) && navigator.maxTouchPoints > 1) || isIOSSource()) return 'ios';
+  if (/android/i.test(agent)) return 'android';
+  return 'other';
+}
+
+// One store for this device, plus a quiet pointer to every other option at the bottom.
+function HeroDownload({ platform }) {
+  const ios = platform === 'ios';
   return (
-    <button type='button' className='home-btn home-btn-primary home-btn-ios' disabled>
-      <span className='home-btn-ios-label'>
-        <span className='icon app-store' aria-hidden='true' />
-        App Store
+    <div className='home-actions'>
+      <StoreButton store={ios ? STORES.appStore : STORES.play} />
+      <a className='home-more' href='#download' data-scroll-download>
+        {/* Non-breaking hyphen keeps "F-Droid" whole when the line wraps on narrow phones. */}
+        Also on {ios ? 'Google Play, F\u2011Droid' : 'F\u2011Droid, GitHub'}, and more
+        <ChevronIcon path='m6 9 6 6 6-6' />
+      </a>
+    </div>
+  );
+}
+
+function StoreButton({ store }) {
+  if (!store.href) {
+    return (
+      <span className='home-btn home-btn-soon' aria-disabled='true'>
+        <span className={`icon ${store.icon}`} aria-hidden='true' />
+        {store.name}
+        <span className='home-soon'>Coming soon</span>
       </span>
-      <span className='home-btn-ios-status'>Coming soon</span>
-    </button>
+    );
+  }
+  return (
+    <a className='home-btn home-btn-primary' href={store.href} target='_blank' rel='noopener'>
+      <span className={`icon ${store.icon}`} aria-hidden='true' />
+      Get it on {store.name}
+    </a>
+  );
+}
+
+function DownloadOption({ store, recommended }) {
+  const className = `home-download${recommended ? ' is-recommended' : ''}${store.href ? '' : ' is-soon'}`;
+  const body = [
+    <span className='home-download__icon' aria-hidden='true'>
+      <span className={`icon ${store.icon}`} />
+    </span>,
+    <span className='home-download__text'>
+      <strong>
+        {store.name}
+        {recommended ? <span className='home-download__tag'>Your device</span> : null}
+      </strong>
+      <span>{store.detail}</span>
+    </span>,
+    store.href ? <ChevronIcon path='M7 17 17 7M8 7h9v9' /> : <span className='home-soon'>Soon</span>,
+  ];
+  if (!store.href) return <div className={className}>{body}</div>;
+  return (
+    <a className={className} href={store.href} target='_blank' rel='noopener'>
+      {body}
+    </a>
+  );
+}
+
+function ChevronIcon({ path }) {
+  return (
+    <svg
+      attr-class='home-chevron'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      stroke-width='1.8'
+      stroke-linecap='round'
+      stroke-linejoin='round'
+      aria-hidden='true'
+      focusable='false'
+    >
+      <path d={path} />
+    </svg>
   );
 }
 
