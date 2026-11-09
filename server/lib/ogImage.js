@@ -41,21 +41,21 @@ function graphemes(value) {
 
 const WIDE = /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6]|\p{Extended_Pictographic}/u;
 
-/**
- * Estimate rendered width without font metrics: wide (CJK, emoji) characters take a full em,
- * capitals and narrow glyphs are weighted, and letter-spacing applies per character.
- */
+// Wide (CJK, emoji) characters take a full em, capitals and narrow glyphs are weighted,
+// and letter-spacing applies per character.
+function characterWidth(character, size, tracking = 0) {
+  if (WIDE.test(character)) return size + tracking;
+  if (character === ' ') return 0.28 * size + tracking;
+  if (/[iljI.,:;'|!]/.test(character)) return 0.3 * size + tracking;
+  if (/[A-Z0-9MWmw@]/.test(character)) return 0.68 * size + tracking;
+  return 0.57 * size + tracking;
+}
+
+/** Estimate rendered width without font metrics. */
 function estimateWidth(value, size, tracking = 0) {
-  let ems = 0;
-  const characters = graphemes(value);
-  for (const character of characters) {
-    if (WIDE.test(character)) ems += 1;
-    else if (character === ' ') ems += 0.28;
-    else if (/[iljI.,:;'|!]/.test(character)) ems += 0.3;
-    else if (/[A-Z0-9MWmw@]/.test(character)) ems += 0.68;
-    else ems += 0.57;
-  }
-  return ems * size + tracking * characters.length;
+  let width = 0;
+  for (const character of graphemes(value)) width += characterWidth(character, size, tracking);
+  return width;
 }
 
 // The SVG renderer has no color emoji font and draws them as blank shapes, so they are left out.
@@ -66,10 +66,17 @@ function withoutEmoji(value) {
 /** Cut text to fit `maxWidth`, preferring a word boundary, and mark the cut with an ellipsis. */
 function fitWidth(value, maxWidth, size, tracking = 0) {
   const text = withoutEmoji(value);
-  if (estimateWidth(text, size, tracking) <= maxWidth) return text;
   const characters = graphemes(text);
-  while (characters.length && estimateWidth(`${characters.join('')}…`, size, tracking) > maxWidth) characters.pop();
-  const cut = characters.join('').trimEnd();
+  const widths = characters.map((character) => characterWidth(character, size, tracking));
+  let width = widths.reduce((total, item) => total + item, 0);
+  if (width <= maxWidth) return text;
+  const ellipsis = characterWidth('…', size, tracking);
+  let length = characters.length;
+  while (length && width + ellipsis > maxWidth) {
+    length -= 1;
+    width -= widths[length];
+  }
+  const cut = characters.slice(0, length).join('').trimEnd();
   const space = cut.lastIndexOf(' ');
   return `${(space > cut.length / 2 ? cut.slice(0, space) : cut).trimEnd()}…`;
 }
