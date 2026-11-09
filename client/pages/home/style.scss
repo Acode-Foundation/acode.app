@@ -1237,6 +1237,9 @@
     }
 
     &__fade {
+      // The mask clips to this box; leave room so the hover lift on the first row isn't cut off.
+      margin-top: -8px;
+      padding-top: 8px;
       mask-image: linear-gradient(to bottom, #000 0%, #000 46%, rgba(0, 0, 0, 0.45) 68%, transparent 100%);
       -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 46%, rgba(0, 0, 0, 0.45) 68%, transparent 100%);
     }
