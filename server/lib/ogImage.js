@@ -149,26 +149,6 @@ async function renderDefaultOgImage(pluginCount) {
   });
 }
 
-/**
- * Pick a short tagline from a plugin README: the first real paragraph, skipping headings,
- * badge rows and a repeated title, cut to its first sentence when that sentence is short.
- */
-function createPluginTagline(markdown, name, maxLength = 64) {
-  const title = normalizeMetadataText(name).toLowerCase();
-  for (const block of String(markdown || '').split(/\n\s*\n/)) {
-    const raw = block
-      .split('\n')
-      .filter((line) => !/^\s*(#|!\[|\[!\[|<img|<p|<\/p|<div|<\/div|---|===|\|)/i.test(line))
-      .join(' ');
-    const paragraph = normalizeMetadataText(raw);
-    if (paragraph.length < 16 || paragraph.toLowerCase() === title) continue;
-    const sentence = paragraph.match(/^(.{16,}?[.!?])(?:\s|$)/)?.[1];
-    const tagline = sentence && sentence.length <= maxLength ? sentence.replace(/\.$/, '') : paragraph;
-    return truncateMetadataText(tagline, maxLength);
-  }
-  return '';
-}
-
 function initials(name) {
   const letters = normalizeMetadataText(name)
     .split(/\s+/)
@@ -187,21 +167,19 @@ const TITLE_SIZES = [
   [Number.POSITIVE_INFINITY, 50],
 ];
 const TILE = 196;
-const TILE_TOP = 92;
+const TILE_TOP = 112;
 const ICON = 140;
 
-function createPluginOgSvg({ name, author, tagline }) {
+function createPluginOgSvg({ name, author }) {
   const title = truncateMetadataText(normalizeMetadataText(name), 40);
   const titleSize = TITLE_SIZES.find(([maxLength]) => title.length <= maxLength)[1];
   const authorName = truncate(author || 'Acode community', 30);
-  const titleY = tagline ? 394 : 414;
   const tileLeft = (WIDTH - TILE) / 2;
   return Buffer.from(
     svgDocument(`
       <rect x="${tileLeft}" y="${TILE_TOP}" width="${TILE}" height="${TILE}" rx="46" fill="#ffffff" fill-opacity="0.07"/>
       <rect x="${tileLeft + 0.5}" y="${TILE_TOP + 0.5}" width="${TILE - 1}" height="${TILE - 1}" rx="46" fill="none" stroke="#ffffff" stroke-opacity="0.16"/>
-      ${text(title, { x: WIDTH / 2, y: titleY, size: titleSize, color: COLORS.text, weight: 700, tracking: -2, anchor: 'middle' })}
-      ${tagline ? text(tagline, { x: WIDTH / 2, y: 452, size: 30, color: COLORS.muted, anchor: 'middle' }) : ''}
+      ${text(title, { x: WIDTH / 2, y: 420, size: titleSize, color: COLORS.text, weight: 700, tracking: -2, anchor: 'middle' })}
       <circle cx="82" cy="562" r="22" fill="${COLORS.accent}" fill-opacity="0.18"/>
       <circle cx="82" cy="562" r="21.5" fill="none" stroke="${COLORS.accent}" stroke-opacity="0.45"/>
       ${text(initials(author || 'Acode'), { x: 82, y: 569, size: 18, color: '#cfe6ff', weight: 700, anchor: 'middle' })}
@@ -212,9 +190,8 @@ function createPluginOgSvg({ name, author, tagline }) {
   );
 }
 
-async function renderPluginOgImage({ id, name, author, description, iconPath, version = 'latest' }) {
-  const tagline = createPluginTagline(description, name);
-  const key = `plugin:${pluginRevision}:${id}:${name}:${author}:${tagline}:${version}:${iconPath || 'fallback'}`;
+async function renderPluginOgImage({ id, name, author, iconPath, version = 'latest' }) {
+  const key = `plugin:${pluginRevision}:${id}:${name}:${author}:${version}:${iconPath || 'fallback'}`;
   return getCached(key, async () => {
     const background = await atmosphere([
       [640, -220, 200, 900, 36, COLORS.accent, 0.5],
@@ -233,7 +210,7 @@ async function renderPluginOgImage({ id, name, author, description, iconPath, ve
 
     return sharp(background)
       .composite([
-        { input: createPluginOgSvg({ name, author, tagline }) },
+        { input: createPluginOgSvg({ name, author }) },
         { input: icon, left: Math.round((WIDTH - size) / 2), top: Math.round(TILE_TOP + (TILE - size) / 2) },
       ])
       .png(OUTPUT)
@@ -266,7 +243,6 @@ module.exports = {
   WIDTH,
   clearOgImageCache,
   createPluginOgSvg,
-  createPluginTagline,
   escapeXml,
   renderDefaultOgImage,
   renderPluginOgImage,

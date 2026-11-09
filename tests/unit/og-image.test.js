@@ -1,13 +1,6 @@
 const sharp = require('sharp');
 const { pluginRevision } = require('../../shared/ogImage.json');
-const {
-  clearOgImageCache,
-  createPluginOgSvg,
-  createPluginTagline,
-  escapeXml,
-  renderDefaultOgImage,
-  renderPluginOgImage,
-} = require('../../server/lib/ogImage');
+const { clearOgImageCache, createPluginOgSvg, escapeXml, renderDefaultOgImage, renderPluginOgImage } = require('../../server/lib/ogImage');
 
 describe('Open Graph image rendering', () => {
   beforeEach(() => clearOgImageCache());
@@ -37,11 +30,10 @@ describe('Open Graph image rendering', () => {
     expect(escapeXml('<Acode & "friends">')).toBe('&lt;Acode &amp; &quot;friends&quot;&gt;');
   });
 
-  it('renders the plugin name, tagline, and author without a fake call-to-action button', () => {
-    const svg = createPluginOgSvg({ name: 'AcodeX - Terminal', author: 'Raunak Raj', tagline: 'A terminal for Acode' }).toString();
+  it('renders the plugin name and author without a fake call-to-action button', () => {
+    const svg = createPluginOgSvg({ name: 'AcodeX - Terminal', author: 'Raunak Raj' }).toString();
 
     expect(svg).toContain('>AcodeX - Terminal</text>');
-    expect(svg).toContain('>A terminal for Acode</text>');
     expect(svg).toContain('>Raunak Raj</text>');
     expect(svg).toContain('>RR</text>');
     expect(svg).not.toContain('Explore on acode.app');
@@ -54,15 +46,6 @@ describe('Open Graph image rendering', () => {
 
     expect(Number(title[1])).toBeLessThan(68);
     expect(title[2]).toMatch(/^Pixforge - Image Toolkit for Designers…$/);
-  });
-
-  it('takes the plugin tagline from the first real README paragraph', () => {
-    const readme =
-      '# Acode AI Agent\n\n[![npm](https://x)](https://y) ![license](z)\n\nA coding agent for [Acode](https://acode.app). It edits files.';
-    expect(createPluginTagline(readme, 'Acode AI Agent')).toBe('A coding agent for Acode');
-    expect(createPluginTagline('# Example\n\nExample', 'Example')).toBe('');
-    expect(createPluginTagline('', 'Example')).toBe('');
-    expect(createPluginTagline(`Intro ${'word '.repeat(40)}`, 'X').length).toBeLessThanOrEqual(64);
   });
 
   it('returns a cached image for the same plugin version', async () => {
