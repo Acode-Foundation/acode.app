@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const sharp = require('sharp');
 const { pluginRevision } = require('../../shared/ogImage.json');
-const { formatMilestoneCount, normalizeMetadataText, truncateMetadataText } = require('../../shared/metadataText');
+const { formatMilestoneCount, normalizeMetadataText } = require('../../shared/metadataText');
 
 const WIDTH = 1200;
 const HEIGHT = 630;
@@ -32,10 +32,46 @@ function escapeXml(value) {
     .replace(/'/g, '&apos;');
 }
 
-function truncate(value, maxLength) {
-  const text = String(value ?? '').trim();
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength - 1).trimEnd()}…`;
+const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+// Whole user-visible characters, so emoji and combined marks are never split in half.
+function graphemes(value) {
+  return Array.from(segmenter.segment(String(value ?? '')), ({ segment }) => segment);
+}
+
+const WIDE = /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6]|\p{Extended_Pictographic}/u;
+
+/**
+ * Estimate rendered width without font metrics: wide (CJK, emoji) characters take a full em,
+ * capitals and narrow glyphs are weighted, and letter-spacing applies per character.
+ */
+function estimateWidth(value, size, tracking = 0) {
+  let ems = 0;
+  const characters = graphemes(value);
+  for (const character of characters) {
+    if (WIDE.test(character)) ems += 1;
+    else if (character === ' ') ems += 0.28;
+    else if (/[iljI.,:;'|!]/.test(character)) ems += 0.3;
+    else if (/[A-Z0-9MWmw@]/.test(character)) ems += 0.68;
+    else ems += 0.57;
+  }
+  return ems * size + tracking * characters.length;
+}
+
+// The SVG renderer has no color emoji font and draws them as blank shapes, so they are left out.
+function withoutEmoji(value) {
+  return normalizeMetadataText(String(value ?? '').replace(/\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*/gu, ' '));
+}
+
+/** Cut text to fit `maxWidth`, preferring a word boundary, and mark the cut with an ellipsis. */
+function fitWidth(value, maxWidth, size, tracking = 0) {
+  const text = withoutEmoji(value);
+  if (estimateWidth(text, size, tracking) <= maxWidth) return text;
+  const characters = graphemes(text);
+  while (characters.length && estimateWidth(`${characters.join('')}…`, size, tracking) > maxWidth) characters.pop();
+  const cut = characters.join('').trimEnd();
+  const space = cut.lastIndexOf(' ');
+  return `${(space > cut.length / 2 ? cut.slice(0, space) : cut).trimEnd()}…`;
 }
 
 function text(content, { x, y, size, color, weight = 400, tracking = 0, anchor = 'start' }) {
@@ -153,33 +189,33 @@ function initials(name) {
   const letters = normalizeMetadataText(name)
     .split(/\s+/)
     .filter(Boolean)
-    .map((word) => word[0])
-    .join('')
+    .map((word) => graphemes(word).find((character) => /[\p{L}\p{N}]/u.test(character)))
+    .filter(Boolean)
     .slice(0, 2)
+    .join('')
     .toUpperCase();
   return letters || 'A';
 }
 
-// Longer names step down in size so they stay on one line: [max characters, font size].
-const TITLE_SIZES = [
-  [20, 68],
-  [27, 58],
-  [Number.POSITIVE_INFINITY, 50],
-];
+// Longer names step down through these sizes before they are cut, so they stay on one line.
+const TITLE_SIZES = [68, 58, 50, 44];
+const TITLE_MAX_WIDTH = WIDTH - 160;
+const TITLE_TRACKING = -2;
 const TILE = 196;
 const TILE_TOP = 112;
 const ICON = 140;
 
 function createPluginOgSvg({ name, author }) {
-  const title = truncateMetadataText(normalizeMetadataText(name), 40);
-  const titleSize = TITLE_SIZES.find(([maxLength]) => title.length <= maxLength)[1];
-  const authorName = truncate(author || 'Acode community', 30);
+  const titleSize = TITLE_SIZES.find((size) => estimateWidth(withoutEmoji(name), size, TITLE_TRACKING) <= TITLE_MAX_WIDTH) ?? TITLE_SIZES.at(-1);
+  const title = fitWidth(name, TITLE_MAX_WIDTH, titleSize, TITLE_TRACKING);
+  // Leave room for the Acode mark on the right of the footer.
+  const authorName = fitWidth(author || 'Acode community', 640, 26);
   const tileLeft = (WIDTH - TILE) / 2;
   return Buffer.from(
     svgDocument(`
       <rect x="${tileLeft}" y="${TILE_TOP}" width="${TILE}" height="${TILE}" rx="46" fill="#ffffff" fill-opacity="0.07"/>
       <rect x="${tileLeft + 0.5}" y="${TILE_TOP + 0.5}" width="${TILE - 1}" height="${TILE - 1}" rx="46" fill="none" stroke="#ffffff" stroke-opacity="0.16"/>
-      ${text(title, { x: WIDTH / 2, y: 420, size: titleSize, color: COLORS.text, weight: 700, tracking: -2, anchor: 'middle' })}
+      ${text(title, { x: WIDTH / 2, y: 420, size: titleSize, color: COLORS.text, weight: 700, tracking: TITLE_TRACKING, anchor: 'middle' })}
       <circle cx="82" cy="562" r="22" fill="${COLORS.accent}" fill-opacity="0.18"/>
       <circle cx="82" cy="562" r="21.5" fill="none" stroke="${COLORS.accent}" stroke-opacity="0.45"/>
       ${text(initials(author || 'Acode'), { x: 82, y: 569, size: 18, color: '#cfe6ff', weight: 700, anchor: 'middle' })}

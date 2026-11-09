@@ -40,12 +40,33 @@ describe('Open Graph image rendering', () => {
     expect(pluginRevision).toBe('3');
   });
 
-  it('shrinks long plugin names and cuts them at a word boundary', () => {
-    const svg = createPluginOgSvg({ name: 'Pixforge - Image Toolkit for Designers and Developers', author: 'A' }).toString();
-    const title = svg.match(/font-size="(\d+)"[^>]*>(Pixforge[^<]*)<\/text>/);
+  const titleOf = (svg) => svg.match(/font-size="(\d+)" font-weight="700" letter-spacing="-2" text-anchor="middle">([^<]*)<\/text>/);
 
-    expect(Number(title[1])).toBeLessThan(68);
-    expect(title[2]).toMatch(/^Pixforge - Image Toolkit for Designers…$/);
+  it('shrinks long plugin names and cuts them at a word boundary', () => {
+    const [, size, title] = titleOf(createPluginOgSvg({ name: 'Pixforge - Image Toolkit for Designers and Developers', author: 'A' }).toString());
+
+    expect(Number(size)).toBeLessThan(68);
+    expect(title).toMatch(/^Pixforge - Image Toolkit[\w -]*\w…$/);
+  });
+
+  it('keeps wide-character names inside the canvas', () => {
+    const name = '代码编辑器插件'.repeat(6);
+    const [, size, title] = titleOf(createPluginOgSvg({ name, author: 'A' }).toString());
+
+    expect(Number(size)).toBe(44);
+    expect(title.endsWith('…')).toBe(true);
+    // Each wide character renders about one em less the -2px tracking, so the cut title fits the 1,040px text area.
+    const characters = Array.from(title).length;
+    expect((characters - 1) * Number(size) - 2 * characters).toBeLessThanOrEqual(1040);
+  });
+
+  it('keeps emoji, which the renderer cannot draw, out of initials and names', () => {
+    const svg = createPluginOgSvg({ name: 'Rocket 🚀 Tools', author: '😀 Émile Zola' }).toString();
+
+    expect(svg).toContain('>ÉZ</text>');
+    expect(svg).toContain('>Émile Zola</text>');
+    expect(svg).toContain('>Rocket Tools</text>');
+    expect(svg).not.toMatch(/\p{Extended_Pictographic}|�/u);
   });
 
   it('returns a cached image for the same plugin version', async () => {
