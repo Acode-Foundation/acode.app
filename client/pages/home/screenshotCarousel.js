@@ -113,6 +113,13 @@ export function setupScreenshotCarousel(gallery, shots, { autoplay = true, prior
     const source = slides[position].querySelector('source');
     source.sizes = shot.width > 1000 ? '(max-width: 700px) calc(100vw - 48px), 640px' : '(max-width: 700px) calc(100vw - 80px), 360px';
     source.srcset = shot.previewSet || shot.webp;
+    // Reveal only once fully decoded so the screenshot never paints in top-to-bottom while streaming.
+    const reveal = async () => {
+      await image.decode?.().catch(() => {});
+      if (!disposed) image.dataset.loaded = 'true';
+    };
+    listen(image, 'load', reveal, { once: true });
+    listen(image, 'error', reveal, { once: true });
     image.src = shot.src;
   }
 
