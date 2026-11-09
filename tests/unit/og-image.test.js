@@ -55,7 +55,7 @@ describe('Open Graph image rendering', () => {
     expect(svg).toContain('>Raunak Raj</text>');
     expect(svg).toContain('>RR</text>');
     expect(svg).not.toContain('Explore on acode.app');
-    expect(pluginRevision).toBe('3');
+    expect(pluginRevision).toBe('4');
   });
 
   const titleOf = (svg) => svg.match(/font-size="(\d+)" font-weight="700" letter-spacing="-2" text-anchor="middle">([^<]*)<\/text>/);
