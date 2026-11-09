@@ -1,6 +1,6 @@
 const sharp = require('sharp');
 const { pluginRevision } = require('../../shared/ogImage.json');
-const { clearOgImageCache, createPluginOgSvg, escapeXml, renderDefaultOgImage, renderPluginOgImage, wrapText } = require('../../server/lib/ogImage');
+const { clearOgImageCache, createPluginOgSvg, escapeXml, renderDefaultOgImage, renderPluginOgImage } = require('../../server/lib/ogImage');
 
 describe('Open Graph image rendering', () => {
   beforeEach(() => clearOgImageCache());
@@ -30,19 +30,43 @@ describe('Open Graph image rendering', () => {
     expect(escapeXml('<Acode & "friends">')).toBe('&lt;Acode &amp; &quot;friends&quot;&gt;');
   });
 
-  it('renders the plugin CTA with padded geometry and high-contrast colors', () => {
+  it('renders the plugin name and author without a fake call-to-action button', () => {
     const svg = createPluginOgSvg({ name: 'AcodeX - Terminal', author: 'Raunak Raj' }).toString();
 
-    expect(svg).toContain('<rect width="336" height="64" rx="32" fill="#66b3ff"/>');
-    expect(svg).toContain('<text x="168" y="42" text-anchor="middle" fill="#07111f"');
-    expect(pluginRevision).toBe('2');
+    expect(svg).toContain('>AcodeX - Terminal</text>');
+    expect(svg).toContain('>Raunak Raj</text>');
+    expect(svg).toContain('>RR</text>');
+    expect(svg).not.toContain('Explore on acode.app');
+    expect(pluginRevision).toBe('3');
   });
 
-  it('bounds long plugin names even when they have no spaces', () => {
-    const lines = wrapText('VeryLongPluginNameWithoutSpacesAndAdditionalText', 20, 2);
-    expect(lines).toHaveLength(2);
-    expect(lines.every((line) => line.length <= 20)).toBe(true);
-    expect(lines.at(-1)).toMatch(/…$/);
+  const titleOf = (svg) => svg.match(/font-size="(\d+)" font-weight="700" letter-spacing="-2" text-anchor="middle">([^<]*)<\/text>/);
+
+  it('shrinks long plugin names and cuts them at a word boundary', () => {
+    const [, size, title] = titleOf(createPluginOgSvg({ name: 'Pixforge - Image Toolkit for Designers and Developers', author: 'A' }).toString());
+
+    expect(Number(size)).toBeLessThan(68);
+    expect(title).toMatch(/^Pixforge - Image Toolkit[\w -]*\w…$/);
+  });
+
+  it('keeps wide-character names inside the canvas', () => {
+    const name = '代码编辑器插件'.repeat(6);
+    const [, size, title] = titleOf(createPluginOgSvg({ name, author: 'A' }).toString());
+
+    expect(Number(size)).toBe(44);
+    expect(title.endsWith('…')).toBe(true);
+    // Each wide character renders about one em less the -2px tracking, so the cut title fits the 1,040px text area.
+    const characters = Array.from(title).length;
+    expect((characters - 1) * Number(size) - 2 * characters).toBeLessThanOrEqual(1040);
+  });
+
+  it('keeps emoji, which the renderer cannot draw, out of initials and names', () => {
+    const svg = createPluginOgSvg({ name: 'Rocket 🚀 Tools', author: '😀 Émile Zola' }).toString();
+
+    expect(svg).toContain('>ÉZ</text>');
+    expect(svg).toContain('>Émile Zola</text>');
+    expect(svg).toContain('>Rocket Tools</text>');
+    expect(svg).not.toMatch(/\p{Extended_Pictographic}|�/u);
   });
 
   it('returns a cached image for the same plugin version', async () => {
