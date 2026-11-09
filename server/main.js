@@ -212,7 +212,7 @@ async function main() {
     try {
       const id = req.params.id;
       const [plugin] = await Plugin.for('internal').get(
-        [Plugin.ID, Plugin.NAME, Plugin.AUTHOR, Plugin.STATUS, Plugin.UPDATED_AT, Plugin.PACKAGE_UPDATED_AT],
+        [Plugin.ID, Plugin.NAME, Plugin.AUTHOR, Plugin.DESCRIPTION, Plugin.STATUS, Plugin.UPDATED_AT, Plugin.PACKAGE_UPDATED_AT],
         [
           [Plugin.ID, id],
           [Plugin.STATUS, Plugin.STATUS_APPROVED],
@@ -234,6 +234,7 @@ async function main() {
         id: plugin.id,
         name: plugin.name,
         author: plugin.author,
+        description: plugin.description,
         iconPath: getPluginIconPath(plugin.id),
         version,
       });

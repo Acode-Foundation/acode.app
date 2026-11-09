@@ -1,6 +1,13 @@
 const sharp = require('sharp');
 const { pluginRevision } = require('../../shared/ogImage.json');
-const { clearOgImageCache, createPluginOgSvg, escapeXml, renderDefaultOgImage, renderPluginOgImage, wrapText } = require('../../server/lib/ogImage');
+const {
+  clearOgImageCache,
+  createPluginOgSvg,
+  createPluginTagline,
+  escapeXml,
+  renderDefaultOgImage,
+  renderPluginOgImage,
+} = require('../../server/lib/ogImage');
 
 describe('Open Graph image rendering', () => {
   beforeEach(() => clearOgImageCache());
@@ -30,19 +37,32 @@ describe('Open Graph image rendering', () => {
     expect(escapeXml('<Acode & "friends">')).toBe('&lt;Acode &amp; &quot;friends&quot;&gt;');
   });
 
-  it('renders the plugin CTA with padded geometry and high-contrast colors', () => {
-    const svg = createPluginOgSvg({ name: 'AcodeX - Terminal', author: 'Raunak Raj' }).toString();
+  it('renders the plugin name, tagline, and author without a fake call-to-action button', () => {
+    const svg = createPluginOgSvg({ name: 'AcodeX - Terminal', author: 'Raunak Raj', tagline: 'A terminal for Acode' }).toString();
 
-    expect(svg).toContain('<rect width="336" height="64" rx="32" fill="#66b3ff"/>');
-    expect(svg).toContain('<text x="168" y="42" text-anchor="middle" fill="#07111f"');
-    expect(pluginRevision).toBe('2');
+    expect(svg).toContain('>AcodeX - Terminal</text>');
+    expect(svg).toContain('>A terminal for Acode</text>');
+    expect(svg).toContain('>Raunak Raj</text>');
+    expect(svg).toContain('>RR</text>');
+    expect(svg).not.toContain('Explore on acode.app');
+    expect(pluginRevision).toBe('3');
   });
 
-  it('bounds long plugin names even when they have no spaces', () => {
-    const lines = wrapText('VeryLongPluginNameWithoutSpacesAndAdditionalText', 20, 2);
-    expect(lines).toHaveLength(2);
-    expect(lines.every((line) => line.length <= 20)).toBe(true);
-    expect(lines.at(-1)).toMatch(/…$/);
+  it('shrinks long plugin names and cuts them at a word boundary', () => {
+    const svg = createPluginOgSvg({ name: 'Pixforge - Image Toolkit for Designers and Developers', author: 'A' }).toString();
+    const title = svg.match(/font-size="(\d+)"[^>]*>(Pixforge[^<]*)<\/text>/);
+
+    expect(Number(title[1])).toBeLessThan(68);
+    expect(title[2]).toMatch(/^Pixforge - Image Toolkit for Designers…$/);
+  });
+
+  it('takes the plugin tagline from the first real README paragraph', () => {
+    const readme =
+      '# Acode AI Agent\n\n[![npm](https://x)](https://y) ![license](z)\n\nA coding agent for [Acode](https://acode.app). It edits files.';
+    expect(createPluginTagline(readme, 'Acode AI Agent')).toBe('A coding agent for Acode');
+    expect(createPluginTagline('# Example\n\nExample', 'Example')).toBe('');
+    expect(createPluginTagline('', 'Example')).toBe('');
+    expect(createPluginTagline(`Intro ${'word '.repeat(40)}`, 'X').length).toBeLessThanOrEqual(64);
   });
 
   it('returns a cached image for the same plugin version', async () => {

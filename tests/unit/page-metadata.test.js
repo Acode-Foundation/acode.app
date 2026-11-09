@@ -154,7 +154,7 @@ describe('route metadata', () => {
     applyPageMetadata(pluginMetadata, documentRef);
     expect(documentRef.title).toBe('Example Plugin - Acode Plugin');
     expect(pluginMetadata.robots).toBe('index, follow');
-    expect(content(documentRef, 'meta[property="og:image"]')).toContain('/og/plugin/example.plugin.png?v=1.2.3&r=2');
+    expect(content(documentRef, 'meta[property="og:image"]')).toContain('/og/plugin/example.plugin.png?v=1.2.3&r=3');
     expect(content(documentRef, 'meta[name="twitter:card"]')).toBe('summary_large_image');
 
     const homeMetadata = resolveRouteMetadata('/', origin);
