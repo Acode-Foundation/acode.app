@@ -4,12 +4,12 @@ import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import Input from 'components/input';
 import Tabs from 'components/tabs';
-import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { isIOSSource } from 'lib/appSource';
 import { getLoggedInUser, hashString } from 'lib/helpers';
 import { handleAnchorLinks, renderMarkdown } from 'lib/markdown';
 import Router from 'lib/Router';
+import { CHECKS, SIGNALS, WEIGHTS } from '../../../shared/verification';
 
 const platformLabels = { both: 'Both', android: 'Android', ios: 'iOS' };
 
@@ -18,22 +18,29 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatf
   const loggedInUser = await getLoggedInUser();
   const isAdmin = !!loggedInUser?.isAdmin;
   const form = Ref();
-  const categoriesContainer = Ref();
-  const searchCount = Reactive('');
-  let searchTimeout;
-  let currentSearch = '';
   const fromIOS = isIOSSource();
   let selectedPlatform = fromIOS ? 'ios' : '';
+  let selectedCategory = '';
+  let currentSearch = '';
+  let searchTimeout;
+
   // The website keeps all FAQs for instant platform switching; native apps use the API filter.
   const res = await fetch('/api/faqs?categories=1');
-  const categories = await res.json();
-  if (qHash) {
-    const linkedFaq = categories.flatMap((category) => category.faqs).find((faq) => hashString(faq.q) === qHash);
-    // An explicit FAQ link takes precedence over the default platform filter.
-    if (['ios', 'android'].includes(linkedFaq?.platform)) selectedPlatform = linkedFaq.platform;
-  }
+  const stored = await res.json().catch(() => []);
+  const categories = [...(Array.isArray(stored) ? stored : []), verifiedCategory()];
+
+  const linkedFaq = qHash && categories.flatMap((category) => category.faqs).find((faq) => hashString(faq.q) === qHash);
+  // An explicit FAQ link takes precedence over the default platform filter.
+  if (['ios', 'android'].includes(linkedFaq?.platform)) selectedPlatform = linkedFaq.platform;
+
+  const searchInput = (
+    <input type='search' name='faq-search' placeholder='Search questions' aria-label='Search FAQs' autocomplete='off' oninput={handleSearch} />
+  );
+  const status = <p className='faq-status' role='status' />;
+  const list = <div className='faq-list' />;
+  const chips = <nav className='faq-chips' aria-label='Topics' />;
   const platformFilters = (
-    <div className='faq-platform-filters' role='group' aria-label='Filter FAQs by platform'>
+    <div className='faq-platform-filters' role='group' aria-label='Filter by platform'>
       {['ios', 'android'].map((platform) => (
         <button type='button' data-platform={platform} aria-pressed={String(selectedPlatform === platform)} onclick={() => togglePlatform(platform)}>
           {platformLabels[platform]}
@@ -42,47 +49,79 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatf
     </div>
   );
 
+  const onKeydown = (e) => {
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)) return;
+    e.preventDefault();
+    searchInput.focus();
+  };
+  document.addEventListener('keydown', onKeydown);
+  const offNavigate = () => {
+    document.removeEventListener('keydown', onKeydown);
+    Router.off('navigate', offNavigate);
+  };
+  Router.on('navigate', offNavigate);
+
   if (isUpdate) {
-    form.on('ref', (el) => {
-      setTimeout(() => el.scrollIntoView(), 0);
-    });
-  } else if (qHash) {
-    setTimeout(() => {
-      const el = document.getElementById(qHash);
-      if (el) el.scrollIntoView();
-      else {
-        const details = document.querySelector(`#faqs-${qHash}`);
-        if (details) {
-          details.open = true;
-          details.scrollIntoView();
-        }
-      }
-    }, 200);
+    form.on('ref', (el) => setTimeout(() => el.scrollIntoView(), 0));
   }
 
   const faqForm = isAdmin ? await FAQForm() : null;
+  render();
+  if (linkedFaq) {
+    setTimeout(() => {
+      const item = list.querySelector(`#faqs-${qHash}`);
+      if (!item) return;
+      item.open = true;
+      item.scrollIntoView({ block: 'start' });
+    }, 100);
+  }
 
   return (
     <section id='faqs'>
-      <h1>Frequently Asked Questions</h1>
-      <div className='faq-search'>
-        <div className='faq-search-controls'>
-          <Input type='search' name='faq-search' placeholder='Search FAQs…' label='Search FAQs' oninput={handleSearch} />
+      <div className='faq-hero'>
+        <p className='faq-eyebrow'>Help center</p>
+        <h1>How can we help?</h1>
+        <p className='faq-lede'>Quick answers about the editor, terminal, plugins and publishing.</p>
+        <div className='faq-toolbar'>
+          <label className='faq-search'>
+            <span className='icon search' aria-hidden='true' />
+            {searchInput}
+            <span className='faq-kbd' aria-hidden='true'>
+              /
+            </span>
+          </label>
           {fromIOS ? null : platformFilters}
         </div>
-        {fromIOS ? null : <span className='search-count'>{searchCount}</span>}
       </div>
+      {chips}
       {faqForm}
-      <div className='faq-categories' ref={categoriesContainer}>
-        {filteredResults()}
-      </div>
+      {status}
+      {list}
+      <aside className='faq-help'>
+        <div>
+          <h2>Still stuck?</h2>
+          <p>Ask the community or reach us directly.</p>
+        </div>
+        <nav>
+          <a href='https://discord.gg/vVxVWYUAWD' target='_blank' rel='noreferrer'>
+            Discord
+          </a>
+          <a href='https://t.me/foxdebug_acode' target='_blank' rel='noreferrer'>
+            Telegram
+          </a>
+          <a href='https://github.com/acode-foundation/acode/issues' target='_blank' rel='noreferrer'>
+            GitHub issues
+          </a>
+          <a href='/contact'>Contact us</a>
+        </nav>
+      </aside>
     </section>
   );
 
   function handleSearch(e) {
     clearTimeout(searchTimeout);
     currentSearch = e.target.value.trim().toLowerCase();
-    searchTimeout = setTimeout(refreshResults, 300);
+    searchTimeout = setTimeout(render, 200);
   }
 
   function togglePlatform(platform) {
@@ -90,55 +129,126 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatf
     for (const button of platformFilters.querySelectorAll('button')) {
       button.setAttribute('aria-pressed', String(button.dataset.platform === selectedPlatform));
     }
-    clearTimeout(searchTimeout);
-    refreshResults();
+    render();
   }
 
-  function refreshResults() {
-    categoriesContainer.el.replaceChildren(...filteredResults());
+  function selectCategory(id) {
+    selectedCategory = selectedCategory === id ? '' : id;
+    render();
   }
 
-  function filteredResults() {
-    const filtered = categories
-      .map((category) => ({
-        ...category,
-        faqs: category.faqs.filter(
-          (faq) =>
-            (!selectedPlatform || !faq.platform || faq.platform === 'both' || faq.platform === selectedPlatform) &&
-            `${faq.q}\n${faq.a}`.toLowerCase().includes(currentSearch),
-        ),
-      }))
-      .filter((category) => category.faqs.length);
-    const total = filtered.reduce((sum, category) => sum + category.faqs.length, 0);
-    searchCount.value = selectedPlatform || currentSearch ? `${total} result${total !== 1 ? 's' : ''} found` : '';
-    return total
-      ? filtered.map((category) => renderCategory(category, !!currentSearch))
-      : [
-          <p className='faq-no-results' role='status'>
-            No FAQs match your filters.
-          </p>,
-        ];
+  function matches(faq) {
+    const platformOk = !selectedPlatform || !faq.platform || faq.platform === 'both' || faq.platform === selectedPlatform;
+    return platformOk && (!currentSearch || `${faq.q}\n${faq.a}`.toLowerCase().includes(currentSearch));
   }
 
-  function renderCategory(cat, forceOpen) {
-    const isOpen = forceOpen || !currentSearch;
-    return (
-      <details className='faq-category' open={isOpen}>
-        <summary className='category-header'>
-          <span className='category-name'>{cat.name}</span>
-          <span className='category-count'>{cat.faqs.length}</span>
-        </summary>
-        <div className='category-faqs'>
-          <p className='category-desc'>{cat.description}</p>
-          {cat.faqs.map((faq) => (
-            <FAQ q={faq.q} a={faq.a} categoryId={cat.id} platform={faq.platform || 'both'} />
+  function render() {
+    const visible = categories.map((category) => ({ ...category, faqs: category.faqs.filter(matches) }));
+    // A search can empty the selected topic; fall back to all topics rather than showing nothing.
+    if (selectedCategory && !visible.some((category) => category.id === selectedCategory && category.faqs.length)) selectedCategory = '';
+
+    // Chips are rebuilt as counts change; keep keyboard focus on the same topic.
+    const focusedTopic = chips.contains(document.activeElement) ? document.activeElement.dataset.topic : null;
+    chips.replaceChildren(
+      <button type='button' data-topic='' aria-pressed={String(!selectedCategory)} onclick={() => selectCategory('')}>
+        All
+      </button>,
+      ...visible
+        .filter((category) => category.faqs.length)
+        .map((category) => (
+          <button
+            type='button'
+            data-topic={category.id}
+            aria-pressed={String(selectedCategory === category.id)}
+            onclick={() => selectCategory(category.id)}
+          >
+            {category.name}
+            <span>{category.faqs.length}</span>
+          </button>
+        )),
+    );
+    if (focusedTopic !== null && focusedTopic !== undefined) {
+      [...chips.children].find((chip) => chip.dataset.topic === focusedTopic)?.focus({ preventScroll: true });
+    }
+
+    const shown = visible.filter((category) => category.faqs.length && (!selectedCategory || category.id === selectedCategory));
+    const total = shown.reduce((sum, category) => sum + category.faqs.length, 0);
+    status.textContent = currentSearch || selectedPlatform ? `${total} result${total === 1 ? '' : 's'}` : '';
+
+    if (!total) {
+      list.replaceChildren(
+        <div className='faq-no-results'>
+          <p>No answers match “{currentSearch || 'these filters'}”.</p>
+          <p className='muted'>Try fewer words, or ask in the community below.</p>
+        </div>,
+      );
+      return;
+    }
+    list.replaceChildren(
+      ...shown.map((category) => (
+        <div className='faq-group' id={`topic-${category.id}`}>
+          <div className='faq-group-head'>
+            <h2>{category.name}</h2>
+            {category.description && <p>{category.description}</p>}
+          </div>
+          {category.faqs.map((faq) => (
+            <FAQ faq={faq} category={category} open={!!currentSearch && total <= 5} />
           ))}
         </div>
-      </details>
+      )),
     );
   }
 
+  function FAQ({ faq, category, open }) {
+    const id = hashString(faq.q);
+    const platform = faq.platform || 'both';
+    const answer = <div className='faq-answer' innerHTML={renderAnswer(faq.a)} />;
+    handleAnchorLinks(answer);
+    const item = (
+      <details className='faq-item' id={`faqs-${id}`} open={open}>
+        <summary>
+          <h3 id={id}>{faq.q}</h3>
+          <span className='icon keyboard_arrow_down' aria-hidden='true' />
+        </summary>
+        {answer}
+        <div className='faq-actions'>
+          <button type='button' className='faq-copy' onclick={copyLink}>
+            <span className='icon link' aria-hidden='true' />
+            Copy link
+          </button>
+          {isAdmin && !category.builtin ? (
+            <>
+              <span className='faq-platform'>{platformLabels[platform]}</span>
+              <button type='button' onclick={() => editFaq(faq.q, faq.a, category.id, platform)} title='Edit this FAQ' aria-label={`Edit ${faq.q}`}>
+                <span className='icon create' aria-hidden='true' />
+                Edit
+              </button>
+              <button type='button' onclick={() => deleteFaq(faq.q)} aria-label={`Delete ${faq.q}`} className='faq-delete'>
+                <span className='icon delete' aria-hidden='true' />
+              </button>
+            </>
+          ) : null}
+        </div>
+      </details>
+    );
+    return item;
+
+    async function copyLink(e) {
+      const button = e.currentTarget;
+      try {
+        await navigator.clipboard.writeText(`${location.origin}/faqs/${id}`);
+        button.lastChild.textContent = 'Copied';
+      } catch {
+        button.lastChild.textContent = 'Copy failed';
+      }
+      setTimeout(() => {
+        button.lastChild.textContent = 'Copy link';
+      }, 1500);
+    }
+  }
+
   async function FAQForm() {
+    const editable = categories.filter((category) => !category.builtin);
     const method = isUpdate ? 'put' : 'post';
     const q = Ref();
     const answer = <textarea name='a' required aria-label='Answer in Markdown' placeholder='Write your answer in Markdown…' value={a || ''} />;
@@ -185,7 +295,7 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatf
             <label className='faq-field'>
               Category
               <select name='category' className='faq-select'>
-                {categories.map((cat) => (
+                {editable.map((cat) => (
                   <option value={cat.id} selected={cat.id === oldCategory}>
                     {cat.name}
                   </option>
@@ -251,34 +361,6 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatf
     }
   }
 
-  function FAQ({ q, a: ans, categoryId, platform }) {
-    const id = hashString(q);
-    const $answer = <div className='faq-answer' innerHTML={renderAnswer(ans)} />;
-    handleAnchorLinks($answer);
-    return (
-      <div className='faq' id={`faqs-${id}`}>
-        <a href={`/faqs/${id}`}>
-          <h2 id={id}>{q}</h2>
-        </a>
-        {$answer}
-        {isAdmin ? (
-          <div className='faq-actions'>
-            <span className='faq-platform'>{platformLabels[platform]}</span>
-            <button type='button' onclick={() => editFaq(q, ans, categoryId, platform)} title='Edit this FAQ' aria-label={`Edit ${q}`}>
-              <span className='icon create' aria-hidden='true' />
-              Edit
-            </button>
-            <button type='button' onclick={() => deleteFaq(q)} title='Delete this FAQ' aria-label={`Delete ${q}`} className='faq-delete'>
-              <span className='icon delete' aria-hidden='true' />
-            </button>
-          </div>
-        ) : (
-          ''
-        )}
-      </div>
-    );
-  }
-
   function editFaq(q, ans, categoryId, platform) {
     Router.reload({ mode: 'update', oldQ: q, a: ans, oldCategory: categoryId, oldPlatform: platform });
   }
@@ -297,6 +379,47 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatf
       alert('Error', error.message);
     }
   }
+}
+
+/**
+ * Built from the same rules the server scores with, so the explanation can't
+ * drift from what actually earns the badge. Not editable from the admin form.
+ */
+function verifiedCategory() {
+  const points = Object.entries(SIGNALS)
+    .map(([key, { label, hint }]) => `- **${label}, up to ${WEIGHTS[key]} points.** ${hint}`)
+    .join('\n');
+  const checklist = Object.values(CHECKS)
+    .map((check) => `- ${check}`)
+    .join('\n');
+  return {
+    id: 'verified-developers',
+    name: 'Verified developers',
+    description: 'What the blue tick means and how to earn it.',
+    builtin: true,
+    faqs: [
+      {
+        q: 'What does the blue tick next to a developer mean?',
+        a: 'It marks a plugin developer with a track record: plugins people actually use and rate well, kept up to date, and no security problems. Verified developers also rank a little higher in plugin search.',
+      },
+      {
+        q: 'How do I get the verified badge?',
+        a: `There's nothing to apply for. We regularly review the highest-ranked developers who meet all of these:\n\n${checklist}\n\nMeeting them makes you eligible, not automatically verified. Every badge is a human decision.`,
+      },
+      {
+        q: 'How is my developer score calculated?',
+        a: `Your score is out of 100 and is used to rank developers for review:\n\n${points}\n\nSecurity strikes take points away: an upload blocked by the security scanner or an update rejected in review costs 15 points for a year, and each rejected plugin costs 3.`,
+      },
+      {
+        q: 'Will buying downloads or reviews help?',
+        a: "No. Downloads are counted once per device and weighed by how many different users they come from, and votes from throwaway accounts don't count toward your rating. Inflated numbers are easy to spot, and they can cost you the badge for good. The fastest route is a plugin people recommend and replying to their reviews.",
+      },
+      {
+        q: 'Can I lose the badge?',
+        a: "Yes. We may remove it after a security issue, a long stretch without updates on plugins people depend on, or any attempt to game downloads or reviews. If you think we got it wrong, [contact us](/contact) and we'll take another look.",
+      },
+    ],
+  };
 }
 
 /** FAQ answers keep GitHub-style links for plain URLs. */

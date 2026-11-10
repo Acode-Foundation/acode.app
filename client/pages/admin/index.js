@@ -17,6 +17,7 @@ import Router from 'lib/Router';
 import { since } from 'lib/relativeTime';
 import moment from 'moment';
 import Promotions from './promotions';
+import Verification from './verification';
 
 export default async function Admin({ queries = {} }) {
   const usersList = Ref();
@@ -68,6 +69,13 @@ export default async function Admin({ queries = {} }) {
             description: 'Find and manage registered accounts.',
             label: 'Users',
             content: <Users signal={lifecycle.signal} />,
+          },
+          {
+            id: 'verification',
+            icon: 'verified',
+            description: 'Developers ranked for the verified badge, with the reasons behind each score.',
+            label: 'Verification',
+            content: <Verification signal={lifecycle.signal} />,
           },
           { id: 'email', icon: 'mail', description: 'Send an announcement to a selected group of users.', label: 'Email', content: <EmailUsers /> },
           {

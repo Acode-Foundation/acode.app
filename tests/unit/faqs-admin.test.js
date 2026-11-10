@@ -9,7 +9,7 @@ import Ref from 'html-tag-js/ref';
 let user;
 let iosSource;
 let categories;
-const router = { reload: vi.fn(), loadUrl: vi.fn() };
+const router = { reload: vi.fn(), loadUrl: vi.fn(), on: vi.fn(), off: vi.fn() };
 const fetch = vi.fn();
 const alert = vi.fn();
 const shared = { './style.scss': {}, 'html-tag-js/reactive': Reactive };
@@ -28,7 +28,9 @@ const FAQs = load('client/pages/FAQs/index.js', {
   'lib/helpers': { getLoggedInUser: async () => user, hashString: (value) => value.toLowerCase().replace(/\W/g, '') },
   'lib/markdown': { renderMarkdown: (answer) => answer, handleAnchorLinks: vi.fn() },
   'lib/Router': router,
+  '../../../shared/verification': require('../../shared/verification'),
 });
+const questions = () => [...document.querySelectorAll('#topic-general .faq-item h3')].map((item) => item.textContent);
 
 beforeEach(() => {
   user = { isAdmin: true };
@@ -85,7 +87,8 @@ it('shows untagged FAQs as Both for admins and hides editing controls from visit
   expect(document.querySelector('.faq-platform').textContent).toBe('Both');
   user = null;
   document.body.replaceChildren(await FAQs({}));
-  expect(document.querySelector('form, .faq-actions')).toBeNull();
+  expect(document.querySelector('form, .faq-platform, [title="Edit this FAQ"]')).toBeNull();
+  expect(document.querySelector('.faq-copy')).not.toBeNull();
   expect(document.body.textContent).toContain('Files?');
 });
 
@@ -99,7 +102,6 @@ it('combines clearable platform filters with search on ordinary website visits',
   ];
   document.body.append(await FAQs({}));
   const [ios, android] = document.querySelectorAll('.faq-platform-filters button');
-  const questions = () => [...document.querySelectorAll('.faq h2')].map((item) => item.textContent);
   expect(ios.getAttribute('aria-pressed')).toBe('false');
   expect(questions()).toHaveLength(4);
   ios.click();
@@ -114,7 +116,7 @@ it('combines clearable platform filters with search on ordinary website visits',
   ios.click();
   expect(questions()).toEqual(['Files?']);
   android.click();
-  expect(document.querySelector('.faq-no-results').textContent).toContain('No FAQs');
+  expect(document.querySelector('.faq-no-results').textContent).toContain('No answers match');
   search.value = '';
   search.dispatchEvent(new Event('input'));
   android.click();
@@ -129,7 +131,7 @@ it('hides browsing platform controls in iOS context while retaining filtering, s
   categories[0].faqs.push({ q: 'Android storage?', a: 'Android answer.', platform: 'android' });
   document.body.append(await FAQs({}));
   expect(document.querySelector('.faq-platform-filters')).toBeNull();
-  expect([...document.querySelectorAll('.faq h2')].map((item) => item.textContent)).toEqual(['Files?']);
+  expect(questions()).toEqual(['Files?']);
   expect(document.querySelector('.search-count')).toBeNull();
   expect(document.querySelectorAll('.faq-platform-toggle input')).toHaveLength(3);
   const search = document.querySelector('input[type=search]');
@@ -143,12 +145,13 @@ it.each(['ios', 'android'])('opens a direct link to a %s FAQ with its platform s
   iosSource = true;
   categories[0].faqs.push({ q: 'Linked?', a: 'Linked answer.', platform });
   document.body.append(await FAQs({ qHash: 'linked' }));
-  const target = document.getElementById('linked');
+  const target = document.getElementById('faqs-linked');
   expect(target).not.toBeNull();
   expect(document.querySelector('.faq-platform-filters')).toBeNull();
   expect(document.getElementById('files') !== null).toBe(platform === 'ios');
   await vi.waitFor(() => expect(target.scrollIntoView).toHaveBeenCalled());
   expect(target.scrollIntoView.mock.contexts).toContain(target);
+  expect(target.open).toBe(true);
 });
 
 function load(file, dependencies) {
@@ -173,3 +176,38 @@ function load(file, dependencies) {
   });
   return exports.default;
 }
+
+it('explains the verified badge from the shared scoring rules, without admin controls', async () => {
+  const { WEIGHTS } = require('../../shared/verification');
+  document.body.append(await FAQs({}));
+  const topic = document.getElementById('topic-verified-developers');
+  expect(topic.querySelectorAll('.faq-item')).toHaveLength(5);
+  expect(topic.textContent).toContain(`Reach, up to ${WEIGHTS.reach} points`);
+  expect(topic.querySelector('[title="Edit this FAQ"]')).toBeNull();
+  expect([...document.querySelectorAll('select[name=category] option')].map((option) => option.value)).toEqual(['general']);
+});
+
+it('filters by topic chip and falls back to all topics when a search empties the chosen one', async () => {
+  user = null;
+  document.body.append(await FAQs({}));
+  const chip = [...document.querySelectorAll('.faq-chips button')].find((button) => button.textContent.trim().startsWith('General'));
+  chip.click();
+  expect(document.querySelectorAll('.faq-group')).toHaveLength(1);
+  const search = document.querySelector('input[type=search]');
+  search.value = 'badge';
+  search.dispatchEvent(new Event('input'));
+  await vi.waitFor(() => expect(document.getElementById('topic-verified-developers')).not.toBeNull());
+  expect(document.getElementById('topic-general')).toBeNull();
+});
+
+it('keeps keyboard focus on the chosen topic chip after it re-renders', async () => {
+  user = null;
+  document.body.append(await FAQs({}));
+  const chip = document.querySelector('.faq-chips [data-topic=general]');
+  chip.focus();
+  chip.click();
+  const active = document.activeElement;
+  expect(active).not.toBe(chip);
+  expect(active.dataset.topic).toBe('general');
+  expect(active.getAttribute('aria-pressed')).toBe('true');
+});

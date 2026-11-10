@@ -21,6 +21,7 @@ const { getAdminExchangeRateResponse } = require('../lib/adminExchangeRate');
 const { getPluginSalesInr } = require('../lib/adminDashboardMetrics');
 const { getSponsorWhereClause } = require('../lib/sponsorScope');
 const { setPluginFeatured } = require('../lib/featuredPlugins');
+const { getVerificationCandidates } = require('../lib/verificationCandidates');
 
 const router = Router();
 
@@ -201,6 +202,15 @@ router.get('/users', async (req, res) => {
     users,
     total: count,
   });
+});
+
+router.get('/verification-candidates', (req, res) => {
+  try {
+    res.send(getVerificationCandidates({ includeVerified: req.query.includeVerified === 'true' }));
+  } catch (error) {
+    console.error('Failed to rank verification candidates', error);
+    res.status(500).send({ error: 'Failed to load verification candidates' });
+  }
 });
 
 router.get('/payments', async (req, res) => {
