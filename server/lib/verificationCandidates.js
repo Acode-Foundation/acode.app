@@ -41,7 +41,7 @@ const logScale = (value, cap) => clamp01(Math.log10(1 + Math.max(0, value)) / Ma
 const round = (n, digits = 1) => Math.round(n * 10 ** digits) / 10 ** digits;
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-const PRIVATE_IP = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|f[cd][0-9a-f]{2}:|fe80:)/i;
+const PRIVATE_IPV4 = /^(0\.|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/;
 
 /**
  * The network an address belongs to, or null when it can't be attributed
@@ -52,15 +52,25 @@ function networkOf(ip) {
   const address = String(ip || '')
     .split(',')[0]
     .trim()
-    .replace(/%.*$/, '')
-    .replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/i, '');
-  if (!address || PRIVATE_IP.test(address)) return null;
-  if (address.includes(':')) {
-    const groups = expandIPv6(address);
-    return groups ? groups.slice(0, 4).join(':') : null;
+    .replace(/%.*$/, '');
+  if (!address.includes(':')) return ipv4Network(address);
+  const groups = expandIPv6(address);
+  if (!groups) return null;
+  // IPv4-mapped (::ffff:a.b.c.d, also written ::ffff:hhhh:hhhh) is plain IPv4.
+  if (groups.slice(0, 5).every((group) => group === '0000') && groups[5] === 'ffff') {
+    const [high, low] = [groups[6], groups[7]].map((group) => Number.parseInt(group, 16));
+    return ipv4Network([high >> 8, high & 255, low >> 8, low & 255].join('.'));
   }
+  // Unspecified, loopback, unique local (fc00::/7) and link-local (fe80::/10).
+  if (groups.slice(0, 7).every((group) => group === '0000') || /^f[cd]/.test(groups[0]) || /^fe[89ab]/.test(groups[0])) return null;
+  return groups.slice(0, 4).join(':');
+}
+
+/** The /24 of a dotted IPv4 address, or null when it is invalid or private. */
+function ipv4Network(address) {
   const octets = address.split('.');
-  return octets.length === 4 && octets.every((octet) => /^\d{1,3}$/.test(octet) && Number(octet) <= 255) ? octets.slice(0, 3).join('.') : null;
+  const valid = octets.length === 4 && octets.every((octet) => /^\d{1,3}$/.test(octet) && Number(octet) <= 255);
+  return valid && !PRIVATE_IPV4.test(address) ? octets.slice(0, 3).join('.') : null;
 }
 
 /**

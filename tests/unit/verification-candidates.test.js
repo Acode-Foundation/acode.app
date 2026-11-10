@@ -162,6 +162,11 @@ it('counts a blocked package once however often it is rescanned or re-uploaded',
 });
 
 it('treats compressed IPv6 addresses in one /64 as one network', () => {
+  // IPv4-mapped addresses, dotted or hex, belong to their IPv4 /24.
+  expect(networkOf('::ffff:808:808')).toBe('8.8.8');
+  expect(networkOf('::ffff:101:101')).toBe('1.1.1');
+  expect(networkOf('0:0:0:0:0:ffff:0808:0808')).toBe(networkOf('::ffff:8.8.8.8'));
+  for (const ip of ['::ffff:7f00:1', '::ffff:a00:1', '::', 'fe90::1', 'fc00::1']) expect(networkOf(ip)).toBeNull();
   expect(networkOf('2001:db8::1')).toBe(networkOf('2001:0db8:0:0::2'));
   expect(networkOf('2001:db8::1%eth0')).toBe('2001:0db8:0000:0000');
   expect(networkOf('2001:db8:1::1')).not.toBe(networkOf('2001:db8:2::1'));
