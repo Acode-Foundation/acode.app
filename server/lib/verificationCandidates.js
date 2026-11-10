@@ -6,7 +6,7 @@
 // accounts are discounted, and bursts are flagged. A flag never verifies or
 // rejects anyone on its own; it blocks "ready" so a human looks first.
 
-const { WEIGHTS, CRITERIA, CHECKS } = require('../../shared/verification');
+const { WEIGHTS, CRITERIA, CHECKS, RECENT_DOWNLOAD_DAYS: RECENT_DAYS } = require('../../shared/verification');
 
 const APPROVED = 1;
 const REJECTED = 2;
@@ -14,7 +14,6 @@ const REJECTED = 2;
 /** Downloads at which reach/momentum saturate (log scale). */
 const REACH_CAP = 100_000;
 const MOMENTUM_CAP = 10_000;
-const RECENT_DAYS = 90;
 /** Neutral votes added to every rating so a 3/3 plugin doesn't beat a 950/1000 one. */
 const RATING_PRIOR_VOTES = 10;
 const RATING_PRIOR = 0.5;
@@ -53,11 +52,40 @@ function networkOf(ip) {
   const address = String(ip || '')
     .split(',')[0]
     .trim()
-    .replace(/^::ffff:/i, '');
+    .replace(/%.*$/, '')
+    .replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/i, '');
   if (!address || PRIVATE_IP.test(address)) return null;
-  if (address.includes(':')) return address.split(':').slice(0, 4).join(':');
+  if (address.includes(':')) {
+    const groups = expandIPv6(address);
+    return groups ? groups.slice(0, 4).join(':') : null;
+  }
   const octets = address.split('.');
-  return octets.length === 4 ? octets.slice(0, 3).join('.') : null;
+  return octets.length === 4 && octets.every((octet) => /^\d{1,3}$/.test(octet) && Number(octet) <= 255) ? octets.slice(0, 3).join('.') : null;
+}
+
+/**
+ * Expands an IPv6 address to eight zero-padded groups, so `2001:db8::1` and
+ * `2001:0db8:0:0::2` share a /64 prefix. Returns null when it isn't valid.
+ * @param {string} address
+ */
+function expandIPv6(address) {
+  const halves = address.toLowerCase().split('::');
+  if (halves.length > 2) return null;
+  const toGroups = (part) => (part ? part.split(':') : []);
+  const head = toGroups(halves[0]);
+  const tail = toGroups(halves[1]);
+  // An embedded IPv4 tail takes the space of two groups.
+  const last = tail.length ? tail : head;
+  if (last.length && last.at(-1).includes('.')) {
+    const octets = last.pop().split('.').map(Number);
+    if (octets.length !== 4 || octets.some((n) => !(n >= 0 && n <= 255))) return null;
+    last.push(((octets[0] << 8) | octets[1]).toString(16), ((octets[2] << 8) | octets[3]).toString(16));
+  }
+  const missing = 8 - head.length - tail.length;
+  if (halves.length === 1 ? missing !== 0 : missing < 1) return null;
+  const groups = [...head, ...Array(halves.length === 2 ? missing : 0).fill('0'), ...tail];
+  if (!groups.every((group) => /^[0-9a-f]{1,4}$/.test(group))) return null;
+  return groups.map((group) => group.padStart(4, '0'));
 }
 
 /**
@@ -71,20 +99,26 @@ function getVerificationCandidates({ db = require('./db'), includeVerified = fal
     .prepare(
       `SELECT u.id, u.name, u.avatar_url, u.github, u.website, u.x, u.linkedin, u.verified,
          julianday(?) - julianday(u.created_at) AS account_days,
-         SUM(p.status = ${APPROVED}) AS approved_plugins,
-         SUM(p.status = ${REJECTED}) AS rejected_plugins,
-         SUM(CASE WHEN p.status = ${APPROVED} THEN CAST(p.downloads AS INTEGER) ELSE 0 END) AS downloads,
-         SUM(CASE WHEN p.status = ${APPROVED} THEN IFNULL(p.votes_up, 0) ELSE 0 END) AS votes_up,
-         SUM(CASE WHEN p.status = ${APPROVED} THEN IFNULL(p.votes_down, 0) ELSE 0 END) AS votes_down,
+         IFNULL(SUM(p.status = ${APPROVED}), 0) AS approved_plugins,
+         IFNULL(SUM(p.status = ${REJECTED}), 0) AS rejected_plugins,
+         IFNULL(SUM(CASE WHEN p.status = ${APPROVED} THEN CAST(p.downloads AS INTEGER) ELSE 0 END), 0) AS downloads,
+         IFNULL(SUM(CASE WHEN p.status = ${APPROVED} THEN IFNULL(p.votes_up, 0) ELSE 0 END), 0) AS votes_up,
+         IFNULL(SUM(CASE WHEN p.status = ${APPROVED} THEN IFNULL(p.votes_down, 0) ELSE 0 END), 0) AS votes_down,
          MIN(CASE WHEN p.status = ${APPROVED} THEN julianday(?) - julianday(COALESCE(p.package_updated_at, p.created_at)) END) AS days_since_release
        FROM user u
-       JOIN plugin p ON p.user_id = u.id
+       LEFT JOIN plugin p ON p.user_id = u.id
        WHERE u.role NOT IN ('admin', 'deleted') ${includeVerified ? '' : 'AND IFNULL(u.verified, 0) = 0'}
        GROUP BY u.id
-       HAVING approved_plugins > 0`,
+       -- Verified developers stay listed after losing their plugins: they are the ones to revoke.
+       HAVING approved_plugins > 0 ${includeVerified ? 'OR IFNULL(u.verified, 0) = 1' : ''}`,
     )
     .all(now, now);
-  if (!developers.length) return { candidates: [], criteria: CRITERIA, weights: WEIGHTS };
+  if (!developers.length) return { candidates: [], criteria: CRITERIA, weights: WEIGHTS, coverageDays: RECENT_DAYS };
+
+  // Old downloads are pruned, and history may not yet reach back the full window
+  // (for example right after retention was extended), so scale to what we have.
+  const oldest = db.prepare('SELECT julianday(?) - julianday(MIN(created_at)) AS days FROM download').get(now)?.days;
+  const coverageDays = Math.max(1, Math.min(RECENT_DAYS, Math.floor(oldest ?? RECENT_DAYS)));
 
   const byUser = (rows) => new Map(rows.map((row) => [row.user_id, row]));
   const groupByUser = (rows) => {
@@ -120,7 +154,8 @@ function getVerificationCandidates({ db = require('./db'), includeVerified = fal
       .all(now),
   );
 
-  // Reviews by others on approved plugins. A throwaway voter signed up shortly
+  // Reviews on approved plugins. Votes by the developer on their own plugins are
+  // split out so they never count; a throwaway voter signed up shortly
   // before reviewing and has never reviewed any other developer's plugin.
   const reviews = byUser(
     db
@@ -132,6 +167,7 @@ function getVerificationCandidates({ db = require('./db'), includeVerified = fal
          ),
          review AS (
            SELECT p.user_id, c.vote, c.created_at,
+             (c.user_id = p.user_id) AS is_self,
              (c.comment IS NOT NULL AND c.comment != '') AS has_text,
              (c.author_reply IS NOT NULL AND c.author_reply != '') AS replied,
              (vr.developers = 1 AND (julianday(c.created_at) - julianday(v.created_at)) * 24 < ${THROWAWAY_HOURS}) AS throwaway
@@ -139,14 +175,20 @@ function getVerificationCandidates({ db = require('./db'), includeVerified = fal
            JOIN plugin p ON p.id = c.plugin_id
            LEFT JOIN user v ON v.id = c.user_id
            LEFT JOIN voter_reach vr ON vr.user_id = c.user_id
-           WHERE p.status = ${APPROVED} AND c.user_id != p.user_id
+           WHERE p.status = ${APPROVED}
          )
          SELECT r.user_id,
-           SUM(r.has_text) AS reviews,
-           SUM(r.has_text AND r.replied) AS replied,
-           SUM(r.vote = 1 AND r.throwaway) AS throwaway_up,
-           SUM(r.vote = -1 AND r.throwaway) AS throwaway_down,
-           (SELECT MAX(n) FROM (SELECT COUNT(*) AS n FROM review r2 WHERE r2.user_id = r.user_id AND r2.has_text GROUP BY date(r2.created_at))) AS peak_day
+           SUM(r.has_text AND NOT r.is_self) AS reviews,
+           SUM(r.has_text AND r.replied AND NOT r.is_self) AS replied,
+           SUM(r.vote = 1 AND r.is_self) AS self_up,
+           SUM(r.vote = -1 AND r.is_self) AS self_down,
+           SUM(r.vote = 1 AND r.throwaway AND NOT r.is_self) AS throwaway_up,
+           SUM(r.vote = -1 AND r.throwaway AND NOT r.is_self) AS throwaway_down,
+           (SELECT MAX(n) FROM (
+             SELECT COUNT(*) AS n FROM review r2
+             WHERE r2.user_id = r.user_id AND r2.has_text AND NOT r2.is_self
+             GROUP BY date(r2.created_at)
+           )) AS peak_day
          FROM review r
          GROUP BY r.user_id`,
       )
@@ -156,11 +198,13 @@ function getVerificationCandidates({ db = require('./db'), includeVerified = fal
   const scans = byUser(
     db
       .prepare(
+        // Admin rescans re-check a package already counted, and the same zip can be
+        // uploaded again, so each package counts once.
         `SELECT p.user_id,
-           SUM(s.recommendation = 'block') AS blocked,
-           SUM(s.status = 'rejected') AS rejected
+           COUNT(DISTINCT CASE WHEN s.recommendation = 'block' THEN COALESCE(s.zip_sha256, s.id) END) AS blocked,
+           COUNT(DISTINCT CASE WHEN s.status = 'rejected' THEN COALESCE(s.zip_sha256, s.id) END) AS rejected
          FROM plugin_scan s JOIN plugin p ON p.id = s.plugin_id
-         WHERE s.created_at >= datetime(?, '-${SCAN_LOOKBACK_DAYS} days')
+         WHERE s.kind != 'rescan' AND s.created_at >= datetime(?, '-${SCAN_LOOKBACK_DAYS} days')
          GROUP BY p.user_id`,
       )
       .all(now),
@@ -185,11 +229,13 @@ function getVerificationCandidates({ db = require('./db'), includeVerified = fal
     const reviewCount = review.reviews || 0;
     const replied = review.replied || 0;
     const throwawayVotes = (review.throwaway_up || 0) + (review.throwaway_down || 0);
-    // Counters on the plugin row include every vote; take the throwaways back out.
-    const trustedUp = Math.max(0, dev.votes_up - (review.throwaway_up || 0));
-    const trustedDown = Math.max(0, dev.votes_down - (review.throwaway_down || 0));
+    // Counters on the plugin row include every vote; take self-votes and throwaways back out.
+    const selfVotes = (review.self_up || 0) + (review.self_down || 0);
+    const trustedUp = Math.max(0, dev.votes_up - (review.self_up || 0) - (review.throwaway_up || 0));
+    const trustedDown = Math.max(0, dev.votes_down - (review.self_down || 0) - (review.throwaway_down || 0));
     const votes = trustedUp + trustedDown;
     const rawVotes = dev.votes_up + dev.votes_down;
+    const outsideVotes = Math.max(0, rawVotes - selfVotes);
     const rating = votes ? trustedUp / votes : null;
     const { blocked = 0, rejected: rejectedScans = 0 } = scans.get(dev.id) || {};
     const daysSinceRelease = dev.days_since_release ?? Number.POSITIVE_INFINITY;
@@ -197,7 +243,7 @@ function getVerificationCandidates({ db = require('./db'), includeVerified = fal
 
     const signals = {
       reach: logScale(dev.downloads, REACH_CAP),
-      momentum: logScale(downloads.credible, MOMENTUM_CAP),
+      momentum: logScale((downloads.credible * RECENT_DAYS) / coverageDays, MOMENTUM_CAP),
       // Bayesian average: few votes stay near neutral until the rating is earned.
       quality: (trustedUp + RATING_PRIOR_VOTES * RATING_PRIOR) / (votes + RATING_PRIOR_VOTES),
       portfolio: clamp01(dev.approved_plugins / PORTFOLIO_CAP),
@@ -225,11 +271,13 @@ function getVerificationCandidates({ db = require('./db'), includeVerified = fal
         `${Math.round((excess / downloads.total) * 100)}% of recent downloads came from a few networks (${plural(downloads.topNetworks, 'network')} over the cap)`,
       );
     }
-    if (peakDay >= DOWNLOAD_SPIKE.min && peakDay / Math.max(1, downloads.total) >= DOWNLOAD_SPIKE.share) {
+    // With less history, one day is naturally a bigger share of it.
+    const spikeShare = Math.min(0.9, (DOWNLOAD_SPIKE.share * RECENT_DAYS) / coverageDays);
+    if (peakDay >= DOWNLOAD_SPIKE.min && peakDay / Math.max(1, downloads.total) >= spikeShare) {
       suspicions.push(`${peakDay.toLocaleString('en')} of ${downloads.total.toLocaleString('en')} recent downloads landed on a single day`);
     }
-    if (throwawayVotes >= THROWAWAY_FLAG.min && throwawayVotes / Math.max(1, rawVotes) >= THROWAWAY_FLAG.share) {
-      suspicions.push(`${throwawayVotes} of ${rawVotes} votes came from brand-new accounts that reviewed nothing else`);
+    if (throwawayVotes >= THROWAWAY_FLAG.min && throwawayVotes / Math.max(1, outsideVotes) >= THROWAWAY_FLAG.share) {
+      suspicions.push(`${throwawayVotes} of ${outsideVotes} votes came from brand-new accounts that reviewed nothing else`);
     }
     const peakReviews = review.peak_day || 0;
     if (peakReviews >= REVIEW_BURST.min && peakReviews / Math.max(1, reviewCount) >= REVIEW_BURST.share) {
@@ -240,6 +288,7 @@ function getVerificationCandidates({ db = require('./db'), includeVerified = fal
     const score = round(Math.max(0, total - penalty));
 
     const checks = Object.entries({
+      plugins: dev.approved_plugins > 0,
       account: dev.account_days >= CRITERIA.minAccountDays,
       downloads: dev.downloads >= CRITERIA.minDownloads,
       rating: votes >= CRITERIA.minVotes && rating >= CRITERIA.minRating,
@@ -280,7 +329,7 @@ function getVerificationCandidates({ db = require('./db'), includeVerified = fal
   });
 
   candidates.sort((a, b) => b.score - a.score || b.stats.downloads - a.stats.downloads);
-  return { candidates, criteria: CRITERIA, weights: WEIGHTS };
+  return { candidates, criteria: CRITERIA, weights: WEIGHTS, coverageDays };
 }
 
 /**

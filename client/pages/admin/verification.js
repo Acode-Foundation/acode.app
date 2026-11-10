@@ -88,7 +88,8 @@ export default function Verification({ signal }) {
     const all = data.candidates;
     const shown = readyOnly ? all.filter((c) => c.ready) : all;
     const ready = all.filter((c) => c.ready && !c.verified).length;
-    summary.textContent = `${all.length} developer${all.length === 1 ? '' : 's'} ranked · ${ready} ready for the badge`;
+    const coverage = data.coverageDays && data.coverageDays < 90 ? ` · momentum estimated from ${data.coverageDays} days of download history` : '';
+    summary.textContent = `${all.length} developer${all.length === 1 ? '' : 's'} ranked · ${ready} ready for the badge${coverage}`;
     if (!shown.length) {
       list.replaceChildren(
         <li className='muted empty'>{readyOnly ? 'Nobody meets every criterion yet.' : 'No developers with approved plugins.'}</li>,
@@ -204,12 +205,13 @@ export default function Verification({ signal }) {
       const res = await fetch(`/api/user/verify${revoke ? '/revoke' : ''}/${candidate.id}`, { method: 'PATCH' });
       const json = await res.json();
       if (!res.ok || json.error) throw new Error(json.error || 'Failed to update badge');
-      if (includeVerified) {
-        candidate.verified = !revoke;
-      } else {
-        data.candidates = data.candidates.filter((c) => c !== candidate);
-      }
+      // A refresh may have replaced `data` while the dialog was open, so update
+      // the current row by id, then reload; load() aborts any older request.
+      const current = data.candidates.find((c) => c.id === candidate.id);
+      if (current && includeVerified) current.verified = !revoke;
+      else if (current) data.candidates = data.candidates.filter((c) => c !== current);
       render();
+      load();
     } catch (error) {
       alert('Error', error.message);
     }

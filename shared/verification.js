@@ -23,6 +23,9 @@ const SIGNALS = {
   profile: { label: 'Profile', hint: 'GitHub linked, a profile picture, and a website, X or LinkedIn link.' },
 };
 
+/** Window for recent downloads; download history must be kept at least this long. */
+const RECENT_DOWNLOAD_DAYS = 90;
+
 /** Hard bars for the badge: the score ranks developers, these decide who is eligible. */
 const CRITERIA = {
   minAccountDays: 90,
@@ -33,6 +36,7 @@ const CRITERIA = {
 };
 
 const CHECKS = {
+  plugins: 'At least one approved plugin',
   account: `Account at least ${CRITERIA.minAccountDays} days old`,
   downloads: `At least ${CRITERIA.minDownloads.toLocaleString('en')} downloads`,
   rating: `Rating of ${CRITERIA.minRating * 100}% or more over at least ${CRITERIA.minVotes} votes`,
@@ -42,4 +46,4 @@ const CHECKS = {
   organic: 'No signs of inflated downloads or reviews',
 };
 
-module.exports = { WEIGHTS, SIGNALS, CRITERIA, CHECKS };
+module.exports = { WEIGHTS, SIGNALS, CRITERIA, CHECKS, RECENT_DOWNLOAD_DAYS };

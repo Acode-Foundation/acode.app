@@ -199,3 +199,15 @@ it('filters by topic chip and falls back to all topics when a search empties the
   await vi.waitFor(() => expect(document.getElementById('topic-verified-developers')).not.toBeNull());
   expect(document.getElementById('topic-general')).toBeNull();
 });
+
+it('keeps keyboard focus on the chosen topic chip after it re-renders', async () => {
+  user = null;
+  document.body.append(await FAQs({}));
+  const chip = document.querySelector('.faq-chips [data-topic=general]');
+  chip.focus();
+  chip.click();
+  const active = document.activeElement;
+  expect(active).not.toBe(chip);
+  expect(active.dataset.topic).toBe('general');
+  expect(active.getAttribute('aria-pressed')).toBe('true');
+});

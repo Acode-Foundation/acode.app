@@ -1,6 +1,7 @@
 const moment = require('moment');
 const Entity = require('../entities/entity');
 const Download = require('../entities/download');
+const { RECENT_DOWNLOAD_DAYS } = require('../../shared/verification');
 // Loaded for its table: PLUGIN_STATS_QUERY reads plugin_scan.
 require('../entities/pluginScan');
 
@@ -8,8 +9,8 @@ const DAILY_RANGE = 30;
 const MONTHLY_RANGE = 12;
 // Downloads are pruned by the daily cleanup cron. Keep enough for the dashboard's
 // current + previous 30-day windows and for the previous month's earnings, which
-// are calculated on the 16th.
-const DOWNLOAD_RETENTION_DAYS = DAILY_RANGE * 2 + 2;
+// are calculated on the 16th, and for the verification ranking's recent-download window.
+const DOWNLOAD_RETENTION_DAYS = Math.max(DAILY_RANGE * 2 + 2, RECENT_DOWNLOAD_DAYS + 1);
 
 // Downloads are inserted in time order, so the lowest id is the oldest row we still have.
 const OLDEST_DOWNLOAD_QUERY = 'SELECT created_at FROM download ORDER BY id LIMIT 1';

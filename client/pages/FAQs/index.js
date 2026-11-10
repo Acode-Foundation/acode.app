@@ -147,19 +147,29 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatf
     // A search can empty the selected topic; fall back to all topics rather than showing nothing.
     if (selectedCategory && !visible.some((category) => category.id === selectedCategory && category.faqs.length)) selectedCategory = '';
 
+    // Chips are rebuilt as counts change; keep keyboard focus on the same topic.
+    const focusedTopic = chips.contains(document.activeElement) ? document.activeElement.dataset.topic : null;
     chips.replaceChildren(
-      <button type='button' aria-pressed={String(!selectedCategory)} onclick={() => selectCategory('')}>
+      <button type='button' data-topic='' aria-pressed={String(!selectedCategory)} onclick={() => selectCategory('')}>
         All
       </button>,
       ...visible
         .filter((category) => category.faqs.length)
         .map((category) => (
-          <button type='button' aria-pressed={String(selectedCategory === category.id)} onclick={() => selectCategory(category.id)}>
+          <button
+            type='button'
+            data-topic={category.id}
+            aria-pressed={String(selectedCategory === category.id)}
+            onclick={() => selectCategory(category.id)}
+          >
             {category.name}
             <span>{category.faqs.length}</span>
           </button>
         )),
     );
+    if (focusedTopic !== null && focusedTopic !== undefined) {
+      [...chips.children].find((chip) => chip.dataset.topic === focusedTopic)?.focus({ preventScroll: true });
+    }
 
     const shown = visible.filter((category) => category.faqs.length && (!selectedCategory || category.id === selectedCategory));
     const total = shown.reduce((sum, category) => sum + category.faqs.length, 0);

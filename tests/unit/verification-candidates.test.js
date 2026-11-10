@@ -14,7 +14,8 @@ beforeEach(() => {
     CREATE TABLE download (id INTEGER PRIMARY KEY, plugin_id TEXT, client_ip TEXT, created_at TEXT);
     CREATE TABLE comment (id INTEGER PRIMARY KEY, plugin_id TEXT, user_id INTEGER, comment TEXT, author_reply TEXT, vote INTEGER DEFAULT 0,
       created_at TEXT DEFAULT '2026-05-10');
-    CREATE TABLE plugin_scan (id INTEGER PRIMARY KEY, plugin_id TEXT, status TEXT, recommendation TEXT, created_at TEXT);
+    CREATE TABLE plugin_scan (id INTEGER PRIMARY KEY, plugin_id TEXT, kind TEXT DEFAULT 'publish', status TEXT, recommendation TEXT,
+      zip_sha256 TEXT, created_at TEXT);
   `);
   const user = db.prepare('INSERT INTO user (id, name, role, verified, github, avatar_url, website, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
   user.run(1, 'Established', 'user', 0, 'est', 'a.png', 'https://est.dev', '2025-01-01');
@@ -134,6 +135,58 @@ it('groups addresses by network and ignores private ones', () => {
   expect(networkOf('203.0.113.7')).toBe('203.0.113');
   expect(networkOf('203.0.113.7, 10.0.0.1')).toBe('203.0.113');
   expect(networkOf('::ffff:198.51.100.4')).toBe('198.51.100');
-  expect(networkOf('2001:db8:1:2:3:4:5:6')).toBe('2001:db8:1:2');
+  expect(networkOf('2001:db8:1:2:3:4:5:6')).toBe('2001:0db8:0001:0002');
   for (const ip of ['127.0.0.1', '10.1.2.3', '192.168.1.1', '172.20.0.1', '::1', 'fd00::1', '', null]) expect(networkOf(ip)).toBeNull();
+});
+
+it('ignores developers voting on their own plugins', () => {
+  // Five self-upvotes on a plugin with no outside votes must not pass the rating check.
+  db.prepare("UPDATE plugin SET votes_up = votes_up + 5 WHERE id = 'new.a'").run();
+  for (let i = 0; i < 5; i++) {
+    db.prepare('INSERT INTO comment (plugin_id, user_id, comment, vote) VALUES (?, ?, ?, 1)').run('new.a', 2, 'mine');
+  }
+  const newcomer = getVerificationCandidates({ db, now: NOW }).candidates.find((c) => c.name === 'Newcomer');
+  expect(newcomer.stats.votes).toBe(3);
+  expect(newcomer.stats.discountedVotes).toBe(5);
+  expect(newcomer.stats.reviews).toBe(0);
+});
+
+it('counts a blocked package once however often it is rescanned or re-uploaded', () => {
+  const scan = db.prepare('INSERT INTO plugin_scan (plugin_id, kind, status, recommendation, zip_sha256, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+  scan.run('est.a', 'publish', 'recorded', 'block', 'abc', '2026-04-01');
+  scan.run('est.a', 'update', 'rejected', 'block', 'abc', '2026-04-02');
+  for (let i = 0; i < 3; i++) scan.run('est.a', 'rescan', 'recorded', 'block', 'abc', '2026-04-03');
+  const est = getVerificationCandidates({ db, now: NOW }).candidates.find((c) => c.name === 'Established');
+  expect(est.penalty).toBe(30);
+  expect(est.flags).toEqual([expect.stringContaining('1 upload blocked'), expect.stringContaining('1 update rejected')]);
+});
+
+it('treats compressed IPv6 addresses in one /64 as one network', () => {
+  expect(networkOf('2001:db8::1')).toBe(networkOf('2001:0db8:0:0::2'));
+  expect(networkOf('2001:db8::1%eth0')).toBe('2001:0db8:0000:0000');
+  expect(networkOf('2001:db8:1::1')).not.toBe(networkOf('2001:db8:2::1'));
+  for (const ip of ['1:2:3:4:5:6:7:8:9', 'zz::1', '300.1.1.1']) expect(networkOf(ip)).toBeNull();
+  const download = db.prepare('INSERT INTO download (plugin_id, client_ip, created_at) VALUES (?, ?, ?)');
+  for (let i = 1; i <= 60; i++) download.run('al.a', `2001:db8::${i.toString(16)}`, '2026-05-15');
+  const already = getVerificationCandidates({ db, now: NOW, includeVerified: true }).candidates.find((c) => c.name === 'Already');
+  expect(already.stats).toMatchObject({ recentDownloads: 60, credibleDownloads: 25 });
+});
+
+it('keeps verified developers listed after they lose every approved plugin', () => {
+  db.prepare("UPDATE plugin SET status = 3 WHERE id = 'al.a'").run();
+  expect(getVerificationCandidates({ db, now: NOW }).candidates.find((c) => c.name === 'Already')).toBeUndefined();
+  const already = getVerificationCandidates({ db, now: NOW, includeVerified: true }).candidates.find((c) => c.name === 'Already');
+  expect(already).toMatchObject({ verified: true, ready: false });
+  expect(already.checks.find((c) => c.id === 'plugins').pass).toBe(false);
+});
+
+it('scales momentum to the download history that is still kept', () => {
+  const full = getVerificationCandidates({ db, now: NOW });
+  expect(full.coverageDays).toBe(90);
+  db.prepare("DELETE FROM download WHERE created_at < '2026-05-02'").run();
+  const partial = getVerificationCandidates({ db, now: NOW });
+  expect(partial.coverageDays).toBe(30);
+  const before = full.candidates.find((c) => c.name === 'Established');
+  const after = partial.candidates.find((c) => c.name === 'Established');
+  expect(after.breakdown.momentum).toBeGreaterThan(before.breakdown.momentum);
 });
