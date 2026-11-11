@@ -16,22 +16,34 @@ import Tabs from 'components/tabs';
 import YearSelect from 'components/YearSelect';
 import Ref from 'html-tag-js/ref';
 import { calcRating, getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers';
-import { applyPluginMetadata } from 'lib/pageMetadata';
+import { applyErrorMetadata, applyPluginMetadata } from 'lib/pageMetadata';
 import Router from 'lib/Router';
 import { since } from 'lib/relativeTime';
 import moment from 'moment/moment';
 import { safeRepositoryUrl } from '../../../shared/repositoryUrl';
 
-export default async function Plugin({ id: pluginId, section = 'description', callback = '' }) {
+export default async function Plugin({ id: pluginId, section = 'description', callback = '', initialDetail }) {
+  const pathname = window.location.pathname;
   let plugin = null;
 
   try {
     showLoading();
-    plugin = await fetch(`/api/plugin/${pluginId}`).then((res) => res.json());
-    if (plugin.error) {
-      throw new Error(plugin.error);
+    const response = await fetch(`/api/plugin/${pluginId}`);
+    if (response.status === 404) {
+      applyErrorMetadata(pathname, 'Plugin not found');
+      return (
+        <div className='error'>
+          Plugin not found. <a href='/plugins'>All plugins</a>
+        </div>
+      );
+    }
+    plugin = await response.json();
+    if (response.ok === false || plugin.error) {
+      throw new Error(plugin.error || 'Unable to load plugin');
     }
   } catch (error) {
+    if (initialDetail) return initialDetail;
+    applyErrorMetadata(pathname, 'Unable to load plugin');
     return <div className='error'>{error.message}</div>;
   } finally {
     hideLoading();
@@ -58,11 +70,11 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
     supported_editor: supportedEditor,
   } = plugin;
 
-  applyPluginMetadata(plugin);
+  if (window.location.pathname === pathname) applyPluginMetadata(plugin);
 
   const repositoryUrl = safeRepositoryUrl(repository);
 
-  const user = await getLoggedInUser();
+  const user = await getLoggedInUser().catch(() => null);
   const userComment = user ? await getUserComment(pluginId) : null;
   const pluginSectionRef = Ref();
   const ordersList = Ref();

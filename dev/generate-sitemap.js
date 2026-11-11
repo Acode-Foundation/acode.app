@@ -7,21 +7,13 @@ const BASE_URL = 'https://acode.app';
 const visited = new Set();
 
 const DB_FILE = path.resolve(__dirname, '../data/db.sqlite3');
-const FAQS_FILE = path.resolve(__dirname, '../data/faqs.json');
-
-function hashString(str) {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return Math.abs(hash).toString(36);
-}
+const { readFaqCatalog } = require('../server/lib/faqCatalog');
 
 /**
  * Adds all plugin and FAQ detail-page URLs directly from the database
  * and JSON files, skipping the need to crawl them.
  */
-function addPluginAndFaqUrls() {
+async function addPluginAndFaqUrls() {
   try {
     if (fs.existsSync(DB_FILE)) {
       const db = sqlite3(DB_FILE);
@@ -37,15 +29,9 @@ function addPluginAndFaqUrls() {
   }
 
   try {
-    if (fs.existsSync(FAQS_FILE)) {
-      const data = JSON.parse(fs.readFileSync(FAQS_FILE, 'utf8'));
-      const faqs = Array.isArray(data) ? data : (data.categories || []).flatMap((c) => c.faqs || []);
-      for (const { q } of faqs) {
-        const id = hashString(q);
-        visited.add(`${BASE_URL}/faqs/${id}`);
-      }
-      console.info(`Added ${faqs.length} FAQ detail pages from JSON`);
-    }
+    const { byId } = await readFaqCatalog();
+    for (const id of byId.keys()) visited.add(`${BASE_URL}/faqs/${id}`);
+    console.info(`Added ${byId.size} FAQ detail pages`);
   } catch (err) {
     console.error('Failed to read FAQs from JSON:', err.message);
   }
@@ -204,7 +190,7 @@ async function generateSitemap() {
       }
     }
 
-    addPluginAndFaqUrls();
+    await addPluginAndFaqUrls();
 
     const sorted = Array.from(visited)
       .filter((url) => url.startsWith(BASE_URL))

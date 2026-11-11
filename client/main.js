@@ -16,6 +16,7 @@ import View, { addProButton, updateAccountButton } from './main.view';
 document.addEventListener('DOMContentLoaded', () => {
   showLoading();
   Theme(dark);
+  let initialDetail = app.querySelector('.public-detail');
   app.content = (
     <View
       appName='Acode'
@@ -58,10 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
   const main = app.get('main');
+  if (initialDetail) main.append(initialDetail);
 
   Router.add('/admin', (_params, queries) => loadModule('admin', { queries }));
   Router.add('/add-payment-method/:mode', (params) => loadModule('addPaymentMethod', params));
   Router.add('/faqs/:qHash?', (params) => loadModule('FAQs', params));
+  Router.add('/docs/run-python', () => window.location.replace('https://docs.acode.app/tutorials/python-language-server'));
   Router.add('/policy', () => loadModule('privacyPolicy'));
   Router.add('/terms', () => loadModule('termsOfService'));
   Router.add('/refund', () => loadModule('refundPolicy'));
@@ -99,9 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
     main.content = <div className='error'>Cannot get '{window.location.pathname}'</div>;
   });
 
-  applyRouteMetadata(window.location.pathname);
-  Router.on('navigate', () => applyRouteMetadata(window.location.pathname));
+  if (!initialDetail) applyRouteMetadata(window.location.pathname);
   Router.listen();
+  Router.on('navigate', () => applyRouteMetadata(window.location.pathname));
 
   Router.on('navigate', () => {
     const navMenuToggler = tag.get('#nav-menu-toggler');
@@ -117,11 +120,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   async function loadModule(module, props = {}) {
+    const detail = initialDetail;
+    initialDetail = null;
+    const path = window.location.pathname;
     showLoading();
     const { default: Module } = await import(`./pages/${module}`);
     hideLoading();
 
-    main.content = await (<Module {...props} />);
+    const page = await (<Module {...props} initialDetail={detail} />);
+    if (window.location.pathname === path && page !== detail) main.content = page;
   }
 
   async function logout() {

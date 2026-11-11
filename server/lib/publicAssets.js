@@ -39,4 +39,24 @@ function sendPublicAsset(req, res, file, next) {
   });
 }
 
-module.exports = { sendPublicAsset };
+// Webpack adds content hashes to these images. Use the deployed files so the
+// preload and the responsive image resolve to the same request.
+function homePosterSrcset(directory) {
+  let files;
+  try {
+    files = fs.readdirSync(directory);
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return '';
+    throw error;
+  }
+  // Production builds clean the output directory and restart the server.
+  // Skip ambiguous widths rather than preloading a stale build's asset.
+  return [480, 800, 1024]
+    .flatMap((width) => {
+      const matches = files.filter((name) => new RegExp(`^acode-poster-${width}[.][a-f0-9]{8}[.]webp$`).test(name));
+      return matches.length === 1 ? [`/${matches[0]} ${width}w`] : [];
+    })
+    .join(', ');
+}
+
+module.exports = { sendPublicAsset, homePosterSrcset };

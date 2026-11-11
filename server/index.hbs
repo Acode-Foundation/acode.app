@@ -5,11 +5,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <script defer src="/main.min.js"></script>
+  {{#if homePoster}}
+  <link rel="preload" as="image" imagesrcset="{{homePoster}}" imagesizes="(max-width: 1168px) calc(100vw - 48px), 1120px" fetchpriority="high" />
+  {{/if}}
   {{#if preload_image}}
   <link rel="preload" as="image" href="{{preload_image}}" fetchpriority="high" />
   {{/if}}
 
+  <script defer src="/main.min.js"></script>
   <link rel="stylesheet" href="/main.css" />
   <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
@@ -63,8 +66,18 @@
 </head>
 
 <body>
-  <noscript>Please enable javascript to view this page.</noscript>
-  <div id="app"></div>
+  {{#unless detail}}<noscript>Please enable javascript to view this page.</noscript>{{/unless}}
+  <div id="app">{{#with detail}}
+    <article class="public-detail">
+      {{#if parentPath}}<a href="{{parentPath}}">{{parentLabel}}</a>{{/if}}
+      <h1>{{heading}}</h1>
+      {{#if author}}<p>By {{author}}</p>{{/if}}
+      {{#if version}}<p>Version {{version}}</p>{{/if}}
+      {{#if platform}}<p>{{platform}}</p>{{/if}}
+      <p class="detail-text">{{text}}</p>
+      {{#if links}}<ul>{{#each links}}<li><a href="{{href}}">{{label}}</a></li>{{/each}}</ul>{{/if}}
+    </article>
+  {{/with}}</div>
 </body>
 
 </html>

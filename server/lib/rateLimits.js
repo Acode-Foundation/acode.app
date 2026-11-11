@@ -1,6 +1,4 @@
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
-const { getLoginSession } = require('./helpers');
-const { getApiKeyAuth } = require('./apiKeyAuth');
 
 /**
  * Bucket key for a request. Signed-in users are keyed by account, so developers
@@ -22,6 +20,8 @@ function createUserOrIpKey(lookupSession) {
  * @param {object} req
  */
 async function getRequesterSession(req) {
+  const { getApiKeyAuth } = require('./apiKeyAuth');
+  const { getLoginSession } = require('./helpers');
   const apiKey = await getApiKeyAuth(req);
   if (apiKey) return apiKey.key ? { user_id: apiKey.key.user_id } : null;
   return getLoginSession(req);

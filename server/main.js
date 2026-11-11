@@ -10,12 +10,14 @@ const fileUpload = require('express-fileupload');
 const Handlebars = require('handlebars');
 const defaultOg = require('./defaultOg.json');
 const { pluginRevision } = require('../shared/ogImage.json');
-const { createProfileMetadata } = require('../shared/metadataText');
-const { isAdFreeRoute } = require('../shared/adPolicy');
-const { getMetadata, getPluginsMetadata, getFaqsMetadata, FALLBACK_TITLE } = require('./routeMetadata');
+const faqPages = require('./routes/faqPages');
+const { normalizeMetadataText, truncateMetadataText, createProfileMetadata } = require('../shared/metadataText');
+const { isAccountRoute, isAdFreeRoute } = require('../shared/adPolicy');
+const { getMetadata, getPluginsMetadata, FALLBACK_TITLE } = require('./routeMetadata');
 const Plugin = require('./entities/plugin');
 const User = require('./entities/user');
 const { getLoggedInUser } = require('./lib/helpers');
+const { redirectPromotionHost } = require('./lib/promotionHost');
 const { promotionRedirectLimiter, sponsorImageLimiter } = require('./lib/rateLimits');
 const { redirectSignedIn } = require('./lib/guestOnly');
 const storeRedirect = require('./lib/storeRedirect');
@@ -27,9 +29,16 @@ const migrationRunner = require('./lib/migrationRunner');
 const { renderDefaultOgImage, renderPluginOgImage, renderPluginsOgImage } = require('./lib/ogImage');
 const { fileInDir } = require('./lib/pluginScanner');
 const { sendSponsorImage } = require('./lib/sponsorImage');
-const { sendPublicAsset } = require('./lib/publicAssets');
+const { sendPublicAsset, homePosterSrcset } = require('./lib/publicAssets');
 const errorHandler = require('./lib/errorHandler');
-const { createMetadataContext, createPluginDescription, getPublicOrigin, localizeStructuredData, publicUrl } = require('./lib/publicMetadata');
+const {
+  createMetadataContext,
+  createPluginDescription,
+  detailError,
+  getPublicOrigin,
+  localizeStructuredData,
+  publicUrl,
+} = require('./lib/publicMetadata');
 
 const app = express();
 
@@ -45,7 +54,9 @@ const OG_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
 const DEFAULT_OG_CACHE_CONTROL = 'public, max-age=300, must-revalidate';
 const PLUGINS_OG_IMAGE_PATH = '/og/plugins.png';
 const PUBLIC_ORIGIN = getPublicOrigin();
-const NOINDEX_PATH = /^\/api-keys\/?$/i;
+// Development builds can replace the poster while the server is running.
+const builtHomePoster = process.env.NODE_ENV === 'development' ? null : homePosterSrcset(PUBLIC_DIR);
+
 const renderIndexTemplate = compileTemplate('index.hbs');
 const renderLandingTemplate = compileTemplate('landing.hbs');
 
@@ -104,6 +115,9 @@ async function main() {
     next();
   });
 
+  app.get('/p/:id', promotionRedirectLimiter, require('./lib/promotionRedirect')());
+  app.use(redirectPromotionHost);
+
   // Inject Link headers for AI crawler and sitemap discovery
   app.use((_req, res, next) => {
     res.setHeader(
@@ -154,6 +168,7 @@ async function main() {
 
   app.use(cookieParser());
   app.get(['/', '/index.html'], storeRedirect);
+  app.get('/docs/run-python', (_req, res) => res.redirect(301, 'https://docs.acode.app/tutorials/python-language-server'));
   app.get(['/login', '/register'], redirectSignedIn);
   app.use(
     fileUpload({
@@ -172,8 +187,6 @@ async function main() {
     if (req.path === '/api/razorpay/webhook') return next();
     express.json({ limit: '50mb' })(req, res, next);
   });
-
-  app.get('/p/:id', promotionRedirectLimiter, require('./lib/promotionRedirect')());
 
   app.get('/ai/oauth/openrouter', aiOAuthCallback);
 
@@ -273,8 +286,7 @@ async function main() {
 
   app.use('/oauth', oauth);
 
-  app.get('/.well-known/assetlinks.json', (req, res) => {
-    if (req.hostname === 'go.acode.app' || req.hostname === 'go.dev.acode.app') return res.status(404).end();
+  app.get('/.well-known/assetlinks.json', (_req, res) => {
     res.send([
       {
         relation: ['delegate_permission/common.handle_all_urls'],
@@ -352,32 +364,34 @@ async function main() {
   });
 
   app.get(['/plugin/:id', '/plugin/:id/:section'], async (req, res, next) => {
+    function missingPlugin() {
+      return res
+        .status(404)
+        .set('Cache-Control', 'private, no-store')
+        .send(
+          renderIndexTemplate({
+            ...createMetadataContext(defaultOg, { canonicalPath: req.path, origin: PUBLIC_ORIGIN }),
+            ...detailError('Plugin not found', '/plugins', 'All plugins'),
+            adsDisabled: true,
+          }),
+        );
+    }
     try {
       const [plugin] = await Plugin.get([Plugin.ID, req.params.id]);
-      if (!plugin) {
-        next();
-        return;
-      }
-
-      const loggedInUser = await getLoggedInUser(req);
-      const isOwner = loggedInUser && loggedInUser.id === plugin.user_id;
-
-      if (plugin.status === Plugin.STATUS_DELETED && !loggedInUser?.isAdmin) {
-        next();
-        return;
-      }
-
-      if (plugin.status !== Plugin.STATUS_APPROVED && !loggedInUser?.isAdmin && !isOwner) {
-        next();
-        return;
+      if (!plugin) return missingPlugin();
+      const approved = plugin.status === Plugin.STATUS_APPROVED;
+      if (!approved) {
+        res.set({ 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex' });
+        const user = await getLoggedInUser(req);
+        const ownerPreview = user && user.id === plugin.user_id && plugin.status !== Plugin.STATUS_DELETED;
+        if (!ownerPreview && !user?.isAdmin) return missingPlugin();
       }
 
       const canonicalPath = `/plugin/${plugin.id}`;
       const pageDesc = createPluginDescription(plugin.description, `${plugin.name} is a plugin for Acode.`);
-      const imagePath =
-        plugin.status === Plugin.STATUS_APPROVED
-          ? `/og/plugin/${encodeURIComponent(plugin.id)}.png?v=${encodeURIComponent(plugin.package_updated_at || plugin.updated_at || plugin.version || 'latest')}&r=${pluginRevision}`
-          : defaultOg.image_path;
+      const imagePath = approved
+        ? `/og/plugin/${encodeURIComponent(plugin.id)}.png?v=${encodeURIComponent(plugin.package_updated_at || plugin.updated_at || plugin.version || 'latest')}&r=${pluginRevision}`
+        : defaultOg.image_path;
 
       res.header('Content-Type', 'text/html;charset=utf-8');
       res.send(
@@ -388,7 +402,15 @@ async function main() {
           description: pageDesc,
           image_alt: `${plugin.name} plugin for Acode`,
           site_name: 'Acode',
-          robots: 'index, follow',
+          robots: approved ? 'index, follow' : 'noindex, follow',
+          detail: approved && {
+            heading: plugin.name,
+            text: truncateMetadataText(normalizeMetadataText(plugin.description), 2400) || pageDesc,
+            author: plugin.author,
+            version: plugin.version,
+            parentPath: '/plugins',
+            parentLabel: 'All plugins',
+          },
           pageSchema: safeSchema(
             JSON.stringify({
               '@context': 'https://schema.org',
@@ -403,8 +425,8 @@ async function main() {
           orgSchema: null,
         }),
       );
-    } catch (_error) {
-      next();
+    } catch (error) {
+      next(error);
     }
   });
 
@@ -451,23 +473,19 @@ async function main() {
     );
   });
 
-  // FAQs page — dynamic schema from data/faqs.json
-  app.get('/faqs', (req, res) => {
-    const faqMeta = getFaqsMetadata();
-
-    res.header('Content-Type', 'text/html;charset=utf-8');
-    res.send(
+  app.use(
+    '/faqs',
+    faqPages((canonicalPath, page, schema) =>
       renderIndexTemplate({
-        ...createMetadataContext(defaultOg, { canonicalPath: '/faqs', origin: PUBLIC_ORIGIN }),
-        adsDisabled: isAdFreeRoute(req.path),
-        title: faqMeta.title,
-        description: faqMeta.description,
+        ...createMetadataContext(defaultOg, { canonicalPath, origin: PUBLIC_ORIGIN }),
+        ...getMetadata('/faqs'),
         robots: 'index, follow',
-        pageSchema: faqMeta.schema ? safeSchema(JSON.stringify(faqMeta.schema)) : null,
-        orgSchema: null,
+        ...page,
+        adsDisabled: isAdFreeRoute(canonicalPath),
+        pageSchema: schema ? safeSchema(JSON.stringify(schema)) : null,
       }),
-    );
-  });
+    ),
+  );
 
   app.get('/profile/:userId', async (req, res, next) => {
     if (!/^\d+$/.test(req.params.userId)) {
@@ -498,7 +516,7 @@ async function main() {
 
   app.get('*path', (req, res) => {
     // Account pages that must stay out of search results, even when linked from elsewhere.
-    const robots = NOINDEX_PATH.test(req.path) ? 'noindex, follow' : 'index, follow';
+    const robots = isAccountRoute(req.path) ? 'noindex, follow' : 'index, follow';
     const metadata = getMetadata(req.path, PUBLIC_ORIGIN);
     const context = metadata
       ? {
@@ -519,7 +537,13 @@ async function main() {
         };
 
     res.header('Content-Type', 'text/html;charset=utf-8');
-    res.send(renderIndexTemplate({ ...context, adsDisabled: isAdFreeRoute(req.path) }));
+    res.send(
+      renderIndexTemplate({
+        ...context,
+        adsDisabled: isAdFreeRoute(req.path),
+        homePoster: ['/', '/index.html'].includes(req.path) && (builtHomePoster ?? homePosterSrcset(PUBLIC_DIR)),
+      }),
+    );
   });
 
   app.use(errorHandler);

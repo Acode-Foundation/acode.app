@@ -1,3 +1,4 @@
+import { isAccountRoute } from '../../shared/adPolicy';
 import metadataText from '../../shared/metadataText';
 import ogImageConfig from '../../shared/ogImage.json';
 import metadataConfig from '../../shared/routeMetadata.json';
@@ -14,7 +15,6 @@ const PLUGINS_PATH = '/plugins';
 const INDEX_ROBOTS = 'index, follow';
 const NOINDEX_ROBOTS = 'noindex, follow';
 const PROFILE_PATH_PATTERN = /^\/profile(?:\/|$)/i;
-const NOINDEX_PATH_PATTERN = /^\/api-keys$/i;
 
 let latestRouteMetadataRequest = 0;
 let latestProfileMetadataRequest = 0;
@@ -97,7 +97,7 @@ export function resolveRouteMetadata(pathname, origin = window.location.origin, 
   return {
     title,
     description,
-    robots: isProfilePath(path) || NOINDEX_PATH_PATTERN.test(path) ? NOINDEX_ROBOTS : INDEX_ROBOTS,
+    robots: isProfilePath(path) || isAccountRoute(path) ? NOINDEX_ROBOTS : INDEX_ROBOTS,
     canonicalUrl: absoluteUrl(canonicalPath, origin),
     imageUrl: absoluteUrl(path === PLUGINS_PATH ? PLUGINS_IMAGE_PATH : DEFAULT_IMAGE_PATH, origin),
     imageWidth: IMAGE_WIDTH,
@@ -123,7 +123,7 @@ export function resolvePluginMetadata(plugin, origin = window.location.origin) {
   return {
     title: `${plugin.name} - Acode Plugin`,
     description,
-    robots: INDEX_ROBOTS,
+    robots: plugin.status == null || plugin.status === 1 ? INDEX_ROBOTS : NOINDEX_ROBOTS,
     canonicalUrl: absoluteUrl(`/plugin/${encodeURIComponent(id)}`, origin),
     imageUrl: absoluteUrl(`/og/plugin/${encodeURIComponent(id)}.png?v=${version}&r=${ogImageConfig.pluginRevision}`, origin),
     imageWidth: IMAGE_WIDTH,
@@ -232,6 +232,11 @@ export async function applyRouteMetadata(pathname = window.location.pathname) {
 
   if (requestId !== latestRouteMetadataRequest || normalizePath(window.location.pathname) !== path) return;
   applyPageMetadata(resolveRouteMetadata(path, window.location.origin, pluginCount));
+}
+
+export function applyErrorMetadata(pathname, message) {
+  if (normalizePath(window.location.pathname) !== normalizePath(pathname)) return;
+  applyPageMetadata({ ...resolveRouteMetadata(pathname), title: `${message} - Acode`, description: message, robots: NOINDEX_ROBOTS });
 }
 
 export function applyPluginMetadata(plugin) {

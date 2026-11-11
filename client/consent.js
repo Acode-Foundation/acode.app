@@ -108,7 +108,16 @@ panel.addEventListener('click', (event) => {
   if (opener?.isConnected) opener.focus();
 });
 document.addEventListener('click', (event) => {
-  if (event.target.closest('[data-cookie-settings]')) openSettings();
+  if (event.target.closest('[data-cookie-settings]')) return openSettings();
+  if (!controller.getChoice()?.analytics) return;
+  const link = event.target.closest('a[href]');
+  if (
+    link?.origin === 'https://play.google.com' &&
+    link.pathname === '/store/apps/details' &&
+    new URL(link.href).searchParams.get('id') === 'com.foxdebug.acodefree'
+  ) {
+    window.gtag?.('event', 'store_click', { store: 'google_play' });
+  }
 });
 window.addEventListener('storage', (event) => {
   if (event.storageArea === storage && (event.key === CONSENT_KEY || event.key === null)) {

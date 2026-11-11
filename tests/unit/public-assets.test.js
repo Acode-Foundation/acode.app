@@ -2,7 +2,7 @@ const { request } = require('express');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { sendPublicAsset } = require('../../server/lib/publicAssets');
+const { homePosterSrcset, sendPublicAsset } = require('../../server/lib/publicAssets');
 
 let directory;
 beforeAll(() => {
@@ -97,4 +97,15 @@ it.each(['main.js.br', 'main.js.gz'])('does not expose raw companion %s', (file)
   const { res } = serve(file);
   expect(res.sendStatus).toHaveBeenCalledWith(404);
   expect(res.sendFile).not.toHaveBeenCalled();
+});
+
+it('preloads the built home poster widths in order and skips ambiguous assets', () => {
+  const render = require('handlebars').compile(fs.readFileSync(path.resolve(__dirname, '../../server/index.hbs'), 'utf8'));
+  const poster = (width, hash) => `acode-poster-${width}.${hash}.webp`;
+  for (const width of [1024, 480, 800]) fs.writeFileSync(path.join(directory, poster(width, 'abcd1234')), '');
+  const srcset = [480, 800, 1024].map((width) => `/${poster(width, 'abcd1234')} ${width}w`).join(', ');
+  expect(homePosterSrcset(directory)).toBe(srcset);
+  expect(render({ homePoster: srcset })).toContain(`imagesrcset="${srcset}"`);
+  fs.writeFileSync(path.join(directory, poster(800, 'abcd9876')), '');
+  expect(homePosterSrcset(directory)).not.toContain('800w');
 });
