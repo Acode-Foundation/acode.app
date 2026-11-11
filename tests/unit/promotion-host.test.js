@@ -1,12 +1,18 @@
 import { once } from 'node:events';
 import http from 'node:http';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { redirectPromotionHost } from '../../server/lib/promotionHost';
 import createPromotionRedirect from '../../server/lib/promotionRedirect';
 import { promotionRedirectLimiter } from '../../server/lib/rateLimits';
 
 it('serves promotion destinations first and sends other tracking-host visits to the matching site', async () => {
   const app = express();
+  const limiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 1000,
+  });
+  app.use(limiter);
   const get = (id) => (id === 'active' ? { url: 'https://sponsor.example/offer' } : null);
   const count = vi.fn();
   app.get(
