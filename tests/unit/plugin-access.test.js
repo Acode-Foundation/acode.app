@@ -341,11 +341,12 @@ describe('plugin list sorting and filters', () => {
     return plugin.get.mock.calls.at(-1)[1];
   };
 
-  it.each(['popular', 'downloads', 'trending', 'rating'])('puts public featured plugins first and boosts verified authors in %s', async (sort) => {
+  it.each(['popular', 'downloads', 'trending', 'rating'])('applies the intended ranking weights in %s', async (sort) => {
     const db = new Database(':memory:');
     try {
       db.exec(`CREATE TABLE listing (id TEXT, downloads TEXT, author_verified INTEGER, votes_up INTEGER, votes_down INTEGER,
-          comment_count INTEGER DEFAULT 0, updated_at TEXT DEFAULT '2026-01-01', status INTEGER DEFAULT 1, featured INTEGER NOT NULL DEFAULT 0);
+          comment_count INTEGER DEFAULT 0, created_at TEXT DEFAULT '2000-01-01', package_updated_at TEXT,
+          status INTEGER DEFAULT 1, featured INTEGER NOT NULL DEFAULT 0);
         CREATE TABLE download (plugin_id TEXT, created_at TEXT);
         INSERT INTO listing (id, downloads, author_verified, votes_up, votes_down) VALUES
           ('verified', '90', 1, 8, 12), ('regular', '100', 0, 9, 13), ('strong', '150', 0, 15, 0), ('small', '9', NULL, 0, 1);`);
@@ -366,9 +367,20 @@ describe('plugin list sorting and filters', () => {
           .map((r) => r.id);
       expect(rankedIds()).toEqual(['strong', 'verified', 'regular', 'small']);
       db.prepare('UPDATE listing SET featured = 1 WHERE id IN (?, ?)').run('regular', 'small');
-      expect(rankedIds()).toEqual(['regular', 'small', 'strong', 'verified']);
+      expect(rankedIds()).toEqual(sort === 'popular' ? ['regular', 'small', 'strong', 'verified'] : ['strong', 'verified', 'regular', 'small']);
       db.prepare('UPDATE listing SET status = 2 WHERE id IN (?, ?)').run('regular', 'small');
       expect(rankedIds()).toEqual(['strong', 'verified', 'regular', 'small']);
+      // The most-voted plugin has no package update, even though its listing is new.
+      db.exec(`UPDATE listing SET created_at = datetime('now') WHERE id = 'strong';
+        UPDATE listing SET package_updated_at = datetime('now', '-181 days') WHERE id = 'small';
+        UPDATE listing SET package_updated_at = datetime('now', '-31 days') WHERE id = 'verified';
+        UPDATE listing SET package_updated_at = datetime('now', '-1 day') WHERE id = 'regular';`);
+      expect(rankedIds()).toEqual(sort === 'popular' ? ['regular', 'verified', 'strong', 'small'] : ['strong', 'verified', 'regular', 'small']);
+      if (sort === 'popular') {
+        db.exec('UPDATE listing SET votes_up = 0');
+        db.exec("UPDATE listing SET downloads = '300' WHERE id = 'small'");
+        expect(rankedIds()).toEqual(['regular', 'verified', 'small', 'strong']);
+      }
     } finally {
       db.close();
     }
@@ -407,6 +419,22 @@ describe('plugin list sorting and filters', () => {
     expect(await listWhere({ price: 'free' })).toContainEqual(['IFNULL(price, 0)', 0]);
     expect(await listWhere({ price: 'paid' })).toContainEqual(['IFNULL(price, 0)', 0, '>']);
     expect(await listWhere({ price: 'other' })).not.toContainEqual(expect.arrayContaining(['IFNULL(price, 0)']));
+  });
+
+  it('uses the rating sort for the app’s legacy Top rated request', async () => {
+    expect((await listOptions({ explore: 'random' })).orderBy).toEqual((await listOptions({ orderBy: 'rating' })).orderBy);
+  });
+
+  it('includes deleted plugins only for admins explicitly filtering for them', async () => {
+    expect(await listWhere({ status: '3' })).toContainEqual(['status', 1]);
+    helpers.getLoggedInUser.mockResolvedValue({ id: 9, isAdmin: true });
+    expect(await listWhere({ name: 'test' })).toContainEqual(['status', 3, '<>']);
+    expect(await listWhere({ status: '03' })).toContainEqual(['status', 3, '<>']);
+    for (const status of ['0', '3']) {
+      const where = await listWhere({ status });
+      expect(where).toContainEqual(['status', status]);
+      expect(where).not.toContainEqual(['status', 3, '<>']);
+    }
   });
 
   it.each(['/api/plugin', '/api/plugins'])('keeps the home plugin detail reachable through %s', async (prefix) => {

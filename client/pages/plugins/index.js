@@ -31,7 +31,7 @@ const PRICES = [
 const OWNED = { value: 'owned', label: 'Purchased' };
 
 const STATUSES = [
-  { value: '', label: 'Any' },
+  { value: '', label: 'All except deleted' },
   { value: 'approved', label: 'Approved', code: 1 },
   { value: 'pending', label: 'Pending', code: 0 },
   { value: 'rejected', label: 'Rejected', code: 2 },
@@ -166,7 +166,7 @@ export default async function PluginList({ filter, orderBy, editor, price, statu
 
   function describe() {
     const words = [
-      label(STATUSES, state.status),
+      state.status && label(STATUSES, state.status),
       state.price === 'owned' ? 'Purchased' : label(PRICES, state.price),
       EDITOR_TITLES[state.editor],
       'plugins',

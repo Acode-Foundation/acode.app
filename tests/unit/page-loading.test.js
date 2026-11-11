@@ -3,6 +3,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { transformAsync } from '@babel/core';
 import Handlebars from 'handlebars';
+import { JSDOM } from 'jsdom';
 import { safeAccountRedirect } from '../../client/lib/appSource';
 import { isAccountRoute, isAdFreeRoute } from '../../shared/adPolicy';
 import landingPages from '../../shared/landingPages.json';
@@ -16,7 +17,8 @@ async function loadClient(file, dependencies, globals = {}) {
       filename: path.join(root, file),
       babelrc: false,
       configFile: false,
-      plugins: ['html-tag-js/jsx/syntax-parser.js', 'html-tag-js/jsx/jsx-to-tag.js', '@babel/plugin-transform-modules-commonjs'],
+      presets: [['@babel/preset-env', { targets: { node: 'current' }, modules: 'commonjs' }]],
+      plugins: ['html-tag-js/jsx/syntax-parser.js', 'html-tag-js/jsx/jsx-to-tag.js'],
     });
     compiled.set(file, code);
   }
@@ -27,6 +29,7 @@ async function loadClient(file, dependencies, globals = {}) {
       exports,
       ...globals,
       require(name) {
+        if (name.startsWith('components/') && 'components/*' in dependencies) return dependencies['components/*'];
         if (!(name in dependencies)) throw new Error(`Unmocked dependency: ${name}`);
         return dependencies[name];
       },
@@ -34,6 +37,29 @@ async function loadClient(file, dependencies, globals = {}) {
     { filename: file },
   );
   return exports;
+}
+
+function loadMain(dependencies, globals) {
+  return loadClient(
+    'client/main.js',
+    {
+      'html-tag-js/dist/polyfill': {},
+      'core-js': {},
+      './main.scss': {},
+      './common.scss': {},
+      'res/icons/style.css': {},
+      'lib/headerTitle': { setupHeaderTitle: vi.fn() },
+      'lib/theme': vi.fn(),
+      'themes/dark': {},
+      ...dependencies,
+    },
+    {
+      tag: (component, props) => component(props),
+      process: { env: { RAZORPAY_ENABLED: true } },
+      console: { error: vi.fn() },
+      ...globals,
+    },
+  );
 }
 
 describe('page startup', () => {
@@ -62,30 +88,14 @@ describe('page startup', () => {
     const main = { append: vi.fn() };
     const applyRouteMetadata = vi.fn();
     const app = { querySelector: () => detail, get: vi.fn(() => main), addEventListener: vi.fn() };
-    await loadClient(
-      'client/main.js',
+    await loadMain(
       {
-        'html-tag-js/dist/polyfill': {},
-        'core-js': {},
-        './main.scss': {},
-        './common.scss': {},
-        'res/icons/style.css': {},
-        'lib/headerTitle': { setupHeaderTitle: vi.fn() },
         'lib/helpers': { getLoggedInUser, showLoading: vi.fn(), hideLoading: vi.fn() },
         'lib/pageMetadata': { applyRouteMetadata },
         'lib/Router': Router,
-        'lib/theme': vi.fn(),
-        'themes/dark': {},
         './main.view': { __esModule: true, default: () => view, updateAccountButton, addProButton },
       },
-      {
-        document,
-        window,
-        app,
-        tag: (component, props) => component(props),
-        process: { env: { RAZORPAY_ENABLED: true } },
-        console: { error: vi.fn() },
-      },
+      { document, window, app },
     );
 
     expect(Router.listen).not.toHaveBeenCalled();
@@ -113,6 +123,104 @@ describe('page startup', () => {
     expect(Router.listen).toHaveBeenCalledOnce();
   });
 
+  it.each(['offline', 'server error'])('clears loading when logout supersedes a page load and fails (%s)', async (failure) => {
+    const document = new EventTarget();
+    const window = { location: { pathname: '/contact' } };
+    const main = {};
+    const app = { querySelector: () => null, get: () => main, addEventListener: vi.fn() };
+    const routes = new Map();
+    const contact = vi.fn();
+    const helpers = { getLoggedInUser: vi.fn().mockResolvedValue(null), showLoading: vi.fn(), hideLoading: vi.fn(), invalidateLoggedInUser: vi.fn() };
+    const fetch = failure === 'offline' ? vi.fn().mockRejectedValue(new Error('Offline')) : vi.fn().mockResolvedValue({ ok: false, status: 503 });
+    await loadMain(
+      {
+        'lib/helpers': helpers,
+        'lib/Router': { add: (path, handler) => routes.set(path, handler), listen: vi.fn(), on: vi.fn() },
+        'lib/pageMetadata': { applyRouteMetadata: vi.fn() },
+        './main.view': { __esModule: true, default: () => main, updateAccountButton: vi.fn(), addProButton: vi.fn() },
+        './pages/contact': contact,
+      },
+      { document, window, app, fetch, tag: (type, props, children) => (typeof type === 'function' ? type(props) : children.join('')) },
+    );
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    const pending = routes.get('/contact')();
+    window.location.pathname = '/logout';
+    await Promise.all([pending, routes.get('/logout')()]);
+    expect(fetch).toHaveBeenCalledExactlyOnceWith('/api/login', { method: 'DELETE' });
+    expect(contact).not.toHaveBeenCalled();
+    expect(helpers.hideLoading).toHaveBeenCalledOnce();
+    expect(helpers.invalidateLoggedInUser).not.toHaveBeenCalled();
+    expect(main.content).toContain('Couldn’t log out');
+  });
+
+  it('restores the initial server description when the plugin request fails', async () => {
+    const render = Handlebars.compile(fs.readFileSync(path.join(root, 'server/index.hbs'), 'utf8'));
+    const html = render({ detail: { icon: '/plugin-icon/example', heading: 'Example', text: 'Offline description' } });
+    const { window } = new JSDOM(html, {
+      url: 'https://acode.test/plugin/example',
+      runScripts: 'dangerously',
+      // Exercise routing recovery independently of the fallback for a missing app bundle.
+      beforeParse: (window) => {
+        window.setTimeout = vi.fn();
+      },
+    });
+    const { document } = window;
+    const app = document.querySelector('#app');
+    const main = document.createElement('main');
+    for (const el of [app, main])
+      Object.defineProperty(el, 'content', {
+        set(value) {
+          el.replaceChildren(value);
+        },
+      });
+    app.get = (selector) => app.querySelector(selector);
+    const helpers = { showLoading: vi.fn(), hideLoading: vi.fn(), getLoggedInUser: vi.fn().mockResolvedValue(null) };
+    const fetch = vi.fn().mockRejectedValue(new Error('Offline'));
+    const excerpt = document.querySelector('.plugin-preview-body');
+    expect(excerpt.hidden).toBe(true);
+    const { default: router } = await loadClient(
+      'client/lib/Router.js',
+      {
+        '../../shared/adPolicy': { isAdFreeRoute, isAccountRoute },
+        '../../shared/landingPages.json': landingPages,
+        './appSource': {},
+      },
+      { document, window, location: window.location, CustomEvent: window.CustomEvent },
+    );
+    const plugin = await loadClient(
+      'client/pages/plugin/index.js',
+      {
+        './style.scss': {},
+        'lib/helpers': helpers,
+        'lib/Router': router,
+        'lib/pageMetadata': {},
+        'lib/relativeTime': {},
+        'html-tag-js/ref': {},
+        'moment/moment': {},
+        '../../../shared/repositoryUrl': {},
+        'components/*': {},
+      },
+      { window, fetch },
+    );
+    await loadMain(
+      {
+        './pages/plugin': plugin,
+        'lib/helpers': helpers,
+        'lib/Router': router,
+        'lib/pageMetadata': { applyRouteMetadata: vi.fn() },
+        './main.view': { __esModule: true, default: () => main, updateAccountButton: vi.fn(), addProButton: vi.fn() },
+      },
+      { document, window, app, tag: Object.assign((component, props) => component(props), { get: () => ({ checked: false }) }) },
+    );
+    document.dispatchEvent(new window.Event('DOMContentLoaded'));
+    await vi.waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('/api/plugin/example');
+      expect(main.contains(excerpt)).toBe(true);
+      expect(excerpt.hidden).toBe(false);
+    });
+    window.close();
+  });
+
   it('defers the entry script and discovers the plugin LCP image in the initial HTML', () => {
     const render = Handlebars.compile(fs.readFileSync(path.join(root, 'server/index.hbs'), 'utf8'));
     const html = render({ preload_image: '/plugin-icon/test.plugin' });
@@ -129,6 +237,31 @@ describe('page startup', () => {
     expect(html).toContain('Use &lt;branch&gt; here.');
     expect(html).toContain('<a href="/plugins">All plugins</a>');
     expect(html).not.toContain('Please enable javascript');
+  });
+
+  it('shows the plugin skeleton during startup and restores the excerpt if the app never loads', async () => {
+    const render = Handlebars.compile(fs.readFileSync(path.join(root, 'server/index.hbs'), 'utf8'));
+    const html = render({ detail: { icon: '/plugin-icon/test', heading: 'Test Plugin', text: 'Plugin description' } });
+    const withoutScripts = new JSDOM(html);
+    expect(withoutScripts.window.document.querySelector('.plugin-preview-body').hidden).toBe(false);
+    expect(withoutScripts.window.document.querySelector('.public-detail .plugin-skeleton')).toBeNull();
+    withoutScripts.window.close();
+
+    const schedule = vi.fn();
+    const { window } = new JSDOM(html, {
+      runScripts: 'dangerously',
+      beforeParse: (window) => {
+        window.setTimeout = schedule;
+      },
+    });
+    const excerpt = window.document.querySelector('.plugin-preview-body');
+    expect(excerpt.hidden).toBe(true);
+    expect(excerpt.nextElementSibling.className).toBe('plugin-skeleton');
+    expect(window.document.querySelector('h1').closest('[hidden]')).toBeNull();
+    await new Promise((resolve) => window.document.addEventListener('DOMContentLoaded', resolve, { once: true }));
+    schedule.mock.calls[0][0]();
+    expect(excerpt.hidden).toBe(false);
+    window.close();
   });
 });
 

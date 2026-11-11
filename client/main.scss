@@ -71,10 +71,89 @@ html {
   padding: 0 1.25rem;
   color: var(--page-text);
 
+  .plugin-preview-heading {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 1rem;
+    overflow-wrap: anywhere;
+
+    img {
+      flex: none;
+      object-fit: contain;
+    }
+  }
+
   .detail-text {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
+}
+
+main > .plugin-skeleton,
+.public-detail:has(.plugin-preview-heading) {
+  box-sizing: border-box;
+  width: 90%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 0;
+}
+
+.plugin-preview-body:not([hidden]) + .plugin-skeleton {
+  display: none;
+}
+
+.plugin-skeleton {
+  --placeholder: rgba(241, 242, 244, 0.09);
+
+  // Client-side navigation starts before the plugin name and icon are available.
+  main > &::before {
+    content: '';
+    display: block;
+    height: 100px;
+    margin-bottom: 16px;
+    background:
+      linear-gradient(var(--placeholder), var(--placeholder)) left center / 100px 100px,
+      linear-gradient(var(--placeholder), var(--placeholder)) 116px center / min(35%, 180px) 16px;
+    background-repeat: no-repeat;
+  }
+
+  span {
+    display: block;
+    border-radius: 4px;
+    background: var(--placeholder);
+  }
+  .skeleton-tabs {
+    display: flex;
+    gap: 18px;
+    padding: 16px 0;
+    border-block: 1px solid var(--page-line);
+
+    span {
+      width: 5rem;
+      height: 12px;
+    }
+  }
+  .skeleton-lines {
+    display: grid;
+    gap: 12px;
+    margin: 24px 0;
+
+    span {
+      height: 12px;
+      &:first-child { width: 36%; height: 20px; }
+      &:last-child { width: 72%; }
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    span {
+      animation: plugin-loading-pulse 1.5s ease-in-out infinite alternate;
+    }
+  }
+}
+
+@keyframes plugin-loading-pulse {
+  to { opacity: 0.55; }
 }
 
 #background {
@@ -706,7 +785,7 @@ footer {
   background: #0e1014;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   position: relative;
-  z-index: 1;
+  z-index: 0;
   padding: 56px 24px 36px;
   margin-top: 80px;
 

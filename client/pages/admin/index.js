@@ -527,7 +527,7 @@ function Plugins({ signal }) {
               <th>Author</th>
               <th>
                 <select className='status-filter' onchange={onStatusFilter}>
-                  <option value=''>All Status</option>
+                  <option value=''>All except deleted</option>
                   <option value='0'>Pending</option>
                   <option value='1'>Approved</option>
                   <option value='2'>Rejected</option>

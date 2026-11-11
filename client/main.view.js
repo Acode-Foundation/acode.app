@@ -38,7 +38,7 @@ export default ({ routes }) => (
       </nav>
     </header>
     <main />
-    <footer>
+    <footer className='google-anno-skip'>
       <div className='footer-content'>
         <div className='footer-section footer-brand'>
           <div className='footer-logo'>

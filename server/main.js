@@ -388,6 +388,7 @@ async function main() {
       }
 
       const canonicalPath = `/plugin/${plugin.id}`;
+      const iconPath = `/plugin-icon/${encodeURIComponent(plugin.id)}`;
       const pageDesc = createPluginDescription(plugin.description, `${plugin.name} is a plugin for Acode.`);
       const imagePath = approved
         ? `/og/plugin/${encodeURIComponent(plugin.id)}.png?v=${encodeURIComponent(plugin.package_updated_at || plugin.updated_at || plugin.version || 'latest')}&r=${pluginRevision}`
@@ -398,12 +399,13 @@ async function main() {
         renderIndexTemplate({
           ...createMetadataContext(defaultOg, { canonicalPath, imagePath, origin: PUBLIC_ORIGIN }),
           title: `${plugin.name} - Acode Plugin`,
-          preload_image: `/plugin-icon/${encodeURIComponent(plugin.id)}`,
+          preload_image: approved ? iconPath : undefined,
           description: pageDesc,
           image_alt: `${plugin.name} plugin for Acode`,
           site_name: 'Acode',
           robots: approved ? 'index, follow' : 'noindex, follow',
           detail: approved && {
+            icon: iconPath,
             heading: plugin.name,
             text: truncateMetadataText(normalizeMetadataText(plugin.description), 2400) || pageDesc,
             author: plugin.author,
