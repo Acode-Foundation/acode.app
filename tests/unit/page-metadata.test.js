@@ -1,4 +1,5 @@
 import {
+  applyErrorMetadata,
   applyPageMetadata,
   applyProfileMetadata,
   applyRouteMetadata,
@@ -56,6 +57,20 @@ describe('route metadata', () => {
     vi.unstubAllGlobals();
   });
 
+  it('marks only the current failed route as unavailable', () => {
+    const documentRef = new FakeDocument();
+    const path = '/faqs/missing';
+    vi.stubGlobal('document', documentRef);
+    vi.stubGlobal('window', { location: { origin, pathname: path } });
+    applyErrorMetadata(path, 'Question not found');
+    expect(documentRef.title).toBe('Question not found - Acode');
+    expect(content(documentRef, 'meta[name="description"]')).toBe('Question not found');
+    expect(content(documentRef, 'meta[name="robots"]')).toBe('noindex, follow');
+    expect(documentRef.querySelector('link[rel="canonical"]').getAttribute('href')).toBe(origin + path);
+    applyErrorMetadata('/plugin/older', 'Unable to load plugin');
+    expect(documentRef.title).toBe('Question not found - Acode');
+  });
+
   it('uses a reached plugin milestone across plugins page metadata', () => {
     const documentRef = new FakeDocument();
     const metadata = resolveRouteMetadata('/plugins', origin, 287);
@@ -97,6 +112,9 @@ describe('route metadata', () => {
     ['/profile/edit', 'noindex, follow'],
     ['/api-keys', 'noindex, follow'],
     ['/api-keys/', 'noindex, follow'],
+    ['/login', 'noindex, follow'],
+    ['/register', 'noindex, follow'],
+    ['/change-password', 'noindex, follow'],
     ['/sponsors', 'index, follow'],
     ['/plugin/example.plugin', 'index, follow'],
   ])('resolves %s with the explicit robots policy %s', (pathname, robots) => {
@@ -130,6 +148,10 @@ describe('route metadata', () => {
 
     expect(documentRef.title).toBe(sponsorsTitle);
     expect(documentRef.title).toBe(resolveRouteMetadata('/sponsors', origin).title);
+  });
+
+  it.each([0, 2, -1])('keeps non-public plugin status %s out of search', (status) => {
+    expect(resolvePluginMetadata({ id: 'example', name: 'Example', status }, origin).robots).toBe('noindex, follow');
   });
 
   it('resolves plugin sections without carrying the section into the canonical URL', () => {

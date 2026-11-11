@@ -60,7 +60,17 @@ function rewritePublicUrl(value, publicOrigin) {
   }
 }
 
+function detailError(heading, parentPath, parentLabel) {
+  return {
+    title: `${heading} - Acode`,
+    description: heading,
+    robots: 'noindex, follow',
+    detail: { heading, parentPath, parentLabel },
+  };
+}
+
 module.exports = {
+  detailError,
   DEFAULT_PUBLIC_ORIGIN,
   MAX_PLUGIN_DESCRIPTION_LENGTH: PLUGIN_DESCRIPTION_MAX_LENGTH,
   createMetadataContext,

@@ -6,17 +6,18 @@ import Input from 'components/input';
 import Tabs from 'components/tabs';
 import Ref from 'html-tag-js/ref';
 import { isIOSSource } from 'lib/appSource';
-import { getLoggedInUser, hashString } from 'lib/helpers';
+import { getLoggedInUser } from 'lib/helpers';
 import { handleAnchorLinks, renderMarkdown } from 'lib/markdown';
+import { applyErrorMetadata, applyPageMetadata, resolveRouteMetadata } from 'lib/pageMetadata';
 import Router from 'lib/Router';
-import { CHECKS, SIGNALS, WEIGHTS } from '../../../shared/verification';
+import { faqMetadata, hashString, verifiedCategory } from '../../../shared/faqs';
 
 const platformLabels = { both: 'Both', android: 'Android', ios: 'iOS' };
 
-export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatform = 'both' }) {
+export default async function FAQs({ initialDetail, mode, oldQ, a, qHash, oldCategory, oldPlatform = 'both' }) {
+  const pathname = window.location.pathname;
   const isUpdate = mode === 'update';
-  const loggedInUser = await getLoggedInUser();
-  const isAdmin = !!loggedInUser?.isAdmin;
+  const userRequest = getLoggedInUser().catch(() => null);
   const form = Ref();
   const fromIOS = isIOSSource();
   let selectedPlatform = fromIOS ? 'ios' : '';
@@ -24,12 +25,53 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatf
   let currentSearch = '';
   let searchTimeout;
 
-  // The website keeps all FAQs for instant platform switching; native apps use the API filter.
-  const res = await fetch('/api/faqs?categories=1');
-  const stored = await res.json().catch(() => []);
-  const categories = [...(Array.isArray(stored) ? stored : []), verifiedCategory()];
+  const single = qHash && !isUpdate && !fromIOS;
+  let partialList = false;
+  let categories;
+  try {
+    const res = await fetch(single ? `/api/faqs?id=${encodeURIComponent(qHash)}` : '/api/faqs?categories=1');
+    if (single && res.status === 404) categories = [];
+    else {
+      if (res.ok === false) throw new Error('Could not load FAQs.');
+      const data = await res.json();
+      categories = single ? [data] : [...data, verifiedCategory()];
+    }
+  } catch (error) {
+    if (initialDetail) return initialDetail;
+    applyErrorMetadata(pathname, 'Unable to load FAQs');
+    if (qHash || isUpdate) return <div className='error'>{error.message}</div>;
+    partialList = true;
+    categories = [verifiedCategory()];
+  }
+  const isAdmin = !partialList && !!(await userRequest)?.isAdmin;
 
-  const linkedFaq = qHash && categories.flatMap((category) => category.faqs).find((faq) => hashString(faq.q) === qHash);
+  if (initialDetail && !qHash && !isUpdate && window.location.pathname === pathname) applyPageMetadata(resolveRouteMetadata(pathname));
+
+  const linkedCategory = qHash ? categories.find((category) => category.faqs.some((faq) => hashString(faq.q) === qHash)) : null;
+  const linkedFaq = linkedCategory?.faqs.find((faq) => hashString(faq.q) === qHash);
+  if (qHash && !isUpdate && (linkedFaq || !fromIOS)) {
+    if (!linkedFaq) {
+      applyErrorMetadata(`/faqs/${qHash}`, 'Question not found');
+      return (
+        <section id='faqs'>
+          <h1>Question not found</h1>
+          <a href='/faqs'>All FAQs</a>
+        </section>
+      );
+    }
+    if (window.location.pathname.replace(/\/$/, '') === `/faqs/${qHash}`) {
+      applyPageMetadata({ ...resolveRouteMetadata(window.location.pathname), ...faqMetadata(linkedFaq) });
+    }
+    if (!fromIOS) {
+      return (
+        <section id='faqs'>
+          <a href='/faqs'>All FAQs</a>
+          <h1>{linkedFaq.q}</h1>
+          <FAQ faq={linkedFaq} category={linkedCategory} open={true} detail={true} />
+        </section>
+      );
+    }
+  }
   // An explicit FAQ link takes precedence over the default platform filter.
   if (['ios', 'android'].includes(linkedFaq?.platform)) selectedPlatform = linkedFaq.platform;
 
@@ -81,7 +123,9 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatf
       <div className='faq-hero'>
         <p className='faq-eyebrow'>Help center</p>
         <h1>How can we help?</h1>
-        <p className='faq-lede'>Quick answers about the editor, terminal, plugins and publishing.</p>
+        <p className='faq-lede'>
+          {partialList ? 'Some answers are temporarily unavailable.' : 'Quick answers about the editor, terminal, plugins and publishing.'}
+        </p>
         <div className='faq-toolbar'>
           <label className='faq-search'>
             <span className='icon search' aria-hidden='true' />
@@ -199,18 +243,30 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatf
     );
   }
 
-  function FAQ({ faq, category, open }) {
+  function FAQ({ faq, category, open, detail }) {
     const id = hashString(faq.q);
     const platform = faq.platform || 'both';
     const answer = <div className='faq-answer' innerHTML={renderAnswer(faq.a)} />;
     handleAnchorLinks(answer);
-    const item = (
+    return detail ? (
+      <article className='faq-item'>
+        <p>Platform: {platform === 'both' ? 'Android and iOS' : platformLabels[platform]}</p>
+        {answer}
+        {actions()}
+      </article>
+    ) : (
       <details className='faq-item' id={`faqs-${id}`} open={open}>
         <summary>
           <h3 id={id}>{faq.q}</h3>
           <span className='icon keyboard_arrow_down' aria-hidden='true' />
         </summary>
         {answer}
+        {actions()}
+      </details>
+    );
+
+    function actions() {
+      return (
         <div className='faq-actions'>
           <button type='button' className='faq-copy' onclick={copyLink}>
             <span className='icon link' aria-hidden='true' />
@@ -229,9 +285,8 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatf
             </>
           ) : null}
         </div>
-      </details>
-    );
-    return item;
+      );
+    }
 
     async function copyLink(e) {
       const button = e.currentTarget;
@@ -379,47 +434,6 @@ export default async function FAQs({ mode, oldQ, a, qHash, oldCategory, oldPlatf
       alert('Error', error.message);
     }
   }
-}
-
-/**
- * Built from the same rules the server scores with, so the explanation can't
- * drift from what actually earns the badge. Not editable from the admin form.
- */
-function verifiedCategory() {
-  const points = Object.entries(SIGNALS)
-    .map(([key, { label, hint }]) => `- **${label}, up to ${WEIGHTS[key]} points.** ${hint}`)
-    .join('\n');
-  const checklist = Object.values(CHECKS)
-    .map((check) => `- ${check}`)
-    .join('\n');
-  return {
-    id: 'verified-developers',
-    name: 'Verified developers',
-    description: 'What the blue tick means and how to earn it.',
-    builtin: true,
-    faqs: [
-      {
-        q: 'What does the blue tick next to a developer mean?',
-        a: 'It marks a plugin developer with a track record: plugins people actually use and rate well, kept up to date, and no security problems. Verified developers also rank a little higher in plugin search.',
-      },
-      {
-        q: 'How do I get the verified badge?',
-        a: `There's nothing to apply for. We regularly review the highest-ranked developers who meet all of these:\n\n${checklist}\n\nMeeting them makes you eligible, not automatically verified. Every badge is a human decision.`,
-      },
-      {
-        q: 'How is my developer score calculated?',
-        a: `Your score is out of 100 and is used to rank developers for review:\n\n${points}\n\nSecurity strikes take points away: an upload blocked by the security scanner or an update rejected in review costs 15 points for a year, and each rejected plugin costs 3.`,
-      },
-      {
-        q: 'Will buying downloads or reviews help?',
-        a: "No. Downloads are counted once per device and weighed by how many different users they come from, and votes from throwaway accounts don't count toward your rating. Inflated numbers are easy to spot, and they can cost you the badge for good. The fastest route is a plugin people recommend and replying to their reviews.",
-      },
-      {
-        q: 'Can I lose the badge?',
-        a: "Yes. We may remove it after a security issue, a long stretch without updates on plugins people depend on, or any attempt to game downloads or reviews. If you think we got it wrong, [contact us](/contact) and we'll take another look.",
-      },
-    ],
-  };
 }
 
 /** FAQ answers keep GitHub-style links for plain URLs. */

@@ -8,8 +8,6 @@
  * For the plugins page, a separate async fetcher pulls the live count from DB.
  */
 
-const fs = require('node:fs');
-const path = require('node:path');
 const sharedMetadata = require('../shared/routeMetadata.json');
 const { formatMilestoneCount } = require('../shared/metadataText');
 const { getPublicOrigin, publicUrl } = require('./lib/publicMetadata');
@@ -23,17 +21,7 @@ const PLUGINS_FALLBACK = sharedMetadata.pluginsFallback;
  * Add entries here only when you want a custom title/description.
  * All other paths are handled dynamically by getMetadata().
  */
-const namedRoutes = {
-  ...sharedMetadata.routes,
-  '/': sharedMetadata.routes['/'],
-
-  '/faqs': {
-    ...sharedMetadata.routes['/faqs'],
-    _buildFaqSchema() {
-      return buildFaqSchema();
-    },
-  },
-};
+const namedRoutes = sharedMetadata.routes;
 
 /**
  * Build a human-readable title from a URL path segment.
@@ -62,10 +50,6 @@ function getMetadata(pathname, origin = getPublicOrigin()) {
     const entry = { ...namedRoutes[clean] };
     entry.title = entry.title.replace(/\{\{count\}\}/g, '250+');
     entry.description = (entry.description || '').replace(/\{\{count\}\}/g, '250+');
-    if (entry._buildFaqSchema) {
-      entry.schema = entry._buildFaqSchema();
-      entry._buildFaqSchema = undefined;
-    }
     if (clean === '/') Object.assign(entry, getHomeSchemas(origin));
     return entry;
   }
@@ -145,51 +129,4 @@ async function getPluginsMetadata() {
   }
 }
 
-/**
- * Read data/faqs.json and build a schema.org FAQPage mainEntity array.
- * Handles both legacy flat array format and the v2 categorized format.
- * Each entry becomes { '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } }.
- * Falls back to null if the file is missing or unparseable.
- */
-function buildFaqSchema() {
-  try {
-    const faqPath = path.resolve(__dirname, '..', 'data', 'faqs.json');
-    const raw = fs.readFileSync(faqPath, 'utf8');
-    const data = JSON.parse(raw);
-    const faqs = Array.isArray(data) ? data : (data.categories || []).flatMap((c) => c.faqs || []);
-    return {
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: faqs.map(({ q, a }) => ({
-        '@type': 'Question',
-        name: q,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: a
-            .replace(/```[\s\S]*?```/g, '') // strip code blocks
-            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links → text
-            .replace(/[*_~`#]/g, '') // strip markdown formatting
-            .replace(/\n+/g, ' ')
-            .trim(),
-        },
-      })),
-    };
-  } catch (_err) {
-    return null;
-  }
-}
-
-/**
- * Build metadata for the /faqs page with live FAQ data.
- * @returns {{ title: string, description: string, schema: object | null }}
- */
-function getFaqsMetadata() {
-  const entry = namedRoutes['/faqs'] || {};
-  return {
-    title: entry.title,
-    description: entry.description,
-    schema: buildFaqSchema(),
-  };
-}
-
-module.exports = { getMetadata, getPluginsMetadata, getFaqsMetadata, FALLBACK_TITLE, FALLBACK_DESC };
+module.exports = { getMetadata, getPluginsMetadata, FALLBACK_TITLE, FALLBACK_DESC };

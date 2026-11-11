@@ -1,23 +1,32 @@
+import { once } from 'node:events';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import express, { Router } from 'express';
 
-let faqsJson;
+const { createFaqReader, faqUrlInUse, findFaq, storedCategories } = require('../../server/lib/faqCatalog');
+const faqPages = require('../../server/routes/faqPages');
+const { hashString, verifiedCategory } = require('../../shared/faqs');
+let fixture;
+const readFixture = () => fs.readFileSync(fixture, 'utf8');
+const setFixture = (data) => fs.writeFileSync(fixture, JSON.stringify(data));
 let writes;
 let user;
 let server;
 let base;
 
 beforeEach(async () => {
-  faqsJson = JSON.stringify({ categories: [{ id: 'general', faqs: [{ q: 'Existing?', a: 'Yes.', tags: [] }] }] });
+  fixture = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'acode-faq-api-')), 'faqs.json');
+  const read = createFaqReader(fixture);
+  setFixture({ categories: [{ id: 'general', faqs: [{ q: 'Existing?', a: 'Yes.', tags: [] }] }] });
   writes = [];
   user = null;
   const stubFs = {
-    readFileSync: () => faqsJson,
+    readFileSync: readFixture,
     writeFileSync: (_file, data) => {
       writes.push(data);
-      faqsJson = data;
+      fs.writeFileSync(fixture, data);
     },
   };
   const module = { exports: {} };
@@ -25,18 +34,33 @@ beforeEach(async () => {
     module,
     __dirname: path.resolve('server/apis'),
     require: (name) =>
-      ({ 'node:path': path, 'node:fs': stubFs, express: { Router }, '../lib/helpers': { getWebLoggedInUser: async () => user } })[name],
+      ({
+        'node:path': path,
+        'node:fs': stubFs,
+        express: { Router },
+        '../lib/faqCatalog': { faqUrlInUse, readFaqCatalog: read, findFaq: (id) => findFaq(id, read), storedCategories },
+        '../lib/helpers': { getWebLoggedInUser: async () => user },
+      })[name],
     JSON,
   });
 
   const app = express();
   app.use(express.json());
+  app.use(
+    '/faqs',
+    faqPages((_path, page) => page.detail.text, read),
+  );
   app.use('/api/faqs', module.exports);
-  server = app.listen(0);
+  server = app.listen(0, '127.0.0.1');
+  await once(server, 'listening');
   base = `http://127.0.0.1:${server.address().port}/api/faqs`;
 });
 
-afterEach(() => server.close());
+afterEach(async () => {
+  vi.restoreAllMocks();
+  await new Promise((resolve) => server.close(resolve));
+  fs.rmSync(path.dirname(fixture), { recursive: true, force: true });
+});
 
 function send(method, body) {
   return fetch(method === 'DELETE' ? `${base}?q=Existing%3F` : base, {
@@ -51,6 +75,10 @@ it('lets anyone read FAQs', async () => {
   expect(res.status).toBe(200);
   expect(await res.json()).toEqual([{ q: 'Existing?', a: 'Yes.', tags: [] }]);
   expect((await fetch(base, { method: 'HEAD' })).status).toBe(200);
+  expect((await (await fetch(`${base}?id=${hashString('Existing?')}`)).json()).faqs).toHaveLength(1);
+  const builtin = hashString(verifiedCategory().faqs[0].q);
+  expect((await (await fetch(`${base}?id=${builtin}`)).json()).builtin).toBe(true);
+  expect((await fetch(`${base}?id=missing`)).status).toBe(404);
 });
 
 it.each([
@@ -79,9 +107,17 @@ it.each(['POST', 'PUT', 'DELETE'])('rejects an incomplete admin %s request witho
 it('lets admins add, edit and delete FAQs', async () => {
   user = { id: 1, isAdmin: true };
   expect((await send('POST', { q: 'New?', a: 'Added.' })).status).toBe(200);
-  expect((await send('PUT', { old_q: 'Existing?', q: 'Existing?', a: 'Edited.' })).status).toBe(200);
+  // Model a filesystem whose timestamps cannot distinguish successive edits.
+  const revision = await fs.promises.stat(fixture, { bigint: true });
+  const stat = fs.promises.stat.bind(fs.promises);
+  vi.spyOn(fs.promises, 'stat').mockImplementation((file, options) => (file === fixture ? Promise.resolve(revision) : stat(file, options)));
+  const detail = new URL(`/faqs/${hashString('Existing?')}`, base);
+  expect(await (await fetch(detail)).text()).toBe('Yes.');
+  expect((await send('PUT', { old_q: 'Existing?', q: 'Existing?', a: 'New!' })).status).toBe(200);
+  expect((await (await fetch(base)).json()).some((faq) => faq.a === 'New!')).toBe(true);
+  expect(await (await fetch(detail)).text()).toBe('New!');
   expect((await send('DELETE')).status).toBe(200);
-  expect(JSON.parse(faqsJson).categories[0].faqs).toEqual([{ q: 'New?', a: 'Added.', tags: [], platform: 'both' }]);
+  expect(JSON.parse(readFixture()).categories[0].faqs).toEqual([{ q: 'New?', a: 'Added.', tags: [], platform: 'both' }]);
 });
 
 it.each(['flat', 'categorized'])('filters %s FAQs by the explicit platform, retaining untagged entries on both', async (shape) => {
@@ -92,8 +128,8 @@ it.each(['flat', 'categorized'])('filters %s FAQs by the explicit platform, reta
     { q: 'Files app?', a: 'iOS instructions.', platform: 'ios' },
   ];
   const categories = faqs.map((faq, index) => ({ id: String(index), name: 'Category', faqs: [faq] }));
-  faqsJson = JSON.stringify(shape === 'flat' ? faqs : { categories });
-  const original = faqsJson;
+  setFixture(shape === 'flat' ? faqs : { categories });
+  const original = readFixture();
   for (const platform of [undefined, 'both', 'ios', 'android']) {
     const query = platform ? `?platform=${platform}` : '';
     const expected = !platform || platform === 'both' ? faqs : [...faqs.slice(0, 2), faqs[platform === 'ios' ? 3 : 2]];
@@ -102,19 +138,23 @@ it.each(['flat', 'categorized'])('filters %s FAQs by the explicit platform, reta
     });
     expect(await res.json()).toEqual([...expected].reverse());
     expect((await fetch(`${base}${query}`, { method: 'HEAD' })).headers.get('etag')).toBe(res.headers.get('etag'));
-    if (shape === 'categorized') {
+    {
       const grouped = await (await fetch(`${base}?categories=1${platform ? `&platform=${platform}` : ''}`)).json();
-      expect(grouped).toEqual(categories.filter((category) => expected.includes(category.faqs[0])));
+      expect(grouped).toEqual(
+        shape === 'flat'
+          ? [{ id: 'general', name: 'General', faqs: expected }]
+          : categories.filter((category) => expected.includes(category.faqs[0])),
+      );
     }
   }
   expect(writes).toEqual([]);
-  expect(faqsJson).toBe(original);
+  expect(readFixture()).toBe(original);
 });
 
 it.each(['flat', 'categorized'])('saves and edits platform settings in %s FAQs without losing tags', async (shape) => {
   user = { isAdmin: true };
   const existing = { q: 'Existing?', a: 'Yes.', tags: ['files'], platform: 'ios' };
-  faqsJson = JSON.stringify(
+  setFixture(
     shape === 'flat'
       ? [existing]
       : {
@@ -125,7 +165,7 @@ it.each(['flat', 'categorized'])('saves and edits platform settings in %s FAQs w
         },
   );
   const readFaqs = () => {
-    const data = JSON.parse(faqsJson);
+    const data = JSON.parse(readFixture());
     return Array.isArray(data) ? data : data.categories.flatMap((category) => category.faqs);
   };
   // Older editors that omit the field must not reset a saved restriction.
@@ -137,7 +177,7 @@ it.each(['flat', 'categorized'])('saves and edits platform settings in %s FAQs w
     expect((await send('PUT', { old_q: 'Existing?', q: 'Existing?', a: 'Edited.', category: 'other', platform })).status).toBe(200);
     expect(readFaqs().find((faq) => faq.q === 'Existing?')).toEqual({ ...existing, a: 'Edited.', platform: platform || 'both' });
   }
-  if (shape === 'categorized') expect(JSON.parse(faqsJson).categories[1].faqs).toHaveLength(1);
+  if (shape === 'categorized') expect(JSON.parse(readFixture()).categories[1].faqs).toHaveLength(1);
 });
 
 it('rejects invalid platform inputs before saving and leaves admin authorization intact', async () => {
@@ -153,4 +193,13 @@ it('rejects invalid platform inputs before saving and leaves admin authorization
   user = null;
   expect((await send('POST', { q: 'New?', a: 'No.', platform: 'ios' })).status).toBe(401);
   expect(writes).toEqual([]);
+});
+
+it('rejects creates and renames that would reuse another public FAQ URL', async () => {
+  user = { isAdmin: true };
+  expect(hashString('Aa')).toBe(hashString('BB'));
+  expect((await send('POST', { q: 'Aa', a: 'First' })).status).toBe(200);
+  expect((await send('POST', { q: 'BB', a: 'Second' })).status).toBe(409);
+  expect((await send('PUT', { old_q: 'Existing?', q: 'BB', a: 'Second' })).status).toBe(409);
+  expect((await send('PUT', { old_q: 'Aa', q: 'BB', a: 'Still first' })).status).toBe(200);
 });

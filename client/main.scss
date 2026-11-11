@@ -64,6 +64,19 @@ html {
   }
 }
 
+.public-detail {
+  position: relative;
+  max-width: 52rem;
+  margin: 2rem auto;
+  padding: 0 1.25rem;
+  color: var(--page-text);
+
+  .detail-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
 #background {
   pointer-events: none;
   width: 100%;

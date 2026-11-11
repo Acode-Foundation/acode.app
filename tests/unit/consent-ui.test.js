@@ -73,7 +73,7 @@ function mount(pathname = '/plugins') {
       },
     },
   };
-  vm.runInNewContext(code, { require: (name) => dependencies[name], document, window: win, location });
+  vm.runInNewContext(code, { require: (name) => dependencies[name], document, window: win, location, URL });
   const panel = document.body.append.mock.calls[0][0];
   const click = (choice) => panel.listeners.click({ target: { closest: () => ({ dataset: { choice } }) } });
   return {
@@ -100,6 +100,21 @@ it('loads both permitted scripts from the entry point and hides the panel after 
     expect.stringContaining('adsbygoogle.js'),
   ]);
   expect(ui.panel.hidden).toBe(true);
+});
+
+it('records the Acode store click only with analytics consent', () => {
+  const ui = mount();
+  const link = new URL('https://play.google.com/store/apps/details?id=com.foxdebug.acodefree');
+  const click = () => ui.document.listeners.click({ target: { closest: (selector) => (selector === 'a[href]' ? link : null) } });
+  const events = () => ui.win.dataLayer.filter(([command, name]) => command === 'event' && name === 'store_click');
+  click();
+  expect(events()).toHaveLength(0);
+  ui.click('accept');
+  click();
+  expect(Array.from(events()[0])).toEqual(['event', 'store_click', { store: 'google_play' }]);
+  link.search = '?id=another.app';
+  click();
+  expect(events()).toHaveLength(1);
 });
 
 it.each(['/admin', '/policy', '/terms', '/refund', '/about', '/contact', '/faqs', '/faqs/question-id'])(

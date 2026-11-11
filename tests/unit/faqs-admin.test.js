@@ -25,10 +25,11 @@ const FAQs = load('client/pages/FAQs/index.js', {
   'components/dialogs/confirm': vi.fn(),
   'html-tag-js/ref': Ref,
   'lib/appSource': { isIOSSource: () => iosSource },
-  'lib/helpers': { getLoggedInUser: async () => user, hashString: (value) => value.toLowerCase().replace(/\W/g, '') },
+  'lib/helpers': { getLoggedInUser: async () => user },
   'lib/markdown': { renderMarkdown: (answer) => answer, handleAnchorLinks: vi.fn() },
   'lib/Router': router,
-  '../../../shared/verification': require('../../shared/verification'),
+  '../../../shared/faqs': { ...require('../../shared/faqs'), hashString: (value) => value.toLowerCase().replace(/\W/g, '') },
+  'lib/pageMetadata': { applyErrorMetadata: vi.fn(), applyPageMetadata: vi.fn(), resolveRouteMetadata: () => ({}) },
 });
 const questions = () => [...document.querySelectorAll('#topic-general .faq-item h3')].map((item) => item.textContent);
 
@@ -36,7 +37,11 @@ beforeEach(() => {
   user = { isAdmin: true };
   iosSource = false;
   categories = [{ id: 'general', name: 'General', faqs: [{ q: 'Files?', a: 'Use Files.', platform: 'ios' }] }];
-  fetch.mockReset().mockImplementation(async () => ({ json: async () => categories }));
+  fetch.mockReset().mockImplementation(async (url) => {
+    if (!url.startsWith('/api/faqs?id=')) return { json: async () => categories };
+    const category = categories.find((c) => c.faqs.some((f) => f.q.toLowerCase().replace(/\W/g, '') === url.split('=')[1]));
+    return category ? { json: async () => category } : { status: 404 };
+  });
   router.reload.mockClear();
   router.loadUrl.mockClear();
   alert.mockClear();
@@ -129,7 +134,7 @@ it('combines clearable platform filters with search on ordinary website visits',
 it('hides browsing platform controls in iOS context while retaining filtering, search and admin platform editing', async () => {
   iosSource = true;
   categories[0].faqs.push({ q: 'Android storage?', a: 'Android answer.', platform: 'android' });
-  document.body.append(await FAQs({}));
+  document.body.append(await FAQs({ qHash: 'stale' }));
   expect(document.querySelector('.faq-platform-filters')).toBeNull();
   expect(questions()).toEqual(['Files?']);
   expect(document.querySelector('.search-count')).toBeNull();
@@ -176,6 +181,28 @@ function load(file, dependencies) {
   });
   return exports.default;
 }
+
+it('renders one public answer on a question link and retains its initial HTML during an API failure', async () => {
+  user = null;
+  categories[0].faqs.push({ q: 'Another?', a: 'Different answer.' });
+  document.body.append(await FAQs({ qHash: 'files' }));
+  expect(document.querySelector('h1').textContent).toBe('Files?');
+  expect(document.body.textContent).toContain('Use Files.');
+  expect(document.body.textContent).not.toContain('Different answer.');
+  expect(document.querySelector('a[href="/faqs"]')).not.toBeNull();
+
+  const initialDetail = document.createElement('article');
+  fetch.mockRejectedValueOnce(new Error('Unavailable'));
+  expect(await FAQs({ qHash: 'files', initialDetail })).toBe(initialDetail);
+});
+
+it('keeps built-in answers readable on the FAQ list when stored answers cannot load', async () => {
+  fetch.mockRejectedValueOnce(new Error('Unavailable'));
+  document.body.append(await FAQs({}));
+  expect(document.body.textContent).toContain('Some answers are temporarily unavailable');
+  expect(document.querySelectorAll('#topic-verified-developers .faq-item')).toHaveLength(5);
+  expect(document.querySelector('.admin-form')).toBeNull();
+});
 
 it('explains the verified badge from the shared scoring rules, without admin controls', async () => {
   const { WEIGHTS } = require('../../shared/verification');

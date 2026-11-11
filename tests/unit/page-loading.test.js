@@ -46,7 +46,7 @@ describe('page startup', () => {
   });
   it.each(['resolve', 'reject'])('starts routing before window load and before account lookup can %s', async (result) => {
     const document = new EventTarget();
-    const window = { location: { pathname: '/' } };
+    const window = { location: { pathname: '/', replace: vi.fn() } };
     const Router = { add: vi.fn(), on: vi.fn(), listen: vi.fn() };
     const updateAccountButton = vi.fn();
     const addProButton = vi.fn();
@@ -58,7 +58,10 @@ describe('page startup', () => {
         }),
     );
     const view = {};
-    const app = { get: vi.fn(() => ({})), addEventListener: vi.fn() };
+    const detail = result === 'reject' ? {} : null;
+    const main = { append: vi.fn() };
+    const applyRouteMetadata = vi.fn();
+    const app = { querySelector: () => detail, get: vi.fn(() => main), addEventListener: vi.fn() };
     await loadClient(
       'client/main.js',
       {
@@ -69,7 +72,7 @@ describe('page startup', () => {
         'res/icons/style.css': {},
         'lib/headerTitle': { setupHeaderTitle: vi.fn() },
         'lib/helpers': { getLoggedInUser, showLoading: vi.fn(), hideLoading: vi.fn() },
-        'lib/pageMetadata': { applyRouteMetadata: vi.fn() },
+        'lib/pageMetadata': { applyRouteMetadata },
         'lib/Router': Router,
         'lib/theme': vi.fn(),
         'themes/dark': {},
@@ -87,6 +90,10 @@ describe('page startup', () => {
 
     expect(Router.listen).not.toHaveBeenCalled();
     document.dispatchEvent(new Event('DOMContentLoaded'));
+    if (detail) expect(main.append).toHaveBeenCalledWith(detail);
+    expect(applyRouteMetadata).toHaveBeenCalledTimes(detail ? 0 : 1);
+    Router.add.mock.calls.find(([route]) => route === '/docs/run-python')[1]();
+    expect(window.location.replace).toHaveBeenCalledWith('https://docs.acode.app/tutorials/python-language-server');
     expect(app.content).toBe(view);
     expect(Router.listen).toHaveBeenCalledOnce();
     expect(Router.add).toHaveBeenCalledWith('/plugin/:id/:section?', expect.any(Function));
@@ -113,6 +120,15 @@ describe('page startup', () => {
     expect(html).toContain('<script defer src="/main.min.js"></script>');
     expect(html).toContain('<link rel="preload" as="image" href="/plugin-icon/test.plugin" fetchpriority="high" />');
     expect(render({})).not.toContain('as="image"');
+  });
+
+  it('serves readable, escaped detail content before the app starts', () => {
+    const render = Handlebars.compile(fs.readFileSync(path.join(root, 'server/index.hbs'), 'utf8'));
+    const html = render({ detail: { heading: 'GitHub & Acode', text: 'Use <branch> here.', parentPath: '/plugins', parentLabel: 'All plugins' } });
+    expect(html).toContain('<h1>GitHub &amp; Acode</h1>');
+    expect(html).toContain('Use &lt;branch&gt; here.');
+    expect(html).toContain('<a href="/plugins">All plugins</a>');
+    expect(html).not.toContain('Please enable javascript');
   });
 });
 
