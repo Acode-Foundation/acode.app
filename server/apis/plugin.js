@@ -21,7 +21,7 @@ const { convertPrice } = require('../lib/exchangeRates');
 const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
 const { pluginUploadLimiter, pluginAdminLimiter, pluginScanReadLimiter } = require('../lib/rateLimits');
 const { LICENSES, normalizeLicense } = require('../lib/pluginLicense');
-const { pluginSearchWhere, pluginSearchRank } = require('../lib/pluginSearch');
+const { pluginSearchWhere, pluginSearchRank, isPluginStatusFilter } = require('../lib/pluginSearch');
 const db = require('../lib/db');
 const { safeRepositoryUrl } = require('../../shared/repositoryUrl');
 const {
@@ -53,22 +53,34 @@ const ID_REGEX = /^[a-z][a-z0-9._]{3,49}$/i;
 // `downloads` is stored as TEXT, so it must be cast or "900" sorts above "21004".
 const DOWNLOADS_DESC = 'CAST(downloads AS INTEGER) DESC';
 const FEATURED_DESC = 'CASE WHEN status = 1 THEN featured ELSE 0 END DESC';
-// Verified authors get a 25% boost within the featured and regular groups.
+// Verified authors get a 25% boost in popularity-based rankings.
 const RANK_WEIGHT = '(CASE WHEN author_verified = 1 THEN 1.25 ELSE 1 END)';
+const RELEASE_DATE = 'COALESCE(package_updated_at, created_at)';
+// A missing package timestamp gets the lowest weight, even for a newly created listing.
+const POPULAR_WEIGHT = `${RANK_WEIGHT} * (CASE
+  WHEN package_updated_at >= datetime('now', '-30 days') THEN 1.25
+  WHEN package_updated_at >= datetime('now', '-180 days') THEN 0.75
+  ELSE 0.25 END)`;
 const WEIGHTED_DOWNLOADS_DESC = `CAST(downloads AS INTEGER) * ${RANK_WEIGHT} DESC`;
 const LIST_ORDER = Object.fromEntries(
   Object.entries({
-    popular: [FEATURED_DESC, `votes_up * ${RANK_WEIGHT} DESC`, WEIGHTED_DOWNLOADS_DESC, 'comment_count DESC', 'updated_at DESC', 'votes_down ASC'],
+    popular: [
+      FEATURED_DESC,
+      `votes_up * ${POPULAR_WEIGHT} DESC`,
+      `CAST(downloads AS INTEGER) * ${POPULAR_WEIGHT} DESC`,
+      'comment_count DESC',
+      `${RELEASE_DATE} DESC`,
+      'votes_down ASC',
+    ],
     // Unique installs over the last week, read through the (plugin_id, created_at) index.
     trending: [
-      FEATURED_DESC,
       `(SELECT COUNT(*) FROM download d WHERE d.plugin_id = listing.id AND d.created_at >= datetime('now', '-7 days')) * ${RANK_WEIGHT} DESC`,
       WEIGHTED_DOWNLOADS_DESC,
     ],
-    downloads: [FEATURED_DESC, WEIGHTED_DOWNLOADS_DESC, DOWNLOADS_DESC],
+    downloads: [WEIGHTED_DOWNLOADS_DESC, DOWNLOADS_DESC],
     // Smoothed approval ratio, so one upvote doesn't outrank hundreds of mostly positive reviews.
-    rating: [FEATURED_DESC, `(votes_up + 1.0) / (votes_up + votes_down + 2) * ${RANK_WEIGHT} DESC`, 'votes_up DESC', DOWNLOADS_DESC],
-    updated: ['COALESCE(package_updated_at, created_at) DESC'],
+    rating: [`(votes_up + 1.0) / (votes_up + votes_down + 2) * ${RANK_WEIGHT} DESC`, 'votes_up DESC', DOWNLOADS_DESC],
+    updated: [`${RELEASE_DATE} DESC`],
     newest: ['created_at DESC'],
     name: ['name COLLATE NOCASE ASC'],
     // The unique id last keeps ties in the same order on every request, so pages don't repeat or skip plugins.
@@ -382,7 +394,8 @@ router.get('{/:pluginId}', async (req, res) => {
     const status = stringParam(query.status);
     const page = stringParam(query.page);
     const limit = stringParam(query.limit);
-    const orderBy = stringParam(query.orderBy);
+    // Installed apps request their Top rated list with this older explore parameter.
+    const orderBy = stringParam(query.orderBy) || (query.explore === 'random' ? 'rating' : undefined);
     const supported_editor = stringParam(query.supported_editor);
     const owned = stringParam(query.owned);
     const price = stringParam(query.price);
@@ -417,11 +430,11 @@ router.get('{/:pluginId}', async (req, res) => {
         columns.push(Plugin.STATUS_TEXT);
       }
 
-      if (!loggedInUser) {
-        where.push([Plugin.STATUS, Plugin.STATUS_APPROVED]);
-      } else if (loggedInUser.id === userId && !loggedInUser.isAdmin) {
+      if (loggedInUser?.isAdmin && isPluginStatusFilter(status)) {
+        where.push([Plugin.STATUS, status]);
+      } else if (loggedInUser && (loggedInUser.isAdmin || loggedInUser.id === userId)) {
         where.push([Plugin.STATUS, Plugin.STATUS_DELETED, '<>']);
-      } else if (!loggedInUser.isAdmin) {
+      } else {
         where.push([Plugin.STATUS, Plugin.STATUS_APPROVED]);
       }
 
@@ -452,10 +465,6 @@ router.get('{/:pluginId}', async (req, res) => {
         } else {
           where.push(...pluginSearchWhere(name));
         }
-      }
-
-      if (status && loggedInUser?.isAdmin) {
-        where.push([Plugin.STATUS, status]);
       }
 
       if (owned === 'true') {

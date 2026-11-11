@@ -50,4 +50,8 @@ function pluginSearchRank(query) {
   };
 }
 
-module.exports = { pluginSearchWhere, pluginSearchRank };
+function isPluginStatusFilter(value) {
+  return ['0', '1', '2', '3'].includes(value);
+}
+
+module.exports = { pluginSearchWhere, pluginSearchRank, isPluginStatusFilter };

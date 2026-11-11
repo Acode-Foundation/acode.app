@@ -60,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const main = app.get('main');
   if (initialDetail) main.append(initialDetail);
+  else main.content = pagePlaceholder(window.location.pathname);
 
   Router.add('/admin', (_params, queries) => loadModule('admin', { queries }));
   Router.add('/add-payment-method/:mode', (params) => loadModule('addPaymentMethod', params));
@@ -106,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.listen();
   Router.on('navigate', () => applyRouteMetadata(window.location.pathname));
 
-  Router.on('navigate', () => {
+  Router.on('navigate', (path) => {
     const navMenuToggler = tag.get('#nav-menu-toggler');
     const userMenuToggler = tag.get('#user-menu-toggler');
     if (navMenuToggler.checked) {
@@ -115,37 +116,69 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userMenuToggler.checked) {
       userMenuToggler.checked = false;
     }
-    main.content = '';
+    main.content = pagePlaceholder(path);
     app.scrollTop = 0;
   });
+
+  function pagePlaceholder(path) {
+    return path.startsWith('/plugin/') ? document.getElementById('plugin-skeleton')?.content?.firstElementChild?.cloneNode(true) || '' : '';
+  }
 
   async function loadModule(module, props = {}) {
     const detail = initialDetail;
     initialDetail = null;
     const path = window.location.pathname;
     showLoading();
-    const { default: Module } = await import(`./pages/${module}`);
-    hideLoading();
-
-    const page = await (<Module {...props} initialDetail={detail} />);
-    if (window.location.pathname === path && page !== detail) main.content = page;
+    try {
+      const { default: Module } = await import(`./pages/${module}`);
+      if (window.location.pathname !== path) return;
+      hideLoading();
+      const page = await (<Module {...props} initialDetail={detail} />);
+      if (window.location.pathname === path && page !== detail) main.content = page;
+    } catch (error) {
+      if (window.location.pathname !== path) return;
+      hideLoading();
+      if (!detail?.isConnected) {
+        main.content =
+          module === 'plugin' ? (
+            <div className='error'>
+              Unable to load plugin. <a href='/plugins'>All plugins</a>
+            </div>
+          ) : (
+            <div className='error'>Unable to load this page. Please reload to try again.</div>
+          );
+      }
+      console.error('Could not load the interactive page', error);
+    } finally {
+      detail?.querySelector('.plugin-preview-body')?.removeAttribute('hidden');
+    }
   }
 
   async function logout() {
-    const res = await fetch('/api/login', {
-      method: 'DELETE',
-    });
-
-    if (res.status === 200) {
-      sessionStorage.clear();
-      invalidateLoggedInUser();
-      updateAccountButton();
-      addProButton();
-      if (window.history.length > 1) {
-        window.history.go(-1);
-      } else {
-        window.location = '/';
+    const path = window.location.pathname;
+    showLoading();
+    try {
+      const res = await fetch('/api/login', { method: 'DELETE' });
+      if (!res.ok) throw new Error(`Logout failed (HTTP ${res.status})`);
+    } catch (error) {
+      if (window.location.pathname === path) {
+        hideLoading();
+        main.content = <div className='error'>Couldn’t log out. Reload to try again.</div>;
       }
+      console.error('Could not log out', error);
+      return;
+    }
+
+    sessionStorage.clear();
+    invalidateLoggedInUser();
+    updateAccountButton();
+    addProButton();
+    if (window.location.pathname !== path) return;
+    hideLoading();
+    if (window.history.length > 1) {
+      window.history.go(-1);
+    } else {
+      window.location = '/';
     }
   }
 });

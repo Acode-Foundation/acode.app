@@ -1,12 +1,10 @@
 import './style.scss';
 import AdSense from 'components/adsense';
-import AjaxForm from 'components/ajaxForm';
 import CurrencySelector from 'components/currencySelector';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import prompt from 'components/dialogs/prompt';
 import EditorType from 'components/editorType';
-import Input from 'components/input';
 import MonthSelect from 'components/MonthSelect';
 import Markdown from 'components/markdown';
 import PluginSecurity from 'components/pluginSecurity';
@@ -75,13 +73,17 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   const repositoryUrl = safeRepositoryUrl(repository);
 
   const user = await getLoggedInUser().catch(() => null);
-  const userComment = user ? await getUserComment(pluginId) : null;
   const pluginSectionRef = Ref();
   const ordersList = Ref();
   const commentListRef = Ref();
   const selectYear = Ref();
   const selectMonth = Ref();
-  const $comments = <CommentsContainerAndForm listRef={commentListRef} plugin={plugin} user={user} id={pluginId} userComment={userComment} />;
+  const $comments = (
+    <div className='comments'>
+      <div ref={commentListRef} className='list' />
+      <p className='review-help'>Review from the app.</p>
+    </div>
+  );
   const $description = (
     <article style={{ width: '100%', overflow: 'auto' }}>
       <AdSense name='readme' style={{ position: 'relative' }} />
@@ -457,6 +459,7 @@ function Comment({
   comment,
   name,
   github,
+  user_id: reviewerId,
   vote,
   author_reply: authorReply,
   updated_at: updatedAt,
@@ -509,7 +512,7 @@ function Comment({
     );
   }
 
-  if (user?.isAdmin) {
+  if (user && (user.id === reviewerId || (user.isAdmin && user.authType === 'web'))) {
     meta.append(<button type='button' onclick={() => deleteComment(id)} className='icon delete danger' title='Delete this comment' />);
   }
 
@@ -526,176 +529,6 @@ function Comment({
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- *
- * @param {object} param0
- * @param {string} [param0.id]
- * @param {object} [param0.userComment]
- * @param {Ref} param0.listRef
- * @param {object} param0.plugin
- * @param {object} param0.user
- * @returns
- */
-function CommentsContainerAndForm({ plugin, listRef, user, id, userComment }) {
-  if (!user) {
-    return (
-      <div className='comments'>
-        <span>
-          <a href={`/login?redirect=/plugin/${id}/comments`} data-google-vignette='false'>
-            Sign in
-          </a>{' '}
-          to write your review.
-        </span>
-        <div ref={listRef} className='list' />
-      </div>
-    );
-  }
-
-  const { comment, vote } = userComment;
-  const form = Ref();
-  let commentId = userComment.id;
-
-  return (
-    <div className='comments'>
-      <AjaxForm ref={form} onerror={onerror} onloadend={onloadend} action='/api/comment' method='POST'>
-        <div className='row' style={{ justifyContent: 'space-around' }}>
-          <IconInput checked={vote === 1} title='Vote up' name='vote' iconSelected='thumb_up primary' icon='thumb_up_alt primary' value='1' />
-          <IconInput checked={vote === -1} title='Vote down' name='vote' iconSelected='thumb_down danger' icon='thumb_down_alt danger' value='-1' />
-        </div>
-        <Input type='hidden' name='plugin_id' value={id} />
-        <Input maxlength={250} type='textarea' name='comment' placeholder='Comment' value={comment} />
-        <div className='buttons-container'>
-          <button type='submit'>Submit</button>
-          {commentId ? (
-            <button onclick={deleteUserComment} type='button' className='danger' title='Delete your review'>
-              <span className='icon delete' />
-            </button>
-          ) : (
-            ''
-          )}
-        </div>
-      </AjaxForm>
-
-      <div ref={listRef} className='list' />
-    </div>
-  );
-
-  async function onloadend(res) {
-    if (res.error) {
-      onerror(res.error);
-      return;
-    }
-
-    let $comment;
-
-    commentId = res.id;
-    if (commentId) {
-      userComment = await fetch(`/api/comment/${commentId}`).then((userRes) => userRes.json());
-      $comment = tag.get(`#comment_${commentId}`);
-    } else {
-      userComment = await getUserComment(id);
-    }
-
-    if (!userComment?.comment) {
-      alert('INFO', 'Comment updated successfully');
-      $comment?.remove();
-      return;
-    }
-
-    userComment.user = user;
-    userComment.pluginAuthor = plugin.author;
-    userComment.pluginUserId = plugin.user_id;
-    const $updatedComment = <Comment {...userComment} />;
-
-    if ($comment) {
-      listRef.el.replaceChild($updatedComment, $comment);
-      return;
-    }
-
-    const { firstChild } = listRef.el;
-    if (firstChild) {
-      listRef.el.insertBefore($updatedComment, firstChild);
-      return;
-    }
-
-    listRef.el.append($updatedComment);
-  }
-
-  async function deleteUserComment() {
-    try {
-      const deleted = await deleteComment(commentId);
-      if (!deleted) return;
-      commentId = null;
-      form.el.reset();
-      for (const input of form.getAll('input[name=vote]')) {
-        input.checked = false;
-        input.onchange();
-      }
-    } catch (error) {
-      alert('ERROR', error);
-    }
-  }
-
-  async function onerror(err) {
-    alert('ERROR', err);
-  }
-}
-
-/**
- * Renders an icon input element with customizable icon states and selection behavior.
- *
- * @param {Object} props - The properties for this component.
- * @param {string} props.name - The name attribute of the input, used for grouping.
- * @param {string} props.icon - The default icon class to display.
- * @param {string} props.iconSelected - The icon class to display when selected.
- * @param {string} props.value - The value attribute of the input.
- * @param {string} props.title - The title attribute used for the label and input.
- * @param {boolean} props.checked - Whether the input is initially checked.
- * @returns {HTMLElement} The rendered icon-based radio input component.
- */
-function IconInput({ name, icon, iconSelected, value, title, checked }) {
-  const input = Ref();
-  const iconHolder = Ref();
-  const className = checked ? `icon ${iconSelected}` : `icon ${icon}`;
-
-  const updateIcon = (val) => {
-    let iconNewClassName = `icon ${icon}`;
-    if (val) {
-      iconNewClassName = `icon ${iconSelected}`;
-    }
-
-    iconHolder.className = iconNewClassName;
-  };
-
-  const onclick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    for (const input of tag.getAll(`input[name=${name}]`)) {
-      if (input === input.el) return;
-      input.checked = false;
-      input.onchange();
-    }
-
-    const isChecked = !input.el.checked;
-    input.el.checked = isChecked;
-    updateIcon(isChecked);
-  };
-
-  input.onref = (el) => {
-    el.onchange = () => {
-      updateIcon(el.checked);
-    };
-  };
-
-  return (
-    <label onclick={onclick} title={title} className='icon-input'>
-      <input checked={checked} hidden ref={input} title={title} type='radio' name={name} value={value} />
-      <span ref={iconHolder} className={className} />
-    </label>
   );
 }
 
@@ -735,16 +568,6 @@ async function flagComment(id, flagRef) {
   if (res.flagged) {
     alert('INFO', 'Thank you for flagging this comment. We will review it shortly.');
   }
-}
-
-/**
- * Gets the current user's comment for a specific plugin.
- * @param {string} pluginId Plugin ID
- * @returns {Promise<Object>} The user's comment for the specified plugin.
- */
-async function getUserComment(pluginId) {
-  const res = await fetch(`/api/user/comment/${pluginId}`).then((commentRes) => commentRes.json());
-  return res;
 }
 
 async function deleteComment(commentId) {

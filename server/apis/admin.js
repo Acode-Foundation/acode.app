@@ -21,6 +21,7 @@ const { getAdminExchangeRateResponse } = require('../lib/adminExchangeRate');
 const { getPluginSalesInr } = require('../lib/adminDashboardMetrics');
 const { getSponsorWhereClause } = require('../lib/sponsorScope');
 const { setPluginFeatured } = require('../lib/featuredPlugins');
+const { isPluginStatusFilter } = require('../lib/pluginSearch');
 const { getVerificationCandidates } = require('../lib/verificationCandidates');
 
 const router = Router();
@@ -470,7 +471,8 @@ router.get('/plugins/search', async (req, res) => {
       res.json([]);
       return;
     }
-    const rows = await plugin.get([plugin.ID, plugin.NAME], [[plugin.ID, q, 'LIKE'], 'OR', [plugin.NAME, q, 'LIKE']], { limit: 10, page: 1 });
+    const where = [[plugin.STATUS, plugin.STATUS_DELETED, '<>'], [plugin.ID, q, 'LIKE'], 'OR', [plugin.NAME, q, 'LIKE']];
+    const rows = await plugin.get([plugin.ID, plugin.NAME], where, { limit: 10, page: 1 });
     res.json(rows.map((r) => ({ id: r.id, name: r.name })));
   } catch {
     res.status(500).json({ error: 'Failed to search plugins' });
@@ -487,8 +489,10 @@ router.get('/plugins', async (req, res) => {
   if (search) {
     where.push([plugin.NAME, search, 'LIKE']);
   }
-  if (status !== undefined && status !== null && status !== '') {
-    where.push([plugin.STATUS, parseInt(status, 10)]);
+  if (isPluginStatusFilter(status)) {
+    where.push([plugin.STATUS, status]);
+  } else {
+    where.push([plugin.STATUS, plugin.STATUS_DELETED, '<>']);
   }
 
   const total = await plugin.count(where);

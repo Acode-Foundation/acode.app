@@ -66,16 +66,40 @@
 </head>
 
 <body>
+  <template id="plugin-skeleton">
+    <div class="plugin-skeleton" role="status" aria-label="Loading plugin details">
+      <div class="skeleton-tabs" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="skeleton-lines" aria-hidden="true"><span></span><span></span><span></span></div>
+    </div>
+  </template>
   {{#unless detail}}<noscript>Please enable javascript to view this page.</noscript>{{/unless}}
   <div id="app">{{#with detail}}
     <article class="public-detail">
+      {{#if icon}}
+      <h1 class="plugin-preview-heading"><img src="{{icon}}" alt="" width="100" height="100" fetchpriority="high" />{{heading}}</h1>
+      <div class="plugin-preview-body">
+        <script>
+          // A deferred bundle has finished or failed by DOMContentLoaded.
+          (() => {
+            const excerpt = document.currentScript.parentElement;
+            const skeleton = document.getElementById('plugin-skeleton')?.content?.firstElementChild;
+            if (!skeleton) return;
+            excerpt.after(skeleton.cloneNode(true));
+            excerpt.hidden = true;
+            document.addEventListener('DOMContentLoaded', () => setTimeout(() => {
+              if (!excerpt.closest('main')) excerpt.hidden = false;
+            }, 0), { once: true });
+          })();
+        </script>
+      {{/if}}
       {{#if parentPath}}<a href="{{parentPath}}">{{parentLabel}}</a>{{/if}}
-      <h1>{{heading}}</h1>
+      {{#unless icon}}<h1>{{heading}}</h1>{{/unless}}
       {{#if author}}<p>By {{author}}</p>{{/if}}
       {{#if version}}<p>Version {{version}}</p>{{/if}}
       {{#if platform}}<p>{{platform}}</p>{{/if}}
       <p class="detail-text">{{text}}</p>
       {{#if links}}<ul>{{#each links}}<li><a href="{{href}}">{{label}}</a></li>{{/each}}</ul>{{/if}}
+      {{#if icon}}</div>{{/if}}
     </article>
   {{/with}}</div>
 </body>

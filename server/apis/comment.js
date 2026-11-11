@@ -68,6 +68,10 @@ router.post('/', async (req, res) => {
       res.status(401).send({ error: 'Unauthorized' });
       return;
     }
+    if (loggedInUser.authType !== 'app') {
+      res.status(403).send({ error: 'Write your review in the Acode app.' });
+      return;
+    }
 
     const { plugin_id: pluginId, comment = '', vote: voteStr = 0 } = req.body;
 

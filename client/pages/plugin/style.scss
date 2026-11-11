@@ -298,36 +298,14 @@
     }
   }
 
-  .icon-input {
-    height: 40px;
-    width: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2em;
-
-    &:active {
-      .icon {
-        animation: strech 0.3s ease-in-out;
-
-        @keyframes strech {
-          0% {
-            transform: scale(1);
-          }
-
-          50% {
-            transform: scale(1.5);
-          }
-
-          100% {
-            transform: scale(1);
-          }
-        }
-      }
-    }
-  }
-
   .comments {
+    .review-help {
+      margin: 12px 0 0;
+      color: var(--page-muted);
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+
     .list:empty::after {
       content: 'No reviews yet';
       display: block;
