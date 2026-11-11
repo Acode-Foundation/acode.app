@@ -3,6 +3,7 @@ import http from 'node:http';
 import express from 'express';
 import { redirectPromotionHost } from '../../server/lib/promotionHost';
 import createPromotionRedirect from '../../server/lib/promotionRedirect';
+import { promotionRedirectLimiter } from '../../server/lib/rateLimits';
 
 it('serves promotion destinations first and sends other tracking-host visits to the matching site', async () => {
   const app = express();
@@ -10,6 +11,7 @@ it('serves promotion destinations first and sends other tracking-host visits to 
   const count = vi.fn();
   app.get(
     '/p/:id',
+    promotionRedirectLimiter,
     createPromotionRedirect(() => ({ prepare: () => ({ get }) }), count),
   );
   app.use(redirectPromotionHost);
