@@ -23,6 +23,7 @@ const FDROID_URL = 'https://f-droid.org/en/packages/com.foxdebug.acode/';
 const GITHUB_URL = 'https://github.com/acode-foundation/acode';
 // Leave empty until the iOS app is live; App Store entries then show as "Coming soon".
 const APP_STORE_URL = '';
+const TESTFLIGHT_URL = 'https://testflight.apple.com/join/qttCCWSb';
 const CONTRIBUTORS_URL = 'https://api.github.com/repos/acode-foundation/acode/contributors?per_page=30';
 
 const STORES = {
@@ -225,12 +226,21 @@ function HeroDownload({ platform }) {
   return (
     <div className='home-actions'>
       <StoreButton store={ios ? STORES.appStore : STORES.play} />
+      {ios ? <BetaLink /> : null}
       <a className='home-more' href='#download' data-scroll-download>
         {/* Non-breaking hyphen keeps "F-Droid" whole when the line wraps on narrow phones. */}
         Also on {ios ? 'Google Play, F\u2011Droid' : 'F\u2011Droid, GitHub'}, and more
         <ChevronIcon path='m6 9 6 6 6-6' />
       </a>
     </div>
+  );
+}
+
+function BetaLink({ label = 'Try the beta via TestFlight' }) {
+  return (
+    <a className='home-beta-link' href={TESTFLIGHT_URL} target='_blank' rel='noopener'>
+      {label}
+    </a>
   );
 }
 
@@ -265,7 +275,14 @@ function DownloadOption({ store, recommended }) {
       </strong>
       <span>{store.detail}</span>
     </span>,
-    store.href ? <ChevronIcon path='M7 17 17 7M8 7h9v9' /> : <span className='home-soon'>Soon</span>,
+    store.href ? (
+      <ChevronIcon path='M7 17 17 7M8 7h9v9' />
+    ) : (
+      <span className='home-download__availability'>
+        <span className='home-soon'>Soon</span>
+        {store === STORES.appStore ? <BetaLink label='Try Beta' /> : null}
+      </span>
+    ),
   ];
   if (!store.href) return <div className={className}>{body}</div>;
   return (
