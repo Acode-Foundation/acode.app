@@ -338,11 +338,14 @@ router.get('/check-update/:id/:version', async (req, res) => {
 
 router.get('/count{/:type}', async (req, res) => {
   try {
+    applyCatalogCachePolicy(res);
+    const iosCatalog = isIOSPluginCatalog(req);
     const { type } = req.params;
     const where = [[Plugin.STATUS, Plugin.STATUS_APPROVED]];
-    if (type === 'free') {
-      where.push([Plugin.PRICE, 0], 'OR', [Plugin.PRICE, null, 'IS']);
-    } else if (type === 'paid') {
+    if (iosCatalog || type === 'free') {
+      where.push(['IFNULL(price, 0)', 0]);
+    }
+    if (type === 'paid') {
       where.push([Plugin.PRICE, 0, '>']);
     }
 
@@ -368,9 +371,11 @@ router.get('/description/:id', async (req, res) => {
   }
 });
 
-router.get('/home/list', async (_req, res) => {
+router.get('/home/list', async (req, res) => {
   try {
-    const where = [Plugin.STATUS, Plugin.STATUS_APPROVED];
+    applyCatalogCachePolicy(res);
+    const where = [[Plugin.STATUS, Plugin.STATUS_APPROVED]];
+    if (isIOSPluginCatalog(req)) where.push(['IFNULL(price, 0)', 0]);
     const [count, plugins] = await Promise.all([
       Plugin.count(where),
       Plugin.get([Plugin.ID, Plugin.NAME, Plugin.AUTHOR, Plugin.DOWNLOADS], where, {
@@ -386,6 +391,8 @@ router.get('/home/list', async (_req, res) => {
 
 router.get('{/:pluginId}', async (req, res) => {
   try {
+    applyCatalogCachePolicy(res, true);
+    const iosCatalog = isIOSPluginCatalog(req);
     const { pluginId } = req.params;
     // Repeated params (`?name=a&name=b`) arrive as arrays; treat anything but a single string as absent.
     const { query } = req;
@@ -486,9 +493,10 @@ router.get('{/:pluginId}', async (req, res) => {
         where.push([Plugin.ID, ownedOrders.map((o) => String(o.plugin_id)), 'IN']);
       }
 
-      if (price === 'free') {
+      if ((iosCatalog && owned !== 'true') || price === 'free') {
         where.push(['IFNULL(price, 0)', 0]);
-      } else if (price === 'paid') {
+      }
+      if (price === 'paid') {
         where.push(['IFNULL(price, 0)', 0, '>']);
       }
 
@@ -551,12 +559,11 @@ router.get('{/:pluginId}', async (req, res) => {
 
     if (pluginId) {
       const row = rows[0];
-      if (!row) {
+      const isOwner = loggedInUser && loggedInUser.id === row?.user_id;
+      if (!row || (iosCatalog && row.price && !row.owned && !isOwner)) {
         res.status(404).send({ error: 'Not found' });
         return;
       }
-
-      const isOwner = loggedInUser && loggedInUser.id === row.user_id;
 
       if (row.status === Plugin.STATUS_DELETED && !loggedInUser?.isAdmin) {
         res.status(404).send({ error: 'Not found' });
@@ -2192,6 +2199,34 @@ async function verifyPurchase(order, plugin) {
     console.error(`Purchase verification failed (provider=${order.provider}):`, err.message);
     return true;
   }
+}
+
+function applyCatalogCachePolicy(res, personalized = false) {
+  // Public counts/cards can revalidate privately; account-specific bodies must not be stored.
+  res.set('Cache-Control', personalized ? 'private, no-store' : 'private, max-age=0, must-revalidate');
+  res.vary('Origin');
+  res.vary('Referer');
+  res.vary('User-Agent');
+}
+
+/** Recognizes the app's acode://localhost and https://localhost origins, including iPad desktop UAs. */
+function isIOSPluginCatalog(req) {
+  const userAgent = req.headers['user-agent'] || '';
+  for (const value of [req.headers.origin, req.headers.referer]) {
+    if (!value || value === 'null') continue;
+    let source;
+    try {
+      source = new URL(value);
+    } catch {
+      continue;
+    }
+    // Keep the supported app origins narrow; CSRF exemptions use different rules.
+    if (source.username || source.password) return false;
+    if (source.protocol === 'acode:' && source.host.toLowerCase() === 'localhost') return true;
+    if (source.origin !== 'https://localhost') return false;
+    return /iPhone|iPad|iPod|Macintosh/i.test(userAgent);
+  }
+  return false;
 }
 
 /**

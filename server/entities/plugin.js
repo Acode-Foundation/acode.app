@@ -129,7 +129,10 @@ class Plugin extends Entity {
       LEFT JOIN (
         SELECT c.plugin_id, COUNT(c.id) as comment_count 
         FROM comment as c 
-        WHERE c.comment IS NOT NULL AND c.comment IS NOT ''
+        -- Match JavaScript String.trim(), including tabs, newlines and Unicode whitespace.
+        WHERE TRIM(c.comment, char(9, 10, 11, 12, 13, 32, 160, 5760,
+          8192, 8193, 8194, 8195, 8196, 8197, 8198, 8199, 8200, 8201, 8202,
+          8232, 8233, 8239, 8287, 12288, 65279)) <> ''
         GROUP BY c.plugin_id
       ) as c ON p.id = c.plugin_id
     ) AS listing`;

@@ -76,16 +76,18 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
   const pluginSectionRef = Ref();
   const ordersList = Ref();
   const commentListRef = Ref();
+  const ratingRef = Ref();
   const selectYear = Ref();
   const selectMonth = Ref();
   const $comments = (
-    <div className='comments'>
+    <div className='comments' on:reviewdeleted={updateReviewSummary}>
+      <p className='review-status' role='status' aria-live='polite' aria-atomic='true' />
       <div ref={commentListRef} className='list' />
-      <p className='review-help'>Review from the app.</p>
+      <p className='review-help'>Write a review in the Acode app.</p>
     </div>
   );
   const $description = (
-    <article style={{ width: '100%', overflow: 'auto' }}>
+    <article className='plugin-description' style={{ width: '100%', overflow: 'auto' }}>
       <AdSense name='readme' style={{ position: 'relative' }} />
       <Markdown content={description} />
     </article>
@@ -123,8 +125,6 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
       // Ignore
     }
   }
-
-  renderComments(commentListRef, userId, user, pluginId, author);
 
   if (shouldShowOrders) {
     renderOrders(ordersList, pluginId);
@@ -314,7 +314,7 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
                 }}
               >
                 <img src='/thumbs-up.gif' alt='thumbs up' />
-                <span>{calcRating(votesUp, votesDown)}</span>
+                <span ref={ratingRef}>{calcRating(votesUp, votesDown)}</span>
               </div>
             )}
           </div>
@@ -359,7 +359,14 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
                   <span style={{ opacity: 0.8, fontSize: 'italic' }}>No changelogs</span>
                 ),
             },
-            { id: 'comments', label: `${commentCount} Reviews`, content: $comments },
+            {
+              id: 'comments',
+              label: reviewTabLabel(commentCount),
+              content: () => {
+                renderComments(commentListRef, userId, user, pluginId, author);
+                return $comments;
+              },
+            },
             { id: 'orders', label: 'Orders', visible: shouldShowOrders, content: $orders },
             {
               id: 'security',
@@ -372,6 +379,19 @@ export default async function Plugin({ id: pluginId, section = 'description', ca
       </div>
     </section>
   );
+
+  function updateReviewSummary({ detail: { vote } }) {
+    plugin.comment_count = Math.max(0, plugin.comment_count - 1);
+    if (vote === 1) plugin.votes_up = Math.max(0, plugin.votes_up - 1);
+    if (vote === -1) plugin.votes_down = Math.max(0, plugin.votes_down - 1);
+    const tab = pluginSectionRef.el.querySelector('[data-tab="comments"]');
+    if (tab) tab.textContent = reviewTabLabel(plugin.comment_count);
+    if (ratingRef.el) {
+      ratingRef.textContent = calcRating(plugin.votes_up, plugin.votes_down);
+      if (!plugin.votes_up && !plugin.votes_down) ratingRef.el.parentElement.remove();
+    }
+    applyPluginMetadata(plugin);
+  }
 
   function Order() {
     return (
@@ -442,16 +462,53 @@ async function renderOrders(ref, pluginId, year, month) {
   }
 }
 
-async function renderComments(ref, pluginUserId, user, id, author) {
-  const comments = await fetch(`/api/comments/${id}`).then((res) => res.json());
+function reviewTabLabel(count) {
+  return `${count} ${count === 1 ? 'Review' : 'Reviews'}`;
+}
 
-  for (const comment of comments) {
-    if (!comment.comment) continue;
-    comment.user = user;
-    comment.pluginUserId = pluginUserId;
-    comment.pluginAuthor = author;
-    ref.append(<Comment {...comment} />);
+/** @param {HTMLElement | Ref} ref A list element or a Ref already bound to one. */
+async function renderComments(ref, pluginUserId, user, id, author) {
+  const list = ref.el || ref;
+  const restoreFocus = list.contains(document.activeElement);
+  setReviewStatus(list, 'Loading reviews…');
+  ref.innerHTML = '';
+  ref.append(<p className='reviews-state'>Loading reviews…</p>);
+  try {
+    const response = await fetch(`/api/comments/${id}`);
+    if (!response.ok) throw new Error('Unable to load reviews');
+    const comments = await response.json();
+    const reviews = comments.filter((comment) => comment?.comment?.trim());
+    const cards = reviews.map((comment) => <Comment {...comment} user={user} pluginUserId={pluginUserId} pluginAuthor={author} />);
+    ref.innerHTML = '';
+    ref.append(...(cards.length ? cards : [<EmptyReviews />]));
+    setReviewStatus(list, cards.length ? `${cards.length} ${cards.length === 1 ? 'review' : 'reviews'} loaded.` : 'No reviews yet.');
+    if (restoreFocus && list.isConnected && document.activeElement === document.body) list.firstElementChild?.focus();
+  } catch {
+    ref.innerHTML = '';
+    ref.append(
+      <div className='reviews-state'>
+        <p>Reviews couldn’t be loaded.</p>
+        <button type='button' onclick={() => renderComments(ref, pluginUserId, user, id, author)}>
+          Try again
+        </button>
+      </div>,
+    );
+    setReviewStatus(list, 'Reviews couldn’t be loaded. Try again.');
+    if (restoreFocus && list.isConnected && document.activeElement === document.body) list.querySelector('button')?.focus();
   }
+}
+
+function setReviewStatus(list, message) {
+  const status = list.closest('.comments')?.querySelector('.review-status');
+  if (status) status.textContent = message;
+}
+
+function EmptyReviews() {
+  return (
+    <p className='reviews-state' tabIndex={-1}>
+      No reviews yet. Be the first to share your experience in the app.
+    </p>
+  );
 }
 
 function Comment({
@@ -468,23 +525,15 @@ function Comment({
   pluginAuthor,
   user,
 }) {
-  const dp = Ref();
   const meta = Ref();
   const flagRef = Ref();
   const reply = Ref();
-  const createTime = moment(updatedAt);
+  // SQLite timestamps are UTC but do not include a timezone suffix.
+  const createTime = moment.utc(updatedAt || null, ['YYYY-MM-DD HH:mm:ss', moment.ISO_8601], true).local();
   const args = [id, pluginAuthor, pluginUserId, user];
   const userIsPluginAuthor = user && pluginUserId === user?.id;
-
-  const createDuration = since(createTime);
-
-  if (vote === 1) {
-    dp.append(<div className='icon thumb_up primary' />);
-  } else if (vote === -1) {
-    dp.append(<div className='icon thumb_down danger' />);
-  }
-
-  meta.append(<time datetime={createTime}>{createDuration}</time>);
+  const reviewerName = name?.trim() || 'Acode user';
+  const createDuration = createTime.fromNow();
 
   if (userIsPluginAuthor) {
     let icon = 'outlined_flag';
@@ -493,8 +542,21 @@ function Comment({
     }
 
     meta.append(
-      <button type='button' ref={flagRef} onclick={() => flagComment(id, flagRef)} className={`icon ${icon} danger`} title='Flag this comment' />,
-      <button type='button' onclick={() => replyToComment(...args)} className='icon chat_bubble primary' title='Reply to this comment' />,
+      <button
+        type='button'
+        ref={flagRef}
+        onclick={() => flagComment(id, flagRef)}
+        className={`icon ${icon} danger`}
+        title={flaggedByAuthor ? 'Unflag this comment' : 'Flag this comment'}
+        aria-label={flaggedByAuthor ? 'Unflag this comment' : 'Flag this comment'}
+      />,
+      <button
+        type='button'
+        onclick={() => replyToComment(...args)}
+        className='icon chat_bubble primary'
+        title='Reply to this comment'
+        aria-label='Reply to this comment'
+      />,
     );
   } else if (user?.isAdmin && flaggedByAuthor) {
     meta.append(<span className='icon flag danger' title='Flag this comment' />);
@@ -503,32 +565,59 @@ function Comment({
   if (authorReply) {
     reply.append(
       <div className='plugin-author'>
-        {pluginAuthor}
+        <strong>{pluginAuthor}</strong>
+        <span className='developer-label'>Developer</span>
         {userIsPluginAuthor && (
-          <button type='button' title='Delete this reply.' onclick={() => deleteReply(...args)} className='icon delete danger' />
+          <button
+            type='button'
+            title='Delete this reply.'
+            aria-label='Delete this reply'
+            onclick={() => deleteReply(...args)}
+            className='icon delete danger'
+          />
         )}
       </div>,
-      <span className='comment-author-reply-text'>{authorReply}</span>,
+      <p className='comment-author-reply-text'>{authorReply}</p>,
     );
   }
 
   if (user && (user.id === reviewerId || (user.isAdmin && user.authType === 'web'))) {
-    meta.append(<button type='button' onclick={() => deleteComment(id)} className='icon delete danger' title='Delete this comment' />);
+    meta.append(
+      <button
+        type='button'
+        onclick={() => deleteComment(id, vote)}
+        className='icon delete danger'
+        title='Delete this comment'
+        aria-label='Delete this comment'
+      />,
+    );
   }
 
   return (
-    <div id={`comment_${id}`} className='comment'>
-      <div className='row'>
-        <div ref={dp} className='dp' title={name}>
-          <img src={gravatar(github)} alt={name} />
-        </div>
-        <div className='comment-body'>
-          <div className='comment-text'>{comment}</div>
-          <div ref={reply} className='comment-author-reply' />
-          <div ref={meta} className='comment-meta' />
-        </div>
+    <article id={`comment_${id}`} className='comment' aria-label={`Review by ${reviewerName}`} tabIndex={-1}>
+      <img className='reviewer-avatar' src={gravatar(github)} alt='' loading='lazy' width='32' height='32' />
+      <div className='comment-header'>
+        <span className='reviewer-name'>{reviewerName}</span>
+        {(vote === 1 || vote === -1) && (
+          <span
+            className='review-vote'
+            role='img'
+            aria-label={vote === 1 ? 'Recommended' : 'Not recommended'}
+            title={vote === 1 ? 'Recommended' : 'Not recommended'}
+          >
+            <span className={`icon ${vote === 1 ? 'thumb_up' : 'thumb_down'}`} aria-hidden='true' />
+          </span>
+        )}
+        {createTime.isValid() && (
+          <time dateTime={createTime.toISOString()} title={createTime.format('D MMMM YYYY, HH:mm')}>
+            {createDuration}
+          </time>
+        )}
       </div>
-    </div>
+      <p className='comment-text'>{comment}</p>
+      <div ref={reply} className='comment-author-reply' />
+      <div ref={meta} className='comment-meta' />
+    </article>
   );
 }
 
@@ -539,14 +628,14 @@ function Comment({
  * @param {HTMLElement} flagRef - A reference to the HTML element that needs its class and title updated.
  */
 function toggleFlag(flagged, flagRef) {
+  flagRef.title = flagged ? 'Unflag this comment' : 'Flag this comment';
+  flagRef.setAttribute('aria-label', flagRef.title);
   if (flagged) {
     flagRef.className = 'icon flag danger';
-    flagRef.title = 'Flagged';
     return;
   }
 
   flagRef.className = 'icon outlined_flag danger';
-  flagRef.title = 'Flag';
 }
 
 /**
@@ -555,38 +644,45 @@ function toggleFlag(flagged, flagRef) {
  * @param {Ref} flagRef
  */
 async function flagComment(id, flagRef) {
-  const res = await fetch(`/api/comment/toggle-flag/${id}`, {
-    method: 'PATCH',
-  }).then((flagRes) => flagRes.json());
-
-  if (res.error) {
-    alert('ERROR', res.error);
-    return;
-  }
-
-  toggleFlag(res.flagged, flagRef);
-  if (res.flagged) {
-    alert('INFO', 'Thank you for flagging this comment. We will review it shortly.');
+  try {
+    const res = await requestComment(`/api/comment/toggle-flag/${id}`, { method: 'PATCH' });
+    toggleFlag(res.flagged, flagRef);
+    if (res.flagged) {
+      alert('INFO', 'Thank you for flagging this comment. We will review it shortly.');
+    }
+  } catch (error) {
+    alert('ERROR', error.message || error);
   }
 }
 
-async function deleteComment(commentId) {
+async function deleteComment(commentId, vote) {
   try {
     const confirmation = await confirm('CONFIRM', 'Are you sure you want to delete your review?');
     if (!confirmation) return false;
-    const res = await fetch(`/api/comment/${commentId}`, {
+    const res = await requestComment(`/api/comment/${commentId}`, {
       method: 'DELETE',
-    }).then((commentRes) => commentRes.json());
+    });
 
-    if (res.error) {
-      throw res.error;
+    const comment = tag.get(`#comment_${commentId}`);
+    const list = comment?.parentElement;
+    const nextReview = comment?.nextElementSibling || comment?.previousElementSibling;
+    comment?.dispatchEvent(new CustomEvent('reviewdeleted', { bubbles: true, detail: { vote } }));
+    comment?.remove();
+    if (list) {
+      const count = list.querySelectorAll('.comment').length;
+      if (!count) list.replaceChildren(<EmptyReviews />);
+      setReviewStatus(list, count ? `Review deleted. ${count} ${count === 1 ? 'review remains' : 'reviews remain'}.` : 'No reviews yet.');
     }
-
-    alert('SUCCESS', res.message);
-    tag.get(`#comment_${commentId}`)?.remove();
+    alert('SUCCESS', res.message, () => {
+      queueMicrotask(() => {
+        if (list?.isConnected && !document.querySelector('.dialog-box-container:not(.hide)')) {
+          (nextReview?.isConnected ? nextReview : list.firstElementChild)?.focus();
+        }
+      });
+    });
     return true;
   } catch (error) {
-    alert('ERROR', error);
+    alert('ERROR', error.message || error);
     return false;
   }
 }
@@ -598,39 +694,46 @@ async function replyToComment(commentId, pluginAuthor, pluginUserId, user) {
 
     await setCommentReply(reply, commentId, pluginAuthor, pluginUserId, user);
   } catch (error) {
-    alert('ERROR', error);
+    alert('ERROR', error.message || error);
   }
+}
+
+async function requestComment(url, options) {
+  const response = await fetch(url, options);
+  const result = await response.json();
+  if (!response.ok || result.error) throw new Error(result.error || 'Unable to update review');
+  return result;
 }
 
 async function setCommentReply(reply, commentId, pluginAuthor, pluginUserId, user) {
   const formData = new FormData();
   formData.append('reply', reply);
-  const res = await fetch(`/api/comment/${commentId}/reply`, {
+  const res = await requestComment(`/api/comment/${commentId}/reply`, {
     method: 'POST',
     body: formData,
-  }).then((replyRes) => replyRes.json());
-
-  if (res.error) {
-    throw res.error;
-  }
-
-  alert('SUCCESS', res.message);
+  });
 
   const $comment = tag.get(`#comment_${commentId}`);
-  const comment = await fetch(`/api/comment/${commentId}`).then((commentRes) => commentRes.json());
-  comment.user = user;
-  comment.pluginAuthor = pluginAuthor;
-  comment.pluginUserId = pluginUserId;
-  const $updatedComment = <Comment {...comment} />;
-  $comment.parentElement.replaceChild($updatedComment, $comment);
+  if ($comment) {
+    let comment;
+    try {
+      comment = await requestComment(`/api/comment/${commentId}`);
+    } catch {
+      alert('INFO', 'Your changes were saved, but the review couldn’t be refreshed. Reload the page to see it.');
+      return;
+    }
+    const $updatedComment = <Comment {...comment} user={user} pluginAuthor={pluginAuthor} pluginUserId={pluginUserId} />;
+    $comment.replaceWith($updatedComment);
+  }
+  alert('SUCCESS', res.message);
 }
 
-async function deleteReply(commentId, pluginAuthor, user) {
+async function deleteReply(commentId, pluginAuthor, pluginUserId, user) {
   try {
     const confirmation = await confirm('CONFIRM', 'Are you sure you want to delete your reply?');
     if (!confirmation) return;
-    await setCommentReply('', commentId, pluginAuthor, user);
+    await setCommentReply('', commentId, pluginAuthor, pluginUserId, user);
   } catch (error) {
-    alert('ERROR', error);
+    alert('ERROR', error.message || error);
   }
 }
