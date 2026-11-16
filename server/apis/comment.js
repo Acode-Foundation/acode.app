@@ -73,12 +73,18 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    const { plugin_id: pluginId, comment = '', vote: voteStr = 0 } = req.body;
+    const { plugin_id: pluginId, comment: rawComment = '', vote: voteStr = 0 } = req.body;
 
     if (!pluginId) {
       res.status(400).send({ error: 'Plugin ID is required' });
       return;
     }
+
+    if (typeof rawComment !== 'string') {
+      res.status(400).send({ error: 'Comment must be text' });
+      return;
+    }
+    const comment = rawComment.trim();
 
     const [plugin] = await Plugin.get([Plugin.AUTHOR, Plugin.AUTHOR_EMAIL, Plugin.NAME], [Plugin.ID, pluginId]);
 

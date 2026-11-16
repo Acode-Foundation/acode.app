@@ -95,3 +95,66 @@ it('returns all review fields from the single-comment route through the real ent
   expect(sql).toMatch(/WHERE\s+\(id = \?/);
   expect(all.mock.calls[0][0]).toBe('42');
 });
+
+it.each([
+  [' \t\r\n\u00a0\u2003\ufeff ', -1, false, 400, 'Comment is required for downvote'],
+  [' \t\r\n\u00a0\u2003\ufeff ', 0, true, 400, 'Comment is required'],
+  [' \t\r\n\u00a0\u2003\ufeff ', 1, false, 200, ''],
+  [' \t\r\n\u00a0\u2003\ufeff ', 1, true, 200, ''],
+  [' \n Useful\nreview \u00a0', -1, false, 200, 'Useful\nreview'],
+  [' \n Updated review \u00a0', 0, true, 200, 'Updated review'],
+  [null, 1, false, 400, 'Comment must be text'],
+  [['Review'], 1, false, 400, 'Comment must be text'],
+])('normalizes review text %j with vote %s (existing=%s)', async (text, vote, existing, status, expected) => {
+  const comment = {
+    ID: 'id',
+    PLUGIN_ID: 'plugin_id',
+    USER_ID: 'user_id',
+    COMMENT: 'comment',
+    VOTE: 'vote',
+    VOTE_DOWN: -1,
+    VOTE_NULL: 0,
+    get: vi
+      .fn()
+      .mockResolvedValueOnce(existing ? [{ id: 3, comment: 'Old review', vote }] : [])
+      .mockResolvedValue([{ id: 3 }]),
+    isValidVote: (value) => [-1, 0, 1].includes(value),
+    getVoteString: () => 'up',
+    insert: vi.fn(),
+    update: vi.fn(),
+  };
+  const sendEmail = vi.fn();
+  const dependencies = {
+    express: { Router },
+    '../lib/helpers': { getLoggedInUser: async () => ({ id: 7, authType: 'app' }) },
+    '../lib/pluginReview': {},
+    '../entities/plugin': { get: async () => [{ name: 'Example' }] },
+    '../entities/comment': comment,
+    '../entities/user': {},
+    '../lib/sendEmail': sendEmail,
+  };
+  const module = { exports: {} };
+  vm.runInNewContext(source, { module, require: (name) => dependencies[name] });
+  const res = {
+    statusCode: 200,
+    send: vi.fn(),
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+  };
+  await module.exports.stack
+    .find((layer) => layer.route?.path === '/' && layer.route.methods.post)
+    .route.stack[0].handle({ body: { plugin_id: 'example', comment: text, vote } }, res);
+  expect(res.statusCode).toBe(status);
+  if (status === 400) {
+    expect(res.send).toHaveBeenCalledWith({ error: expected });
+    expect(comment.insert).not.toHaveBeenCalled();
+    expect(comment.update).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+  } else {
+    expect(res.send).toHaveBeenCalledWith(expect.objectContaining({ comment: expected, vote }));
+    if (existing) expect(comment.update).toHaveBeenCalledWith([['comment', expected]], ['id', 3]);
+    else expect(comment.insert).toHaveBeenCalledWith(['plugin_id', 'example'], ['user_id', 7], ['comment', expected], ['vote', vote]);
+  }
+});

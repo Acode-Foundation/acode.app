@@ -1,6 +1,49 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
 const Database = require('better-sqlite3');
 const { canDeleteReview } = require('../../server/lib/pluginReview');
 const voteCounterMigration = require('../../server/migrations/014_add_plugin_review_vote_triggers');
+
+it('counts legacy written reviews using the same whitespace rule as the client', async () => {
+  const db = new Database(':memory:');
+  const loadEntity = (name, dependencies) => {
+    const module = { exports: {} };
+    vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, `../../server/entities/${name}.js`), 'utf8'), {
+      module,
+      console,
+      process: { env: { HOST: 'https://example.test' } },
+      require(name) {
+        if (!(name in dependencies)) throw new Error(`Unmocked dependency: ${name}`);
+        return dependencies[name];
+      },
+    });
+    return module.exports;
+  };
+  try {
+    db.exec(`CREATE TABLE user (id INTEGER PRIMARY KEY, name TEXT, email TEXT, github TEXT, website TEXT, verified INTEGER);
+      CREATE TABLE comment (id INTEGER PRIMARY KEY, plugin_id TEXT, comment TEXT);`);
+    const Entity = loadEntity('entity', { '../lib/db': db });
+    const plugin = loadEntity('plugin', { './entity': Entity });
+    db.prepare('INSERT INTO plugin (id) VALUES (?)').run('example');
+    const insert = db.prepare('INSERT INTO comment (plugin_id, comment) VALUES (?, ?)');
+    // All ECMAScript whitespace, plus a mixed legacy value. No live database is opened.
+    const whitespace = [
+      ...'\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff',
+    ];
+    const comments = [null, '', ...whitespace, whitespace.join('')];
+    for (const comment of comments) insert.run('example', comment);
+    const count = async () => (await plugin.get([plugin.COMMENT_COUNT], [plugin.ID, 'example']))[0].comment_count;
+    expect(await count()).toBe(0);
+    // Zero-width space and NEL are not stripped by String.trim(); do not over-filter them.
+    const written = ['Useful', ' \tWorks\nwell\u00a0 ', '\u200b', '\u0085'];
+    for (const comment of written) insert.run('example', comment);
+    expect(await count()).toBe([...comments, ...written].filter((comment) => comment?.trim()).length);
+    expect(await count()).toBe(written.length);
+  } finally {
+    db.close();
+  }
+});
 
 function createReviewDatabase({ votesUp = 0, votesDown = 0, existingVote } = {}) {
   const db = new Database(':memory:');
