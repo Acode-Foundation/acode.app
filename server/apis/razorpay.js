@@ -823,7 +823,7 @@ router.post('/webhook', async (req, res) => {
           }
           if (payments.items?.some((attempt) => ['created', 'authorized', 'captured', 'refunded'].includes(attempt.status))) break;
         } catch (error) {
-          console.error(`Failed to verify Razorpay order ${orderId}:`, error.message);
+          console.error('Failed to verify Razorpay order %s: %s', orderId, error.message);
           // Invalid/missing provider orders need investigation, not endless webhook retries.
           const status = Number(error.statusCode ?? error.response?.status);
           if (status === 400 || status === 404) break;
