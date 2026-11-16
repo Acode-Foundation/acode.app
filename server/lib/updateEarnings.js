@@ -53,19 +53,30 @@ async function updateEarnings(year, month) {
     const report = await downloadReport(year, month + 1);
     const reportOfPreviousMonth = await downloadReport(previousYear, previousMonth + 1);
 
-    // push previous month report to current month report using for loop
+    // Include adjacent report entries for the same order. Invalid entries from either
+    // month intentionally hold its developer rather than risk a partial settlement.
     const len = reportOfPreviousMonth.length;
     for (let i = 0; i < len; i++) {
       report.push(reportOfPreviousMonth[i]);
     }
 
     const users = await Plugin.getUsersWithPlugin();
+    const indexedReport = calcEarnings.indexReport(report);
+    const heldUsers = [];
     // filter user with not paypal email or not bank account and send email to them
     // send email to user with no paypal email or no bank account
 
     for (const user of users) {
       const { payment_method_id, email, name } = user;
-      const earnings = await calcEarnings.total(year, month, user, report);
+      let earnings;
+      try {
+        earnings = await calcEarnings.total(year, month, user, indexedReport);
+      } catch (error) {
+        if (error.code !== 'INVALID_GOOGLE_REPORT') throw error;
+        console.error(error.message);
+        heldUsers.push(user.id);
+        continue;
+      }
       const threshold = parseInt(await AppConfig.getValue('payment_threshold'), 10) || PAYMENT_THRESHOLD;
 
       const [row] = await UserEarnings.get([
@@ -126,10 +137,15 @@ async function updateEarnings(year, month) {
 
       await UserEarnings.update([UserEarnings.PAYMENT_ID, paymentId], [UserEarnings.ID, unpaidEarningsId]);
     }
+    if (heldUsers.length) {
+      throw new Error(
+        `Earnings completed with holds for users: ${heldUsers.join(', ')}. Other users completed; review held users and payment links before a targeted retry. Invalid Google report amounts.`,
+      );
+    }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.log(error);
-    process.exit(1);
+    // Let the cron wrapper send its existing failure alert without terminating the server.
+    console.error(error);
+    throw error;
   }
 }
 

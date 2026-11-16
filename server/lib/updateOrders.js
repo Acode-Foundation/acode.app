@@ -1,5 +1,6 @@
 const PurchaseOrder = require('../entities/purchaseOrder');
 const Plugin = require('../entities/plugin');
+const moment = require('moment');
 
 const args = process.argv.slice(2);
 const startDateArg = args[0];
@@ -26,14 +27,16 @@ if (startDateArg && endDateArg) {
  */
 async function updateOrder(startDate, endDate, google) {
   const androidpublisher = google.androidpublisher('v3');
-  const orders = await PurchaseOrder.for('internal').get([PurchaseOrder.CREATED_AT, [startDate, endDate], 'BETWEEN']);
+  const endExclusive = moment(endDate).add(1, 'day').format('YYYY-MM-DD');
+  const orders = await PurchaseOrder.for('internal').get([
+    [`COALESCE(${PurchaseOrder.PROVIDER}, '${PurchaseOrder.PROVIDER_GOOGLE_PLAY}')`, PurchaseOrder.PROVIDER_GOOGLE_PLAY],
+    [PurchaseOrder.CREATED_AT, startDate, '>='],
+    [PurchaseOrder.CREATED_AT, endExclusive, '<'],
+  ]);
 
   for (const order of orders) {
     try {
-      const { package: packageName, plugin_id: pluginId, order_id: orderId, id: rowId, token, state, provider } = order;
-
-      // Skip Razorpay orders — they don't need Google Play verification
-      if (provider === 'razorpay') continue;
+      const { package: packageName, plugin_id: pluginId, order_id: orderId, id: rowId, token, state } = order;
 
       const [plugin] = await Plugin.get([Plugin.SKU], [Plugin.ID, pluginId]);
       if (!plugin) {
@@ -50,7 +53,7 @@ async function updateOrder(startDate, endDate, google) {
       const { purchaseState, orderId: purchaseOrderId } = purchase.data;
       const updates = [];
 
-      if (!orderId) {
+      if (!orderId && purchaseOrderId) {
         updates.push([PurchaseOrder.ORDER_ID, purchaseOrderId]);
       }
 

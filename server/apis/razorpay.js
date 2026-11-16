@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { Router } = require('express');
+const Entity = require('../entities/entity');
 const Plugin = require('../entities/plugin');
 const Order = require('../entities/purchaseOrder');
 const User = require('../entities/user');
@@ -806,37 +807,57 @@ router.post('/webhook', async (req, res) => {
         const payment = payload.payment.entity;
         const orderId = payment.order_id;
 
-        RazorpayOrder.update([[RazorpayOrder.STATUS, RazorpayOrder.STATUS_FAILED]], [RazorpayOrder.RAZORPAY_ORDER_ID, orderId]).catch((err) =>
-          console.error('Failed to update razorpay_order failed status:', err),
-        );
-
-        const [existingOrder] = await Order.get([Order.ORDER_ID, orderId]);
-        if (existingOrder) {
-          await Order.update([[Order.STATE, Order.STATE_CANCELED]], [Order.ORDER_ID, orderId]);
-        }
-
-        const [failedRzpOrder] = await RazorpayOrder.get(
-          [RazorpayOrder.USER_ID, RazorpayOrder.PLUGIN_ID, RazorpayOrder.PRODUCT_TYPE],
+        // An order can have both failed and captured attempts, delivered out of order.
+        // A failed attempt must never revoke an already purchased plugin.
+        const [record] = await RazorpayOrder.get(
+          [RazorpayOrder.STATUS, RazorpayOrder.RAZORPAY_PAYMENT_ID],
           [RazorpayOrder.RAZORPAY_ORDER_ID, orderId],
         );
+        const failureStates = [RazorpayOrder.STATUS_CREATED, RazorpayOrder.STATUS_PENDING];
+        if (!record || !failureStates.includes(record.status)) break;
 
-        if (failedRzpOrder) {
-          const [failedUser] = await User.get([User.EMAIL, User.NAME], [User.ID, failedRzpOrder.user_id]);
-          if (failedUser) {
-            let itemName = 'your purchase';
-            if (failedRzpOrder.product_type === 'acode_pro') {
-              itemName = 'Acode Pro';
-            } else if (failedRzpOrder.plugin_id) {
-              const [failedPlugin] = await Plugin.get([Plugin.ID, Plugin.NAME], [Plugin.ID, failedRzpOrder.plugin_id]);
-              itemName = failedPlugin?.name || 'your plugin';
-            }
-            sendEmail(
-              failedUser.email,
-              failedUser.name,
-              'Your payment was not completed',
-              `Your payment for <strong>${itemName}</strong> could not be completed. No charges were made. You can try again anytime from the <a href="https://acode.app/orders">Orders page</a>.<br><br>If you need help, reach out at <a href="https://acode.app/contact">acode.app/contact</a>.`,
-            ).catch((err) => console.error('Failed to send payment failure email:', err));
+        try {
+          const payments = await getRazorpay().orders.fetchPayments(orderId);
+          if (!Array.isArray(payments.items) || !payments.items.length || Number(payments.count ?? payments.items.length) !== payments.items.length) {
+            throw new Error('Incomplete Razorpay payment attempts response.');
           }
+          if (payments.items?.some((attempt) => ['created', 'authorized', 'captured', 'refunded'].includes(attempt.status))) break;
+        } catch (error) {
+          console.error(`Failed to verify Razorpay order ${orderId}:`, error.message);
+          // Invalid/missing provider orders need investigation, not endless webhook retries.
+          const status = Number(error.statusCode ?? error.response?.status);
+          if (status === 400 || status === 404) break;
+          res.status(503).send({ error: 'Payment verification unavailable; retry webhook.' });
+          return;
+        }
+
+        // RETURNING distinguishes a new failure from duplicates and capture races.
+        const [failedRzpOrder] = await Entity.execSql(
+          `UPDATE razorpay_order SET status = ?
+           WHERE razorpay_order_id = ? AND status = ? AND razorpay_payment_id IS ?
+           RETURNING user_id, plugin_id, product_type`,
+          [RazorpayOrder.STATUS_FAILED, orderId, record.status, record.razorpay_payment_id ?? null],
+          RazorpayOrder,
+        );
+        if (!failedRzpOrder) break;
+
+        const [failedUser] = await User.get([User.EMAIL, User.NAME], [User.ID, failedRzpOrder.user_id]);
+        if (failedUser) {
+          let itemName = 'your purchase';
+          if (failedRzpOrder.product_type === 'acode_pro') {
+            itemName = 'Acode Pro';
+          } else if (failedRzpOrder.plugin_id) {
+            const [failedPlugin] = await Plugin.get([Plugin.ID, Plugin.NAME], [Plugin.ID, failedRzpOrder.plugin_id]);
+            itemName = failedPlugin?.name || 'your plugin';
+          }
+          const [latest] = await RazorpayOrder.get([RazorpayOrder.STATUS], [RazorpayOrder.RAZORPAY_ORDER_ID, orderId]);
+          if (latest?.status !== RazorpayOrder.STATUS_FAILED) break;
+          sendEmail(
+            failedUser.email,
+            failedUser.name,
+            'Your payment was not completed',
+            `Your payment for <strong>${itemName}</strong> could not be completed. No charges were made. You can try again anytime from the <a href="https://acode.app/orders">Orders page</a>.<br><br>If you need help, reach out at <a href="https://acode.app/contact">acode.app/contact</a>.`,
+          ).catch((err) => console.error('Failed to send payment failure email:', err));
         }
         break;
       }

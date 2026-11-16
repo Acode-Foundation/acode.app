@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import Database from 'better-sqlite3';
 import { Router } from 'express';
 import JSZip from 'jszip';
+import moment from 'moment';
 import * as apiKeyLib from '../../server/lib/apiKey';
 import { createKeyedLock } from '../../server/lib/pluginScanner';
 import * as pluginSearch from '../../server/lib/pluginSearch';
@@ -48,6 +49,8 @@ beforeEach(() => {
   order = {
     ID: 'id',
     TOKEN: 'token',
+    ORDER_ID: 'order_id',
+    CREATED_AT: 'created_at',
     PROVIDER: 'provider',
     PACKAGE: 'package',
     USER_ID: 'user_id',
@@ -56,6 +59,7 @@ beforeEach(() => {
     AMOUNT: 'amount',
     STATE_PURCHASED: 0,
     STATE_CANCELED: 1,
+    STATE_PENDING: 2,
     PROVIDER_RAZORPAY: 'razorpay',
     PROVIDER_GOOGLE_PLAY: 'google_play',
     for() {
@@ -81,14 +85,16 @@ beforeEach(() => {
     detectUserCurrency: () => ({ code: 'USD' }),
     formatAmount: (amount) => amount.toFixed(2),
   };
-  googlePurchase = vi.fn().mockResolvedValue({ data: { purchaseState: 0 } });
+  googlePurchase = vi.fn().mockResolvedValue({
+    data: { purchaseState: 0, orderId: 'GPA.original', purchaseTimeMillis: String(Date.parse('2025-12-24T01:54:36Z')) },
+  });
   razorpayPayment = vi.fn().mockResolvedValue({ status: 'captured' });
   const dependencies = {
     'node:crypto': {},
     'node:fs': { promises: { writeFile: vi.fn() } },
     'node:path': path,
     jszip: JSZip,
-    moment: {},
+    moment,
     express: { Router },
     googleapis: { google: { androidpublisher: () => ({ purchases: { products: { get: googlePurchase } } }) } },
     '../entities/plugin': plugin,
@@ -135,8 +141,8 @@ beforeEach(() => {
   router = module.exports;
 });
 
-async function request(routePath, { params = {}, query = {}, headers = {} } = {}) {
-  const req = { params, query, headers, ip: '127.0.0.1' };
+async function request(routePath, { params = {}, query = {}, headers = {}, body = {} } = {}) {
+  const req = { params, query, headers, body, ip: '127.0.0.1' };
   const res = { statusCode: 200, send: vi.fn(), sendFile: vi.fn(), vary: vi.fn(), set: vi.fn() };
   res.status = vi.fn((code) => {
     res.statusCode = code;
@@ -220,6 +226,123 @@ describe('paid plugin download access', () => {
     expect(res.sendFile).toHaveBeenCalledOnce();
     expect(googlePurchase).toHaveBeenCalledWith({ packageName: 'com.foxdebug.acode', productId: paidPlugin.sku, token: 'valid' });
     expect(order.insert).toHaveBeenCalledOnce();
+    expect(order.insert.mock.calls[0]).toEqual(
+      expect.arrayContaining([
+        ['order_id', 'GPA.original'],
+        ['created_at', '2025-12-24 01:54:36'],
+      ]),
+    );
+  });
+
+  it('records the original Google purchase date and order ID when saving a purchase', async () => {
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'restored', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(200);
+    expect(order.insert.mock.calls[0]).toEqual(
+      expect.arrayContaining([
+        ['order_id', 'GPA.original'],
+        ['created_at', '2025-12-24 01:54:36'],
+      ]),
+    );
+  });
+
+  it.each([undefined, null, '', 'invalid', '1e30'])('uses the database date for invalid purchaseTimeMillis %s', async (purchaseTimeMillis) => {
+    googlePurchase.mockResolvedValue({ data: { purchaseState: 0, orderId: 'GPA.original', purchaseTimeMillis } });
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'valid', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(200);
+    expect(order.insert.mock.calls[0].some(([column]) => column === 'created_at')).toBe(false);
+  });
+
+  it('omits empty order IDs for multiple pending Google purchases', async () => {
+    googlePurchase.mockResolvedValue({ data: { purchaseState: 2, orderId: '' } });
+    for (const token of ['pending-one', 'pending-two']) {
+      const res = await request('/order', { body: { id: paidPlugin.id, token, package: 'com.foxdebug.acode' } });
+      expect(res.statusCode).toBe(200);
+      expect(res.send).toHaveBeenCalledWith({ success: true, pending: true, message: 'Payment is pending.' });
+    }
+    for (const columns of order.insert.mock.calls) {
+      expect(columns.some(([column]) => column === 'order_id' || column === 'created_at')).toBe(false);
+    }
+  });
+
+  it.each(['order', 'download'])('restores a replacement token via %s without needing the current price', async (route) => {
+    plugin.get.mockResolvedValue([{ ...paidPlugin, price: route === 'download' ? 'unavailable' : undefined }]);
+    order.get
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 10, plugin_id: paidPlugin.id, provider: 'google_play', token: 'old', state: 0, user_id: null }]);
+    const res =
+      route === 'order'
+        ? await request('/order', { body: { id: paidPlugin.id, token: 'replacement', package: 'com.foxdebug.acode' } })
+        : await downloadPlugin({ token: 'replacement', package: 'com.foxdebug.acode' });
+    expect(res.statusCode).toBe(200);
+    if (route === 'download') expect(res.sendFile).toHaveBeenCalledOnce();
+    expect(order.insert).not.toHaveBeenCalled();
+    expect(order.get).toHaveBeenLastCalledWith(['order_id', 'GPA.original']);
+    expect(order.update).toHaveBeenCalledWith(
+      [['token', 'replacement']],
+      [
+        ['id', 10],
+        ['user_id', null],
+        ['token', 'old'],
+        ['state', 0],
+      ],
+    );
+  });
+
+  it('recovers when the same Google order is inserted concurrently', async () => {
+    order.get
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 10, plugin_id: paidPlugin.id, provider: 'google_play', token: 'old', state: 0, user_id: null }]);
+    order.insert.mockRejectedValue(Object.assign(new Error('Duplicate order'), { code: 'SQLITE_CONSTRAINT_UNIQUE' }));
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'replacement', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(200);
+    expect(order.insert).toHaveBeenCalledOnce();
+    expect(order.update.mock.calls[0][0]).toEqual([['token', 'replacement']]);
+  });
+
+  it('rejects a new purchase without a current price before insertion', async () => {
+    plugin.get.mockResolvedValue([{ ...paidPlugin, price: undefined }]);
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'new', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(403);
+    expect(order.insert).not.toHaveBeenCalled();
+    expect(order.update).not.toHaveBeenCalled();
+  });
+
+  it.each([null, 3])('persists a replacement token for an unowned or same-account order (owner %s)', async (userId) => {
+    helpers.getLoggedInUser.mockResolvedValue({ id: 3, authType: 'app' });
+    order.insert.mockRejectedValue(Object.assign(new Error('Duplicate order'), { code: 'SQLITE_CONSTRAINT_UNIQUE' }));
+    order.get
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 10, plugin_id: paidPlugin.id, provider: 'google_play', token: 'old', state: 0, user_id: userId }]);
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'replacement', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(200);
+    expect(order.update.mock.calls[0][0]).toEqual(
+      userId === null
+        ? [
+            ['token', 'replacement'],
+            ['user_id', 3],
+          ]
+        : [['token', 'replacement']],
+    );
+  });
+
+  it.each([null, { id: 4, authType: 'app' }])('never transfers another account’s order or token to %j', async (user) => {
+    helpers.getLoggedInUser.mockResolvedValue(user);
+    order.insert.mockRejectedValue(Object.assign(new Error('Duplicate order'), { code: 'SQLITE_CONSTRAINT_UNIQUE' }));
+    order.get
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 10, plugin_id: paidPlugin.id, provider: 'google_play', token: 'old', state: 0, user_id: 3 }]);
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'replacement', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(200);
+    expect(order.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a duplicate Google order belonging to a different plugin', async () => {
+    order.insert.mockRejectedValue(Object.assign(new Error('Duplicate order'), { code: 'SQLITE_CONSTRAINT_UNIQUE' }));
+    order.get.mockResolvedValueOnce([]).mockResolvedValueOnce([{ plugin_id: 'different.plugin', provider: 'google_play' }]);
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'replacement', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(403);
+    expect(order.update).not.toHaveBeenCalled();
   });
 
   it('rejects a canceled token purchase before contacting Google Play', async () => {
@@ -251,6 +374,133 @@ describe('paid plugin download access', () => {
     const res = await downloadPlugin();
     expect(res.statusCode).toBe(404);
     expect(res.sendFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('Google purchase completion', () => {
+  let pending;
+
+  beforeEach(() => {
+    pending = { id: 10, plugin_id: paidPlugin.id, provider: 'google_play', state: 2, amount: 0, token: 'pending', user_id: null, order_id: null };
+    order.get.mockImplementation(async (columns, where) => {
+      const [column, value] = where || columns;
+      if ((column === 'token' && value === pending.token) || column === 'order_id' || (column === 'id' && value === pending.id)) {
+        return [{ ...pending }];
+      }
+      return [];
+    });
+    order.update.mockImplementation(async (columns, where) => {
+      if (where.every(([column, value]) => pending[column] === value)) {
+        for (const [column, value] of columns) pending[column] = value;
+      }
+    });
+  });
+
+  it.each(['download', 'order'])('promotes a validated pending purchase via %s and keeps later downloads working', async (route) => {
+    const res =
+      route === 'download'
+        ? await downloadPlugin({ token: 'pending', package: 'com.foxdebug.acode' })
+        : await request('/order', { body: { id: paidPlugin.id, token: 'pending', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(200);
+    expect(pending).toMatchObject({ state: 0, amount: 100, order_id: 'GPA.original', created_at: '2025-12-24 01:54:36' });
+    expect(order.insert).not.toHaveBeenCalled();
+    expect((await downloadPlugin({ token: 'pending', package: 'com.foxdebug.acode' })).sendFile).toHaveBeenCalledOnce();
+  });
+
+  it.each(['google_play', null])('promotes a replacement-token download for provider %s', async (provider) => {
+    pending.provider = provider;
+    order.insert.mockRejectedValue(Object.assign(new Error('Duplicate order'), { code: 'SQLITE_CONSTRAINT_UNIQUE' }));
+    expect((await downloadPlugin({ token: 'replacement', package: 'com.foxdebug.acode' })).sendFile).toHaveBeenCalledOnce();
+    expect(pending).toMatchObject({ token: 'replacement', state: 0 });
+    expect((await downloadPlugin({ token: 'replacement', package: 'com.foxdebug.acode' })).sendFile).toHaveBeenCalledOnce();
+    expect(order.insert).not.toHaveBeenCalled();
+  });
+
+  it('does not promote a purchase still pending at Google', async () => {
+    googlePurchase.mockResolvedValue({ data: { purchaseState: 2, orderId: '' } });
+    const res = await downloadPlugin({ token: 'pending', package: 'com.foxdebug.acode' });
+    expect(res.statusCode).toBe(403);
+    expect(pending.state).toBe(2);
+    expect(order.update).not.toHaveBeenCalled();
+  });
+
+  it('does not promote on a Google verification error', async () => {
+    googlePurchase.mockRejectedValue(new Error('Unavailable'));
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'pending', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(403);
+    expect(pending.state).toBe(2);
+    expect(order.update).not.toHaveBeenCalled();
+  });
+
+  it('does not report a cancelled Google purchase as successfully saved', async () => {
+    googlePurchase.mockResolvedValue({ data: { purchaseState: 1 } });
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'pending', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(403);
+    expect(order.update).not.toHaveBeenCalled();
+    expect(order.insert).not.toHaveBeenCalled();
+  });
+
+  it('does not promote a zeroed estimate when the plugin amount is unavailable', async () => {
+    plugin.get.mockResolvedValue([{ ...paidPlugin, price: undefined }]);
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'pending', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(403);
+    expect(order.update).not.toHaveBeenCalled();
+  });
+
+  it('preserves an existing pending estimate when the current price is unavailable', async () => {
+    pending.amount = 80;
+    plugin.get.mockResolvedValue([{ ...paidPlugin, price: undefined }]);
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'pending', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(200);
+    expect(pending).toMatchObject({ state: 0, amount: 80 });
+  });
+
+  it.each([null, '', ' ', true, -1, 'NaN', Infinity])('rejects invalid purchase amounts %s before writes', async (price) => {
+    plugin.get.mockResolvedValue([{ ...paidPlugin, price }]);
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'pending', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(403);
+    expect(order.update).not.toHaveBeenCalled();
+    expect(order.insert).not.toHaveBeenCalled();
+  });
+
+  it('normalizes a numeric-string estimate before promoting a pending purchase', async () => {
+    plugin.get.mockResolvedValue([{ ...paidPlugin, price: '100.50' }]);
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'pending', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(200);
+    expect(pending.amount).toBe(100.5);
+  });
+
+  it('does not resurrect a cancelled order through a replacement token', async () => {
+    pending.state = 1;
+    order.insert.mockRejectedValue(Object.assign(new Error('Duplicate order'), { code: 'SQLITE_CONSTRAINT_UNIQUE' }));
+    const res = await downloadPlugin({ token: 'replacement', package: 'com.foxdebug.acode' });
+    expect(res.statusCode).toBe(403);
+    expect(order.update).not.toHaveBeenCalled();
+    expect(pending).toMatchObject({ state: 1, token: 'pending' });
+  });
+
+  it('does not overwrite cancellation that races Google validation', async () => {
+    googlePurchase.mockImplementation(async () => {
+      pending.state = 1;
+      return { data: { purchaseState: 0, orderId: 'GPA.original' } };
+    });
+    const res = await downloadPlugin({ token: 'pending', package: 'com.foxdebug.acode' });
+    expect(res.statusCode).toBe(403);
+    expect(res.sendFile).not.toHaveBeenCalled();
+    expect(pending.state).toBe(1);
+  });
+});
+
+describe('developer order history', () => {
+  it('uses the same full-month boundaries as the earnings calculation', async () => {
+    helpers.getWebLoggedInUser.mockResolvedValue({ id: paidPlugin.user_id });
+    const res = await request('/orders/:pluginId/:year/:month', { params: { pluginId: paidPlugin.id, year: '2026', month: '9' } });
+    expect(res.statusCode).toBe(200);
+    expect(order.get).toHaveBeenCalledWith(order.minColumns, [
+      ['plugin_id', paidPlugin.id],
+      ['created_at', '2026-10-01', '>='],
+      ['created_at', '2026-11-01', '<'],
+    ]);
   });
 });
 

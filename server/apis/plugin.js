@@ -48,6 +48,82 @@ const androidpublisher = google.androidpublisher('v3');
 const router = Router();
 const MIN_PRICE = 10;
 const MAX_PRICE = 10000;
+
+function googlePurchaseAmount(rawAmount) {
+  const amount = typeof rawAmount === 'number' || (typeof rawAmount === 'string' && rawAmount.trim()) ? Number(rawAmount) : NaN;
+  if (amount < 0 || !Number.isSafeInteger(Math.round(amount * 100))) throw new Error('Purchase amount unavailable.');
+  return amount;
+}
+
+async function saveGooglePurchase(columns, purchase, pluginId, existing) {
+  const amountColumn = columns.find(([column]) => column === Order.AMOUNT);
+  const orderId = typeof purchase.orderId === 'string' ? purchase.orderId.trim() : '';
+  if (orderId) columns.push([Order.ORDER_ID, orderId]);
+
+  // Restores belong to the original sale month, not the month the token is registered.
+  // Missing/invalid metadata uses the database timestamp instead of storing "Invalid date".
+  const purchasedAt = Number(purchase.purchaseTimeMillis);
+  const date = moment.utc(purchasedAt);
+  if (Number.isFinite(purchasedAt) && purchasedAt > 0 && date.isValid()) {
+    columns.push([Order.CREATED_AT, date.format('YYYY-MM-DD HH:mm:ss')]);
+  }
+
+  // Token rotation must not depend on the plugin's current sale price.
+  if (!existing && orderId) [existing] = await Order.for('internal').get([Order.ORDER_ID, orderId]);
+  if (!existing) {
+    const amount = googlePurchaseAmount(amountColumn?.[1]);
+    amountColumn[1] = amount;
+    try {
+      await Order.insert(...columns);
+      return;
+    } catch (error) {
+      if (error.code !== 'SQLITE_CONSTRAINT_UNIQUE' || !orderId) throw error;
+    }
+    // A validated token may be registered twice or rotate for the same Google order.
+    // Keep the existing accounting record; never let a shared SKU unlock another plugin.
+    [existing] = await Order.for('internal').get([Order.ORDER_ID, orderId]);
+  }
+  if (
+    !existing ||
+    (existing.provider ?? Order.PROVIDER_GOOGLE_PLAY) !== Order.PROVIDER_GOOGLE_PLAY ||
+    String(existing.plugin_id) !== String(pluginId) ||
+    Number(existing.state) === Order.STATE_CANCELED
+  ) {
+    throw new Error('Purchase not active for this plugin.');
+  }
+
+  const token = columns.find(([column]) => column === Order.TOKEN)?.[1];
+  const userId = columns.find(([column]) => column === Order.USER_ID)?.[1];
+  const updates = [];
+  const completing = Number(existing.state) === Order.STATE_PENDING && Number(purchase.purchaseState) === Order.STATE_PURCHASED;
+  if (completing) {
+    updates.push([Order.STATE, Order.STATE_PURCHASED]);
+    // The pending-order sync may have zeroed the estimate; the Google report supplies final proceeds later.
+    if (!Number.isFinite(Number(existing.amount)) || Number(existing.amount) <= 0) {
+      updates.push([Order.AMOUNT, googlePurchaseAmount(amountColumn?.[1])]);
+    }
+    for (const column of columns) {
+      if (column[0] === Order.CREATED_AT || (column[0] === Order.ORDER_ID && !existing.order_id)) updates.push(column);
+    }
+  }
+  // A replacement token must not transfer an existing entitlement to another account.
+  if (existing.user_id == null || String(existing.user_id) === String(userId)) {
+    if (token && token !== existing.token) updates.push([Order.TOKEN, token]);
+    if (existing.user_id == null && userId != null) updates.push([Order.USER_ID, userId]);
+  }
+  if (updates.length) {
+    await Order.update(updates, [
+      [Order.ID, existing.id],
+      [Order.USER_ID, existing.user_id ?? null],
+      [Order.TOKEN, existing.token],
+      [Order.STATE, existing.state],
+    ]);
+    if (completing) {
+      const [saved] = await Order.for('internal').get([Order.STATE], [Order.ID, existing.id]);
+      if (Number(saved?.state) !== Order.STATE_PURCHASED) throw new Error('Purchase not active.');
+    }
+  }
+}
 const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
 const ID_REGEX = /^[a-z][a-z0-9._]{3,49}$/i;
 // `downloads` is stored as TEXT, so it must be cast or "900" sorts above "21004".
@@ -208,7 +284,7 @@ router.get('/download/:id', async (req, res) => {
 
       const [order] = await Order.for('internal').get([Order.TOKEN, token]);
 
-      if (order?.state && Number.parseInt(order.state, 10) !== Order.STATE_PURCHASED) {
+      if (order && ![Order.STATE_PURCHASED, Order.STATE_PENDING].includes(Number(order.state))) {
         res.status(403).send({ error: 'Purchase not active.' });
         return;
       }
@@ -227,7 +303,7 @@ router.get('/download/:id', async (req, res) => {
         });
         const { purchaseState } = purchase.data;
 
-        if (!order) {
+        if (!order || Number(order.state) === Order.STATE_PENDING) {
           const orderInsert = [
             [Order.TOKEN, token],
             [Order.PACKAGE, packageName],
@@ -239,7 +315,7 @@ router.get('/download/:id', async (req, res) => {
           if (loggedInUser) {
             orderInsert.push([Order.USER_ID, loggedInUser.id]);
           }
-          await Order.insert(...orderInsert);
+          await saveGooglePurchase(orderInsert, purchase.data, row.id, order);
         }
 
         if (Number(purchaseState) !== 0) {
@@ -306,10 +382,11 @@ router.get('/orders/:pluginId/:year/:month', async (req, res) => {
       year: Number.parseInt(year, 10),
     };
     const monthStart = moment(yearMonth).startOf('month').format('YYYY-MM-DD');
-    const monthEnd = moment(yearMonth).endOf('month').format('YYYY-MM-DD');
+    const nextMonthStart = moment(yearMonth).startOf('month').add(1, 'month').format('YYYY-MM-DD');
     const orders = await Order.get(Order.minColumns, [
       [Order.PLUGIN_ID, pluginId],
-      [Order.CREATED_AT, [monthStart, monthEnd], 'BETWEEN'],
+      [Order.CREATED_AT, monthStart, '>='],
+      [Order.CREATED_AT, nextMonthStart, '<'],
     ]);
     res.send(orders);
   } catch (error) {
@@ -609,8 +686,8 @@ router.post('/order', async (req, res) => {
       return;
     }
 
-    const order = await Order.get([Order.TOKEN, token]);
-    if (order.length) {
+    const [order] = await Order.for('internal').get([Order.TOKEN, token]);
+    if (order && Number(order.state) !== Order.STATE_PENDING) {
       res.status(400).send({ error: 'Order already exists.' });
       return;
     }
@@ -623,6 +700,8 @@ router.post('/order', async (req, res) => {
       });
 
       const [{ price }] = await Plugin.get([Plugin.PRICE], [Plugin.ID, id]);
+      const state = Number(purchase.data.purchaseState);
+      if (![Order.STATE_PURCHASED, Order.STATE_PENDING].includes(state)) throw new Error('Purchase is not active.');
 
       const orderInsert = [
         [Order.PLUGIN_ID, id],
@@ -636,7 +715,11 @@ router.post('/order', async (req, res) => {
       if (loggedInUser) {
         orderInsert.push([Order.USER_ID, loggedInUser.id]);
       }
-      await Order.insert(...orderInsert);
+      await saveGooglePurchase(orderInsert, purchase.data, id, order);
+      if (state === Order.STATE_PENDING) {
+        res.send({ success: true, pending: true, message: 'Payment is pending.' });
+        return;
+      }
       res.send({ success: 'Order saved.' });
     } catch (error) {
       const message = `Error while validating purchase: ${error.errors?.map((e) => e.message).join(', ') || error.message}`;
