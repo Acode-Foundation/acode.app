@@ -226,30 +226,38 @@ describe('paid plugin download access', () => {
     expect(res.sendFile).toHaveBeenCalledOnce();
     expect(googlePurchase).toHaveBeenCalledWith({ packageName: 'com.foxdebug.acode', productId: paidPlugin.sku, token: 'valid' });
     expect(order.insert).toHaveBeenCalledOnce();
-    expect(order.insert.mock.calls[0]).toEqual(
-      expect.arrayContaining([
-        ['order_id', 'GPA.original'],
-        ['created_at', '2025-12-24 01:54:36'],
-      ]),
-    );
+    expect(order.insert.mock.calls[0]).toEqual(expect.arrayContaining([['order_id', 'GPA.original']]));
   });
 
-  it('records the original Google purchase date and order ID when saving a purchase', async () => {
-    const res = await request('/order', { body: { id: paidPlugin.id, token: 'restored', package: 'com.foxdebug.acode' } });
-    expect(res.statusCode).toBe(200);
-    expect(order.insert.mock.calls[0]).toEqual(
-      expect.arrayContaining([
-        ['order_id', 'GPA.original'],
-        ['created_at', '2025-12-24 01:54:36'],
-      ]),
-    );
-  });
-
-  it.each([undefined, null, '', 'invalid', '1e30'])('uses the database date for invalid purchaseTimeMillis %s', async (purchaseTimeMillis) => {
-    googlePurchase.mockResolvedValue({ data: { purchaseState: 0, orderId: 'GPA.original', purchaseTimeMillis } });
-    const res = await request('/order', { body: { id: paidPlugin.id, token: 'valid', package: 'com.foxdebug.acode' } });
-    expect(res.statusCode).toBe(200);
-    expect(order.insert.mock.calls[0].some(([column]) => column === 'created_at')).toBe(false);
+  it.each(['order', 'download'])('includes a late restore via %s in the registration month, not the closed sale month', async (route) => {
+    const db = new Database(':memory:');
+    try {
+      db.exec(`CREATE TABLE purchase_order (
+        id INTEGER PRIMARY KEY, plugin_id TEXT, token TEXT UNIQUE, package TEXT,
+        amount REAL, state INTEGER, provider TEXT, order_id TEXT UNIQUE,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )`);
+      order.insert.mockImplementation(async (...columns) => {
+        db.prepare(`INSERT INTO purchase_order (${columns.map(([column]) => column).join(',')}) VALUES (${columns.map(() => '?').join(',')})`).run(
+          ...columns.map(([, value]) => value),
+        );
+      });
+      const res =
+        route === 'order'
+          ? await request('/order', { body: { id: paidPlugin.id, token: 'restored', package: 'com.foxdebug.acode' } })
+          : await downloadPlugin({ token: 'restored', package: 'com.foxdebug.acode' });
+      expect(res.statusCode).toBe(200);
+      const payable = db
+        .prepare(
+          "SELECT * FROM purchase_order WHERE created_at >= date('now', 'start of month') AND created_at < date('now', 'start of month', '+1 month')",
+        )
+        .all();
+      expect(payable).toHaveLength(1);
+      expect(payable[0]).toMatchObject({ order_id: 'GPA.original', state: 0, amount: 100 });
+      expect(order.insert.mock.calls[0].some(([column]) => column === 'created_at')).toBe(false);
+    } finally {
+      db.close();
+    }
   });
 
   it('omits empty order IDs for multiple pending Google purchases', async () => {
@@ -381,7 +389,18 @@ describe('Google purchase completion', () => {
   let pending;
 
   beforeEach(() => {
-    pending = { id: 10, plugin_id: paidPlugin.id, provider: 'google_play', state: 2, amount: 0, token: 'pending', user_id: null, order_id: null };
+    vi.spyOn(moment, 'now').mockReturnValue(Date.parse('2026-12-10T12:00:00Z'));
+    pending = {
+      id: 10,
+      plugin_id: paidPlugin.id,
+      provider: 'google_play',
+      state: 2,
+      amount: 0,
+      token: 'pending',
+      user_id: null,
+      order_id: null,
+      created_at: '2026-10-01 00:00:00',
+    };
     order.get.mockImplementation(async (columns, where) => {
       const [column, value] = where || columns;
       if ((column === 'token' && value === pending.token) || column === 'order_id' || (column === 'id' && value === pending.id)) {
@@ -396,15 +415,21 @@ describe('Google purchase completion', () => {
     });
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it.each(['download', 'order'])('promotes a validated pending purchase via %s and keeps later downloads working', async (route) => {
     const res =
       route === 'download'
         ? await downloadPlugin({ token: 'pending', package: 'com.foxdebug.acode' })
         : await request('/order', { body: { id: paidPlugin.id, token: 'pending', package: 'com.foxdebug.acode' } });
     expect(res.statusCode).toBe(200);
-    expect(pending).toMatchObject({ state: 0, amount: 100, order_id: 'GPA.original', created_at: '2025-12-24 01:54:36' });
+    expect(pending).toMatchObject({ state: 0, amount: 100, order_id: 'GPA.original', created_at: '2026-12-10 12:00:00' });
     expect(order.insert).not.toHaveBeenCalled();
+    moment.now.mockReturnValue(Date.parse('2027-01-10T12:00:00Z'));
     expect((await downloadPlugin({ token: 'pending', package: 'com.foxdebug.acode' })).sendFile).toHaveBeenCalledOnce();
+    expect(pending.created_at).toBe('2026-12-10 12:00:00');
   });
 
   it.each(['google_play', null])('promotes a replacement-token download for provider %s', async (provider) => {

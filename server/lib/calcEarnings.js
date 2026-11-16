@@ -100,6 +100,8 @@ async function fromPaidPlugins(year, month, user, report) {
         if (report) {
           const reportOrderId = normalizeOrderId(orderId);
           if (!reportOrderId || !reportAmounts.has(reportOrderId)) {
+            // Late registrations may predate the available reports; retain the
+            // existing estimate instead of dropping them from their registration month.
             return amount * 0.7;
           }
 

@@ -60,17 +60,11 @@ async function saveGooglePurchase(columns, purchase, pluginId, existing) {
   const orderId = typeof purchase.orderId === 'string' ? purchase.orderId.trim() : '';
   if (orderId) columns.push([Order.ORDER_ID, orderId]);
 
-  // Restores belong to the original sale month, not the month the token is registered.
-  // Missing/invalid metadata uses the database timestamp instead of storing "Invalid date".
-  const purchasedAt = Number(purchase.purchaseTimeMillis);
-  const date = moment.utc(purchasedAt);
-  if (Number.isFinite(purchasedAt) && purchasedAt > 0 && date.isValid()) {
-    columns.push([Order.CREATED_AT, date.format('YYYY-MM-DD HH:mm:ss')]);
-  }
-
   // Token rotation must not depend on the plugin's current sale price.
   if (!existing && orderId) [existing] = await Order.for('internal').get([Order.ORDER_ID, orderId]);
   if (!existing) {
+    // Use the database registration timestamp. Backdating a late restore would
+    // put it in a closed month that the monthly earnings job never revisits.
     const amount = googlePurchaseAmount(amountColumn?.[1]);
     amountColumn[1] = amount;
     try {
@@ -97,14 +91,13 @@ async function saveGooglePurchase(columns, purchase, pluginId, existing) {
   const updates = [];
   const completing = Number(existing.state) === Order.STATE_PENDING && Number(purchase.purchaseState) === Order.STATE_PURCHASED;
   if (completing) {
-    updates.push([Order.STATE, Order.STATE_PURCHASED]);
+    // Pending orders have not earned yet; recognize them when validation completes.
+    updates.push([Order.STATE, Order.STATE_PURCHASED], [Order.CREATED_AT, moment.utc().format('YYYY-MM-DD HH:mm:ss')]);
     // The pending-order sync may have zeroed the estimate; the Google report supplies final proceeds later.
     if (!Number.isFinite(Number(existing.amount)) || Number(existing.amount) <= 0) {
       updates.push([Order.AMOUNT, googlePurchaseAmount(amountColumn?.[1])]);
     }
-    for (const column of columns) {
-      if (column[0] === Order.CREATED_AT || (column[0] === Order.ORDER_ID && !existing.order_id)) updates.push(column);
-    }
+    if (orderId && !existing.order_id) updates.push([Order.ORDER_ID, orderId]);
   }
   // A replacement token must not transfer an existing entitlement to another account.
   if (existing.user_id == null || String(existing.user_id) === String(userId)) {
