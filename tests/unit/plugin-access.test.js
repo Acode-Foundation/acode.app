@@ -122,6 +122,7 @@ beforeEach(() => {
     source,
     {
       module,
+      URL,
       __dirname: path.dirname(filename),
       process: { env: { HOST: 'https://acode.app' } },
       require(name) {
@@ -134,9 +135,9 @@ beforeEach(() => {
   router = module.exports;
 });
 
-async function request(routePath, { params = {}, query = {} } = {}) {
-  const req = { params, query, headers: {}, ip: '127.0.0.1' };
-  const res = { statusCode: 200, send: vi.fn(), sendFile: vi.fn() };
+async function request(routePath, { params = {}, query = {}, headers = {} } = {}) {
+  const req = { params, query, headers, ip: '127.0.0.1' };
+  const res = { statusCode: 200, send: vi.fn(), sendFile: vi.fn(), vary: vi.fn(), set: vi.fn() };
   res.status = vi.fn((code) => {
     res.statusCode = code;
     return res;
@@ -331,6 +332,111 @@ describe('plugin install entitlement', () => {
   });
 });
 
+describe('iOS plugin catalog', () => {
+  const headers = {
+    origin: 'https://localhost',
+    'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148',
+  };
+
+  it.each([
+    [headers, true],
+    [{ ...headers, 'user-agent': 'Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148' }, true],
+    [{ ...headers, 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Mobile/15E148' }, true],
+    [{ referer: 'https://localhost/', 'user-agent': headers['user-agent'] }, true],
+    [{ origin: 'null', referer: 'https://localhost/index.html', 'user-agent': headers['user-agent'] }, true],
+    [{ origin: 'invalid', referer: 'acode://localhost/index.html' }, true],
+    [{ referer: 'https://LOCALHOST/plugin/example', 'user-agent': headers['user-agent'] }, true],
+    [{ origin: 'acode://localhost' }, true],
+    [{ ...headers, 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15' }, true],
+    [{ origin: 'https://acode.app', 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)' }, false],
+    [{ origin: 'null', referer: 'acode://localhost/index.html' }, true],
+    [{ origin: 'acode://LOCALHOST' }, true],
+    [{ ...headers, origin: 'https://localhost@evil.com' }, false],
+    [{ ...headers, origin: 'https://user:pass@localhost' }, false],
+    [{ ...headers, origin: 'http://localhost' }, false],
+    [{ ...headers, 'user-agent': 'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Mobile Safari/537.36' }, false],
+    [{ ...headers, origin: 'https://acode.app' }, false],
+    [{ ...headers, origin: 'https://localhost.example.com' }, false],
+    [{ ...headers, origin: 'https://acode.app', referer: 'https://localhost/index.html' }, false],
+    [{ ...headers, origin: 'https://localhost:8080' }, false],
+    [{ ...headers, origin: 'file://' }, false],
+    [{ ...headers, origin: 'https://127.0.0.1' }, false],
+    [{}, false],
+  ])('restricts discovery only for iOS app requests: %j', async (requestHeaders, restricted) => {
+    const res = await request('{/:pluginId}', { headers: requestHeaders, query: { name: 'test', page: '2', limit: '10' } });
+    expect(res.statusCode).toBe(200);
+    const [, where, options] = plugin.get.mock.calls[0];
+    expect(where.some(([column]) => column === 'IFNULL(price, 0)')).toBe(restricted);
+    expect(options).toMatchObject({ page: 2, limit: 10 });
+    expect(res.vary.mock.calls.flat()).toEqual(['Origin', 'Referer', 'User-Agent']);
+  });
+
+  it.each([{}, headers])('prevents shared caching for catalog responses: %j', async (requestHeaders) => {
+    for (const [routePath, params] of [
+      ['{/:pluginId}', {}],
+      ['{/:pluginId}', { pluginId: paidPlugin.id }],
+      ['/count{/:type}', {}],
+      ['/home/list', {}],
+    ]) {
+      const res = await request(routePath, { headers: requestHeaders, params });
+      expect(res.set).toHaveBeenCalledWith(
+        'Cache-Control',
+        routePath === '{/:pluginId}' ? 'private, no-store' : 'private, max-age=0, must-revalidate',
+      );
+    }
+  });
+
+  it('lets authors inspect their paid plugin without granting purchase entitlement', async () => {
+    helpers.getLoggedInUser.mockResolvedValue({ id: paidPlugin.user_id, authType: 'app' });
+    const detail = () => request('{/:pluginId}', { headers, params: { pluginId: paidPlugin.id } });
+    expect((await detail()).send).toHaveBeenCalledWith(expect.objectContaining({ id: paidPlugin.id, owned: false }));
+    plugin.get.mockResolvedValue([{ ...paidPlugin, status: 2 }]);
+    expect((await detail()).statusCode).toBe(200);
+    plugin.get.mockResolvedValue([{ ...paidPlugin, status: plugin.STATUS_DELETED }]);
+    expect((await detail()).statusCode).toBe(404);
+    expect(order.insert).not.toHaveBeenCalled();
+  });
+
+  it('keeps the free constraint when paid plugins are explicitly requested', async () => {
+    await request('{/:pluginId}', { headers, query: { price: 'paid' } });
+    expect(plugin.get.mock.calls[0][1]).toEqual(
+      expect.arrayContaining([
+        ['IFNULL(price, 0)', 0],
+        ['IFNULL(price, 0)', 0, '>'],
+      ]),
+    );
+  });
+
+  it('hides unowned paid details but retains free plugins and existing purchases', async () => {
+    const detail = () => request('{/:pluginId}', { headers, params: { pluginId: paidPlugin.id } });
+    expect((await detail()).statusCode).toBe(404);
+    helpers.getLoggedInUser.mockResolvedValue({ id: 3, authType: 'app' });
+    expect((await detail()).statusCode).toBe(404);
+    order.get.mockResolvedValue([{ plugin_id: paidPlugin.id }]);
+    expect((await detail()).send).toHaveBeenCalledWith(expect.objectContaining({ owned: true }));
+    const owned = await request('{/:pluginId}', { headers, query: { owned: 'true' } });
+    expect(owned.send).toHaveBeenCalledWith([expect.objectContaining({ owned: true })]);
+    expect(plugin.get.mock.calls.at(-1)[1]).toContainEqual(['id', [paidPlugin.id], 'IN']);
+    expect(plugin.get.mock.calls.at(-1)[1]).not.toContainEqual(['IFNULL(price, 0)', 0]);
+    plugin.get.mockResolvedValue([{ ...paidPlugin, price: 0 }]);
+    expect((await detail()).statusCode).toBe(200);
+  });
+
+  it('applies the same free filter to counts and home cards', async () => {
+    const where = [
+      ['status', 1],
+      ['IFNULL(price, 0)', 0],
+    ];
+    await request('/home/list', { headers });
+    expect(plugin.get.mock.calls[0][1]).toEqual(where);
+    expect(plugin.count).toHaveBeenLastCalledWith(where);
+    for (const type of [undefined, 'free', 'paid']) {
+      await request('/count{/:type}', { headers, params: { type } });
+      expect(plugin.count).toHaveBeenLastCalledWith(type === 'paid' ? [...where, ['price', 0, '>']] : where);
+    }
+  });
+});
+
 describe('plugin list sorting and filters', () => {
   const listOptions = async (query) => {
     await request('{/:pluginId}', { query });
@@ -442,7 +548,7 @@ describe('plugin list sorting and filters', () => {
     const mounted = Router();
     mounted.use(prefix, router);
     const result = await new Promise((resolve, reject) => {
-      const res = { send: resolve, status: () => res };
+      const res = { send: resolve, status: () => res, vary: vi.fn(), set: vi.fn() };
       mounted.handle({ method: 'GET', url: `${prefix}/home`, query: {}, headers: {} }, res, reject);
     });
     expect(result).toMatchObject({ id: 'home', price: 0 });
@@ -454,8 +560,8 @@ describe('plugin list sorting and filters', () => {
     const cards = [{ id: 'example', name: 'Example', author: 'Author', downloads: '100' }];
     plugin.get.mockResolvedValue(cards);
     const res = await request('/home/list', { query: { limit: '1000', page: '2', status: '3' } });
-    expect(plugin.count).toHaveBeenCalledWith(['status', 1]);
-    expect(plugin.get).toHaveBeenCalledWith(['id', 'name', 'author', 'downloads'], ['status', 1], {
+    expect(plugin.count).toHaveBeenCalledWith([['status', 1]]);
+    expect(plugin.get).toHaveBeenCalledWith(['id', 'name', 'author', 'downloads'], [['status', 1]], {
       limit: 12,
       orderBy: (await listOptions({ orderBy: 'downloads' })).orderBy,
     });
@@ -718,8 +824,14 @@ describe('public plugin counts', () => {
         ['price', 0, '>'],
       ],
     ],
-    ['free', [['status', 1], ['price', 0], 'OR', ['price', null, 'IS']]],
-  ])('restricts %s counts to approved plugins, keeping price alternatives grouped', async (type, where) => {
+    [
+      'free',
+      [
+        ['status', 1],
+        ['IFNULL(price, 0)', 0],
+      ],
+    ],
+  ])('restricts %s counts to approved plugins with the requested price filter', async (type, where) => {
     const res = await request('/count{/:type}', { params: { type } });
     expect(plugin.count).toHaveBeenCalledExactlyOnceWith(where);
     expect(res.send).toHaveBeenCalledWith({ count: 4 });

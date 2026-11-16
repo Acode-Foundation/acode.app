@@ -236,7 +236,7 @@ router.post('/:commentId/reply', async (req, res) => {
 
     await Comment.update([Comment.AUTHOR_REPLY, reply], [Comment.ID, commentId]);
 
-    res.send({ message: 'Reply added successfully' });
+    res.send({ message: 'Reply updated successfully' });
 
     try {
       const [commenter] = await user.get([user.NAME, user.EMAIL], [user.ID, comment.user_id]);

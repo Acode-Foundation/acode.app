@@ -58,3 +58,40 @@ it.each([
     expect(sendEmail).not.toHaveBeenCalled();
   }
 });
+
+it('returns all review fields from the single-comment route through the real entity overload', async () => {
+  const row = { id: 42, user_id: 7, comment: 'Useful', vote: 1, updated_at: '2026-11-14 12:00:00', author_reply: 'Thank you', name: 'Sam' };
+  const all = vi.fn(() => [row]);
+  const db = { exec: vi.fn(), prepare: vi.fn(() => ({ reader: true, all })) };
+  const load = (file, dependencies) => {
+    const module = { exports: {} };
+    vm.runInNewContext(fs.readFileSync(new URL(file, import.meta.url), 'utf8'), {
+      module,
+      require(name) {
+        if (!(name in dependencies)) throw new Error(`Unmocked dependency: ${name}`);
+        return dependencies[name];
+      },
+    });
+    return module.exports;
+  };
+  const Entity = load('../../server/entities/entity.js', { '../lib/db': db });
+  const comment = load('../../server/entities/comment.js', { './entity': Entity });
+  const router = load('../../server/apis/comment.js', {
+    express: { Router },
+    '../lib/helpers': { getWebLoggedInUser: async () => null },
+    '../lib/pluginReview': {},
+    '../entities/plugin': { get: async () => [] },
+    '../entities/comment': comment,
+    '../entities/user': {},
+    '../lib/sendEmail': () => {},
+  });
+  const res = { send: vi.fn(), status: vi.fn() };
+  await router.stack.find((layer) => layer.route?.path === '/:id').route.stack[0].handle({ params: { id: '42' }, query: {} }, res);
+  expect(res.send).toHaveBeenCalledWith(row);
+  const sql = db.prepare.mock.calls[0][0];
+  for (const field of ['comment', 'vote', 'updated_at', 'user_id']) expect(sql).toContain(`c.${field}`);
+  expect(sql).toContain("IFNULL(author_reply, '') AS author_reply");
+  expect(sql).toContain('u.[name]');
+  expect(sql).toMatch(/WHERE\s+\(id = \?/);
+  expect(all.mock.calls[0][0]).toBe('42');
+});
