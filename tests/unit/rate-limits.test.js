@@ -57,7 +57,7 @@ it.each([
     expect(res.setHeader).toHaveBeenCalledWith('Retry-After', expect.any(String));
     if (_label === 'plugin stats') {
       expect(res.type).toHaveBeenCalledWith('image/svg+xml');
-      expect(res.send).toHaveBeenCalledWith(expect.stringContaining('<title>plugin: rate limited</title>'));
+      expect(res.send).toHaveBeenCalledWith(expect.stringContaining('<title>Acode Plugin: rate limited</title>'));
     }
     expect(next).not.toHaveBeenCalled();
   }

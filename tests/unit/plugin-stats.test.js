@@ -135,10 +135,10 @@ it('allows conditional-read preflights through the global handler only for the p
 });
 
 it.each([
-  ['downloads', 'downloads: 12,345'],
-  ['rating', 'rating: 96%'],
-  ['version', 'version: 1.2.3'],
-  ['updated', 'updated: 2026-11-18'],
+  ['downloads', 'Acode Downloads: 12,345'],
+  ['rating', 'Acode Rating: 96%'],
+  ['version', 'Acode Version: v1.2.3'],
+  ['updated', 'Acode Updated: 2026-11-18'],
 ])('serves a valid accessible SVG for %s', async (metric, title) => {
   const response = await fetch(`${base}/${metric}.svg`);
   expect(response.status).toBe(200);
@@ -148,6 +148,18 @@ it.each([
   const dom = new JSDOM(await response.text(), { contentType: 'image/svg+xml' });
   expect(dom.window.document.querySelector('title').textContent).toBe(title);
   expect(dom.window.document.documentElement.getAttribute('aria-label')).toBe(title);
+  // The logo must render under the badge's CSP, with no external or raster images.
+  expect(dom.window.document.querySelector('svg[aria-hidden="true"] path')).not.toBeNull();
+  const icons = dom.window.document.querySelectorAll('svg[aria-hidden="true"]');
+  const hasMetricIcon = metric === 'downloads' || metric === 'rating';
+  expect(icons).toHaveLength(hasMetricIcon ? 2 : 1);
+  if (hasMetricIcon) {
+    expect(Number(icons[1].getAttribute('x'))).toBeGreaterThan(26);
+  }
+  expect([...dom.window.document.querySelectorAll('text')].map((node) => node.textContent)).toEqual(
+    metric === 'updated' ? ['Updated', title.split(': ')[1]] : [title.split(': ')[1]],
+  );
+  expect(dom.window.document.querySelector('image, style, script')).toBeNull();
   dom.window.close();
 });
 
@@ -156,14 +168,14 @@ it('escapes stored text so a version cannot inject SVG elements or attributes', 
   const response = await fetch(`${base}/version.svg`);
   const dom = new JSDOM(await response.text(), { contentType: 'image/svg+xml' });
   expect(dom.window.document.querySelector('script')).toBeNull();
-  expect(dom.window.document.querySelector('title').textContent).toBe('version: <script>&"\'');
+  expect(dom.window.document.querySelector('title').textContent).toBe('Acode Version: v<script>&"\'');
   dom.window.close();
 });
 
 it('represents no reviews as unrated, preserves zero approval and falls back to creation time', () => {
   const stats = badges.publicStats({ ...fixture, downloads: null, votes_up: null, votes_down: null, package_updated_at: null });
   expect(stats).toMatchObject({ downloads: 0, rating: null, updated_at: '2026-10-01T00:00:00.000Z' });
-  expect(badges.pluginBadge(stats, 'rating')).toContain('rating: unrated');
+  expect(badges.pluginBadge(stats, 'rating')).toContain('Rating: unrated');
   expect(badges.publicStats({ ...fixture, votes_up: 0 }).rating).toBe(0);
 });
 
