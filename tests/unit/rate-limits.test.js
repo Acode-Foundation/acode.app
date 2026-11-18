@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import * as rateLimit from 'express-rate-limit';
+import * as pluginBadge from '../../server/lib/pluginBadge';
 
 const module = { exports: {} };
 const getLoginSession = vi.fn(async () => null);
@@ -10,6 +11,7 @@ vm.runInNewContext(fs.readFileSync(new URL('../../server/lib/rateLimits.js', imp
   process: { env: {} },
   require(name) {
     if (name === 'express-rate-limit') return rateLimit;
+    if (name === './pluginBadge') return pluginBadge;
     if (name === './helpers') return { getLoginSession };
     if (name === './apiKeyAuth') return { getApiKeyAuth };
     throw new Error(`Unmocked dependency: ${name}`);
@@ -17,13 +19,22 @@ vm.runInNewContext(fs.readFileSync(new URL('../../server/lib/rateLimits.js', imp
 });
 
 it.each([
-  ['promotion', module.exports.promotionRedirectLimiter],
-  ['OAuth callback', module.exports.createOAuthCallbackLimiter((_req, res) => res.status(429).send({ error: 'Rate limited' }))],
-])('limits %s requests without session lookups or header-based bypasses', async (_label, limiter) => {
+  ['promotion', module.exports.promotionRedirectLimiter, 120],
+  ['OAuth callback', module.exports.createOAuthCallbackLimiter((_req, res) => res.status(429).send({ error: 'Rate limited' })), 120],
+  ['plugin stats', module.exports.pluginStatsLimiter, 600],
+  ['OG images', module.exports.ogImageLimiter, 600],
+])('limits %s requests without session lookups or header-based bypasses', async (_label, limiter, limit) => {
   const downstream = vi.fn();
   const send = async (ip, headers = {}, method = 'GET') => {
-    const req = { ip, method, headers, cookies: { token: headers.authorization } };
-    const res = { setHeader: vi.fn(), append: vi.fn(), status: vi.fn().mockReturnThis(), send: vi.fn() };
+    const req = { ip, method, headers, path: _label === 'plugin stats' ? '/test.plugin/rating.svg' : '/', cookies: { token: headers.authorization } };
+    const res = {
+      setHeader: vi.fn(),
+      set: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
+      append: vi.fn(),
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn(),
+    };
     const next = vi.fn((error) => {
       if (!error) downstream();
     });
@@ -31,7 +42,7 @@ it.each([
     if (next.mock.calls.length) expect(next).toHaveBeenCalledWith();
     return { res, next };
   };
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < limit; i++) {
     const { next } = await send('203.0.113.50', { authorization: `Bearer token-${i}` });
     expect(next).toHaveBeenCalledOnce();
   }
@@ -44,9 +55,13 @@ it.each([
     const { res, next } = await send('203.0.113.50', headers, method);
     expect(res.status).toHaveBeenCalledWith(429);
     expect(res.setHeader).toHaveBeenCalledWith('Retry-After', expect.any(String));
+    if (_label === 'plugin stats') {
+      expect(res.type).toHaveBeenCalledWith('image/svg+xml');
+      expect(res.send).toHaveBeenCalledWith(expect.stringContaining('<title>plugin: rate limited</title>'));
+    }
     expect(next).not.toHaveBeenCalled();
   }
-  expect(downstream).toHaveBeenCalledTimes(120);
+  expect(downstream).toHaveBeenCalledTimes(limit);
   const other = await send('203.0.113.51');
   expect(other.next).toHaveBeenCalledOnce();
   expect(getLoginSession).not.toHaveBeenCalled();

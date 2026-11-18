@@ -1,16 +1,18 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const sharp = require('sharp');
+const createSharp = require('sharp');
 const { pluginRevision } = require('../../shared/ogImage.json');
 const { formatMilestoneCount, normalizeMetadataText } = require('../../shared/metadataText');
 
 const WIDTH = 1200;
 const HEIGHT = 630;
-const CACHE_LIMIT = 100;
+// The response cache owns long-lived cards; keep only a few render variants here.
+const CACHE_LIMIT = 8;
 // Palette PNGs keep cards well under the ~300KB that some chat apps accept for link previews;
 // the grain dithers away any banding in the gradients.
 const OUTPUT = { palette: true, quality: 90, dither: 1 };
 const cache = new Map();
+let pluginBackground;
 const logoPath = path.resolve(__dirname, '../../client/res/logo.svg');
 const screenshotPath = path.resolve(__dirname, '../../client/res/acode-shot-panes.jpg');
 const FONT = `font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif"`;
@@ -22,6 +24,11 @@ const COLORS = {
   faint: '#5d6470',
   accent: '#3499fe',
 };
+
+// A queue timeout cannot cancel native work; bound each libvips pipeline too.
+function sharp(...args) {
+  return createSharp(...args).timeout({ seconds: 10 });
+}
 
 function escapeXml(value) {
   return String(value ?? '')
@@ -231,17 +238,45 @@ const TILE = 196;
 const TILE_TOP = 112;
 const ICON = 140;
 
-function createPluginOgSvg({ name, author }) {
+const STAT_ICONS = {
+  version: '<path d="M20 13 13 20a2 2 0 0 1-3 0l-7-7V3h10l7 7a2 2 0 0 1 0 3Z"/><circle cx="7.5" cy="7.5" r="1"/>',
+  downloads: '<path d="M12 3v12m-5-5 5 5 5-5M4 15v5h16v-5"/>',
+  rating: '<path d="M7 10v11H3V10h4Zm0 0 4-8a3 3 0 0 1 3 3v4h5a2 2 0 0 1 2 2l-2 8a2 2 0 0 1-2 2H7"/>',
+};
+
+function statWidth(value) {
+  return Math.ceil(estimateWidth(value, 24) + 62);
+}
+
+function statChip(value, icon, x) {
+  const width = statWidth(value);
+  return `<g transform="translate(${x} 52)">
+    <rect width="${width}" height="48" rx="14" fill="#ffffff" fill-opacity="0.045"/>
+    <rect x="0.5" y="0.5" width="${width - 1}" height="47" rx="13.5" fill="none" stroke="#ffffff" stroke-opacity="0.13"/>
+    <svg x="14" y="13" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ccfff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${STAT_ICONS[icon]}</svg>
+    ${text(value, { x: 47, y: 32, size: 24, color: '#dce6f2', weight: 500 })}
+  </g>`;
+}
+
+function createPluginOgSvg({ name, author, version, downloads = 0, rating = null }) {
   const titleSize = TITLE_SIZES.find((size) => estimateWidth(withoutEmoji(name), size, TITLE_TRACKING) <= TITLE_MAX_WIDTH) ?? TITLE_SIZES.at(-1);
   const title = fitWidth(name, TITLE_MAX_WIDTH, titleSize, TITLE_TRACKING);
   // Leave room for the Acode mark on the right of the footer.
   const authorName = fitWidth(author || 'Acode community', 640, 26);
   const tileLeft = (WIDTH - TILE) / 2;
+  const total = Number(downloads);
+  const downloadLabel = (Number.isSafeInteger(total) && total >= 0 ? total : 0).toLocaleString('en-US');
+  const ratingLabel = rating === null ? '—' : `${rating}%`;
+  const ratingLeft = WIDTH - 60 - statWidth(ratingLabel);
   return Buffer.from(
     svgDocument(`
+      ${statChip(version ? fitWidth(version, 240, 24) : '—', 'version', 60)}
+      ${statChip(downloadLabel, 'downloads', ratingLeft - 14 - statWidth(downloadLabel))}
+      ${statChip(ratingLabel, 'rating', ratingLeft)}
       <rect x="${tileLeft}" y="${TILE_TOP}" width="${TILE}" height="${TILE}" rx="46" fill="#ffffff" fill-opacity="0.07"/>
       <rect x="${tileLeft + 0.5}" y="${TILE_TOP + 0.5}" width="${TILE - 1}" height="${TILE - 1}" rx="46" fill="none" stroke="#ffffff" stroke-opacity="0.16"/>
       ${text(title, { x: WIDTH / 2, y: 420, size: titleSize, color: COLORS.text, weight: 700, tracking: TITLE_TRACKING, anchor: 'middle' })}
+      <path d="M60 520H1140" stroke="#ffffff" stroke-opacity="0.08"/>
       <circle cx="82" cy="562" r="22" fill="${COLORS.accent}" fill-opacity="0.18"/>
       <circle cx="82" cy="562" r="21.5" fill="none" stroke="${COLORS.accent}" stroke-opacity="0.45"/>
       ${text(initials(author || 'Acode'), { x: 82, y: 569, size: 18, color: '#cfe6ff', weight: 700, anchor: 'middle' })}
@@ -251,14 +286,19 @@ function createPluginOgSvg({ name, author }) {
   );
 }
 
-async function renderPluginOgImage({ id, name, author, iconPath, version = 'latest' }) {
-  const key = `plugin:${pluginRevision}:${id}:${name}:${author}:${version}:${iconPath || 'fallback'}`;
+async function renderPluginOgImage({ id, name, author, iconPath, version, downloads = 0, rating = null, updatedAt = 'latest' }) {
+  const key = JSON.stringify(['plugin', pluginRevision, id, name, author, version, downloads, rating, updatedAt, iconPath || 'fallback']);
   return getCached(key, async () => {
-    const background = await atmosphere([
+    // Share the promise too, so concurrent cold cards only draw this background once.
+    pluginBackground ??= atmosphere([
       [640, -220, 200, 900, 36, COLORS.accent, 0.5],
       [880, -160, 120, 900, 36, '#1d4ed8', 0.45],
       [120, 260, 160, 700, -40, '#1e40af', 0.3],
-    ]);
+    ]).catch((error) => {
+      pluginBackground = undefined;
+      throw error;
+    });
+    const background = await pluginBackground;
     const resolvedIcon = iconPath && fs.existsSync(iconPath) ? iconPath : logoPath;
     const fallback = resolvedIcon === logoPath;
     const size = fallback ? 104 : ICON;
@@ -271,7 +311,7 @@ async function renderPluginOgImage({ id, name, author, iconPath, version = 'late
 
     return sharp(background)
       .composite([
-        { input: createPluginOgSvg({ name, author }) },
+        { input: createPluginOgSvg({ name, author, version, downloads, rating }) },
         { input: icon, left: Math.round((WIDTH - size) / 2), top: Math.round(TILE_TOP + (TILE - size) / 2) },
       ])
       .png(OUTPUT)
@@ -368,6 +408,7 @@ async function getCached(key, create) {
 
 function clearOgImageCache() {
   cache.clear();
+  pluginBackground = undefined;
 }
 
 module.exports = {

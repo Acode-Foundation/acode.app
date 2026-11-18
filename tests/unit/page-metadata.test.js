@@ -161,6 +161,17 @@ describe('route metadata', () => {
     expect(metadata.imageUrl).toBe('https://acode.app/og/default.png');
   });
 
+  it('keeps legacy preview URLs stable across votes/downloads and changes them on a release', () => {
+    const plugin = { id: 'example.plugin', name: 'Example', version: '1.2.3', created_at: '2026-01-01 00:00:00', package_updated_at: null };
+    const first = resolvePluginMetadata({ ...plugin, updated_at: '2026-11-18 01:00:00' }, origin).imageUrl;
+    const next = resolvePluginMetadata({ ...plugin, updated_at: '2026-11-18 02:00:00', downloads: 100 }, origin).imageUrl;
+    expect(next).toBe(first);
+    expect(new URL(first).searchParams.get('v')).toBe('1.2.3');
+    expect(resolvePluginMetadata({ ...plugin, version: '1.2.4' }, origin).imageUrl).not.toBe(first);
+    const released = resolvePluginMetadata({ ...plugin, package_updated_at: '2026-11-19 03:00:00' }, origin).imageUrl;
+    expect(new URL(released).searchParams.get('v')).toBe('2026-11-19 03:00:00');
+  });
+
   it('updates plugin metadata after data loads and safely resets it on home navigation', () => {
     const documentRef = new FakeDocument();
     const pluginMetadata = resolvePluginMetadata(
@@ -176,7 +187,7 @@ describe('route metadata', () => {
     applyPageMetadata(pluginMetadata, documentRef);
     expect(documentRef.title).toBe('Example Plugin - Acode Plugin');
     expect(pluginMetadata.robots).toBe('index, follow');
-    expect(content(documentRef, 'meta[property="og:image"]')).toContain('/og/plugin/example.plugin.png?v=1.2.3&r=4');
+    expect(content(documentRef, 'meta[property="og:image"]')).toContain('/og/plugin/example.plugin.png?v=1.2.3&r=5');
     expect(content(documentRef, 'meta[name="twitter:card"]')).toBe('summary_large_image');
 
     const homeMetadata = resolveRouteMetadata('/', origin);

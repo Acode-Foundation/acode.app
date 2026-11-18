@@ -44,6 +44,28 @@ describe('Open Graph image rendering', () => {
     }
   });
 
+  it('keeps a plugin card with a detailed image and long labels within the chat-preview budget', async () => {
+    const path = require('node:path');
+    const image = await renderPluginOgImage({
+      id: 'example.plugin',
+      name: 'A detailed plugin for developers and designers',
+      author: 'Example Developer Community',
+      iconPath: path.resolve(__dirname, '../../client/res/acode-shot-panes.jpg'),
+      version: '123.456.789',
+      downloads: 423121,
+      rating: 98,
+    });
+    expect(image.length).toBeLessThan(300 * 1024);
+  });
+
+  it.each([
+    [null, '0'],
+    ['12345', '12,345'],
+    [Number.NaN, '0'],
+  ])('normalizes %s downloads in the exported SVG renderer', (downloads, label) => {
+    expect(createPluginOgSvg({ name: 'Example', downloads }).toString()).toContain(`>${label}</text>`);
+  });
+
   it('escapes text embedded in the generated SVG', () => {
     expect(escapeXml('<Acode & "friends">')).toBe('&lt;Acode &amp; &quot;friends&quot;&gt;');
   });
@@ -55,7 +77,7 @@ describe('Open Graph image rendering', () => {
     expect(svg).toContain('>Raunak Raj</text>');
     expect(svg).toContain('>RR</text>');
     expect(svg).not.toContain('Explore on acode.app');
-    expect(pluginRevision).toBe('4');
+    expect(pluginRevision).toBe('5');
   });
 
   const titleOf = (svg) => svg.match(/font-size="(\d+)" font-weight="700" letter-spacing="-2" text-anchor="middle">([^<]*)<\/text>/);
@@ -92,6 +114,26 @@ describe('Open Graph image rendering', () => {
     const first = await renderPluginOgImage(input);
     const second = await renderPluginOgImage(input);
     expect(second).toBe(first);
+  });
+
+  it('shows the release, downloads and approval rating, including unrated plugins', () => {
+    const svg = createPluginOgSvg({ name: 'Test', version: '2.3.4', downloads: 12345, rating: 96 }).toString();
+    expect(svg).toContain('transform="translate(60 52)"');
+    expect(svg).toContain('>2.3.4</text>');
+    expect(svg).toContain('>12,345</text>');
+    expect(svg).toContain('>96%</text>');
+    expect(svg.match(/viewBox="0 0 24 24"/g)).toHaveLength(3);
+    const unrated = createPluginOgSvg({ name: 'New', downloads: 0 }).toString();
+    expect(unrated).toContain('>0</text>');
+    expect(unrated).toContain('>—</text>');
+  });
+
+  it('refreshes cached plugin images when displayed stats change', async () => {
+    const input = { id: 'test.plugin', name: 'Test', version: '1.0.0', downloads: 12, rating: 80 };
+    const first = await renderPluginOgImage(input);
+    for (const change of [{ version: '1.0.1' }, { downloads: 13 }, { rating: 81 }]) {
+      expect((await renderPluginOgImage({ ...input, ...change })).equals(first)).toBe(false);
+    }
   });
 
   it('refreshes the default image at the same plugin milestones used by page metadata', async () => {

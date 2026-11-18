@@ -187,6 +187,16 @@ class Plugin extends Entity {
     return Entity.execSql(sql, [], this);
   }
 
+  // Badge requests need only the public counters, without author/comment joins.
+  getPublicStats(id) {
+    return Entity.execSqlGet(
+      `SELECT id, name, version, downloads, votes_up, votes_down, package_updated_at, created_at
+       FROM plugin WHERE id = ? AND status = ?`,
+      [id, this.STATUS_APPROVED],
+      this,
+    );
+  }
+
   get minColumns() {
     return [
       this.ID,

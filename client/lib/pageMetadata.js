@@ -3,7 +3,7 @@ import metadataText from '../../shared/metadataText';
 import ogImageConfig from '../../shared/ogImage.json';
 import metadataConfig from '../../shared/routeMetadata.json';
 
-const { createPluginMetadataDescription, createProfileMetadata, formatMilestoneCount } = metadataText;
+const { createPluginMetadataDescription, createProfileMetadata, formatMilestoneCount, pluginReleaseToken } = metadataText;
 
 const DEFAULT_IMAGE_PATH = '/og/default.png';
 const PLUGINS_IMAGE_PATH = '/og/plugins.png';
@@ -117,7 +117,7 @@ export function resolveRouteMetadata(pathname, origin = window.location.origin, 
  */
 export function resolvePluginMetadata(plugin, origin = window.location.origin) {
   const id = String(plugin.id);
-  const version = encodeURIComponent(plugin.package_updated_at || plugin.updated_at || plugin.version || 'latest');
+  const version = encodeURIComponent(pluginReleaseToken(plugin));
   const description = createPluginMetadataDescription(plugin.description, `${plugin.name} is a plugin for Acode.`);
 
   return {
