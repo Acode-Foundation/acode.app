@@ -47,7 +47,16 @@ async function request(etag) {
     send: vi.fn(),
   };
   const next = vi.fn();
-  await handler({ headers: { 'if-none-match': etag } }, response, next);
+  await handler(
+    {
+      headers: { 'if-none-match': etag },
+      get fresh() {
+        return Boolean(etag && etag === headers.ETag);
+      },
+    },
+    response,
+    next,
+  );
   expect(next).not.toHaveBeenCalled();
   return { ...response, headers };
 }

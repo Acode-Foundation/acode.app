@@ -1,17 +1,10 @@
-const fs = require('node:fs');
-const path = require('node:path');
+const { acodeLogo } = require('../../shared/acodeLogo');
 
 const METRICS = new Set(['downloads', 'rating', 'version', 'updated']);
 const METRIC_ICONS = {
   downloads: '<path d="M12 3v12m-5-5 5 5 5-5M4 15v5h16v-5"/>',
   rating: '<path d="M7 10v11H3V10h4Zm0 0 4-8a3 3 0 0 1 3 3v4h5a2 2 0 0 1 2 2l-2 8a2 2 0 0 1-2 2H7"/>',
 };
-// Reuse the brand's vector paths, omitting raster shadows at badge size.
-const logoPaths = fs
-  .readFileSync(path.resolve(__dirname, '../../client/res/logo.svg'), 'utf8')
-  .match(/<path\b[^>]*\/>/g)
-  .join('');
-
 function count(value) {
   const number = Number(value);
   return Number.isSafeInteger(number) && number >= 0 ? number : 0;
@@ -20,8 +13,12 @@ function count(value) {
 function releaseDate(value) {
   if (!value) return null;
   // SQLite timestamps are UTC but have no timezone suffix.
-  const text = String(value);
-  const date = new Date(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(text) ? `${text.replace(' ', 'T')}Z` : text);
+  const text = String(value).trim();
+  const naiveUtc = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(text);
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(text);
+  const zoned = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/i.test(text);
+  if (!naiveUtc && !dateOnly && !zoned) return null;
+  const date = new Date(naiveUtc ? `${text.replace(' ', 'T')}Z` : text.replace(' ', 'T'));
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
@@ -36,7 +33,7 @@ function publicStats(plugin) {
     votes_up: votesUp,
     votes_down: votesDown,
     rating: votesUp + votesDown ? Math.round((votesUp / (votesUp + votesDown)) * 100) : null,
-    updated_at: releaseDate(plugin.package_updated_at || plugin.created_at),
+    updated_at: releaseDate(plugin.package_updated_at) || releaseDate(plugin.created_at),
   };
 }
 
@@ -53,20 +50,20 @@ function renderBadge(label, value, color = '#007ec6') {
   const icon = METRICS.has(label) ? METRIC_ICONS[label] : null;
   const showLabel = !icon && label !== 'version';
   const iconSpace = 20;
-  const left = showLabel ? displayLabel.length * 7 + 12 + iconSpace : 26;
+  const left = showLabel ? displayLabel.length * 7 + 12 + iconSpace : iconSpace + 6;
   const valueIconSpace = icon ? 20 : 0;
   const right = [...message].length * 7 + 12 + valueIconSpace;
   const width = left + right;
   const title = escapeXml(`Acode ${displayLabel}: ${message}`);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="20" role="img" aria-label="${title}">
   <title>${title}</title>
-  <clipPath id="r"><rect width="${width}" height="20" rx="3"/></clipPath>
-  <g clip-path="url(#r)"><path fill="#555" d="M0 0h${left}v20H0z"/><path fill="${color}" d="M${left} 0h${right}v20H${left}z"/></g>
-  <svg x="5" y="3" width="16" height="14" viewBox="685 334 543 409" fill="#3499fe" aria-hidden="true">${logoPaths}</svg>
+  <rect width="${width}" height="20" rx="3" fill="#555"/>
+  <path fill="${color}" d="M${left} 0H${width - 3}a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H${left}Z"/>
+  ${acodeLogo(5, 3, 16, 14)}
   ${icon ? `<svg x="${left + 6}" y="3" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon}</svg>` : ''}
   <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans Mono,monospace" font-size="11">
-    ${showLabel ? `<text x="${(left + iconSpace) / 2}" y="14">${escapeXml(displayLabel)}</text>` : ''}
-    <text x="${left + (right + valueIconSpace) / 2}" y="14">${escapeXml(message)}</text>
+    ${showLabel ? `<text x="${(left + iconSpace) / 2}" y="14" textLength="${displayLabel.length * 7}" lengthAdjust="spacingAndGlyphs">${escapeXml(displayLabel)}</text>` : ''}
+    <text x="${left + (right + valueIconSpace) / 2}" y="14" textLength="${[...message].length * 7}" lengthAdjust="spacingAndGlyphs">${escapeXml(message)}</text>
   </g>
 </svg>`;
 }
@@ -76,7 +73,7 @@ function pluginBadge(stats, metric) {
     case 'downloads':
       return renderBadge('downloads', stats.downloads.toLocaleString('en-US'));
     case 'rating':
-      return renderBadge('rating', stats.rating === null ? 'unrated' : `${stats.rating}%`, '#4c7d12');
+      return renderBadge('rating', stats.rating == null ? 'unrated' : `${stats.rating}%`, '#4c7d12');
     case 'version':
       return renderBadge('version', stats.version ? `v${String(stats.version).replace(/^v/i, '')}` : 'unknown');
     case 'updated':

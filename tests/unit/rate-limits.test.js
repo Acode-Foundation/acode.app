@@ -25,8 +25,15 @@ it.each([
   ['OG images', module.exports.ogImageLimiter, 600],
 ])('limits %s requests without session lookups or header-based bypasses', async (_label, limiter, limit) => {
   const downstream = vi.fn();
-  const send = async (ip, headers = {}, method = 'GET') => {
-    const req = { ip, method, headers, path: _label === 'plugin stats' ? '/test.plugin/rating.svg' : '/', cookies: { token: headers.authorization } };
+  const send = async (ip, headers = {}, method = 'GET', extension = 'svg') => {
+    const statsPath = extension ? `/test.plugin/rating.${extension}` : '/test.plugin';
+    const req = {
+      ip,
+      method,
+      headers,
+      path: _label === 'plugin stats' ? statsPath : '/',
+      cookies: { token: headers.authorization },
+    };
     const res = {
       setHeader: vi.fn(),
       set: vi.fn().mockReturnThis(),
@@ -46,18 +53,23 @@ it.each([
     const { next } = await send('203.0.113.50', { authorization: `Bearer token-${i}` });
     expect(next).toHaveBeenCalledOnce();
   }
-  for (const [headers, method] of [
+  for (const [headers, method, extension] of [
     [{ authorization: 'Bearer different-token' }, 'GET'],
     [{ 'sec-purpose': 'prefetch' }, 'GET'],
     [{ 'user-agent': 'Googlebot' }, 'GET'],
     [{}, 'HEAD'],
+    [{}, 'GET', 'SVG'],
+    [{}, 'GET', null],
   ]) {
-    const { res, next } = await send('203.0.113.50', headers, method);
+    const { res, next } = await send('203.0.113.50', headers, method, extension);
     expect(res.status).toHaveBeenCalledWith(429);
     expect(res.setHeader).toHaveBeenCalledWith('Retry-After', expect.any(String));
-    if (_label === 'plugin stats') {
+    if (_label === 'plugin stats' && extension !== null) {
       expect(res.type).toHaveBeenCalledWith('image/svg+xml');
       expect(res.send).toHaveBeenCalledWith(expect.stringContaining('<title>Acode Plugin: rate limited</title>'));
+    } else if (_label === 'plugin stats') {
+      expect(res.send).toHaveBeenCalledWith({ error: 'Too many requests, please try again later.' });
+      expect(res.type).not.toHaveBeenCalled();
     }
     expect(next).not.toHaveBeenCalled();
   }

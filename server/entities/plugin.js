@@ -1,4 +1,5 @@
 const Entity = require('./entity');
+const PUBLIC_STATS_COLUMNS = ['id', 'name', 'version', 'downloads', 'votes_up', 'votes_down', 'package_updated_at', 'created_at'];
 
 const table = `CREATE TABLE IF NOT EXISTS plugin (
   id TEXT,
@@ -190,8 +191,19 @@ class Plugin extends Entity {
   // Badge requests need only the public counters, without author/comment joins.
   getPublicStats(id) {
     return Entity.execSqlGet(
-      `SELECT id, name, version, downloads, votes_up, votes_down, package_updated_at, created_at
+      `SELECT ${PUBLIC_STATS_COLUMNS.join(', ')}
        FROM plugin WHERE id = ? AND status = ?`,
+      [id, this.STATUS_APPROVED],
+      this,
+    );
+  }
+
+  // Share cards need the author's display name, but no comment aggregation or private fields.
+  getPublicOgData(id) {
+    return Entity.execSqlGet(
+      `SELECT ${PUBLIC_STATS_COLUMNS.map((column) => `p.${column}`).join(', ')}, u.name AS author
+       FROM plugin AS p LEFT JOIN user AS u ON p.user_id = u.id
+       WHERE p.id = ? AND p.status = ?`,
       [id, this.STATUS_APPROVED],
       this,
     );

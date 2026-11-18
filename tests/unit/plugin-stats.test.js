@@ -7,6 +7,7 @@ import { JSDOM } from 'jsdom';
 import * as badges from '../../server/lib/pluginBadge';
 import pluginStatsCors from '../../server/lib/pluginStatsCors';
 import * as rateLimits from '../../server/lib/rateLimits';
+import { acodeLogo } from '../../shared/acodeLogo';
 
 const fixture = {
   id: 'test.plugin',
@@ -115,19 +116,19 @@ it('returns only compact public fields with numeric counts, UTC release time and
   expect(getPublicStats).toHaveBeenCalledWith('test.plugin');
 });
 
-it('allows conditional-read preflights through the global handler only for the public stats namespace', async () => {
+it.each(['/api/plugin-stats', '/API/Plugin-Stats'])('allows conditional-read preflights only for the public namespace %s', async (namespace) => {
   const headers = {
     Origin: 'https://example.com',
     'Access-Control-Request-Method': 'GET',
     'Access-Control-Request-Headers': 'if-none-match,cache-control,pragma',
   };
-  const allowed = await fetch(base, { method: 'OPTIONS', headers });
+  const allowed = await fetch(base.replace('/api/plugin-stats', namespace), { method: 'OPTIONS', headers });
   expect(allowed.status).toBe(204);
   expect(allowed.headers.get('access-control-allow-origin')).toBe('*');
   expect(allowed.headers.get('access-control-allow-headers').toLowerCase()).toBe('if-none-match, cache-control, pragma');
   expect(allowed.headers.get('access-control-allow-methods')).toBe('GET, HEAD, OPTIONS');
   expect(allowed.headers.has('access-control-allow-credentials')).toBe(false);
-  for (const prefix of ['plugin', 'plugin-stats-private']) {
+  for (const prefix of ['plugin', 'plugin-stats-private', 'Plugin-Stats-Private']) {
     const privateApi = await fetch(base.replace('plugin-stats', prefix), { method: 'OPTIONS', headers });
     expect(privateApi.headers.has('access-control-allow-origin')).toBe(false);
   }
@@ -179,6 +180,57 @@ it('represents no reviews as unrated, preserves zero approval and falls back to 
   expect(badges.publicStats({ ...fixture, votes_up: 0 }).rating).toBe(0);
 });
 
+it('falls back from an invalid release date to creation time and returns null when neither is valid', () => {
+  expect(badges.publicStats({ ...fixture, package_updated_at: 'invalid' }).updated_at).toBe('2026-10-01T00:00:00.000Z');
+  expect(badges.publicStats({ ...fixture, package_updated_at: 'invalid', created_at: 'invalid' }).updated_at).toBeNull();
+});
+
+it('renders every badge with a self-contained logo and no filesystem or inline ID dependencies', () => {
+  const filename = path.resolve(import.meta.dirname, '../../server/lib/pluginBadge.js');
+  const module = { exports: {} };
+  vm.runInNewContext(fs.readFileSync(filename, 'utf8'), {
+    module,
+    require(name) {
+      if (name === '../../shared/acodeLogo') return { acodeLogo };
+      throw new Error(`Unexpected dependency: ${name}`);
+    },
+  });
+  const markup = [...badges.METRICS].map((metric) => module.exports.pluginBadge(module.exports.publicStats(fixture), metric)).join('');
+  const dom = new JSDOM(markup);
+  expect(dom.window.document.querySelectorAll('svg[viewBox="685 334 543 409"]')).toHaveLength(4);
+  expect(dom.window.document.querySelector('[id], image, use, style, script')).toBeNull();
+  for (const text of dom.window.document.querySelectorAll('text')) {
+    expect(text.getAttribute('lengthAdjust')).toBe('spacingAndGlyphs');
+    expect(Number(text.getAttribute('textLength'))).toBeGreaterThan(0);
+  }
+  dom.window.close();
+});
+
+it.each(['rating.SVG', 'Rating.svg', 'RATING.SVG'])('accepts case-insensitive metric %s', async (suffix) => {
+  const response = await fetch(`${base}/${suffix}`);
+  expect(response.status).toBe(200);
+  expect(await response.text()).toContain('Acode Rating: 96%');
+});
+
+it('renders missing ratings as unrated', () => {
+  expect(badges.pluginBadge({ ...fixture, rating: undefined }, 'rating')).toContain('Rating: unrated');
+});
+
+it('interprets timezone-less timestamps as UTC, including fractions and ISO separators', () => {
+  const original = process.env.TZ;
+  process.env.TZ = 'Asia/Kolkata';
+  try {
+    for (const value of ['2026-11-19 10:30:00.123', '2026-11-19T10:30:00.123']) {
+      expect(badges.publicStats({ ...fixture, package_updated_at: value }).updated_at).toBe('2026-11-19T10:30:00.123Z');
+    }
+    expect(badges.publicStats({ ...fixture, package_updated_at: '2026-11-19T10:30:00+05:30' }).updated_at).toBe('2026-11-19T05:00:00.000Z');
+    expect(badges.publicStats({ ...fixture, package_updated_at: '11/19/2026 10:30' }).updated_at).toBe('2026-10-01T00:00:00.000Z');
+  } finally {
+    if (original === undefined) delete process.env.TZ;
+    else process.env.TZ = original;
+  }
+});
+
 it('uses ETags for unchanged stats and serves changed data after revalidation', async () => {
   const first = await fetch(base);
   // Undici otherwise adds no-cache to conditional requests, forcing Express to return 200.
@@ -188,6 +240,10 @@ it('uses ETags for unchanged stats and serves changed data after revalidation', 
   const changed = await fetch(base, { headers });
   expect(changed.status).toBe(200);
   expect((await changed.json()).downloads).toBe(12346);
+  const badge = await fetch(`${base}/rating.svg`);
+  const unchangedBadge = await fetch(`${base}/rating.svg`, { headers: { 'If-None-Match': badge.headers.get('etag'), 'Cache-Control': 'max-age=0' } });
+  expect(unchangedBadge.status).toBe(304);
+  expect(await unchangedBadge.text()).toBe('');
   const head = await fetch(`${base}/rating.svg`, { method: 'HEAD' });
   expect(head.status).toBe(200);
   expect(await head.text()).toBe('');
@@ -214,7 +270,7 @@ it('returns uncached errors for missing or nonpublic plugins and hides internal 
   expect(await failed.json()).toEqual({ error: 'Plugin stats unavailable' });
 });
 
-it('requires approved status and binds the ID in the lightweight entity lookup', async () => {
+it.each(['getPublicStats', 'getPublicOgData'])('requires approved status and binds the ID in %s', async (method) => {
   // biome-ignore lint/complexity/noStaticOnlyClass: Mock the base class without opening a database.
   class Entity {
     static execSqlGet = vi.fn().mockResolvedValue(fixture);
@@ -228,9 +284,16 @@ it('requires approved status and binds the ID in the lightweight entity lookup',
       return Entity;
     },
   });
-  await module.exports.getPublicStats("test' OR 1=1 --");
+  await module.exports[method]("test' OR 1=1 --");
   const [sql, values] = Entity.execSqlGet.mock.calls[0];
-  expect(sql).toMatch(/FROM plugin WHERE id = \? AND status = \?/);
-  expect(sql).not.toMatch(/JOIN|\*/i);
+  if (method === 'getPublicStats') {
+    expect(sql).toMatch(/FROM plugin WHERE id = \? AND status = \?/);
+    expect(sql).not.toMatch(/JOIN/i);
+  } else {
+    expect(sql).toMatch(/FROM plugin AS p LEFT JOIN user AS u ON p.user_id = u.id/);
+    expect(sql).toMatch(/WHERE p.id = \? AND p.status = \?/);
+    expect(sql).toMatch(/u.name AS author/);
+  }
+  expect(sql).not.toMatch(/comment|\*|email|password/i);
   expect(values).toEqual(["test' OR 1=1 --", 1]);
 });

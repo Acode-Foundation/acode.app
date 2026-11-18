@@ -1,6 +1,7 @@
-const fs = require('node:fs');
 const path = require('node:path');
 const createSharp = require('sharp');
+const { acodeLogo } = require('../../shared/acodeLogo');
+const { RETRY_MS, CACHE_BYTES, markTemporaryImage, isTemporaryImage } = require('./ogImageCachePolicy');
 const { pluginRevision } = require('../../shared/ogImage.json');
 const { formatMilestoneCount, normalizeMetadataText } = require('../../shared/metadataText');
 
@@ -12,8 +13,9 @@ const CACHE_LIMIT = 8;
 // the grain dithers away any banding in the gradients.
 const OUTPUT = { palette: true, quality: 90, dither: 1 };
 const cache = new Map();
+const assetWarnings = new Map();
+let cacheBytes = 0;
 let pluginBackground;
-const logoPath = path.resolve(__dirname, '../../client/res/logo.svg');
 const screenshotPath = path.resolve(__dirname, '../../client/res/acode-shot-panes.jpg');
 const FONT = `font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif"`;
 
@@ -92,10 +94,17 @@ function text(content, { x, y, size, color, weight = 400, tracking = 0, anchor =
   return `<text x="${x}" y="${y}" fill="${color}" ${FONT} font-size="${size}" font-weight="${weight}" letter-spacing="${tracking}" text-anchor="${anchor}">${escapeXml(content)}</text>`;
 }
 
+function warnAsset(asset, error) {
+  const now = Date.now();
+  if (assetWarnings.has(asset) && now - assetWarnings.get(asset) < RETRY_MS) return;
+  assetWarnings.delete(asset);
+  assetWarnings.set(asset, now);
+  while (assetWarnings.size > 64) assetWarnings.delete(assetWarnings.keys().next().value);
+  console.warn('OG asset unavailable; using fallback', { asset: path.basename(asset), reason: error.code || error.message });
+}
+
 function logoMarkup(x, y, height, opacity = 1) {
-  const width = (height * 543) / 409;
-  const inner = fs.readFileSync(logoPath, 'utf8').replace(/^[\s\S]*?<svg\b[^>]*>/, '');
-  return `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="685 334 543 409" opacity="${opacity}">${inner}`;
+  return acodeLogo(x, y, (height * 543) / 409, height, opacity);
 }
 
 function svgDocument(content, defs = '') {
@@ -157,19 +166,33 @@ async function renderDefaultOgImage(pluginCount) {
     // The product window rises from the bottom edge and melts into the canvas.
     const win = { x: 150, y: 352, width: 900, radius: 18 };
     const shotHeight = HEIGHT - win.y;
-    const shot = await sharp(screenshotPath)
-      .resize(win.width)
-      .extract({ left: 0, top: 0, width: win.width, height: shotHeight })
-      .composite([
-        {
-          input: Buffer.from(
-            `<svg width="${win.width}" height="${shotHeight}"><rect width="${win.width}" height="${shotHeight + win.radius}" rx="${win.radius}"/></svg>`,
-          ),
-          blend: 'dest-in',
-        },
-      ])
-      .png()
-      .toBuffer();
+    let shot;
+    let temporary = false;
+    try {
+      shot = await sharp(screenshotPath)
+        .resize(win.width)
+        .extract({ left: 0, top: 0, width: win.width, height: shotHeight })
+        .composite([
+          {
+            input: Buffer.from(
+              `<svg width="${win.width}" height="${shotHeight}"><rect width="${win.width}" height="${shotHeight + win.radius}" rx="${win.radius}"/></svg>`,
+            ),
+            blend: 'dest-in',
+          },
+        ])
+        .png()
+        .toBuffer();
+    } catch (error) {
+      warnAsset(screenshotPath, error);
+      temporary = true;
+      shot = await sharp(
+        Buffer.from(
+          `<svg width="${win.width}" height="${shotHeight}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" rx="18" fill="#111827"/>${acodeLogo(380, 60, 140, 105)}<text x="450" y="215" text-anchor="middle" fill="#dce6f2" font-family="sans-serif" font-size="24">Acode</text></svg>`,
+        ),
+      )
+        .png()
+        .toBuffer();
+    }
     const glow = await sharp(
       Buffer.from(
         svgDocument(
@@ -192,10 +215,11 @@ async function renderDefaultOgImage(pluginCount) {
        <linearGradient id="melt" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${COLORS.background}" stop-opacity="0"/><stop offset="1" stop-color="${COLORS.background}" stop-opacity="0.96"/></linearGradient>`,
     );
 
-    return sharp(background)
+    const image = await sharp(background)
       .composite([{ input: glow }, { input: shot, left: win.x, top: win.y }, { input: Buffer.from(overlay) }])
       .png(OUTPUT)
       .toBuffer();
+    return temporary ? markTemporaryImage(image) : image;
   });
 }
 
@@ -286,6 +310,26 @@ function createPluginOgSvg({ name, author, version, downloads = 0, rating = null
   );
 }
 
+async function renderIcon(iconPath, size, radius, fallbackSize = size) {
+  if (iconPath) {
+    try {
+      const mask = Buffer.from(`<svg width="${size}" height="${size}"><rect width="${size}" height="${size}" rx="${radius}"/></svg>`);
+      const icon = await sharp(iconPath)
+        .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .composite([{ input: mask, blend: 'dest-in' }])
+        .png()
+        .toBuffer();
+      return { icon, size, temporary: false };
+    } catch (error) {
+      warnAsset(iconPath, error);
+    }
+  }
+  const icon = await sharp(Buffer.from(acodeLogo(0, 0, fallbackSize, fallbackSize)))
+    .png()
+    .toBuffer();
+  return { icon, size: fallbackSize, temporary: Boolean(iconPath) };
+}
+
 async function renderPluginOgImage({ id, name, author, iconPath, version, downloads = 0, rating = null, updatedAt = 'latest' }) {
   const key = JSON.stringify(['plugin', pluginRevision, id, name, author, version, downloads, rating, updatedAt, iconPath || 'fallback']);
   return getCached(key, async () => {
@@ -299,23 +343,16 @@ async function renderPluginOgImage({ id, name, author, iconPath, version, downlo
       throw error;
     });
     const background = await pluginBackground;
-    const resolvedIcon = iconPath && fs.existsSync(iconPath) ? iconPath : logoPath;
-    const fallback = resolvedIcon === logoPath;
-    const size = fallback ? 104 : ICON;
-    const mask = Buffer.from(`<svg width="${size}" height="${size}"><rect width="${size}" height="${size}" rx="${fallback ? 0 : 32}"/></svg>`);
-    const icon = await sharp(resolvedIcon)
-      .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .composite([{ input: mask, blend: 'dest-in' }])
-      .png()
-      .toBuffer();
+    const { icon, size, temporary } = await renderIcon(iconPath, ICON, 32, 104);
 
-    return sharp(background)
+    const image = await sharp(background)
       .composite([
         { input: createPluginOgSvg({ name, author, version, downloads, rating }) },
         { input: icon, left: Math.round((WIDTH - size) / 2), top: Math.round(TILE_TOP + (TILE - size) / 2) },
       ])
       .png(OUTPUT)
       .toBuffer();
+    return temporary ? markTemporaryImage(image) : image;
   });
 }
 
@@ -337,10 +374,10 @@ function storeSlots() {
 }
 
 /** Share card for the plugin store: a headline over a shelf of the most popular plugin icons. */
-async function renderPluginsOgImage({ count, iconPaths = [] } = {}) {
-  const countLabel = formatMilestoneCount(count);
-  const subline = countLabel === null ? 'Extend Acode with community plugins' : `${countLabel} community plugins for Acode`;
-  const icons = iconPaths.filter((iconPath) => iconPath && fs.existsSync(iconPath));
+async function renderPluginsOgImage({ iconPaths = [] } = {}) {
+  // Evergreen text stays consistent with live page metadata throughout the image TTL.
+  const subline = 'Extend Acode with community plugins';
+  const icons = iconPaths.filter(Boolean);
   return getCached(`plugins:${subline}:${icons.join('|')}`, async () => {
     const background = await atmosphere([
       [660, -240, 200, 900, 34, COLORS.accent, 0.5],
@@ -356,17 +393,9 @@ async function renderPluginsOgImage({ count, iconPaths = [] } = {}) {
       .join('');
     const iconLayers = await Promise.all(
       slots.map(async ({ x, y }, index) => {
-        const source = icons.length ? icons[index % icons.length] : logoPath;
-        const size = icons.length ? STORE_ICON : 72;
-        const mask = Buffer.from(
-          `<svg width="${size}" height="${size}"><rect width="${size}" height="${size}" rx="${icons.length ? 22 : 0}"/></svg>`,
-        );
-        const input = await sharp(source)
-          .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-          .composite([{ input: mask, blend: 'dest-in' }])
-          .png()
-          .toBuffer();
-        return { input, left: x + (STORE_TILE - size) / 2, top: y + (STORE_TILE - size) / 2 };
+        const source = icons.length ? icons[index % icons.length] : null;
+        const { icon, size, temporary } = await renderIcon(source, STORE_ICON, 22, 72);
+        return { input: icon, left: x + (STORE_TILE - size) / 2, top: y + (STORE_TILE - size) / 2, temporary };
       }),
     );
     const shade = svgDocument(
@@ -379,10 +408,11 @@ async function renderPluginsOgImage({ count, iconPaths = [] } = {}) {
        <linearGradient id="floor" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${COLORS.background}" stop-opacity="0"/><stop offset="1" stop-color="${COLORS.background}" stop-opacity="0.9"/></linearGradient>`,
     );
 
-    return sharp(background)
+    const image = await sharp(background)
       .composite([{ input: Buffer.from(svgDocument(tiles)) }, ...iconLayers.map(place), { input: Buffer.from(shade) }])
       .png(OUTPUT)
       .toBuffer();
+    return iconLayers.some(({ temporary }) => temporary) ? markTemporaryImage(image) : image;
   });
 }
 
@@ -390,24 +420,37 @@ function place({ input, left, top }) {
   return { input, left: Math.round(left), top: Math.round(top) };
 }
 
+function removeCached(key) {
+  const entry = cache.get(key);
+  if (entry) cacheBytes -= entry.image.length;
+  cache.delete(key);
+}
+
 async function getCached(key, create) {
-  if (cache.has(key)) {
-    const value = cache.get(key);
-    cache.delete(key);
-    cache.set(key, value);
-    return value;
+  const entry = cache.get(key);
+  if (entry) {
+    if (!isTemporaryImage(entry.image) || Date.now() - entry.createdAt < RETRY_MS) {
+      cache.delete(key);
+      cache.set(key, entry);
+      return entry.image;
+    }
+    removeCached(key);
   }
 
-  const value = await create();
-  cache.set(key, value);
-  while (cache.size > CACHE_LIMIT) {
-    cache.delete(cache.keys().next().value);
+  const image = await create();
+  removeCached(key);
+  if (image.length <= CACHE_BYTES) {
+    cache.set(key, { image, createdAt: Date.now() });
+    cacheBytes += image.length;
+    while (cache.size > CACHE_LIMIT || cacheBytes > CACHE_BYTES) removeCached(cache.keys().next().value);
   }
-  return value;
+  return image;
 }
 
 function clearOgImageCache() {
   cache.clear();
+  cacheBytes = 0;
+  assetWarnings.clear();
   pluginBackground = undefined;
 }
 

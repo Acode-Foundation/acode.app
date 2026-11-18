@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { createOgImageHandler, OG_CACHE_MS, OG_CACHE_CONTROL } = require('../../server/lib/ogImageResponse');
+const { pluginReleaseToken } = require('../../shared/metadataText');
 const { publicStats } = require('../../server/lib/pluginBadge');
 
 // Exercise the actual handler without starting the app or loading its database.
@@ -27,14 +28,9 @@ let now;
 beforeEach(() => {
   now = 1000;
   vi.spyOn(Date, 'now').mockImplementation(() => now);
-  get = vi.fn().mockResolvedValue([{ ...fixture }]);
+  get = vi.fn().mockResolvedValue({ ...fixture });
   render = vi.fn(async (input) => Buffer.from(JSON.stringify(input)));
-  const Plugin = Object.fromEntries(
-    ['ID', 'NAME', 'AUTHOR', 'STATUS', 'UPDATED_AT', 'CREATED_AT', 'PACKAGE_UPDATED_AT', 'VERSION', 'DOWNLOADS', 'VOTES_UP', 'VOTES_DOWN'].map(
-      (column) => [column, column.toLowerCase()],
-    ),
-  );
-  Object.assign(Plugin, { STATUS_APPROVED: 1, for: () => ({ get }) });
+  const Plugin = { getPublicOgData: get };
   vm.runInNewContext(route, {
     app: {
       get: (_path, callback) => {
@@ -43,6 +39,7 @@ beforeEach(() => {
     },
     Plugin,
     publicStats,
+    pluginReleaseToken,
     createOgImageHandler,
     getPluginIconPath: () => null,
     renderPluginOgImage: render,
@@ -66,18 +63,24 @@ async function request(etag) {
     end: vi.fn(),
   };
   const next = vi.fn();
-  await handler({ params: { id: fixture.id }, headers: { 'if-none-match': etag } }, res, next);
+  await handler(
+    {
+      params: { id: fixture.id },
+      headers: { 'if-none-match': etag },
+      get fresh() {
+        return Boolean(etag && etag === headers.ETag);
+      },
+    },
+    res,
+    next,
+  );
   expect(next).not.toHaveBeenCalled();
   return { ...res, headers };
 }
 
 it('loads only approved plugin data and passes current public stats to the image renderer', async () => {
   const response = await request();
-  expect(get.mock.calls[0][0]).toEqual(expect.arrayContaining(['version', 'downloads', 'votes_up', 'votes_down', 'created_at']));
-  expect(get.mock.calls[0][1]).toEqual([
-    ['id', fixture.id],
-    ['status', 1],
-  ]);
+  expect(get).toHaveBeenCalledWith(fixture.id);
   expect(render).toHaveBeenCalledWith({
     id: fixture.id,
     name: 'Test',
@@ -93,7 +96,7 @@ it('loads only approved plugin data and passes current public stats to the image
 
 it('serves cached stats for two days, then refreshes the image in the background', async () => {
   const first = await request();
-  get.mockResolvedValue([{ ...fixture, version: '1.2.4', downloads: '121', votes_up: 10 }]);
+  get.mockResolvedValue({ ...fixture, version: '1.2.4', downloads: '121', votes_up: 10 });
   now += OG_CACHE_MS - 1;
   const cached = await request(first.headers.ETag);
   expect(cached.statusCode).toBe(304);
@@ -113,7 +116,17 @@ it('serves cached stats for two days, then refreshes the image in the background
 });
 
 it('returns 404 without rendering missing or nonpublic plugins', async () => {
-  get.mockResolvedValue([]);
+  get.mockResolvedValue(undefined);
   expect((await request()).statusCode).toBe(404);
   expect(render).not.toHaveBeenCalled();
+});
+
+it.each([
+  [{ updated_at: '2099-01-01' }, fixture.package_updated_at],
+  [{ package_updated_at: null, updated_at: '2099-01-01' }, fixture.version],
+  [{ package_updated_at: null, version: null, created_at: '2026-01-01' }, '2026-01-01'],
+])('uses the stable release token instead of mutable row timestamps', async (fields, token) => {
+  get.mockResolvedValue({ ...fixture, ...fields });
+  await request();
+  expect(render).toHaveBeenCalledWith(expect.objectContaining({ updatedAt: token }));
 });

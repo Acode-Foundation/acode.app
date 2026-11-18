@@ -45,7 +45,7 @@ function publicReadLimiter() {
     keyGenerator: (req) => ipKeyGenerator(req.ip),
     handler: (req, res) => {
       res.set('Cache-Control', 'no-store').status(429);
-      if (req.path?.endsWith('.svg')) {
+      if (/\.svg$/i.test(req.path || '')) {
         res.type('image/svg+xml').send(renderBadge('plugin', 'rate limited', '#9f3737'));
       } else {
         res.send({ error: 'Too many requests, please try again later.' });

@@ -1,6 +1,7 @@
 const { once } = require('node:events');
 const express = require('express');
 const { createOgImageHandler, createGenerationQueue, OG_CACHE_MS, OG_CACHE_CONTROL } = require('../../server/lib/ogImageResponse');
+const { markTemporaryImage } = require('../../server/lib/ogImageCachePolicy');
 
 let now;
 beforeEach(() => {
@@ -24,7 +25,18 @@ function request(handler, { id = 'test.plugin', etag, query = {} } = {}) {
     end: vi.fn(),
   };
   const next = vi.fn();
-  const done = handler({ params: { id }, query, headers: { 'if-none-match': etag } }, res, next);
+  const done = handler(
+    {
+      params: { id },
+      query,
+      headers: { 'if-none-match': etag },
+      get fresh() {
+        return Boolean(etag && etag === headers.ETag);
+      },
+    },
+    res,
+    next,
+  );
   return { res, headers, next, done };
 }
 
@@ -105,6 +117,7 @@ it('removes a cached plugin after the refresh reports it is no longer public', a
     await missing.done;
     expect(missing.res.statusCode).toBe(404);
     expect(missing.headers['Cache-Control']).toBe('no-store');
+    expect(missing.headers['X-Content-Type-Options']).toBe('nosniff');
   });
 });
 
@@ -131,6 +144,40 @@ it('bounds the cache and keeps recently used plugins when evicting old entries',
   expect(load).toHaveBeenCalledTimes(101);
   await request(handler, { id: '1' }).done;
   expect(load).toHaveBeenCalledTimes(102);
+});
+
+it('evicts by image bytes and serves oversized images without retaining them', async () => {
+  const load = vi.fn(async (req) => Buffer.alloc(req.params.id === 'large' ? 12 : 4));
+  const handler = createOgImageHandler(load, undefined, { maxBytes: 8 });
+  for (const id of ['a', 'b', 'a', 'c', 'a']) await request(handler, { id }).done;
+  expect(load).toHaveBeenCalledTimes(3);
+  await request(handler, { id: 'b' }).done;
+  expect(load).toHaveBeenCalledTimes(4);
+  await request(handler, { id: 'large' }).done;
+  await request(handler, { id: 'large' }).done;
+  expect(load).toHaveBeenCalledTimes(6);
+  await request(handler, { id: 'a' }).done;
+  expect(load).toHaveBeenCalledTimes(6);
+});
+
+it('retries temporary asset fallback images after one minute without caching them downstream', async () => {
+  const load = vi
+    .fn()
+    .mockResolvedValueOnce(markTemporaryImage(Buffer.from('fallback')))
+    .mockResolvedValue(Buffer.from('repaired'));
+  const handler = createOgImageHandler(load);
+  const fallback = request(handler);
+  await fallback.done;
+  expect(fallback.headers['Cache-Control']).toBe('no-store');
+  now += 60000;
+  await request(handler).done;
+  await vi.waitFor(async () => {
+    const repaired = request(handler);
+    await repaired.done;
+    expect(repaired.res.send).toHaveBeenCalledWith(Buffer.from('repaired'));
+    expect(repaired.headers['Cache-Control']).toBe(OG_CACHE_CONTROL);
+  });
+  expect(load).toHaveBeenCalledTimes(2);
 });
 
 it('keeps the two-day origin cache policy even when callers change v/r query parameters', async () => {
@@ -208,6 +255,7 @@ it('returns retryable 503 on generation overload while cached images remain avai
     await busy.done;
     expect(busy.res.statusCode).toBe(503);
     expect(busy.headers).toMatchObject({ 'Cache-Control': 'no-store', 'Retry-After': '5' });
+    expect(busy.headers['X-Content-Type-Options']).toBe('nosniff');
     expect(load).toHaveBeenCalledTimes(3); // warm entry + two active cold renders
     const warm = request(handler, { id: 'warm' });
     await warm.done;
@@ -233,19 +281,56 @@ it('preserves real Express GET, conditional GET and HEAD response semantics', as
     const unchanged = await fetch(url, { headers });
     expect(unchanged.status).toBe(304);
     expect(unchanged.headers.get('etag')).toBe(headers['If-None-Match']);
+    expect(unchanged.headers.has('content-type')).toBe(false);
     expect(await unchanged.text()).toBe('');
     const head = await fetch(url, { method: 'HEAD' });
     expect(head.status).toBe(200);
     expect(head.headers.get('content-length')).toBe('5');
     expect(await head.text()).toBe('');
+    for (const validator of ['*', `W/${headers['If-None-Match']}`, `"other", ${headers['If-None-Match']}`]) {
+      const conditional = await fetch(url, { headers: { ...headers, 'If-None-Match': validator } });
+      expect(conditional.status).toBe(304);
+      expect(conditional.headers.has('content-type')).toBe(false);
+    }
     expect(load).toHaveBeenCalledTimes(1);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
 });
 
-it('times out stuck active work, ignores late settlement, and admits later jobs', async () => {
+it('keeps timed-out renders deduplicated and caches their late success', async () => {
   vi.useFakeTimers();
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const pending = Promise.withResolvers();
+  const load = vi.fn(() => pending.promise);
+  const handler = createOgImageHandler(load);
+  try {
+    const first = request(handler, { id: 'slow.plugin' });
+    await vi.advanceTimersByTimeAsync(15000);
+    await first.done;
+    expect(first.res.statusCode).toBe(503);
+    expect(first.headers).toMatchObject({ 'Retry-After': '15', 'X-Content-Type-Options': 'nosniff' });
+    expect(log).toHaveBeenCalledWith(expect.any(String), { label: 'OG [slow.plugin]' });
+    await request(handler, { id: 'slow.plugin' }).done;
+    expect(load).toHaveBeenCalledTimes(1);
+    pending.resolve(Buffer.from('late image'));
+    await vi.advanceTimersByTimeAsync(0);
+    const cached = request(handler, { id: 'slow.plugin' });
+    await cached.done;
+    expect(cached.res.statusCode).toBe(200);
+    expect(cached.res.send).toHaveBeenCalledWith(Buffer.from('late image'));
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  } finally {
+    pending.resolve(Buffer.from('late image'));
+    await vi.advanceTimersByTimeAsync(0);
+    vi.useRealTimers();
+  }
+});
+
+it.each(['resolve', 'reject'])('keeps timed-out work in its slot until late %s, then admits queued work', async (settle) => {
+  vi.useFakeTimers();
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {});
   try {
     const generate = createGenerationQueue(1, 1, 15000);
     const late = Promise.withResolvers();
@@ -253,17 +338,23 @@ it('times out stuck active work, ignores late settlement, and admits later jobs'
     const timedOut = expect(first).rejects.toMatchObject({ status: 503, message: 'OG generation timed out' });
     await vi.advanceTimersByTimeAsync(15000);
     await timedOut;
+    expect(log).toHaveBeenCalledExactlyOnceWith('OG generation timed out; render slot held until work settles', { label: 'OG' });
     const next = Promise.withResolvers();
-    const second = generate(() => next.promise);
+    const nextWork = vi.fn(() => next.promise);
+    const second = generate(nextWork);
     await Promise.resolve();
-    late.resolve('too late');
-    await Promise.resolve();
+    expect(nextWork).not.toHaveBeenCalled();
+    await expect(generate(() => 'overload')).rejects.toMatchObject({ status: 503 });
+    late[settle](settle === 'resolve' ? 'too late' : new Error('late failure'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(nextWork).toHaveBeenCalledTimes(1);
     const queuedWork = vi.fn(() => 'queued');
     const queued = generate(queuedWork);
     expect(queuedWork).not.toHaveBeenCalled();
     next.resolve('next');
     expect(await second).toBe('next');
     expect(await queued).toBe('queued');
+    expect(log).toHaveBeenCalledTimes(settle === 'reject' ? 2 : 1);
     expect(vi.getTimerCount()).toBe(0);
   } finally {
     vi.useRealTimers();
@@ -272,17 +363,26 @@ it('times out stuck active work, ignores late settlement, and admits later jobs'
 
 it('counts waiting time toward the deadline and never runs expired queued work', async () => {
   vi.useFakeTimers();
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {});
   try {
     const generate = createGenerationQueue(1, 1, 15000);
-    const hung = generate(() => new Promise(() => {}));
+    const active = Promise.withResolvers();
+    const hung = generate(() => active.promise);
     const timedOut = expect(hung).rejects.toMatchObject({ status: 503 });
     const queuedWork = vi.fn(() => new Promise(() => {}));
     const queued = generate(queuedWork);
     const queuedTimeout = expect(queued).rejects.toMatchObject({ status: 503 });
     await vi.advanceTimersByTimeAsync(15000);
     await Promise.all([timedOut, queuedTimeout]);
+    expect(log).toHaveBeenCalledTimes(1); // Only active work logs, not expired waiting jobs.
     expect(queuedWork).not.toHaveBeenCalled();
-    expect(await generate(() => 'recovered')).toBe('recovered');
+    const recoveryWork = vi.fn(() => 'recovered');
+    const recovery = generate(recoveryWork);
+    await Promise.resolve();
+    expect(recoveryWork).not.toHaveBeenCalled();
+    active.resolve('late');
+    expect(await recovery).toBe('recovered');
+    expect(queuedWork).not.toHaveBeenCalled();
     expect(vi.getTimerCount()).toBe(0);
   } finally {
     vi.useRealTimers();

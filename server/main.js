@@ -101,7 +101,7 @@ async function main() {
   await setAuth();
 
   app.use((_req, res, next) => {
-    if (_req.method === 'OPTIONS' && (_req.path === '/api/plugin-stats' || _req.path.startsWith('/api/plugin-stats/'))) {
+    if (_req.method === 'OPTIONS' && /^\/api\/plugin-stats(?:\/|$)/i.test(_req.path)) {
       pluginStatsCors(_req, res, next);
       return;
     }
@@ -225,25 +225,7 @@ async function main() {
   app.get(
     '/og/plugin/:id.png',
     createOgImageHandler(async (req) => {
-      const [plugin] = await Plugin.for('internal').get(
-        [
-          Plugin.ID,
-          Plugin.NAME,
-          Plugin.AUTHOR,
-          Plugin.STATUS,
-          Plugin.UPDATED_AT,
-          Plugin.CREATED_AT,
-          Plugin.PACKAGE_UPDATED_AT,
-          Plugin.VERSION,
-          Plugin.DOWNLOADS,
-          Plugin.VOTES_UP,
-          Plugin.VOTES_DOWN,
-        ],
-        [
-          [Plugin.ID, req.params.id],
-          [Plugin.STATUS, Plugin.STATUS_APPROVED],
-        ],
-      );
+      const plugin = await Plugin.getPublicOgData(req.params.id);
       if (!plugin) return null;
       const { version, downloads, rating } = publicStats(plugin);
       return renderPluginOgImage({
@@ -254,7 +236,7 @@ async function main() {
         version,
         downloads,
         rating,
-        updatedAt: plugin.updated_at || plugin.package_updated_at || 'latest',
+        updatedAt: pluginReleaseToken(plugin),
       });
     }),
   );
@@ -264,12 +246,9 @@ async function main() {
     createOgImageHandler(
       async () => {
         const where = [Plugin.STATUS, Plugin.STATUS_APPROVED];
-        const [count, plugins] = await Promise.all([
-          Plugin.count(where),
-          Plugin.get([Plugin.ID], where, { limit: 24, orderBy: 'CAST(downloads AS INTEGER) DESC' }),
-        ]);
+        const plugins = await Plugin.get([Plugin.ID], where, { limit: 24, orderBy: 'CAST(downloads AS INTEGER) DESC' });
         const iconPaths = plugins.map((plugin) => getPluginIconPath(plugin.id)).filter(Boolean);
-        return renderPluginsOgImage({ count, iconPaths: iconPaths.slice(0, 11) });
+        return renderPluginsOgImage({ iconPaths: iconPaths.slice(0, 11) });
       },
       () => renderPluginsOgImage(),
     ),

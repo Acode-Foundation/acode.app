@@ -20,7 +20,8 @@ router.use(
 );
 
 async function serveStats(req, res) {
-  const { id, metric } = req.params;
+  const { id } = req.params;
+  const metric = req.params.metric?.toLowerCase();
   const badge = metric !== undefined;
   if (badge) res.type('image/svg+xml');
 

@@ -1,5 +1,6 @@
 const sharp = require('sharp');
 const { pluginRevision } = require('../../shared/ogImage.json');
+const { isTemporaryImage } = require('../../server/lib/ogImageCachePolicy');
 const {
   clearOgImageCache,
   createPluginOgSvg,
@@ -11,6 +12,7 @@ const {
 
 describe('Open Graph image rendering', () => {
   beforeEach(() => clearOgImageCache());
+  afterEach(() => vi.restoreAllMocks());
 
   it.each([
     ['default', () => renderDefaultOgImage()],
@@ -31,6 +33,102 @@ describe('Open Graph image rendering', () => {
     expect(metadata.format).toBe('png');
     expect(metadata.width).toBe(1200);
     expect(metadata.height).toBe(630);
+  });
+
+  it('uses the Acode logo for missing, corrupt or directory plugin icons', async () => {
+    const fs = require('node:fs');
+    const os = require('node:os');
+    const path = require('node:path');
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'acode-og-icon-'));
+    try {
+      const corrupt = path.join(directory, 'corrupt.png');
+      fs.writeFileSync(corrupt, 'not a PNG');
+      const input = { id: 'test.plugin', name: 'Test', author: 'Author', version: '1.0.0' };
+      const fallback = await renderPluginOgImage(input);
+      for (const iconPath of [path.join(directory, 'missing.png'), corrupt, directory]) {
+        const image = await renderPluginOgImage({ ...input, iconPath });
+        expect(image.equals(fallback)).toBe(true);
+        expect(isTemporaryImage(image)).toBe(true);
+      }
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('retries repaired icons after a minute and rate-limits fallback warnings across cards', async () => {
+    const fs = require('node:fs');
+    const os = require('node:os');
+    const path = require('node:path');
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'acode-og-repair-'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let now = 1000;
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
+    try {
+      const iconPath = path.join(directory, 'icon.png');
+      fs.writeFileSync(iconPath, 'corrupt');
+      const input = { id: 'test.plugin', name: 'Test', iconPath };
+      const fallback = await renderPluginOgImage(input);
+      await renderPluginOgImage({ ...input, id: 'other.plugin' });
+      expect(warn).toHaveBeenCalledTimes(1);
+      await sharp({ create: { width: 32, height: 32, channels: 4, background: '#ff6600' } })
+        .png()
+        .toFile(iconPath);
+      expect(await renderPluginOgImage(input)).toBe(fallback);
+      now += 60000;
+      const repaired = await renderPluginOgImage(input);
+      expect(repaired.equals(fallback)).toBe(false);
+      expect(isTemporaryImage(repaired)).toBe(false);
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('renders all card types when external assets are unavailable, including permission errors', async () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const vm = require('node:vm');
+    const filename = path.resolve(__dirname, '../../server/lib/ogImage.js');
+    const module = { exports: {} };
+    const warn = vi.fn();
+    const dependencies = {
+      'node:path': path,
+      sharp: (input, ...args) => {
+        if (typeof input === 'string') throw Object.assign(new Error('Permission denied'), { code: 'EACCES' });
+        return sharp(input, ...args);
+      },
+      '../../shared/acodeLogo': require('../../shared/acodeLogo'),
+      '../../shared/ogImage.json': require('../../shared/ogImage.json'),
+      '../../shared/metadataText': require('../../shared/metadataText'),
+      './ogImageCachePolicy': require('../../server/lib/ogImageCachePolicy'),
+    };
+    vm.runInNewContext(fs.readFileSync(filename, 'utf8'), {
+      module,
+      Buffer,
+      __dirname: path.dirname(filename),
+      console: { warn },
+      require(name) {
+        if (!(name in dependencies)) throw new Error(`Unexpected dependency: ${name}`);
+        return dependencies[name];
+      },
+    });
+    const renderer = module.exports;
+    for (const image of [
+      await renderer.renderDefaultOgImage(),
+      await renderer.renderPluginOgImage({ id: 'test.plugin', name: 'Test', iconPath: '/denied/icon.png' }),
+      await renderer.renderPluginsOgImage({ iconPaths: ['/denied/icon.png'] }),
+    ]) {
+      const metadata = await sharp(image).metadata();
+      expect([metadata.width, metadata.height]).toEqual([1200, 630]);
+      expect(isTemporaryImage(image)).toBe(true);
+    }
+    expect(warn).toHaveBeenCalledTimes(2); // Screenshot and icon, not every store tile.
+    expect(warn).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ reason: 'EACCES' }));
+  });
+
+  it('keeps the store card count-free while page metadata can update live', async () => {
+    const first = await renderPluginsOgImage({ count: 99 });
+    expect(await renderPluginsOgImage({ count: 1000 })).toBe(first);
   });
 
   it('renders the plugin store card with and without icons, under the chat-preview size budget', async () => {
