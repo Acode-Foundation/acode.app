@@ -2,7 +2,6 @@
 require('dotenv').config();
 
 const fs = require('node:fs');
-const crypto = require('node:crypto');
 const path = require('node:path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -11,14 +10,15 @@ const Handlebars = require('handlebars');
 const defaultOg = require('./defaultOg.json');
 const { pluginRevision } = require('../shared/ogImage.json');
 const faqPages = require('./routes/faqPages');
-const { normalizeMetadataText, truncateMetadataText, createProfileMetadata } = require('../shared/metadataText');
+const { normalizeMetadataText, truncateMetadataText, createProfileMetadata, pluginReleaseToken } = require('../shared/metadataText');
+const pluginStatsCors = require('./lib/pluginStatsCors');
 const { isAccountRoute, isAdFreeRoute } = require('../shared/adPolicy');
 const { getMetadata, getPluginsMetadata, FALLBACK_TITLE } = require('./routeMetadata');
 const Plugin = require('./entities/plugin');
 const User = require('./entities/user');
 const { getLoggedInUser } = require('./lib/helpers');
 const { redirectPromotionHost } = require('./lib/promotionHost');
-const { promotionRedirectLimiter, sponsorImageLimiter } = require('./lib/rateLimits');
+const { promotionRedirectLimiter, sponsorImageLimiter, ogImageLimiter } = require('./lib/rateLimits');
 const { redirectSignedIn } = require('./lib/guestOnly');
 const storeRedirect = require('./lib/storeRedirect');
 const apis = require('./routes/apis');
@@ -27,6 +27,8 @@ const aiOAuthCallback = require('./lib/aiOAuthCallback');
 const setAuth = require('./lib/gapis');
 const migrationRunner = require('./lib/migrationRunner');
 const { renderDefaultOgImage, renderPluginOgImage, renderPluginsOgImage } = require('./lib/ogImage');
+const { createOgImageHandler } = require('./lib/ogImageResponse');
+const { publicStats } = require('./lib/pluginBadge');
 const { fileInDir } = require('./lib/pluginScanner');
 const { sendSponsorImage } = require('./lib/sponsorImage');
 const { sendPublicAsset, homePosterSrcset } = require('./lib/publicAssets');
@@ -50,8 +52,6 @@ const LEGACY_NATIVE_CSRF_EXEMPT_PATHS = new Set(['/api/plugin/order', '/api/plug
 const PLUGIN_ICONS = path.resolve(__dirname, '../data/icons');
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
 const SCHEMAS_DIR = path.resolve(__dirname, './schemas');
-const OG_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
-const DEFAULT_OG_CACHE_CONTROL = 'public, max-age=300, must-revalidate';
 const PLUGINS_OG_IMAGE_PATH = '/og/plugins.png';
 const PUBLIC_ORIGIN = getPublicOrigin();
 // Development builds can replace the poster while the server is running.
@@ -101,6 +101,10 @@ async function main() {
   await setAuth();
 
   app.use((_req, res, next) => {
+    if (_req.method === 'OPTIONS' && /^\/api\/plugin-stats(?:\/|$)/i.test(_req.path)) {
+      pluginStatsCors(_req, res, next);
+      return;
+    }
     const origin = _req.headers.origin;
     if (ALLOWED_ORIGINS.has(origin)) {
       res.header('Access-Control-Allow-Origin', origin);
@@ -205,79 +209,50 @@ async function main() {
     res.sendFile('llms.txt', { root: process.cwd() });
   });
 
-  app.get('/og/default.png', async (req, res, next) => {
-    try {
-      const count = await Plugin.count([Plugin.STATUS, Plugin.STATUS_APPROVED]).catch(() => null);
-      const image = await renderDefaultOgImage(count);
-      const etag = createEtag(image);
-      res.setHeader('Cache-Control', DEFAULT_OG_CACHE_CONTROL);
-      res.setHeader('ETag', etag);
-      if (req.headers['if-none-match'] === etag) {
-        res.status(304).end();
-        return;
-      }
-      sendOgImage(res, image, etag, DEFAULT_OG_CACHE_CONTROL);
-    } catch (error) {
-      next(error);
-    }
-  });
+  app.use('/og', ogImageLimiter);
 
-  app.get('/og/plugin/:id.png', async (req, res, next) => {
-    try {
-      const id = req.params.id;
-      const [plugin] = await Plugin.for('internal').get(
-        [Plugin.ID, Plugin.NAME, Plugin.AUTHOR, Plugin.STATUS, Plugin.UPDATED_AT, Plugin.PACKAGE_UPDATED_AT],
-        [
-          [Plugin.ID, id],
-          [Plugin.STATUS, Plugin.STATUS_APPROVED],
-        ],
-      );
-      if (!plugin) {
-        res.status(404).send({ error: 'Plugin not found' });
-        return;
-      }
+  app.get(
+    '/og/default.png',
+    createOgImageHandler(
+      async () => {
+        const count = await Plugin.count([Plugin.STATUS, Plugin.STATUS_APPROVED]);
+        return renderDefaultOgImage(count);
+      },
+      () => renderDefaultOgImage(null),
+    ),
+  );
 
-      const version = plugin.package_updated_at || plugin.updated_at || 'latest';
-      const etag = createEtag(`plugin-og:${pluginRevision}:${plugin.id}:${plugin.name}:${plugin.author}:${version}`);
-      if (req.headers['if-none-match'] === etag) {
-        res.status(304).end();
-        return;
-      }
-
-      const image = await renderPluginOgImage({
+  app.get(
+    '/og/plugin/:id.png',
+    createOgImageHandler(async (req) => {
+      const plugin = await Plugin.getPublicOgData(req.params.id);
+      if (!plugin) return null;
+      const { version, downloads, rating } = publicStats(plugin);
+      return renderPluginOgImage({
         id: plugin.id,
         name: plugin.name,
         author: plugin.author,
         iconPath: getPluginIconPath(plugin.id),
         version,
+        downloads,
+        rating,
+        updatedAt: pluginReleaseToken(plugin),
       });
-      sendOgImage(res, image, etag);
-    } catch (error) {
-      next(error);
-    }
-  });
+    }),
+  );
 
-  app.get('/og/plugins.png', async (req, res, next) => {
-    try {
-      const where = [Plugin.STATUS, Plugin.STATUS_APPROVED];
-      const [count, plugins] = await Promise.all([
-        Plugin.count(where).catch(() => null),
-        Plugin.get([Plugin.ID], where, { limit: 24, orderBy: 'CAST(downloads AS INTEGER) DESC' }).catch(() => []),
-      ]);
-      const iconPaths = plugins.map((plugin) => getPluginIconPath(plugin.id)).filter(Boolean);
-      const image = await renderPluginsOgImage({ count, iconPaths: iconPaths.slice(0, 11) });
-      const etag = createEtag(image);
-      res.setHeader('Cache-Control', DEFAULT_OG_CACHE_CONTROL);
-      res.setHeader('ETag', etag);
-      if (req.headers['if-none-match'] === etag) {
-        res.status(304).end();
-        return;
-      }
-      sendOgImage(res, image, etag, DEFAULT_OG_CACHE_CONTROL);
-    } catch (error) {
-      next(error);
-    }
-  });
+  app.get(
+    '/og/plugins.png',
+    createOgImageHandler(
+      async () => {
+        const where = [Plugin.STATUS, Plugin.STATUS_APPROVED];
+        const plugins = await Plugin.get([Plugin.ID], where, { limit: 24, orderBy: 'CAST(downloads AS INTEGER) DESC' });
+        const iconPaths = plugins.map((plugin) => getPluginIconPath(plugin.id)).filter(Boolean);
+        return renderPluginsOgImage({ iconPaths: iconPaths.slice(0, 11) });
+      },
+      () => renderPluginsOgImage(),
+    ),
+  );
 
   app.use('/api', apis);
   app.use('/api/*path', (_req, res) => {
@@ -391,7 +366,7 @@ async function main() {
       const iconPath = `/plugin-icon/${encodeURIComponent(plugin.id)}`;
       const pageDesc = createPluginDescription(plugin.description, `${plugin.name} is a plugin for Acode.`);
       const imagePath = approved
-        ? `/og/plugin/${encodeURIComponent(plugin.id)}.png?v=${encodeURIComponent(plugin.package_updated_at || plugin.updated_at || plugin.version || 'latest')}&r=${pluginRevision}`
+        ? `/og/plugin/${encodeURIComponent(plugin.id)}.png?v=${encodeURIComponent(pluginReleaseToken(plugin))}&r=${pluginRevision}`
         : defaultOg.image_path;
 
       res.header('Content-Type', 'text/html;charset=utf-8');
@@ -584,10 +559,6 @@ function compileTemplate(filename) {
   return Handlebars.compile(fs.readFileSync(templatePath, 'utf8'));
 }
 
-function createEtag(value) {
-  return `"${crypto.createHash('sha256').update(value).digest('base64url')}"`;
-}
-
 function getPluginIconPath(id) {
   return resolveFileIn(PLUGIN_ICONS, `${id}.png`);
 }
@@ -606,14 +577,6 @@ function resolveFileIn(dir, name) {
   } catch {
     return null;
   }
-}
-
-function sendOgImage(res, image, etag, cacheControl = OG_CACHE_CONTROL) {
-  res.setHeader('Content-Type', 'image/png');
-  res.setHeader('Cache-Control', cacheControl);
-  res.setHeader('ETag', etag);
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.send(image);
 }
 
 start();

@@ -56,6 +56,18 @@ sudo install -m 755 target/release/plugin_scanner /usr/local/bin/plugin_scanner
 
 Scan results are stored in the `plugin_scan` table, one row per upload.
 
+## Public plugin badges and stats
+
+Replace `your.plugin.id` with the ID from `plugin.json`:
+
+```markdown
+![Downloads](https://acode.app/api/plugin-stats/your.plugin.id/downloads.svg)
+```
+
+Use `rating.svg`, `version.svg` or `updated.svg` for the other badges. Fetch `https://acode.app/api/plugin-stats/your.plugin.id` for JSON. No API key is required; only approved plugins are public. Badge/JSON responses cache for five minutes; OG images cache for two days and then refresh in the background.
+
+The [full guide](https://docs.acode.app/docs/getting-started/plugin-badges) is maintained in the separate `Acode-Foundation/acode-plugin-docs` repository. Publish the companion docs change with the API release before enabling the docs homepage announcement; the guide URL may return 404 until that deployment.
+
 ## Contributing
 
 We welcome contributions to improve the Acode website. To contribute:

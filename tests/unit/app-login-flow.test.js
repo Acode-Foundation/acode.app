@@ -618,6 +618,7 @@ async function start() {
     '../../server/lib/rateLimits.js',
     {
       'express-rate-limit': rateLimit,
+      './pluginBadge': { renderBadge: () => '<svg/>' },
       './helpers': helpers,
       './apiKeyAuth': { getApiKeyAuth: async () => null },
     },

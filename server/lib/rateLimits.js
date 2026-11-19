@@ -1,4 +1,5 @@
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
+const { renderBadge } = require('./pluginBadge');
 
 /**
  * Bucket key for a request. Signed-in users are keyed by account, so developers
@@ -39,8 +40,24 @@ function limiter(limit, windowMinutes, options = {}) {
   });
 }
 
+function publicReadLimiter() {
+  return limiter(600, 1, {
+    keyGenerator: (req) => ipKeyGenerator(req.ip),
+    handler: (req, res) => {
+      res.set('Cache-Control', 'no-store').status(429);
+      if (/\.svg$/i.test(req.path || '')) {
+        res.type('image/svg+xml').send(renderBadge('plugin', 'rate limited', '#9f3737'));
+      } else {
+        res.send({ error: 'Too many requests, please try again later.' });
+      }
+    },
+  });
+}
+
 module.exports = {
   createUserOrIpKey,
+  pluginStatsLimiter: publicReadLimiter(),
+  ogImageLimiter: publicReadLimiter(),
   // Shared-IP allowance, before database access; spoofable bot/prefetch headers get no exemption.
   // Like the other limiters, this quota is per process and resets on restart.
   promotionRedirectLimiter: limiter(120, 1, {

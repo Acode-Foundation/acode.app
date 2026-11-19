@@ -44,6 +44,10 @@ function createPluginMetadataDescription(markdown, fallback = 'Explore this plug
   return truncateMetadataText(normalizedDescription || normalizedFallback);
 }
 
+function pluginReleaseToken(plugin) {
+  return plugin.package_updated_at || plugin.version || plugin.created_at || 'latest';
+}
+
 /**
  * Build profile metadata shared by server rendering and SPA navigation.
  * @param {{ name?: unknown, role?: string }} user
@@ -78,6 +82,7 @@ function formatMilestoneCount(count) {
 module.exports = {
   PLUGIN_DESCRIPTION_MAX_LENGTH,
   createPluginMetadataDescription,
+  pluginReleaseToken,
   createProfileMetadata,
   formatMilestoneCount,
   normalizeMetadataText,
