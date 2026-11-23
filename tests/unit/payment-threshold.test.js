@@ -142,7 +142,7 @@ it.each(['network', 'http', 'invalid'])('keeps Terms readable without a guessed 
   expect(html).toContain('href="/earnings"');
   expect(html).toContain('Developers receive 85% of the reported net earnings');
   expect(html).toContain('Developers receive 70% of the original INR plugin price');
-  expect(html).not.toMatch(/₹|PAYMENT_THRESHOLD|<script>/);
+  expect(html).not.toMatch(/₹|PAYMENT_THRESHOLD|<\s*script\b/i);
 });
 
 it('aborts a stalled threshold response body and still renders Terms', async () => {
