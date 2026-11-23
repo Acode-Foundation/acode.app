@@ -1,6 +1,8 @@
 const PurchaseOrder = require('../entities/purchaseOrder');
 const Plugin = require('../entities/plugin');
 const moment = require('moment');
+const { googlePurchaseCompletion } = require('./googlePurchase');
+const checkGooglePurchaseAccounting = require('./checkGooglePurchaseAccounting');
 
 const args = process.argv.slice(2);
 const startDateArg = args[0];
@@ -31,14 +33,18 @@ async function updateOrder(startDate, endDate, google) {
   const orders = await PurchaseOrder.for('internal').get([
     [`COALESCE(${PurchaseOrder.PROVIDER}, '${PurchaseOrder.PROVIDER_GOOGLE_PLAY}')`, PurchaseOrder.PROVIDER_GOOGLE_PLAY],
     [PurchaseOrder.CREATED_AT, startDate, '>='],
+    // Pending purchases can complete after the normal sync window closes.
+    'OR',
+    [`CAST(${PurchaseOrder.STATE} AS INTEGER)`, PurchaseOrder.STATE_PENDING],
     [PurchaseOrder.CREATED_AT, endExclusive, '<'],
   ]);
 
+  const heldOrders = [];
   for (const order of orders) {
     try {
       const { package: packageName, plugin_id: pluginId, order_id: orderId, id: rowId, token, state } = order;
 
-      const [plugin] = await Plugin.get([Plugin.SKU], [Plugin.ID, pluginId]);
+      const [plugin] = await Plugin.get([Plugin.SKU, Plugin.PRICE], [Plugin.ID, pluginId]);
       if (!plugin) {
         console.log(`Plugin ${pluginId} not found`);
         continue;
@@ -61,17 +67,30 @@ async function updateOrder(startDate, endDate, google) {
         updates.push([PurchaseOrder.STATE, Number(purchaseState)]);
       }
 
+      if (Number(state) === PurchaseOrder.STATE_PENDING && Number(purchaseState) === PurchaseOrder.STATE_PURCHASED) {
+        await checkGooglePurchaseAccounting(order);
+        updates.push(...Object.entries(googlePurchaseCompletion(order, plugin.price)));
+      }
+
       if (Number(purchaseState) !== Number(PurchaseOrder.STATE_PURCHASED)) {
         updates.push([PurchaseOrder.AMOUNT, 0]);
       }
 
       if (updates.length) {
-        await PurchaseOrder.update(updates, [PurchaseOrder.ID, rowId]);
+        // Discard stale provider results if the API or another sync changed this order.
+        await PurchaseOrder.update(updates, [
+          [PurchaseOrder.ID, rowId],
+          [PurchaseOrder.STATE, state],
+          [PurchaseOrder.TOKEN, token],
+        ]);
       }
     } catch (error) {
-      console.error(`Error updating order ${order.order_id}:`, error.message);
-      // Optionally, you can log the error to a file or send a notification
+      console.error('Error updating order %s: %s', order.order_id, error.message);
+      if (error.code === 'GOOGLE_PURCHASE_REVIEW_REQUIRED') heldOrders.push(order.id);
     }
+  }
+  if (heldOrders.length) {
+    throw new Error(`Google purchases held for accounting review (purchase_order IDs): ${heldOrders.join(', ')}. No held orders were changed.`);
   }
 }
 

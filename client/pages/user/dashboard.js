@@ -19,7 +19,7 @@ const STATUS_LABELS = { 0: 'Pending', 2: 'Rejected' };
  * @param {() => void} [props.onManagePlugins] Switch to the plugin manager
  */
 export default function DeveloperDashboard({ user, isSelf, stats, paymentMethods, onManagePlugins }) {
-  const hasActivity = stats.totals.plugins > 0 || stats.totals.lifetimeEarnings > 0;
+  const hasActivity = stats.totals.plugins > 0 || stats.totals.lifetimeEarnings > 0 || stats.monthly.some((row) => row.reviewRequired);
   const downloadsCanvas = Ref();
   const earningsCanvas = Ref();
   const payoutBalance = Ref();
@@ -36,6 +36,9 @@ export default function DeveloperDashboard({ user, isSelf, stats, paymentMethods
               </div>
             </Panel>
             <Panel title='Earnings' meta='Last 12 months'>
+              {stats.monthly.some((row) => row.reviewRequired) && (
+                <p className='panel-empty'>Some earnings are under review. Affected months are omitted from the chart.</p>
+              )}
               <div className='chart-box'>
                 <canvas ref={earningsCanvas} aria-label='Monthly earnings for the last 12 months' role='img' />
               </div>
@@ -95,14 +98,16 @@ export default function DeveloperDashboard({ user, isSelf, stats, paymentMethods
 
   async function loadPayout() {
     let unpaid = null;
+    let reviewRequired = false;
     try {
       const res = await fetch(`/api/user/unpaid-earnings?user=${user.id}`);
       const json = await res.json();
+      reviewRequired = res.status === 409;
       if (!json.error) unpaid = json;
     } catch {
       // handled by the empty payout state
     }
-    payoutBalance.el.replaceChildren(<Payout unpaid={unpaid} />);
+    payoutBalance.el.replaceChildren(<Payout unpaid={unpaid} reviewRequired={reviewRequired} />);
   }
 }
 
@@ -110,22 +115,24 @@ function StatTiles({ stats, user }) {
   const { totals, monthly } = stats;
   const thisMonth = monthly[monthly.length - 1];
   const monthLabel = moment({ year: thisMonth.year, month: thisMonth.month }).format('MMM YYYY');
+  const earningsSource = totals.paidPlugins ? `${totals.paidPlugins} paid plugin${totals.paidPlugins === 1 ? '' : 's'}` : 'From downloads';
 
   return (
     <div className='stat-grid'>
       <StatTile
         icon='attach_money'
         label='This month'
-        value={formatExactNumber(thisMonth.amount, { currency: true })}
-        sub={`${thisMonth.estimated ? 'Estimated · ' : ''}${monthLabel}`}
+        value={thisMonth.reviewRequired ? '—' : formatExactNumber(thisMonth.amount, { currency: true })}
+        title={thisMonth.reviewRequired ? 'Earnings under review' : undefined}
+        sub={thisMonth.reviewRequired ? `Under review · ${monthLabel}` : `${thisMonth.estimated ? 'Estimated · ' : ''}${monthLabel}`}
         href={`/earnings?user=${user.id}`}
       />
       <StatTile
         icon='account_balance'
         label='Lifetime earnings'
-        value={formatCompactNumber(totals.lifetimeEarnings, { currency: true })}
-        title={formatExactNumber(totals.lifetimeEarnings, { currency: true })}
-        sub={totals.paidPlugins ? `${totals.paidPlugins} paid plugin${totals.paidPlugins === 1 ? '' : 's'}` : 'From downloads'}
+        value={totals.lifetimeEarnings === null ? '—' : formatCompactNumber(totals.lifetimeEarnings, { currency: true })}
+        title={totals.lifetimeEarnings === null ? 'Earnings under review' : formatExactNumber(totals.lifetimeEarnings, { currency: true })}
+        sub={totals.lifetimeEarnings === null ? 'Earnings under review' : earningsSource}
       />
       <StatTile
         icon='download'
@@ -248,9 +255,9 @@ function TopPlugins({ plugins }) {
   );
 }
 
-function Payout({ unpaid }) {
+function Payout({ unpaid, reviewRequired }) {
   if (!unpaid) {
-    return <p className='panel-empty'>Unpaid balance unavailable.</p>;
+    return <p className='panel-empty'>{reviewRequired ? 'Earnings under review. Unpaid balance is unavailable.' : 'Unpaid balance unavailable.'}</p>;
   }
 
   const threshold = Number(unpaid.threshold) || 0;
@@ -276,7 +283,7 @@ function Payout({ unpaid }) {
       </div>
       <div className='payout-caption'>
         {progress >= 100
-          ? 'Threshold reached, payout is on its way'
+          ? 'Threshold reached; eligible payouts are initiated on the 16th'
           : `${Math.round(progress)}% of ${formatExactNumber(threshold, { currency: true })} threshold`}
       </div>
     </div>
@@ -395,6 +402,8 @@ function earningsChartConfig(monthly) {
       },
       tooltipLabel: (ctx) => {
         const m = monthly[ctx.dataIndex];
+        if (m.reviewRequired) return 'Earnings under review';
+        if (ctx.raw == null) return 'Earnings unavailable';
         let note = m.paid ? ' · paid' : '';
         if (m.estimated) note = ' (estimated)';
         return `${formatExactNumber(ctx.raw, { currency: true })}${note}`;

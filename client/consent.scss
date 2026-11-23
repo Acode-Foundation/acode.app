@@ -97,6 +97,12 @@
     margin-top: 20px;
   }
 
+  &[data-editing='true'] .cookie-consent-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    [data-choice='save'] { grid-column: auto; }
+  }
+
   [data-choice='accept'], [data-choice='save'] {
     background: #286fbd;
     border-color: #3e83d0;

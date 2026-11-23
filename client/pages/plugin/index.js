@@ -443,7 +443,7 @@ async function renderOrders(ref, pluginId, year, month) {
 
   for (const order of orders) {
     const date = moment(order.created_at).format('DD MMMM YYYY');
-    const statusLabel = Number(order.state) === 0 ? 'Completed' : 'Cancelled';
+    const statusLabel = ['Completed', 'Cancelled', 'Pending'][Number(order.state)] || 'Unknown';
     const statusClass = statusLabel.toLowerCase();
     const packageName = /free$/.test(order.package) ? 'Free' : 'Paid';
     const provider = order.provider === 'razorpay' ? 'Razorpay' : 'Google Play';

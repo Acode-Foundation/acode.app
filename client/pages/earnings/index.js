@@ -19,10 +19,11 @@ export default async function Earnings({ user }) {
   const earnings = Reactive('Loading...');
 
   let unpaidEarnings;
+  let unpaidError;
   try {
     unpaidEarnings = await fetchJson('unpaid-earnings');
   } catch (error) {
-    return <span className='error'>{error.message}</span>;
+    unpaidError = error.status === 409 ? 'Earnings under review. Unpaid balance is unavailable.' : error.message;
   }
 
   earningsMonth.onref = updateEarnings;
@@ -44,39 +45,42 @@ export default async function Earnings({ user }) {
             <tr>
               <th>Total Earnings</th>
               <td>
-                <span title='Your earnings'>&#8377; {earnings}</span>
+                <span title='Your earnings'>{earnings}</span>
               </td>
             </tr>
             <tr>
               <th>Unpaid earnings</th>
               <td>
-                <table className='mini-info'>
-                  <tr>
-                    <td attr-colspan='2'>&#8377; {unpaidEarnings.earnings.toLocaleString()}</td>
-                  </tr>
-                  <tr>
-                    <th>From</th>
-                    <th>To</th>
-                  </tr>
-                  <tr>
-                    <td>{new Date(unpaidEarnings.from).toLocaleDateString()}</td>
-                    <td>{new Date(unpaidEarnings.to).toLocaleDateString()}</td>
-                  </tr>
-                  <tr>
-                    <td attr-colspan='2'>
-                      <p>Earnings from previous month will be calculated after 16th of this month.</p>
-                    </td>
-                  </tr>
-                </table>
+                {unpaidEarnings ? (
+                  <table className='mini-info'>
+                    <tr>
+                      <td attr-colspan='2'>&#8377; {unpaidEarnings.earnings.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <th>From</th>
+                      <th>To</th>
+                    </tr>
+                    <tr>
+                      <td>{new Date(unpaidEarnings.from).toLocaleDateString()}</td>
+                      <td>{new Date(unpaidEarnings.to).toLocaleDateString()}</td>
+                    </tr>
+                    <tr>
+                      <td attr-colspan='2'>
+                        <p>Earnings for each month are calculated on the 16th of the next month.</p>
+                      </td>
+                    </tr>
+                  </table>
+                ) : (
+                  <span role='status'>{unpaidError}</span>
+                )}
               </td>
             </tr>
             <tr>
               <th>Payment Threshold</th>
               <td>
-                <div>&#8377; {unpaidEarnings.threshold.toLocaleString()}</div>
+                <div>{unpaidEarnings ? `₹ ${unpaidEarnings.threshold.toLocaleString()}` : 'Unavailable'}</div>
                 <p>
-                  You will be paid when your earnings reach this amount. Please read <a href='/terms'>Terms of Service</a> "Payment threshold" section
-                  for more info.
+                  Eligible payouts are initiated on the 16th and processed within 10 business days. <a href='/terms'>Payout terms</a>.
                 </p>
               </td>
             </tr>
@@ -116,9 +120,9 @@ export default async function Earnings({ user }) {
       const selectedMonth = earningsMonth.el.value;
       const totalEarnings = await fetchJson(`earnings/${selectedYear}/${selectedMonth}`);
 
-      earnings.value = totalEarnings.earnings.toLocaleString();
+      earnings.value = `₹ ${totalEarnings.earnings.toLocaleString()}`;
     } catch (error) {
-      earnings.value = error.message;
+      earnings.value = error.status === 409 ? 'Earnings under review' : error.message;
     } finally {
       hideLoading();
     }
@@ -175,7 +179,7 @@ async function fetchJson(url) {
   const res = await fetch(`/api/user/${url}?user=${loggedInUser}`);
   const json = await res.json();
   if (json.error) {
-    throw new Error(json.error);
+    throw Object.assign(new Error(json.error), { status: res.status });
   }
   return json;
 }

@@ -1,221 +1,107 @@
-#contact-us {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 60px 24px 60px;
+@use '../../informationPage' as info;
 
-  h1 {
-    font-size: clamp(2.2rem, 5vw, 3.4rem);
-    font-weight: 500;
-    line-height: 1.1;
-    letter-spacing: -0.05em;
-    text-align: center;
-    color: #fff;
-    margin-bottom: 16px;
-  }
+#contact-us {
+  @include info.page(790px);
+  @include info.links;
+
+  h1 { @include info.title; }
 
   .subtitle {
-    font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.55);
-    max-width: 540px;
-    margin: 0 auto 80px;
-    line-height: 1.6;
-    text-align: center;
+    @include info.copy;
+    margin: 0 0 28px;
   }
 
   .contact-card {
     display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 24px 28px;
-    margin-bottom: 80px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 16px;
-    text-decoration: none;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 16px;
-      background: radial-gradient(circle at top right,
-          rgba(52, 153, 254, 0.06),
-          transparent 60%);
-      opacity: 0;
-      transition: opacity 0.4s ease;
-    }
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(52, 153, 254, 0.2);
-      transform: translateY(-4px);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-
-      &::before {
-        opacity: 1;
-      }
-    }
+    align-items: flex-start;
+    gap: 18px;
+    padding: 24px;
+    margin-bottom: 36px;
+    background: var(--page-surface);
+    border: 1px solid var(--page-line);
+    border-radius: 12px;
 
     .icon.email {
-      font-size: 1.8rem;
-      color: #3499fe;
+      font-size: 1.5rem;
+      color: #72b8ff;
       flex-shrink: 0;
-      position: relative;
-      z-index: 1;
+      margin-top: 3px;
     }
 
     .contact-info {
-      flex: 1;
       min-width: 0;
-      position: relative;
-      z-index: 1;
+      flex: 1;
 
       h2 {
-        font-family: inherit;
-        font-size: 0.75rem;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: rgba(255, 255, 255, 0.4);
-        margin-bottom: 4px;
+        @include info.label;
+        color: var(--page-muted);
+        margin-bottom: 8px;
       }
 
       a {
-        font-family: inherit;
-        font-size: 1.2rem;
+        font-size: clamp(1rem, 3vw, 1.2rem);
         font-weight: 600;
-        color: #ffffff;
-        text-decoration: none;
-        transition: color 0.2s ease;
-
-        &:hover {
-          color: #3499fe;
-        }
+        overflow-wrap: anywhere;
       }
 
       p {
-        font-size: 0.82rem;
-        color: rgba(255, 255, 255, 0.4);
-        margin-top: 6px;
-        line-height: 1.5;
+        font-size: 0.9rem;
+        line-height: 1.7;
+        color: var(--page-muted);
+        margin: 8px 0 0;
       }
     }
   }
 
   .contact-section {
-    margin-bottom: 80px;
+    border-top: 1px solid var(--page-line);
+    padding-top: 24px;
 
-    &:last-of-type {
-      margin-bottom: 0;
-    }
-
-    .section-label {
-      font-family: inherit;
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #3499fe;
-      margin-bottom: 12px;
-    }
+    .section-label { @include info.label; }
 
     h2 {
-      font-family: inherit;
-      font-size: 2rem;
-      font-weight: 500;
-      color: #ffffff;
-      margin-bottom: 24px;
-      letter-spacing: -0.02em;
+      @include info.section-title;
+      margin: 0 0 20px;
     }
   }
 
   .social-links {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
 
   .social-link {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    gap: 12px;
+    padding: 16px;
+    min-width: 0;
+    background: var(--page-surface);
+    border: 1px solid var(--page-line);
     border-radius: 12px;
-    color: rgba(255, 255, 255, 0.6);
+    color: #c5cad4;
     text-decoration: none;
-    font-family: inherit;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+    transition: background-color 140ms, border-color 140ms;
 
-    svg {
-      flex-shrink: 0;
-      opacity: 0.7;
-      transition: opacity 0.3s ease;
-    }
+    svg { flex-shrink: 0; color: #72b8ff; }
+    span { min-width: 0; }
 
     &:hover {
       background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(52, 153, 254, 0.2);
-      color: #3499fe;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-
-      svg {
-        opacity: 1;
-      }
+      border-color: rgba(52, 153, 254, 0.3);
     }
   }
 
-  .company-info {
-    font-size: 1.05rem;
-    line-height: 1.75;
-    color: rgba(255, 255, 255, 0.6);
-    max-width: 680px;
-
-    p {
-      margin: 0;
-    }
-
-    strong {
-      color: #ffffff;
-      font-weight: 600;
-    }
+  @media (max-width: 600px) {
+    .contact-card { padding: 20px 16px; gap: 12px; }
+    .social-links { grid-template-columns: minmax(0, 1fr); }
   }
 
-  @media screen and (max-width: 600px) {
-    padding: 40px 20px 40px;
-
-    h1 {
-      font-size: 1.8rem;
-    }
-
-    .subtitle {
-      margin-bottom: 50px;
-    }
-
-    .contact-card {
-      margin-bottom: 50px;
-      padding: 20px;
-      gap: 14px;
-    }
-
-    .contact-section {
-      margin-bottom: 50px;
-
-      h2 {
-        font-size: 1.5rem;
-      }
-    }
-
-    .social-link {
-      padding: 8px 16px;
-      font-size: 0.8rem;
-    }
+  @media (prefers-reduced-motion: reduce) {
+    .social-link { transition: none; }
   }
 }

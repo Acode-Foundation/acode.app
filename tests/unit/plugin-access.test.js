@@ -6,6 +6,7 @@ import { Router } from 'express';
 import JSZip from 'jszip';
 import moment from 'moment';
 import * as apiKeyLib from '../../server/lib/apiKey';
+import * as googlePurchaseLib from '../../server/lib/googlePurchase';
 import { createKeyedLock } from '../../server/lib/pluginScanner';
 import * as pluginSearch from '../../server/lib/pluginSearch';
 import * as repositoryUrl from '../../shared/repositoryUrl';
@@ -23,8 +24,10 @@ let router;
 let apiKeyAuth;
 let sendEmail;
 let apiKeyEntity;
+let checkGooglePurchaseAccounting;
 
 beforeEach(() => {
+  checkGooglePurchaseAccounting = vi.fn().mockResolvedValue();
   apiKeyAuth = null;
   sendEmail = vi.fn().mockResolvedValue();
   apiKeyEntity = { addPlugin: vi.fn().mockReturnValue(true) };
@@ -110,6 +113,8 @@ beforeEach(() => {
     '../lib/razorpay': () => ({ payments: { fetch: razorpayPayment } }),
     '../lib/sendEmail': sendEmail,
     '../lib/exchangeRates': { convertPrice: async (amount) => ({ amount: amount / 10, currency: 'USD', symbol: '$' }) },
+    '../lib/googlePurchase': googlePurchaseLib,
+    '../lib/checkGooglePurchaseAccounting': checkGooglePurchaseAccounting,
     '../lib/modeRegex': {},
     '../lib/pluginScanner': { createKeyedLock, fileInDir: (dir, name) => path.join(dir, name) },
     '../lib/db': {},
@@ -361,6 +366,34 @@ describe('paid plugin download access', () => {
     expect(googlePurchase).not.toHaveBeenCalled();
   });
 
+  it('rejects a canceled Google purchase without inserting an order', async () => {
+    googlePurchase.mockResolvedValue({ data: { purchaseState: 1, orderId: 'GPA.canceled' } });
+    const res = await downloadPlugin({ token: 'canceled-new', package: 'com.foxdebug.acode' });
+    expect(res.statusCode).toBe(403);
+    expect(order.insert).not.toHaveBeenCalled();
+    expect(order.update).not.toHaveBeenCalled();
+  });
+
+  it('returns a readable error if a replacement token is claimed concurrently', async () => {
+    order.get
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 10, plugin_id: paidPlugin.id, provider: 'google_play', state: 0, token: 'old', user_id: null }]);
+    order.update.mockRejectedValue(Object.assign(new Error('table<purchase_order> sql execution failed.'), { code: 'SQLITE_CONSTRAINT_UNIQUE' }));
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'replacement', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(403);
+    expect(res.send.mock.calls[0][0].error).toContain('Purchase is already registered');
+    expect(res.send.mock.calls[0][0].error).not.toContain('purchase_order');
+  });
+
+  it('returns a readable error on a concurrent pending insert without an order ID', async () => {
+    googlePurchase.mockResolvedValue({ data: { purchaseState: 2 } });
+    order.insert.mockRejectedValue(Object.assign(new Error('table<purchase_order> sql execution failed.'), { code: 'SQLITE_CONSTRAINT_UNIQUE' }));
+    const res = await request('/order', { body: { id: paidPlugin.id, token: 'pending-new', package: 'com.foxdebug.acode' } });
+    expect(res.statusCode).toBe(403);
+    expect(res.send.mock.calls[0][0].error).toContain('Purchase is already registered');
+    expect(res.send.mock.calls[0][0].error).not.toContain('purchase_order');
+  });
+
   it('does not let a token recorded for another plugin unlock this one', async () => {
     order.get.mockResolvedValue([{ state: order.STATE_PURCHASED, plugin_id: 'other.plugin' }]);
     const res = await downloadPlugin({ token: 'valid', package: 'com.foxdebug.acode' });
@@ -470,6 +503,23 @@ describe('Google purchase completion', () => {
     const res = await request('/order', { body: { id: paidPlugin.id, token: 'pending', package: 'com.foxdebug.acode' } });
     expect(res.statusCode).toBe(403);
     expect(order.update).not.toHaveBeenCalled();
+  });
+
+  it.each(['order', 'download'])('holds an ambiguous historical pending purchase through %s without writes', async (route) => {
+    checkGooglePurchaseAccounting.mockRejectedValue(
+      Object.assign(new Error('Purchase requires an accounting review.'), {
+        code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED',
+      }),
+    );
+    const res =
+      route === 'order'
+        ? await request('/order', { body: { id: paidPlugin.id, token: 'pending', package: 'com.foxdebug.acode' } })
+        : await downloadPlugin({ token: 'pending', package: 'com.foxdebug.acode' });
+    expect(res.statusCode).toBe(403);
+    expect(res.send.mock.calls[0][0].error).toContain('accounting review');
+    expect(order.update).not.toHaveBeenCalled();
+    expect(order.insert).not.toHaveBeenCalled();
+    expect(pending.state).toBe(2);
   });
 
   it('preserves an existing pending estimate when the current price is unavailable', async () => {

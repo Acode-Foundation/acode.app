@@ -37,6 +37,8 @@ function loadCalcEarnings(razorpayRows) {
     PROVIDER_GOOGLE_PLAY: 'google_play',
     STATE_CANCELED: 1,
     STATE_PURCHASED: 0,
+    STATE_PENDING: 2,
+    STATE: 'state',
     for() {
       return this;
     },
@@ -110,18 +112,44 @@ describe('developer earnings', () => {
 
   it.each(['USD', 'JPY', 'VND'])('never treats a %s amount as INR when accounting data is missing', async (currency) => {
     const calcEarnings = loadCalcEarnings([]);
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     purchaseOrder.get.mockResolvedValue([{ order_id: 'legacy', amount: 50000, currency, provider: 'razorpay', state: 0 }]);
 
-    await expect(calcEarnings.fromPaidPlugins(2026, 5, { id: 7 })).resolves.toBe(0);
-    expect(error).toHaveBeenCalledOnce();
+    await expect(calcEarnings.fromPaidPlugins(2026, 5, { id: 7 })).rejects.toMatchObject({ code: 'MISSING_RAZORPAY_INR', statusCode: 409 });
+    expect(purchaseOrder.update).not.toHaveBeenCalled();
   });
 
-  it.each([1, 2, '2.0'])('excludes cancelled and pending purchases (state %s)', async (state) => {
+  it.each([1, 2, '2.0', '0invalid', null, undefined, '', '   ', false])('excludes non-purchased states (%s)', async (state) => {
     const calcEarnings = loadCalcEarnings([{ razorpay_order_id: 'order_1', amount_inr: 200 }]);
     purchaseOrder.get.mockResolvedValue([{ order_id: 'order_1', amount: 200, provider: 'razorpay', state }]);
 
     await expect(calcEarnings.fromPaidPlugins(2026, 5, { id: 7 })).resolves.toBe(0);
+  });
+
+  it.each([null, '', '   '])('does not reconcile or hold invalid-state purchases (%s)', async (state) => {
+    const calcEarnings = loadCalcEarnings([]);
+    purchaseOrder.get.mockResolvedValue([
+      { id: 1, order_id: 'GPA.invalid', amount: 100, provider: 'google_play', state },
+      { id: 2, order_id: 'order_missing', amount: 10, currency: 'USD', provider: 'razorpay', state },
+      { id: 3, order_id: 'GPA.valid', amount: 100, provider: 'google_play', state: '0' },
+    ]);
+    const report = [
+      { Description: 'GPA.invalid', 'Amount (Merchant Currency)': 'invalid' },
+      { Description: 'GPA.valid', 'Amount (Merchant Currency)': '80' },
+    ];
+    await expect(calcEarnings.fromPaidPlugins(2026, 9, { id: 7 }, report)).resolves.toBe(68);
+    expect(purchaseOrder.update).toHaveBeenCalledExactlyOnceWith(['amount', 80], ['id', 3]);
+  });
+
+  it('holds a missing foreign INR basis before updating any Google report amounts', async () => {
+    const calcEarnings = loadCalcEarnings([]);
+    purchaseOrder.get.mockResolvedValue([
+      { id: 1, order_id: 'GPA.1', amount: 100, provider: 'google_play', state: 0 },
+      { id: 2, order_id: 'order_missing', amount: 1, currency: 'BRL', provider: 'razorpay', state: 0 },
+    ]);
+    await expect(
+      calcEarnings.fromPaidPlugins(2026, 9, { id: 7 }, [{ Description: 'GPA.1', 'Amount (Merchant Currency)': '85' }]),
+    ).rejects.toMatchObject({ code: 'MISSING_RAZORPAY_INR', message: expect.stringContaining('order_missing') });
+    expect(purchaseOrder.update).not.toHaveBeenCalled();
   });
 
   it('applies the Google share to net report proceeds after fees and refunds', async () => {
@@ -138,6 +166,7 @@ describe('developer earnings', () => {
     [2028, 1, '2028-02-01', '2028-03-01'],
   ])('uses complete month boundaries for sales and downloads (%i/%i)', async (year, month, start, end) => {
     const calcEarnings = loadCalcEarnings([]);
+    purchaseOrder.get.mockResolvedValue([]);
     await calcEarnings.fromPaidPlugins(year, month, { id: 7 });
     await calcEarnings.fromDownloads(year, month, { id: 7 });
     for (const mock of [purchaseOrder.get, download.count]) {
@@ -176,6 +205,8 @@ describe('developer earnings', () => {
     const dependencies = {
       '../entities/purchaseOrder': purchaseOrder,
       '../entities/plugin': {},
+      './googlePurchase': {},
+      './checkGooglePurchaseAccounting': {},
       moment,
     };
     vm.runInNewContext(fs.readFileSync(require.resolve('../../server/lib/updateOrders'), 'utf8'), {
@@ -191,6 +222,8 @@ describe('developer earnings', () => {
     expect(purchaseOrder.get).toHaveBeenCalledWith([
       ["COALESCE(provider, 'google_play')", 'google_play'],
       ['created_at', '2026-10-01', '>='],
+      'OR',
+      ['CAST(state AS INTEGER)', 2],
       ['created_at', '2026-11-01', '<'],
     ]);
   });
@@ -257,7 +290,7 @@ describe('developer earnings', () => {
       { Description: 'GPA.1', 'Amount (Merchant Currency)': '100' },
       { Description: '\tGPA.1 ', 'Amount (Merchant Currency)': 'invalid' },
     ]);
-    await expect(calcEarnings.fromPaidPlugins(2026, 9, { id: 7 }, report)).rejects.toMatchObject({ code: 'INVALID_GOOGLE_REPORT' });
+    await expect(calcEarnings.fromPaidPlugins(2026, 9, { id: 7 }, report)).rejects.toMatchObject({ code: 'INVALID_GOOGLE_REPORT', statusCode: 409 });
     expect(purchaseOrder.update).not.toHaveBeenCalled();
   });
 });

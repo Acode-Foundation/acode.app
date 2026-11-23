@@ -11,7 +11,6 @@ const PaymentMethod = require('../entities/paymentMethod');
 const UserEarnings = require('../entities/userEarnings');
 const calcEarnings = require('../lib/calcEarnings');
 const { getDeveloperDashboard } = require('../lib/developerDashboard');
-const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
 const AppConfig = require('../entities/appConfig');
 const login = require('../entities/login');
 const AppAuthCode = require('../entities/appAuthCode');
@@ -240,7 +239,7 @@ route.get('/earnings/:year/:month', async (req, res) => {
 route.get('/unpaid-earnings', async (req, res) => {
   try {
     const user = await getAuthorizedUser(req);
-    const threshold = parseInt(await AppConfig.getValue('payment_threshold'), 10) || PAYMENT_THRESHOLD;
+    const threshold = await AppConfig.getPaymentThreshold();
     const { earnings, from, to } = await calcEarnings.unpaid(user);
 
     if (!earnings) {
@@ -628,8 +627,7 @@ route.post('/', emailCodeCheckLimiter, rejectSignedIn, async (req, res) => {
 
 route.put('/threshold', async (_req, res) => {
   try {
-    const raw = await AppConfig.getValue('payment_threshold');
-    const threshold = parseInt(raw, 10) || PAYMENT_THRESHOLD;
+    const threshold = await AppConfig.getPaymentThreshold();
     res.status(410).send({
       error: `Payment threshold is now fixed at ₹${threshold.toLocaleString()} for all users. It can be changed by an admin in Settings.`,
     });
@@ -869,7 +867,8 @@ async function getAuthorizedUser(req) {
  */
 function handleError(res, error) {
   console.log(error);
-  res.status(error.code || 500).send({ error: error.message });
+  const status = [error.statusCode, error.code].find((value) => Number.isInteger(value) && value >= 400 && value <= 599) ?? 500;
+  res.status(status).send({ error: error.message });
 }
 
 module.exports = route;

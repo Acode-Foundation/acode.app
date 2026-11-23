@@ -108,7 +108,7 @@ async function getDeveloperDashboard(user, { executeQuery = executeDashboardQuer
       previousDownloads: hasPreviousWindow ? plugins.reduce((sum, p) => sum + p.previous, 0) : null,
       votesUp: plugins.reduce((sum, p) => sum + p.votesUp, 0),
       votesDown: plugins.reduce((sum, p) => sum + p.votesDown, 0),
-      lifetimeEarnings: Math.round(monthly.lifetime * 100) / 100,
+      lifetimeEarnings: monthly.rows.some((row) => row.reviewRequired) ? null : Math.round(monthly.lifetime * 100) / 100,
     },
     daily,
     monthly: monthly.rows,
@@ -142,6 +142,7 @@ async function buildMonthlyEarnings(user, [rows, [lifetimeRow]], now, estimateEa
     const storedAmount = row ? Number(row.amount) || 0 : 0;
     let amount = storedAmount;
     let estimated = false;
+    let reviewRequired = false;
 
     // Current month (and last month until it is finalized) are estimates,
     // unless the month has already been paid out.
@@ -149,12 +150,18 @@ async function buildMonthlyEarnings(user, [rows, [lifetimeRow]], now, estimateEa
     const isCurrent = date.isSame(thisMonth, 'month');
     const isPendingLast = !row && date.isSame(lastMonth, 'month');
     if ((isCurrent || isPendingLast) && !isSettled && estimateEarnings) {
-      amount = Number(await estimateEarnings(year, month, user)) || 0;
-      estimated = true;
-      lifetime += amount - storedAmount;
+      try {
+        amount = Number(await estimateEarnings(year, month, user)) || 0;
+        estimated = true;
+        lifetime += amount - storedAmount;
+      } catch (error) {
+        if (!['MISSING_RAZORPAY_INR', 'INVALID_GOOGLE_REPORT'].includes(error.code)) throw error;
+        amount = null;
+        reviewRequired = true;
+      }
     }
 
-    result.push({ year, month, amount: Math.round(amount * 100) / 100, estimated, paid: isSettled });
+    result.push({ year, month, amount: amount === null ? null : Math.round(amount * 100) / 100, estimated, paid: isSettled, reviewRequired });
   }
 
   return { rows: result, lifetime };

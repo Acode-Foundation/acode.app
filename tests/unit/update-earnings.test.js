@@ -10,14 +10,19 @@ let earnings;
 let payment;
 let updateEarnings;
 let exit;
+let configuredThreshold;
+let users;
 
 beforeEach(() => {
+  configuredThreshold = 1000;
+  users = [{ id: 1 }, { id: 2 }, { id: 3 }];
   calcEarnings = {
     indexReport: vi.fn(() => new Map()),
     total: vi.fn(async (_year, _month, user) => {
       if (user.id === 1) throw Object.assign(new Error('Invalid report for user 1'), { code: 'INVALID_GOOGLE_REPORT' });
       return 100;
     }),
+    unpaid: vi.fn(async () => ({ ids: [10], earnings: 100, from: moment('2026-10-01'), to: moment('2026-10-31') })),
   };
   earnings = {
     USER_ID: 'user_id',
@@ -31,17 +36,16 @@ beforeEach(() => {
   payment = { insert: vi.fn() };
   exit = vi.fn();
   const dependencies = {
-    'node:crypto': {},
+    'node:crypto': { randomInt: () => 123 },
     moment,
-    '../entities/plugin': { getUsersWithPlugin: async () => [{ id: 1 }, { id: 2 }, { id: 3 }] },
+    '../entities/plugin': { getUsersWithPlugin: async () => users },
     '../entities/payment': payment,
     './downloadGr': async () => [],
     './calcEarnings': calcEarnings,
     '../entities/userEarnings': earnings,
-    '../entities/paymentMethod': {},
+    '../entities/paymentMethod': { ID: 'id', get: async () => [{ id: 1 }] },
     './sendEmail': vi.fn(),
-    '../../constants.mjs': { PAYMENT_THRESHOLD: 1000 },
-    '../entities/appConfig': { getValue: async () => 1000 },
+    '../entities/appConfig': { getPaymentThreshold: async () => configuredThreshold },
   };
   const module = { exports: {} };
   vm.runInNewContext(
@@ -77,4 +81,24 @@ it('propagates unexpected failures without killing the server', async () => {
   await expect(updateEarnings(2026, 9)).rejects.toThrow('Database unavailable');
   expect(earnings.insert).not.toHaveBeenCalled();
   expect(exit).not.toHaveBeenCalled();
+});
+
+it('includes missing Razorpay order references in the cron alert while continuing other developers', async () => {
+  calcEarnings.total.mockImplementation(async (_year, _month, user) => {
+    if (user.id === 1) throw Object.assign(new Error('Missing INR basis for order_missing; user 1 held.'), { code: 'MISSING_RAZORPAY_INR' });
+    return 100;
+  });
+  await expect(updateEarnings(2026, 9)).rejects.toThrow('order_missing');
+  expect(earnings.insert.mock.calls.map((columns) => columns.find(([key]) => key === 'user_id')[1])).toEqual([2, 3]);
+  expect(payment.insert).not.toHaveBeenCalled();
+});
+
+it('uses the current application threshold for payout eligibility, including the exact boundary', async () => {
+  users = [{ id: 2, payment_method_id: 1 }];
+  configuredThreshold = 101;
+  await updateEarnings(2026, 9);
+  expect(payment.insert).not.toHaveBeenCalled();
+  configuredThreshold = 100;
+  await updateEarnings(2026, 9);
+  expect(payment.insert).toHaveBeenCalledOnce();
 });

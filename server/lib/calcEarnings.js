@@ -9,6 +9,10 @@ function normalizeOrderId(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function isPurchased(state) {
+  return (typeof state === 'number' || (typeof state === 'string' && state.trim() !== '')) && Number(state) === PurchaseOrder.STATE_PURCHASED;
+}
+
 function indexReport(report) {
   const amounts = new Map();
   for (const row of report) {
@@ -46,7 +50,7 @@ async function fromPaidPlugins(year, month, user, report) {
   for (const order of orders) {
     const orderId = normalizeOrderId(order.order_id);
     if (
-      Number(order.state) === PurchaseOrder.STATE_PURCHASED &&
+      isPurchased(order.state) &&
       order.provider !== PurchaseOrder.PROVIDER_RAZORPAY &&
       orderId &&
       reportAmounts.has(orderId) &&
@@ -54,6 +58,7 @@ async function fromPaidPlugins(year, month, user, report) {
     ) {
       const error = new Error(`Invalid Google report amount for order ${order.order_id}; earnings held for user ${user.id}.`);
       error.code = 'INVALID_GOOGLE_REPORT';
+      error.statusCode = 409;
       throw error;
     }
   }
@@ -75,10 +80,26 @@ async function fromPaidPlugins(year, month, user, report) {
     }
   }
 
+  // Hold the developer before any report amount updates if an INR basis is missing.
+  const missingInr = orders.filter(
+    (order) =>
+      isPurchased(order.state) &&
+      order.provider === PurchaseOrder.PROVIDER_RAZORPAY &&
+      !razorpayAmountsInr.has(String(order.order_id)) &&
+      (order.currency || 'INR').toUpperCase() !== 'INR',
+  );
+  if (missingInr.length) {
+    const error = new Error(
+      `Missing INR accounting amounts for Razorpay orders ${missingInr.map((order) => order.order_id || order.id).join(', ')}; earnings held for user ${user.id}.`,
+    );
+    error.code = 'MISSING_RAZORPAY_INR';
+    error.statusCode = 409;
+    throw error;
+  }
+
   const amounts = await Promise.all(
-    orders.map(async ({ id: rowId, order_id: orderId, amount, currency, state, provider }) => {
-      state = Number.parseInt(state, 10);
-      if (state !== PurchaseOrder.STATE_PURCHASED) {
+    orders.map(async ({ id: rowId, order_id: orderId, amount, state, provider }) => {
+      if (!isPurchased(state)) {
         return 0;
       }
 
@@ -88,10 +109,6 @@ async function fromPaidPlugins(year, month, user, report) {
           // earnings use the immutable INR value captured when the order was created.
           let accountingAmount = razorpayAmountsInr.get(String(orderId));
           if (accountingAmount === undefined) {
-            if ((currency || 'INR').toUpperCase() !== 'INR') {
-              console.error(`Missing INR accounting amount for Razorpay order ${orderId}; excluding it from earnings.`);
-              return 0;
-            }
             accountingAmount = amount;
           }
           return accountingAmount * 0.7;

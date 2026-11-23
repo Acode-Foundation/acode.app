@@ -7,7 +7,6 @@ const calcEarnings = require('./calcEarnings');
 const UserEarnings = require('../entities/userEarnings');
 const PaymentMethod = require('../entities/paymentMethod');
 const sendEmail = require('./sendEmail');
-const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
 const AppConfig = require('../entities/appConfig');
 
 const args = process.argv.slice(2);
@@ -63,6 +62,8 @@ async function updateEarnings(year, month) {
     const users = await Plugin.getUsersWithPlugin();
     const indexedReport = calcEarnings.indexReport(report);
     const heldUsers = [];
+    const holdReasons = [];
+    const threshold = await AppConfig.getPaymentThreshold();
     // filter user with not paypal email or not bank account and send email to them
     // send email to user with no paypal email or no bank account
 
@@ -72,12 +73,12 @@ async function updateEarnings(year, month) {
       try {
         earnings = await calcEarnings.total(year, month, user, indexedReport);
       } catch (error) {
-        if (error.code !== 'INVALID_GOOGLE_REPORT') throw error;
+        if (!['INVALID_GOOGLE_REPORT', 'MISSING_RAZORPAY_INR'].includes(error.code)) throw error;
         console.error(error.message);
         heldUsers.push(user.id);
+        holdReasons.push(error.message);
         continue;
       }
-      const threshold = parseInt(await AppConfig.getValue('payment_threshold'), 10) || PAYMENT_THRESHOLD;
 
       const [row] = await UserEarnings.get([
         [UserEarnings.USER_ID, user.id],
@@ -139,7 +140,7 @@ async function updateEarnings(year, month) {
     }
     if (heldUsers.length) {
       throw new Error(
-        `Earnings completed with holds for users: ${heldUsers.join(', ')}. Other users completed; review held users and payment links before a targeted retry. Invalid Google report amounts.`,
+        `Earnings completed with holds for users: ${heldUsers.join(', ')}. Other users completed; review held users and payment links before a targeted retry. ${holdReasons.join(' ')}`,
       );
     }
   } catch (error) {

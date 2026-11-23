@@ -18,6 +18,8 @@ const { SCOPE_PLUGIN_CREATE, SCOPE_PLUGIN_PUBLISH, MAX_PLUGINS_PER_KEY, hasScope
 const getRazorpay = require('../lib/razorpay');
 const sendEmail = require('../lib/sendEmail');
 const { convertPrice } = require('../lib/exchangeRates');
+const { googlePurchaseAmount, googlePurchaseCompletion } = require('../lib/googlePurchase');
+const checkGooglePurchaseAccounting = require('../lib/checkGooglePurchaseAccounting');
 const { isModeKeywordSafe, validateModeRegex } = require('../lib/modeRegex');
 const { pluginUploadLimiter, pluginAdminLimiter, pluginScanReadLimiter } = require('../lib/rateLimits');
 const { LICENSES, normalizeLicense } = require('../lib/pluginLicense');
@@ -49,12 +51,6 @@ const router = Router();
 const MIN_PRICE = 10;
 const MAX_PRICE = 10000;
 
-function googlePurchaseAmount(rawAmount) {
-  const amount = typeof rawAmount === 'number' || (typeof rawAmount === 'string' && rawAmount.trim()) ? Number(rawAmount) : NaN;
-  if (amount < 0 || !Number.isSafeInteger(Math.round(amount * 100))) throw new Error('Purchase amount unavailable.');
-  return amount;
-}
-
 async function saveGooglePurchase(columns, purchase, pluginId, existing) {
   const amountColumn = columns.find(([column]) => column === Order.AMOUNT);
   const orderId = typeof purchase.orderId === 'string' ? purchase.orderId.trim() : '';
@@ -71,7 +67,8 @@ async function saveGooglePurchase(columns, purchase, pluginId, existing) {
       await Order.insert(...columns);
       return;
     } catch (error) {
-      if (error.code !== 'SQLITE_CONSTRAINT_UNIQUE' || !orderId) throw error;
+      if (error.code !== 'SQLITE_CONSTRAINT_UNIQUE') throw error;
+      if (!orderId) throw new Error('Purchase is already registered. Please try again or contact Acode support.');
     }
     // A validated token may be registered twice or rotate for the same Google order.
     // Keep the existing accounting record; never let a shared SKU unlock another plugin.
@@ -91,12 +88,8 @@ async function saveGooglePurchase(columns, purchase, pluginId, existing) {
   const updates = [];
   const completing = Number(existing.state) === Order.STATE_PENDING && Number(purchase.purchaseState) === Order.STATE_PURCHASED;
   if (completing) {
-    // Pending orders have not earned yet; recognize them when validation completes.
-    updates.push([Order.STATE, Order.STATE_PURCHASED], [Order.CREATED_AT, moment.utc().format('YYYY-MM-DD HH:mm:ss')]);
-    // The pending-order sync may have zeroed the estimate; the Google report supplies final proceeds later.
-    if (!Number.isFinite(Number(existing.amount)) || Number(existing.amount) <= 0) {
-      updates.push([Order.AMOUNT, googlePurchaseAmount(amountColumn?.[1])]);
-    }
+    await checkGooglePurchaseAccounting(existing);
+    updates.push([Order.STATE, Order.STATE_PURCHASED], ...Object.entries(googlePurchaseCompletion(existing, amountColumn?.[1])));
     if (orderId && !existing.order_id) updates.push([Order.ORDER_ID, orderId]);
   }
   // A replacement token must not transfer an existing entitlement to another account.
@@ -105,12 +98,19 @@ async function saveGooglePurchase(columns, purchase, pluginId, existing) {
     if (existing.user_id == null && userId != null) updates.push([Order.USER_ID, userId]);
   }
   if (updates.length) {
-    await Order.update(updates, [
-      [Order.ID, existing.id],
-      [Order.USER_ID, existing.user_id ?? null],
-      [Order.TOKEN, existing.token],
-      [Order.STATE, existing.state],
-    ]);
+    try {
+      await Order.update(updates, [
+        [Order.ID, existing.id],
+        [Order.USER_ID, existing.user_id ?? null],
+        [Order.TOKEN, existing.token],
+        [Order.STATE, existing.state],
+      ]);
+    } catch (error) {
+      if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        throw new Error('Purchase is already registered. Please try again or contact Acode support.');
+      }
+      throw error;
+    }
     if (completing) {
       const [saved] = await Order.for('internal').get([Order.STATE], [Order.ID, existing.id]);
       if (Number(saved?.state) !== Order.STATE_PURCHASED) throw new Error('Purchase not active.');
@@ -295,6 +295,9 @@ router.get('/download/:id', async (req, res) => {
           token,
         });
         const { purchaseState } = purchase.data;
+        if (![Order.STATE_PURCHASED, Order.STATE_PENDING].includes(Number(purchaseState))) {
+          throw new Error('Purchase is not active');
+        }
 
         if (!order || Number(order.state) === Order.STATE_PENDING) {
           const orderInsert = [
@@ -692,7 +695,7 @@ router.post('/order', async (req, res) => {
         token,
       });
 
-      const [{ price }] = await Plugin.get([Plugin.PRICE], [Plugin.ID, id]);
+      const { price } = plugin;
       const state = Number(purchase.data.purchaseState);
       if (![Order.STATE_PURCHASED, Order.STATE_PENDING].includes(state)) throw new Error('Purchase is not active.');
 

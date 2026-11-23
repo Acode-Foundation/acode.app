@@ -1,4 +1,5 @@
 const Entity = require('./entity');
+const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
 
 const table = `CREATE TABLE IF NOT EXISTS app_config (
   key TEXT PRIMARY KEY,
@@ -37,6 +38,10 @@ class AppConfig extends Entity {
   async getValue(key) {
     const [row] = await this.get([this.KEY, key], { orderBy: 'updated_at DESC' });
     return row?.value ?? null;
+  }
+
+  async getPaymentThreshold() {
+    return parseInt(await this.getValue('payment_threshold'), 10) || PAYMENT_THRESHOLD;
   }
 
   async setValue(key, value) {

@@ -43,15 +43,15 @@ panel.innerHTML = `
     <label><input type="checkbox" name="analytics"> Analytics <span>Help us understand website usage</span></label>
     <label><input type="checkbox" name="advertising"> Advertising <span>Allow Google ads; additional regional consent may apply</span></label>
     <p>Turning off a previously enabled option reloads this page. Save any unfinished work first.</p>
-    <button type="button" data-choice="cancel">Cancel</button>
     <button type="button" data-google-privacy hidden>Google advertising privacy settings</button>
   </div>
   <p role="status" data-consent-status hidden></p>
   <button type="button" data-consent-reload hidden>Reload page</button>
   <div class="cookie-consent-actions">
     <button type="button" data-choice="reject">Reject optional</button>
-    <button type="button" data-choice="settings">Settings</button>
+    <button type="button" data-choice="settings">Customize</button>
     <button type="button" data-choice="accept">Accept all</button>
+    <button type="button" data-choice="cancel" hidden>Cancel</button>
     <button type="button" data-choice="save" hidden>Save preferences</button>
   </div>`;
 document.body.append(panel);
@@ -64,11 +64,16 @@ const reloadButton = panel.querySelector('[data-consent-reload]');
 let opener;
 reloadButton.onclick = () => location.reload();
 
+function setSettingsOpen(open) {
+  options.hidden = !open;
+  panel.dataset.editing = String(open);
+  for (const action of ['reject', 'settings', 'accept']) panel.querySelector(`[data-choice="${action}"]`).hidden = open;
+  for (const action of ['cancel', 'save']) panel.querySelector(`[data-choice="${action}"]`).hidden = !open;
+}
+
 function closeSettings() {
   panel.hidden = !!controller.getChoice();
-  options.hidden = true;
-  panel.querySelector('[data-choice="settings"]').hidden = false;
-  panel.querySelector('[data-choice="save"]').hidden = true;
+  setSettingsOpen(false);
   if (opener?.isConnected) opener.focus();
   else if (!panel.hidden) panel.querySelector('[data-choice="settings"]').focus();
 }
@@ -85,10 +90,8 @@ function openSettings() {
   const choice = controller.getChoice();
   analytics.checked = choice?.analytics === true;
   advertising.checked = choice?.advertising === true;
-  options.hidden = false;
+  setSettingsOpen(true);
   panel.hidden = false;
-  panel.querySelector('[data-choice="settings"]').hidden = true;
-  panel.querySelector('[data-choice="save"]').hidden = false;
   analytics.focus();
 }
 
