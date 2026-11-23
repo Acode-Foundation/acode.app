@@ -23,6 +23,7 @@ const { getSponsorWhereClause } = require('../lib/sponsorScope');
 const { setPluginFeatured } = require('../lib/featuredPlugins');
 const { isPluginStatusFilter } = require('../lib/pluginSearch');
 const { getVerificationCandidates } = require('../lib/verificationCandidates');
+const earningsReview = require('../lib/earningsReview');
 
 const router = Router();
 
@@ -33,6 +34,7 @@ router.use('/', async (req, res, next) => {
     return;
   }
 
+  req.adminUser = loggedInUser;
   next();
 });
 
@@ -357,6 +359,63 @@ router.put('/config', async (req, res) => {
     res.send({ success: true, key, value });
   } catch {
     res.status(500).send({ error: 'Failed to update config' });
+  }
+});
+
+router.get('/earnings-holds', async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    res.send(await earningsReview.listAll());
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+// Months are zero-based, matching GET /earnings-holds and the earnings APIs.
+// Clear only after manual reconciliation; recalculating a paid month is not a refund.
+router.delete('/earnings-holds/:userId/:year/:month', async (req, res) => {
+  const userId = Number(req.params.userId);
+  const year = Number(req.params.year);
+  const month = Number(req.params.month);
+  if (
+    !Number.isSafeInteger(userId) ||
+    userId <= 0 ||
+    !Number.isSafeInteger(year) ||
+    year < 1970 ||
+    !Number.isInteger(month) ||
+    month < 0 ||
+    month > 11
+  ) {
+    res.status(400).send({ error: 'Invalid user, year or month (0-11)' });
+    return;
+  }
+  const held = req.body?.snapshot;
+  if (held === undefined) {
+    res.status(428).send({ error: 'Supply the snapshot from the reviewed earnings-holds listing.' });
+    return;
+  }
+  if (!Array.isArray(held) || !held.length || held.some((row) => !row || typeof row.key !== 'string' || typeof row.value !== 'string')) {
+    res.status(400).send({ error: 'Invalid earnings review snapshot.' });
+    return;
+  }
+  try {
+    const removed = await earningsReview.clear(userId, year, month, held);
+    console.info(
+      'Earnings holds cleared by admin %s for user %s, %s-%s: %s',
+      req.adminUser.id,
+      userId,
+      year,
+      month + 1,
+      [...new Set(removed.map((hold) => hold.code))].join(', '),
+    );
+    res.send({ success: true, clearedCodes: [...new Set(removed.map((hold) => hold.code))] });
+  } catch (error) {
+    if ([400, 409].includes(error.statusCode)) {
+      res.status(error.statusCode).send({ error: error.message });
+      return;
+    }
+    console.error('Failed to clear earnings hold:', error);
+    res.status(500).send({ error: 'Failed to clear earnings hold' });
   }
 });
 

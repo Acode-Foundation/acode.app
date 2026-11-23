@@ -36,7 +36,14 @@ beforeEach(() => {
   };
   payment = { USER_ID: 'user_id', insert: vi.fn() };
   exit = vi.fn();
-  review = { hold: vi.fn(), clear: vi.fn(), assertClear: vi.fn() };
+  review = {
+    CALCULATION_CODES: ['INVALID_GOOGLE_REPORT', 'MISSING_RAZORPAY_INR'],
+    hold: vi.fn(),
+    clearCalculated: vi.fn(),
+    assertRecalculable: vi.fn(),
+    assertClear: vi.fn(),
+    markPendingExcluded: vi.fn(),
+  };
   const dependencies = {
     './earningsReview': review,
     'node:crypto': { randomInt: () => 123 },
@@ -145,4 +152,21 @@ it('does not suppress unexpected failures while loading a balance', async () => 
   await expect(updateEarnings(2026, 9)).rejects.toThrow('Database unavailable');
   expect(calcEarnings.total).toHaveBeenCalledOnce();
   expect(payment.insert).not.toHaveBeenCalled();
+});
+
+it('records the pending-exclusion cutoff before saving any earnings row', async () => {
+  await expect(updateEarnings(2026, 9)).rejects.toThrow('holds for users: 1');
+  expect(review.markPendingExcluded).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/));
+  expect(review.markPendingExcluded.mock.invocationCallOrder[0]).toBeLessThan(earnings.insert.mock.invocationCallOrder[0]);
+});
+
+it('continues other developers without recalculating a manually held month', async () => {
+  review.assertRecalculable.mockRejectedValueOnce(Object.assign(new Error('Manual review required'), { code: 'EARNINGS_UNDER_REVIEW' }));
+  await expect(updateEarnings(2026, 9)).rejects.toThrow('holds for users: 1');
+  expect(calcEarnings.total.mock.calls.map((args) => args[2].id)).toEqual([2, 3]);
+  expect(review.hold).not.toHaveBeenCalled();
+  expect(review.clearCalculated.mock.calls).toEqual([
+    [2, 2026, 9],
+    [3, 2026, 9],
+  ]);
 });

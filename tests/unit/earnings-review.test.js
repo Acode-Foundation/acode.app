@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -16,6 +17,8 @@ let unpaid;
 let calculator;
 let orders;
 let downloadReport;
+let Entity;
+let users;
 const user = { id: 7, payment_method_id: 1 };
 
 function load(file, dependencies) {
@@ -40,10 +43,10 @@ function load(file, dependencies) {
 beforeEach(async () => {
   db = new Database(':memory:');
   db.pragma('foreign_keys = OFF');
-  const Entity = load('entities/entity.js', { '../lib/db': db });
+  Entity = load('entities/entity.js', { '../lib/db': db });
   settings = load('entities/appConfig.js', { './entity': Entity, '../../constants.mjs': { PAYMENT_THRESHOLD: 10000 } });
   await settings.setValue('payment_threshold', 10000);
-  reviews = load('lib/earningsReview.js', { '../entities/appConfig': settings });
+  reviews = load('lib/earningsReview.js', { '../entities/appConfig': settings, '../entities/entity': Entity, 'node:crypto': crypto });
   earnings = load('entities/userEarnings.js', { './entity': Entity });
   orders = {
     ID: 'id',
@@ -72,12 +75,13 @@ beforeEach(async () => {
   });
   unpaid = () => calculator.unpaid(user);
   calculate = vi.fn().mockRejectedValue(Object.assign(new Error('Missing original INR'), { code: 'MISSING_RAZORPAY_INR' }));
+  users = [user];
   payment = { ID: 'id', AMOUNT: 'amount', insert: vi.fn() };
   downloadReport = vi.fn().mockResolvedValue([]);
   run = load('lib/updateEarnings.js', {
     moment,
     'node:crypto': { randomInt: () => 123 },
-    '../entities/plugin': { getUsersWithPlugin: async () => [user] },
+    '../entities/plugin': { getUsersWithPlugin: async () => users },
     '../entities/payment': payment,
     '../entities/paymentMethod': { ID: 'id', get: async () => [{ id: 1 }] },
     '../entities/userEarnings': earnings,
@@ -112,7 +116,7 @@ it.each(['MISSING_RAZORPAY_INR', 'INVALID_GOOGLE_REPORT'])('keeps %s visible acr
   await expect(run(2026, 9)).rejects.toThrow('holds for users: 7');
   expect(db.prepare('SELECT * FROM user_earnings').all()).toEqual([]);
   // A newly loaded helper sees the persisted marker, without process-local state.
-  const reloaded = load('lib/earningsReview.js', { '../entities/appConfig': settings });
+  const reloaded = load('lib/earningsReview.js', { '../entities/appConfig': settings, '../entities/entity': Entity, 'node:crypto': crypto });
   await expect(reloaded.assertClear(7, 2026, 9)).rejects.toMatchObject({ statusCode: 409 });
   for (const date of ['2026-11-20', '2026-12-01', '2027-01-01']) {
     const data = await dashboard(date);
@@ -166,7 +170,7 @@ it('does not clear a marker when recalculation succeeds but the monthly write fa
 it('reads all held months without the API pagination limit and leaves settings alone', async () => {
   for (let i = 0; i < 101; i++) await reviews.hold(7, 2000 + Math.floor(i / 12), i % 12, 'INVALID_GOOGLE_REPORT');
   expect(await reviews.list(7)).toHaveLength(101);
-  await reviews.clear(7, 2000, 0);
+  await reviews.clear(7, 2000, 0, await reviews.snapshot(7, 2000, 0));
   expect(await reviews.list(7)).toHaveLength(100);
   expect(await settings.getPaymentThreshold()).toBe(10000);
 });
@@ -194,4 +198,117 @@ it('preserves the monthly amount and hold when a Google amount write fails, then
   expect(db.prepare('SELECT amount, payment_id FROM user_earnings').all()).toEqual([{ amount: 170, payment_id: 123 }]);
   expect(payment.insert).toHaveBeenCalledOnce();
   expect(payment.insert.mock.calls[0]).toContainEqual(['amount', 170]);
+});
+
+it('lists holds per developer and across developers for admins', async () => {
+  await reviews.hold(7, 2026, 9, 'INVALID_GOOGLE_REPORT');
+  await reviews.hold(17, 2026, 8, 'GOOGLE_PURCHASE_REVIEW_REQUIRED');
+  await reviews.markPendingExcluded('2026-11-16 00:00:00');
+  await expect(reviews.list(7)).resolves.toEqual([{ year: 2026, month: 9, code: 'INVALID_GOOGLE_REPORT' }]);
+  const all = (await reviews.listAll()).holds;
+  expect(all).toHaveLength(2);
+  expect(all).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ userId: 7, year: 2026, month: 9, codes: ['INVALID_GOOGLE_REPORT'] }),
+      expect.objectContaining({ userId: 17, year: 2026, month: 8, codes: ['GOOGLE_PURCHASE_REVIEW_REQUIRED'] }),
+    ]),
+  );
+});
+
+it('records the pending-exclusion cutoff only once', async () => {
+  await reviews.markPendingExcluded('2026-11-16 00:00:00');
+  await reviews.markPendingExcluded('2026-12-16 00:00:00');
+  await expect(reviews.pendingExcludedSince()).resolves.toBe('2026-11-16 00:00:00');
+});
+
+it('atomically preserves concurrent hold reasons and the first cutoff', async () => {
+  await Promise.all([
+    reviews.hold(7, 2026, 9, 'INVALID_GOOGLE_REPORT'),
+    reviews.hold(7, 2026, 9, 'INVALID_GOOGLE_REPORT'),
+    reviews.hold(7, 2026, 9, 'GOOGLE_PURCHASE_REVIEW_REQUIRED'),
+  ]);
+  expect((await reviews.list(7)).map((hold) => hold.code).sort()).toEqual(['GOOGLE_PURCHASE_REVIEW_REQUIRED', 'INVALID_GOOGLE_REPORT']);
+  await Promise.all([reviews.markPendingExcluded('2026-11-16 00:00:00'), reviews.markPendingExcluded('2026-11-16 00:00:01')]);
+  await expect(reviews.pendingExcludedSince()).resolves.toBe('2026-11-16 00:00:00');
+});
+
+it.each([null, 42])('does not recalculate or release a manually held month (payment %s)', async (paymentId) => {
+  // Existing unsuffixed markers must remain valid without a migration.
+  await settings.setValue('earnings-hold:7:2026:9', 'GOOGLE_PURCHASE_REVIEW_REQUIRED');
+  await reviews.hold(7, 2026, 9, 'INVALID_GOOGLE_REPORT');
+  db.prepare('INSERT INTO user_earnings (user_id, year, month, amount, payment_id) VALUES (7, 2026, 9, 70, ?)').run(paymentId);
+  db.prepare('INSERT INTO user_earnings (user_id, year, month, amount) VALUES (7, 2026, 10, 12000)').run();
+  calculate.mockResolvedValue(0);
+  await expect(run(2026, 9)).rejects.toThrow('holds for users: 7');
+  expect(calculate).not.toHaveBeenCalled();
+  expect(db.prepare('SELECT amount, payment_id FROM user_earnings WHERE month = 9').get()).toEqual({ amount: 70, payment_id: paymentId });
+  expect(payment.insert).not.toHaveBeenCalled();
+  expect(await reviews.list(7)).toHaveLength(2);
+});
+
+it('automatic clearing removes calculation reasons but preserves legacy and new manual holds', async () => {
+  await settings.setValue('earnings-hold:7:2026:9', 'GOOGLE_PURCHASE_REVIEW_REQUIRED');
+  await reviews.hold(7, 2026, 9, 'INVALID_GOOGLE_REPORT');
+  await reviews.hold(7, 2026, 9, 'MISSING_RAZORPAY_INR');
+  await reviews.hold(7, 2026, 9, 'GOOGLE_PURCHASE_REVIEW_REQUIRED');
+  await reviews.hold(7, 2026, 10, 'INVALID_GOOGLE_REPORT');
+  await reviews.hold(70, 2026, 9, 'INVALID_GOOGLE_REPORT');
+  await reviews.clearCalculated(7, 2026, 9);
+  expect((await reviews.list(7)).filter((hold) => hold.month === 9).map((hold) => hold.code)).toEqual(['GOOGLE_PURCHASE_REVIEW_REQUIRED']);
+  expect(await reviews.snapshot(7, 2026, 9)).toHaveLength(2);
+  await reviews.clear(7, 2026, 9, await reviews.snapshot(7, 2026, 9));
+  await expect(reviews.list(7)).resolves.toEqual([{ year: 2026, month: 10, code: 'INVALID_GOOGLE_REPORT' }]);
+  expect(await reviews.list(70)).toHaveLength(1);
+  await settings.setValue('earnings-hold:7:2026:8', 'INVALID_GOOGLE_REPORT');
+  await reviews.clearCalculated(7, 2026, 8);
+  expect((await reviews.list(7)).some((hold) => hold.month === 8)).toBe(false);
+});
+
+it('rejects a stale admin snapshot without deleting old or newly arrived holds', async () => {
+  await reviews.hold(7, 2026, 9, 'INVALID_GOOGLE_REPORT');
+  const before = await reviews.snapshot(7, 2026, 9);
+  await reviews.hold(7, 2026, 9, 'GOOGLE_PURCHASE_REVIEW_REQUIRED');
+  await expect(reviews.clear(7, 2026, 9, before)).rejects.toMatchObject({ statusCode: 409 });
+  expect(await reviews.snapshot(7, 2026, 9)).toHaveLength(2);
+  const refreshed = await reviews.snapshot(7, 2026, 9);
+  const removed = await reviews.clear(7, 2026, 9, refreshed);
+  expect(removed.map((hold) => hold.code).sort()).toEqual(['GOOGLE_PURCHASE_REVIEW_REQUIRED', 'INVALID_GOOGLE_REPORT']);
+  await expect(reviews.list(7)).resolves.toEqual([]);
+});
+
+it('rejects a changed legacy reason even when the marker count is unchanged', async () => {
+  await settings.setValue('earnings-hold:7:2026:9', 'INVALID_GOOGLE_REPORT');
+  const before = await reviews.snapshot(7, 2026, 9);
+  await settings.setValue('earnings-hold:7:2026:9', 'GOOGLE_PURCHASE_REVIEW_REQUIRED');
+  await expect(reviews.clear(7, 2026, 9, before)).rejects.toMatchObject({ statusCode: 409 });
+  await expect(reviews.list(7)).resolves.toEqual([{ year: 2026, month: 9, code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED' }]);
+});
+
+it('deduplicates listings without discarding raw markers needed for atomic clearing', async () => {
+  await settings.setValue('earnings-hold:7:2026:9', 'INVALID_GOOGLE_REPORT');
+  await reviews.hold(7, 2026, 9, 'INVALID_GOOGLE_REPORT');
+  await reviews.hold(70, 2026, 9, 'INVALID_GOOGLE_REPORT');
+  await expect(reviews.list(7)).resolves.toEqual([{ year: 2026, month: 9, code: 'INVALID_GOOGLE_REPORT' }]);
+  expect((await reviews.listAll()).holds).toHaveLength(2);
+  const before = await reviews.snapshot(7, 2026, 9);
+  expect(before).toHaveLength(2);
+  expect(await reviews.clear(7, 2026, 9, before)).toHaveLength(2);
+  await expect(reviews.list(7)).resolves.toEqual([]);
+  expect(await reviews.list(70)).toHaveLength(1);
+});
+
+it.each([
+  ['earnings-hold:7:2026:9:INVALID_GOOGLE_REPORT', 'MISSING_RAZORPAY_INR'],
+  ['earnings-hold:7:2026:12', 'INVALID_GOOGLE_REPORT'],
+])('isolates malformed marker %s while preserving the affected developer hold', async (marker, reason) => {
+  await settings.setValue(marker, reason);
+  users = [user, { id: 8 }];
+  calculate.mockResolvedValue(70);
+  await expect(unpaid()).rejects.toMatchObject({ code: 'EARNINGS_UNDER_REVIEW', statusCode: 409 });
+  await expect(run(2026, 9)).rejects.toThrow('holds for users: 7');
+  expect(calculate.mock.calls.map((args) => args[2].id)).toEqual([8]);
+  expect(db.prepare('SELECT user_id, amount FROM user_earnings').all()).toEqual([{ user_id: 8, amount: 70 }]);
+  expect(payment.insert).not.toHaveBeenCalled();
+  await expect(settings.getValue(marker)).resolves.toBe(reason);
+  await expect(reviews.list(7)).rejects.toMatchObject({ code: 'EARNINGS_UNDER_REVIEW' });
 });

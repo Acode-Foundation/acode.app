@@ -503,6 +503,7 @@ describe('Google purchase completion', () => {
     const res = await request('/order', { body: { id: paidPlugin.id, token: 'pending', package: 'com.foxdebug.acode' } });
     expect(res.statusCode).toBe(403);
     expect(order.update).not.toHaveBeenCalled();
+    expect(checkGooglePurchaseAccounting).not.toHaveBeenCalled();
   });
 
   it.each(['order', 'download'])('holds an ambiguous historical pending purchase through %s without writes', async (route) => {
@@ -520,6 +521,16 @@ describe('Google purchase completion', () => {
     expect(order.update).not.toHaveBeenCalled();
     expect(order.insert).not.toHaveBeenCalled();
     expect(pending.state).toBe(2);
+  });
+
+  it.each(['order', 'download'])('completes a legacy pending purchase through %s when its developer is held for review', async (route) => {
+    checkGooglePurchaseAccounting.mockResolvedValue({ userId: 7, year: 2026, month: 9 });
+    const res =
+      route === 'order'
+        ? await request('/order', { body: { id: paidPlugin.id, token: 'pending', package: 'com.foxdebug.acode' } })
+        : await downloadPlugin({ token: 'pending', package: 'com.foxdebug.acode' });
+    expect(res.statusCode).toBe(200);
+    expect(pending.state).toBe(0);
   });
 
   it('preserves an existing pending estimate when the current price is unavailable', async () => {

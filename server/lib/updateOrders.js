@@ -18,7 +18,10 @@ if (startDateArg && endDateArg) {
     await setAuth();
 
     await updateOrder(startDateArg, endDateArg, google);
-  })();
+  })().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
 }
 
 /**
@@ -40,6 +43,8 @@ async function updateOrder(startDate, endDate, google) {
   ]);
 
   const heldOrders = [];
+  const heldEarnings = [];
+  const failedOrders = [];
   for (const order of orders) {
     try {
       const { package: packageName, plugin_id: pluginId, order_id: orderId, id: rowId, token, state } = order;
@@ -47,6 +52,7 @@ async function updateOrder(startDate, endDate, google) {
       const [plugin] = await Plugin.get([Plugin.SKU, Plugin.PRICE], [Plugin.ID, pluginId]);
       if (!plugin) {
         console.log(`Plugin ${pluginId} not found`);
+        failedOrders.push(rowId);
         continue;
       }
 
@@ -68,8 +74,11 @@ async function updateOrder(startDate, endDate, google) {
       }
 
       if (Number(state) === PurchaseOrder.STATE_PENDING && Number(purchaseState) === PurchaseOrder.STATE_PURCHASED) {
-        await checkGooglePurchaseAccounting(order);
-        updates.push(...Object.entries(googlePurchaseCompletion(order, plugin.price)));
+        // Resolve the amount first so a hold is only placed for an order that can complete.
+        const completion = googlePurchaseCompletion(order, plugin.price);
+        const held = await checkGooglePurchaseAccounting(order);
+        if (held) heldEarnings.push(`order ${rowId} (user ${held.userId}, ${held.year}-${String(held.month + 1).padStart(2, '0')})`);
+        updates.push(...Object.entries(completion));
       }
 
       if (Number(purchaseState) !== Number(PurchaseOrder.STATE_PURCHASED)) {
@@ -87,11 +96,19 @@ async function updateOrder(startDate, endDate, google) {
     } catch (error) {
       console.error('Error updating order %s: %s', order.order_id, error.message);
       if (error.code === 'GOOGLE_PURCHASE_REVIEW_REQUIRED') heldOrders.push(order.id);
+      else failedOrders.push(order.id);
     }
   }
+  const problems = [];
   if (heldOrders.length) {
-    throw new Error(`Google purchases held for accounting review (purchase_order IDs): ${heldOrders.join(', ')}. No held orders were changed.`);
+    problems.push(`Google purchases held for accounting review (purchase_order IDs): ${heldOrders.join(', ')}. No held orders were changed.`);
   }
+  if (heldEarnings.length) {
+    // Holds are recorded before the guarded order write; a failed/raced write may still need retry.
+    problems.push(`Google purchase accounting held for review: ${heldEarnings.join(', ')}.`);
+  }
+  if (failedOrders.length) problems.push(`Google purchase sync failed (purchase_order IDs): ${failedOrders.join(', ')}.`);
+  if (problems.length) throw new Error(problems.join(' '));
 }
 
 module.exports = updateOrder;

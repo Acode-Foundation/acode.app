@@ -23,6 +23,8 @@ function load(file, dependencies) {
 function harness({ loggedIn = { id: 7 }, userExists = true, failure, holds = [] } = {}) {
   const user = { id: 7, created_at: '2026-01-01' };
   const reviews = load('server/lib/earningsReview.js', {
+    'node:crypto': crypto,
+    '../entities/entity': {},
     '../entities/appConfig': {
       KEY: 'key',
       VALUE: 'value',

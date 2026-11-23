@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -13,6 +14,8 @@ let sync;
 let calcEarnings;
 let checkAccounting;
 let Entity;
+let appConfig;
+let reviews;
 
 function load(relativePath, dependencies) {
   const filename = path.resolve(import.meta.dirname, '../../server', relativePath);
@@ -56,10 +59,13 @@ beforeEach(() => {
   };
   googleGet = vi.fn(async () => ({ data: { purchaseState: 0, orderId: 'GPA.test' } }));
   const userEarnings = load('entities/userEarnings.js', { './entity': Entity });
+  appConfig = load('entities/appConfig.js', { './entity': Entity, '../../constants.mjs': { PAYMENT_THRESHOLD: 10000 } });
+  reviews = load('lib/earningsReview.js', { '../entities/appConfig': appConfig, '../entities/entity': Entity, 'node:crypto': crypto });
   checkAccounting = load('lib/checkGooglePurchaseAccounting.js', {
     moment,
     '../entities/plugin': Plugin,
     '../entities/userEarnings': userEarnings,
+    './earningsReview': reviews,
   });
   const updateOrders = load('lib/updateOrders.js', {
     moment,
@@ -115,7 +121,7 @@ it('keeps a valid pending estimate even when the current price is unavailable', 
 
 it('does not promote or move an order if its zeroed estimate cannot be restored', async () => {
   plugin.price = undefined;
-  await sync();
+  await expect(sync()).rejects.toThrow('Google purchase sync failed');
   expect(savedOrder()).toMatchObject({ state: 2, amount: 0, created_at: '2026-10-31 12:00:00' });
   expect(console.error).toHaveBeenCalledWith('Error updating order %s: %s', 'GPA.test', 'Purchase amount unavailable.');
 });
@@ -188,17 +194,74 @@ it.each(['2', '2.0'])('finds and promotes legacy TEXT state %s through the real 
   expect(savedOrder()).toMatchObject({ amount: 100, created_at: '2026-11-20 12:00:00' });
 });
 
-it.each([null, 42])('holds a pending purchase when its original month already has earnings (payment %s)', async (paymentId) => {
-  db.prepare('INSERT INTO user_earnings (user_id, amount, month, year, payment_id) VALUES (7, 500, 9, 2026, ?)').run(paymentId);
-  db.prepare(`INSERT INTO purchase_order (id, plugin_id, package, token, order_id, amount, state, created_at)
+it.each([null, 42])(
+  'completes a pending purchase and holds its developer when a legacy month already has earnings (payment %s)',
+  async (paymentId) => {
+    db.prepare('INSERT INTO user_earnings (user_id, amount, month, year, payment_id) VALUES (7, 500, 9, 2026, ?)').run(paymentId);
+    db.prepare(`INSERT INTO purchase_order (id, plugin_id, package, token, order_id, amount, state, created_at)
     VALUES (2, 'test.plugin', 'test.package', 'other', 'GPA.other', 100, 2, '2026-09-30 12:00:00')`).run();
-  const before = savedOrder();
-  await expect(sync()).rejects.toThrow('purchase_order IDs): 1');
-  expect(savedOrder()).toEqual(before);
-  expect(db.prepare('SELECT state FROM purchase_order WHERE id = 2').get().state).toBe(0);
-  expect(db.prepare('SELECT amount, payment_id FROM user_earnings').get()).toEqual({ amount: 500, payment_id: paymentId });
+    await expect(sync()).rejects.toThrow('Google purchase accounting held for review: order 1 (user 7, 2026-10)');
+    // The buyer's purchase completes; only the developer's original month is held.
+    expect(savedOrder()).toMatchObject({ state: 0, amount: 100, created_at: '2026-11-20 12:00:00' });
+    expect(db.prepare('SELECT state FROM purchase_order WHERE id = 2').get().state).toBe(0);
+    expect(db.prepare('SELECT amount, payment_id FROM user_earnings').get()).toEqual({ amount: 500, payment_id: paymentId });
+    await expect(reviews.list(7)).resolves.toEqual([{ year: 2026, month: 9, code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED' }]);
+    // The completed order is not reported again.
+    await expect(sync()).resolves.toBeUndefined();
+  },
+);
+
+it('does not hold a month first calculated after pending orders were excluded', async () => {
+  await reviews.markPendingExcluded('2026-11-16 00:00:00');
+  db.prepare(`INSERT INTO user_earnings (user_id, amount, month, year, created_at, updated_at)
+    VALUES (7, 500, 9, 2026, '2026-11-16 00:00:05', '2026-11-16 00:00:05')`).run();
+  await expect(sync()).resolves.toBeUndefined();
+  expect(savedOrder()).toMatchObject({ state: 0, amount: 100 });
+  await expect(reviews.list(7)).resolves.toEqual([]);
+});
+
+it('still holds a legacy month whose row was only marked paid after the cutoff', async () => {
+  await reviews.markPendingExcluded('2026-11-16 00:00:00');
+  db.prepare(`INSERT INTO user_earnings (user_id, amount, month, year, payment_id, created_at, updated_at)
+    VALUES (7, 500, 9, 2026, 42, '2026-10-16 00:00:00', '2026-11-16 00:00:05')`).run();
+  await expect(sync()).rejects.toThrow('Google purchase accounting held for review');
+  await expect(reviews.list(7)).resolves.toHaveLength(1);
 });
 
 it('holds a purchase if its original accounting date is missing', async () => {
   await expect(checkAccounting({ ...savedOrder(), created_at: null })).rejects.toMatchObject({ code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED' });
+});
+
+it.each([false, true])('holds when any duplicate earnings row is legacy (legacy inserted first: %s)', async (legacyFirst) => {
+  await reviews.markPendingExcluded('2026-11-16 00:00:00');
+  const dates = ['2026-11-16 00:00:05', '2026-10-16 00:00:00'];
+  if (legacyFirst) dates.reverse();
+  for (const date of dates) {
+    db.prepare('INSERT INTO user_earnings (user_id, amount, month, year, created_at) VALUES (7, 500, 9, 2026, ?)').run(date);
+  }
+  await expect(sync()).rejects.toThrow('Google purchase accounting held for review');
+  expect(savedOrder().state).toBe(0);
+  expect(await reviews.list(7)).toHaveLength(1);
+});
+
+it.each(['2026-11-16T00:00:01Z', 'invalid', null])('keeps an older or unknown timestamp held: %s', async (created) => {
+  await reviews.markPendingExcluded('2026-11-16 12:00:00');
+  db.prepare('INSERT INTO user_earnings (user_id, amount, month, year, created_at) VALUES (7, 500, 9, 2026, ?)').run(created);
+  await expect(sync()).rejects.toThrow('Google purchase accounting held for review');
+  expect(await reviews.list(7)).toHaveLength(1);
+});
+
+it('reports a failed guarded order write while retaining its conservative hold', async () => {
+  db.prepare('INSERT INTO user_earnings (user_id, amount, month, year) VALUES (7, 500, 9, 2026)').run();
+  vi.spyOn(order, 'update').mockRejectedValueOnce(new Error('Fixture write failure'));
+  await expect(sync()).rejects.toThrow('Google purchase sync failed (purchase_order IDs): 1');
+  expect(savedOrder().state).toBe(2);
+  expect(await reviews.list(7)).toHaveLength(1);
+});
+
+it('logs missing developer attribution without inventing a hold owner', async () => {
+  plugin.user_id = null;
+  await expect(checkAccounting(savedOrder())).resolves.toBeNull();
+  expect(console.error).toHaveBeenCalledWith(expect.stringContaining('no developer attribution'), 1, 'test.plugin');
+  await expect(reviews.listAll()).resolves.toEqual({ holds: [], invalidMarkers: [] });
 });

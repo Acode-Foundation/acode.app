@@ -23,7 +23,10 @@ if (yearArg && monthArg) {
     await setAuth();
 
     await updateEarnings(+yearArg, +monthArg);
-  })();
+  })().catch(() => {
+    // updateEarnings has already logged the error.
+    process.exitCode = 1;
+  });
 }
 
 /**
@@ -60,6 +63,8 @@ async function updateEarnings(year, month) {
       report.push(reportOfPreviousMonth[i]);
     }
 
+    // Mark before any row is written: rows saved from here on exclude pending orders.
+    await earningsReview.markPendingExcluded(moment.utc().format('YYYY-MM-DD HH:mm:ss'));
     const users = await Plugin.getUsersWithPlugin();
     const indexedReport = calcEarnings.indexReport(report);
     const heldUsers = [];
@@ -72,10 +77,14 @@ async function updateEarnings(year, month) {
       const { payment_method_id, email, name } = user;
       let earnings;
       try {
+        await earningsReview.assertRecalculable(user.id, year, month);
         earnings = await calcEarnings.total(year, month, user, indexedReport);
       } catch (error) {
-        if (!['INVALID_GOOGLE_REPORT', 'MISSING_RAZORPAY_INR'].includes(error.code)) throw error;
-        await earningsReview.hold(user.id, year, month, error.code);
+        if (earningsReview.CALCULATION_CODES.includes(error.code)) {
+          await earningsReview.hold(user.id, year, month, error.code);
+        } else if (error.code !== 'EARNINGS_UNDER_REVIEW') {
+          throw error;
+        }
         console.error(error.message);
         heldUsers.push(user.id);
         holdReasons.push(error.message);
@@ -101,7 +110,7 @@ async function updateEarnings(year, month) {
 
       // Clear only after this month's result has been saved. Other held months
       // still make the aggregate incomplete and must prevent payout initiation.
-      await earningsReview.clear(user.id, year, month);
+      await earningsReview.clearCalculated(user.id, year, month);
       let unpaidEarnings;
       try {
         if (payment_method_id) {

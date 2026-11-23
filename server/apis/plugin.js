@@ -88,8 +88,11 @@ async function saveGooglePurchase(columns, purchase, pluginId, existing) {
   const updates = [];
   const completing = Number(existing.state) === Order.STATE_PENDING && Number(purchase.purchaseState) === Order.STATE_PURCHASED;
   if (completing) {
+    // Resolve the amount first so a hold is only placed for an order that can complete.
+    const completion = googlePurchaseCompletion(existing, amountColumn?.[1]);
+    // An ambiguous legacy month holds the developer's earnings, not the buyer's purchase.
     await checkGooglePurchaseAccounting(existing);
-    updates.push([Order.STATE, Order.STATE_PURCHASED], ...Object.entries(googlePurchaseCompletion(existing, amountColumn?.[1])));
+    updates.push([Order.STATE, Order.STATE_PURCHASED], ...Object.entries(completion));
     if (orderId && !existing.order_id) updates.push([Order.ORDER_ID, orderId]);
   }
   // A replacement token must not transfer an existing entitlement to another account.
