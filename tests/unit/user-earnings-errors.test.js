@@ -20,8 +20,18 @@ function load(file, dependencies) {
   return module.exports;
 }
 
-function harness({ loggedIn = { id: 7 }, userExists = true, failure } = {}) {
+function harness({ loggedIn = { id: 7 }, userExists = true, failure, holds = [] } = {}) {
   const user = { id: 7, created_at: '2026-01-01' };
+  const reviews = load('server/lib/earningsReview.js', {
+    '../entities/appConfig': {
+      KEY: 'key',
+      VALUE: 'value',
+      for() {
+        return this;
+      },
+      get: async () => holds.map(({ year, month }) => ({ key: `earnings-hold:7:${year}:${month}`, value: 'MISSING_RAZORPAY_INR' })),
+    },
+  });
   const UserEarnings = { get: vi.fn().mockResolvedValue([]) };
   const entity = (rows, fields = {}) => ({
     ...fields,
@@ -35,6 +45,7 @@ function harness({ loggedIn = { id: 7 }, userExists = true, failure } = {}) {
     PROVIDER_RAZORPAY: 'razorpay',
   });
   const calculator = load('server/lib/calcEarnings.js', {
+    './earningsReview': reviews,
     moment,
     '../entities/plugin': entity([{ id: 'fixture-plugin' }]),
     '../entities/download': { count: async () => 0 },
@@ -47,6 +58,7 @@ function harness({ loggedIn = { id: 7 }, userExists = true, failure } = {}) {
       throw failure;
     };
   const dashboard = load('server/lib/developerDashboard.js', {
+    './earningsReview': reviews,
     moment,
     '../entities/entity': { execSql: async (sql) => (sql.includes('FROM plugin p') ? [{ id: 'fixture-plugin', price: 100, downloads: 42 }] : []) },
     '../entities/download': {},
@@ -67,6 +79,7 @@ function harness({ loggedIn = { id: 7 }, userExists = true, failure } = {}) {
     '../entities/userEarnings': UserEarnings,
     '../entities/appConfig': { getPaymentThreshold: async () => 10000 },
     '../lib/calcEarnings': calculator,
+    '../lib/earningsReview': reviews,
     '../lib/developerDashboard': dashboard,
     '../lib/rateLimits': Object.fromEntries(
       ['appAuthCodeLimiter', 'appTokenExchangeLimiter', 'appleUnlinkLimiter', 'emailCodeCheckLimiter'].map((name) => [
@@ -80,7 +93,7 @@ function harness({ loggedIn = { id: 7 }, userExists = true, failure } = {}) {
   const source = fs.readFileSync(path.join(root, 'server/apis/user.js'), 'utf8');
   for (const [, name] of source.matchAll(/require\('(\.\.\/entities\/[^']+)'\)/g)) dependencies[name] ??= {};
   const router = load('server/apis/user.js', dependencies);
-  return async (route, query = { user: '7' }) => {
+  return async (route, query = { user: '7' }, params = { year: String(moment().year()), month: String(moment().month()) }) => {
     const handler = router.stack.find((layer) => layer.route?.path === route).route.stack.at(-1).handle;
     const res = {
       statusCode: 200,
@@ -88,7 +101,7 @@ function harness({ loggedIn = { id: 7 }, userExists = true, failure } = {}) {
       status: express.response.status,
       send: vi.fn(),
     };
-    await handler({ query, params: { year: String(moment().year()), month: String(moment().month()) } }, res);
+    await handler({ query, params }, res);
     return { status: res.statusCode, body: res.send.mock.calls[0]?.[0] };
   };
 }
@@ -127,4 +140,14 @@ it.each([
   const failure = Object.assign(new Error('Accounting needs review'), metadata);
   const response = await harness({ failure })('/earnings/:year/:month');
   expect(response).toEqual({ status, body: { error: failure.message } });
+});
+
+it('keeps historical holds visible on monthly and unpaid endpoints after the estimate window closes', async () => {
+  const request = harness({ holds: [{ year: 2024, month: 9 }] });
+  const held = await request('/earnings/:year/:month', { user: '7' }, { year: '2024', month: '9' });
+  expect(held.status).toBe(409);
+  expect(held.body.error).toContain('2024-10');
+  expect((await request('/unpaid-earnings')).status).toBe(409);
+  const otherMonth = await request('/earnings/:year/:month', { user: '7' }, { year: '2024', month: '8' });
+  expect(otherMonth.status).toBe(200);
 });

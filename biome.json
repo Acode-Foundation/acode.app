@@ -71,6 +71,19 @@
   },
   "overrides": [
     {
+      "includes": ["client/pages/plugin/index.js", "client/components/plugins/index.js", "client/pages/admin/index.js"],
+      "assist": {
+        "actions": {
+          "source": {
+            "organizeImports": {
+              "level": "on",
+              "options": { "groups": ["./promotions", "components/dialogs/**"] }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/client/**"],
       "linter": {
         "rules": {

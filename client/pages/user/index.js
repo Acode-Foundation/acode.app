@@ -59,9 +59,7 @@ export default async function User({ userId }) {
   }
 
   const stats = shouldShowSensitiveInfo ? await fetchDashboard() : null;
-  const isDeveloper = Boolean(
-    stats && (stats.totals.plugins > 0 || stats.totals.lifetimeEarnings > 0 || stats.monthly.some((row) => row.reviewRequired)),
-  );
+  const isDeveloper = Boolean(stats && (stats.totals.plugins > 0 || stats.totals.lifetimeEarnings > 0 || stats.totals.lifetimeEarnings === null));
   const params = new URLSearchParams(window.location.search);
   const linked = params.get('linked');
   const linkedLabel = { github: 'GitHub', google: 'Google', apple: 'Apple' }[linked];

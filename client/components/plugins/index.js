@@ -1,13 +1,13 @@
 import './style.scss';
-import AdSense from 'components/adsense';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import select from 'components/dialogs/select';
+import AdSense from 'components/adsense';
+import EditorType from 'components/editorType';
 import PluginStatus from 'components/pluginStatus';
 import { calcRating, getLoggedInUser, hideLoading, showLoading } from 'lib/helpers';
 import Router from 'lib/Router';
 import { since } from 'lib/relativeTime';
-import EditorType from '../editorType';
 
 const PAGE_SIZE = 30;
 const AD_POSITIONS = [2, 15, 28];

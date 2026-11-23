@@ -10,6 +10,7 @@ const Payment = require('../entities/payment');
 const PaymentMethod = require('../entities/paymentMethod');
 const UserEarnings = require('../entities/userEarnings');
 const calcEarnings = require('../lib/calcEarnings');
+const earningsReview = require('../lib/earningsReview');
 const { getDeveloperDashboard } = require('../lib/developerDashboard');
 const AppConfig = require('../entities/appConfig');
 const login = require('../entities/login');
@@ -207,6 +208,7 @@ route.get('/earnings/:year/:month', async (req, res) => {
 
     let earnings;
     let estimated = false;
+    await earningsReview.assertClear(user.id, year, month);
 
     const now = moment();
     const thisMonth = moment({ year: now.year(), month: now.month() });

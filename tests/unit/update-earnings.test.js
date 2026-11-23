@@ -12,6 +12,7 @@ let updateEarnings;
 let exit;
 let configuredThreshold;
 let users;
+let review;
 
 beforeEach(() => {
   configuredThreshold = 1000;
@@ -33,9 +34,11 @@ beforeEach(() => {
     insert: vi.fn(),
     update: vi.fn(),
   };
-  payment = { insert: vi.fn() };
+  payment = { USER_ID: 'user_id', insert: vi.fn() };
   exit = vi.fn();
+  review = { hold: vi.fn(), clear: vi.fn(), assertClear: vi.fn() };
   const dependencies = {
+    './earningsReview': review,
     'node:crypto': { randomInt: () => 123 },
     moment,
     '../entities/plugin': { getUsersWithPlugin: async () => users },
@@ -101,4 +104,45 @@ it('uses the current application threshold for payout eligibility, including the
   configuredThreshold = 100;
   await updateEarnings(2026, 9);
   expect(payment.insert).toHaveBeenCalledOnce();
+});
+
+it('continues later developers when balance loading discovers a hold', async () => {
+  users = [
+    { id: 1, payment_method_id: 1 },
+    { id: 2, payment_method_id: 1 },
+  ];
+  configuredThreshold = 100;
+  calcEarnings.total.mockResolvedValue(100);
+  calcEarnings.unpaid.mockRejectedValueOnce(Object.assign(new Error('New hold for 2026-09'), { code: 'EARNINGS_UNDER_REVIEW' }));
+
+  await expect(updateEarnings(2026, 9)).rejects.toThrow('holds for users: 1');
+  expect(calcEarnings.total.mock.calls.map((args) => args[2].id)).toEqual([1, 2]);
+  expect(calcEarnings.unpaid.mock.calls.map(([user]) => user.id)).toEqual([1, 2]);
+  expect(payment.insert).toHaveBeenCalledOnce();
+  expect(payment.insert.mock.calls[0]).toContainEqual(['user_id', 2]);
+  expect(review.assertClear).not.toHaveBeenCalled(); // unpaid owns the hold check for payable accounts.
+  expect(review.hold).not.toHaveBeenCalled(); // Do not mislabel this successfully calculated month as held.
+});
+
+it('still reports existing holds for developers without a payment method', async () => {
+  users = [{ id: 2 }, { id: 3 }];
+  review.assertClear.mockRejectedValueOnce(Object.assign(new Error('Older month held'), { code: 'EARNINGS_UNDER_REVIEW' }));
+
+  await expect(updateEarnings(2026, 9)).rejects.toThrow('holds for users: 2');
+  expect(review.assertClear.mock.calls).toEqual([[2], [3]]);
+  expect(calcEarnings.total).toHaveBeenCalledTimes(2);
+  expect(calcEarnings.unpaid).not.toHaveBeenCalled();
+  expect(payment.insert).not.toHaveBeenCalled();
+});
+
+it('does not suppress unexpected failures while loading a balance', async () => {
+  users = [
+    { id: 2, payment_method_id: 1 },
+    { id: 3, payment_method_id: 1 },
+  ];
+  calcEarnings.unpaid.mockRejectedValueOnce(new Error('Database unavailable'));
+
+  await expect(updateEarnings(2026, 9)).rejects.toThrow('Database unavailable');
+  expect(calcEarnings.total).toHaveBeenCalledOnce();
+  expect(payment.insert).not.toHaveBeenCalled();
 });

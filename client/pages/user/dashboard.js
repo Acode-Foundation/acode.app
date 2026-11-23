@@ -19,7 +19,7 @@ const STATUS_LABELS = { 0: 'Pending', 2: 'Rejected' };
  * @param {() => void} [props.onManagePlugins] Switch to the plugin manager
  */
 export default function DeveloperDashboard({ user, isSelf, stats, paymentMethods, onManagePlugins }) {
-  const hasActivity = stats.totals.plugins > 0 || stats.totals.lifetimeEarnings > 0 || stats.monthly.some((row) => row.reviewRequired);
+  const hasActivity = stats.totals.plugins > 0 || stats.totals.lifetimeEarnings > 0 || stats.totals.lifetimeEarnings === null;
   const downloadsCanvas = Ref();
   const earningsCanvas = Ref();
   const payoutBalance = Ref();

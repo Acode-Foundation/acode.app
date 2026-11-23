@@ -73,6 +73,7 @@ beforeEach(() => {
       androidpublisher: () => ({ purchases: { products: { get: googleGet } } }),
     });
   calcEarnings = load('lib/calcEarnings.js', {
+    './earningsReview': {},
     moment,
     '../entities/purchaseOrder': order,
     '../entities/plugin': Plugin,

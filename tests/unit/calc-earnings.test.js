@@ -5,6 +5,7 @@ const moment = require('moment');
 
 const calcEarningsPath = require.resolve('../../server/lib/calcEarnings');
 const dependencyPaths = {
+  earningsReview: require.resolve('../../server/lib/earningsReview'),
   plugin: require.resolve('../../server/entities/plugin'),
   download: require.resolve('../../server/entities/download'),
   userEarnings: require.resolve('../../server/entities/userEarnings'),
@@ -63,6 +64,7 @@ function loadCalcEarnings(razorpayRows) {
     get: vi.fn().mockResolvedValue(razorpayRows),
   };
 
+  mockModule(dependencyPaths.earningsReview, { assertClear: async () => {} });
   mockModule(dependencyPaths.plugin, {
     ID: 'id',
     USER_ID: 'user_id',

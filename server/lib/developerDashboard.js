@@ -1,6 +1,7 @@
 const moment = require('moment');
 const Entity = require('../entities/entity');
 const Download = require('../entities/download');
+const earningsReview = require('./earningsReview');
 const { RECENT_DOWNLOAD_DAYS } = require('../../shared/verification');
 // Loaded for its table: PLUGIN_STATS_QUERY reads plugin_scan.
 require('../entities/pluginScan');
@@ -53,20 +54,25 @@ WHERE user_id = ? AND (year > ? OR (year = ? AND month >= ?))`;
  * @param {object} [deps]
  * @param {(sql: string, values: any[]) => Promise<object[]>} [deps.executeQuery]
  * @param {(year: number, month: number, user: object) => Promise<number>} [deps.estimateEarnings]
+ * @param {(userId: number) => Promise<Array<{year: number, month: number}>>} [deps.getEarningsHolds]
  * @param {moment.Moment} [deps.now]
  */
-async function getDeveloperDashboard(user, { executeQuery = executeDashboardQuery, estimateEarnings, now = moment() } = {}) {
+async function getDeveloperDashboard(
+  user,
+  { executeQuery = executeDashboardQuery, estimateEarnings, getEarningsHolds = earningsReview.list, now = moment() } = {},
+) {
   const today = now.clone().startOf('day');
   const rangeStart = today.clone().subtract(DAILY_RANGE - 1, 'days');
   const previousStart = rangeStart.clone().subtract(DAILY_RANGE, 'days');
   const rangeStartSql = rangeStart.format('YYYY-MM-DD HH:mm:ss');
   const previousStartSql = previousStart.format('YYYY-MM-DD HH:mm:ss');
 
-  const [pluginRows, dailyRows, earningRows, [oldestDownload]] = await Promise.all([
+  const [pluginRows, dailyRows, earningRows, [oldestDownload], holds] = await Promise.all([
     executeQuery(PLUGIN_STATS_QUERY, [rangeStartSql, rangeStartSql, previousStartSql, user.id]),
     executeQuery(DAILY_DOWNLOADS_QUERY, [user.id, rangeStartSql]),
     getEarningRows(user, now, executeQuery),
     executeQuery(OLDEST_DOWNLOAD_QUERY, []),
+    getEarningsHolds(user.id),
   ]);
 
   // If older downloads were pruned before the previous window started, the
@@ -96,7 +102,7 @@ async function getDeveloperDashboard(user, { executeQuery = executeDashboardQuer
     daily.push({ date: day, count: dailyMap.get(day) || 0 });
   }
 
-  const monthly = await buildMonthlyEarnings(user, earningRows, now, estimateEarnings);
+  const monthly = await buildMonthlyEarnings(user, earningRows, now, estimateEarnings, holds);
 
   return {
     range: DAILY_RANGE,
@@ -108,7 +114,7 @@ async function getDeveloperDashboard(user, { executeQuery = executeDashboardQuer
       previousDownloads: hasPreviousWindow ? plugins.reduce((sum, p) => sum + p.previous, 0) : null,
       votesUp: plugins.reduce((sum, p) => sum + p.votesUp, 0),
       votesDown: plugins.reduce((sum, p) => sum + p.votesDown, 0),
-      lifetimeEarnings: monthly.rows.some((row) => row.reviewRequired) ? null : Math.round(monthly.lifetime * 100) / 100,
+      lifetimeEarnings: holds.length || monthly.rows.some((row) => row.reviewRequired) ? null : Math.round(monthly.lifetime * 100) / 100,
     },
     daily,
     monthly: monthly.rows,
@@ -127,12 +133,13 @@ function getEarningRows(user, now, executeQuery) {
   ]);
 }
 
-async function buildMonthlyEarnings(user, [rows, [lifetimeRow]], now, estimateEarnings) {
+async function buildMonthlyEarnings(user, [rows, [lifetimeRow]], now, estimateEarnings, holds) {
   const thisMonth = now.clone().startOf('month');
   const lastMonth = thisMonth.clone().subtract(1, 'month');
   const rowMap = new Map(rows.map((row) => [`${row.year}-${row.month}`, row]));
   let lifetime = Number(lifetimeRow?.total) || 0;
   const result = [];
+  const heldMonths = new Set(holds.map(({ year, month }) => `${year}-${month}`));
 
   for (let i = MONTHLY_RANGE - 1; i >= 0; i--) {
     const date = thisMonth.clone().subtract(i, 'months');
@@ -140,16 +147,16 @@ async function buildMonthlyEarnings(user, [rows, [lifetimeRow]], now, estimateEa
     const month = date.month();
     const row = rowMap.get(`${year}-${month}`);
     const storedAmount = row ? Number(row.amount) || 0 : 0;
-    let amount = storedAmount;
+    let reviewRequired = heldMonths.has(`${year}-${month}`);
+    let amount = reviewRequired ? null : storedAmount;
     let estimated = false;
-    let reviewRequired = false;
 
     // Current month (and last month until it is finalized) are estimates,
     // unless the month has already been paid out.
     const isSettled = Boolean(row?.payment_id);
     const isCurrent = date.isSame(thisMonth, 'month');
     const isPendingLast = !row && date.isSame(lastMonth, 'month');
-    if ((isCurrent || isPendingLast) && !isSettled && estimateEarnings) {
+    if (!reviewRequired && (isCurrent || isPendingLast) && !isSettled && estimateEarnings) {
       try {
         amount = Number(await estimateEarnings(year, month, user)) || 0;
         estimated = true;

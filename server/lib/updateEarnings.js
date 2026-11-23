@@ -8,6 +8,7 @@ const UserEarnings = require('../entities/userEarnings');
 const PaymentMethod = require('../entities/paymentMethod');
 const sendEmail = require('./sendEmail');
 const AppConfig = require('../entities/appConfig');
+const earningsReview = require('./earningsReview');
 
 const args = process.argv.slice(2);
 const yearArg = args[0];
@@ -74,6 +75,7 @@ async function updateEarnings(year, month) {
         earnings = await calcEarnings.total(year, month, user, indexedReport);
       } catch (error) {
         if (!['INVALID_GOOGLE_REPORT', 'MISSING_RAZORPAY_INR'].includes(error.code)) throw error;
+        await earningsReview.hold(user.id, year, month, error.code);
         console.error(error.message);
         heldUsers.push(user.id);
         holdReasons.push(error.message);
@@ -97,9 +99,28 @@ async function updateEarnings(year, month) {
         );
       }
 
+      // Clear only after this month's result has been saved. Other held months
+      // still make the aggregate incomplete and must prevent payout initiation.
+      await earningsReview.clear(user.id, year, month);
+      let unpaidEarnings;
+      try {
+        if (payment_method_id) {
+          // unpaid() checks for holds itself. Catch that check here too, so a
+          // hold found during balance loading does not skip later developers.
+          unpaidEarnings = await calcEarnings.unpaid(user);
+        } else {
+          await earningsReview.assertClear(user.id);
+        }
+      } catch (error) {
+        if (error.code !== 'EARNINGS_UNDER_REVIEW') throw error;
+        heldUsers.push(user.id);
+        holdReasons.push(error.message);
+        continue;
+      }
+
       if (!payment_method_id) continue;
 
-      const { ids: unpaidEarningsId, earnings: unpaid, from, to } = await calcEarnings.unpaid(user);
+      const { ids: unpaidEarningsId, earnings: unpaid, from, to } = unpaidEarnings;
       console.log(`Earnings for ${user.name} is ${unpaid}`);
 
       if (unpaid < threshold) continue;

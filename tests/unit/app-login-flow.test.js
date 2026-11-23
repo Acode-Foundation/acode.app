@@ -640,6 +640,7 @@ async function start() {
     '../lib/rateLimits': limits,
     '../lib/emailCode': {},
     '../lib/calcEarnings': {},
+    '../lib/earningsReview': {},
     '../lib/developerDashboard': {},
     '../../constants.mjs': {},
   };

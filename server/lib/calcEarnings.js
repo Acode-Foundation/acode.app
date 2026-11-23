@@ -4,6 +4,7 @@ const Download = require('../entities/download');
 const UserEarnings = require('../entities/userEarnings');
 const PurchaseOrder = require('../entities/purchaseOrder');
 const RazorpayOrder = require('../entities/razorpayOrder');
+const earningsReview = require('./earningsReview');
 
 function normalizeOrderId(value) {
   return typeof value === 'string' ? value.trim() : '';
@@ -103,40 +104,35 @@ async function fromPaidPlugins(year, month, user, report) {
         return 0;
       }
 
-      try {
-        if (provider === PurchaseOrder.PROVIDER_RAZORPAY) {
-          // Keep purchase_order in the buyer's charged currency. Developer
-          // earnings use the immutable INR value captured when the order was created.
-          let accountingAmount = razorpayAmountsInr.get(String(orderId));
-          if (accountingAmount === undefined) {
-            accountingAmount = amount;
-          }
-          return accountingAmount * 0.7;
+      if (provider === PurchaseOrder.PROVIDER_RAZORPAY) {
+        // Keep purchase_order in the buyer's charged currency. Developer
+        // earnings use the immutable INR value captured when the order was created.
+        let accountingAmount = razorpayAmountsInr.get(String(orderId));
+        if (accountingAmount === undefined) {
+          accountingAmount = amount;
         }
-
-        if (report) {
-          const reportOrderId = normalizeOrderId(orderId);
-          if (!reportOrderId || !reportAmounts.has(reportOrderId)) {
-            // Late registrations may predate the available reports; retain the
-            // existing estimate instead of dropping them from their registration month.
-            return amount * 0.7;
-          }
-
-          const calculatedAmount = reportAmounts.get(reportOrderId);
-
-          if (calculatedAmount !== amount) {
-            await PurchaseOrder.update([PurchaseOrder.AMOUNT, calculatedAmount], [PurchaseOrder.ID, rowId]);
-          }
-
-          // apply 15% platform fee (Google's fee is already reflected in the settlement amount)
-          return Math.round(calculatedAmount * 85) / 100;
-        }
-
-        return amount * 0.7;
-      } catch (error) {
-        console.error(error);
-        return 0;
+        return accountingAmount * 0.7;
       }
+
+      if (report) {
+        const reportOrderId = normalizeOrderId(orderId);
+        if (!reportOrderId || !reportAmounts.has(reportOrderId)) {
+          // Late registrations may predate the available reports; retain the
+          // existing estimate instead of dropping them from their registration month.
+          return amount * 0.7;
+        }
+
+        const calculatedAmount = reportAmounts.get(reportOrderId);
+
+        if (calculatedAmount !== amount) {
+          await PurchaseOrder.update([PurchaseOrder.AMOUNT, calculatedAmount], [PurchaseOrder.ID, rowId]);
+        }
+
+        // apply 15% platform fee (Google's fee is already reflected in the settlement amount)
+        return Math.round(calculatedAmount * 85) / 100;
+      }
+
+      return amount * 0.7;
     }),
   );
 
@@ -194,6 +190,7 @@ async function total(year, month, user, report) {
  * @returns {Promise<UnpaidEarnings>}
  */
 async function unpaid(user, year, month) {
+  await earningsReview.assertClear(user.id);
   let earnings = 0;
   const ids = [];
   const where = [

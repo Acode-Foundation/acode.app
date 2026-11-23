@@ -1,9 +1,10 @@
 import './style.scss';
-import Chart from 'chart.js/auto';
+import Promotions from './promotions';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import DialogBox from 'components/dialogs/dialogBox';
 import select from 'components/dialogs/select';
+import Chart from 'chart.js/auto';
 import Input from 'components/input';
 import { RecommendationBadge, ReviewActions, ScanDetails } from 'components/pluginSecurity';
 import createRefreshButton from 'components/refreshButton';
@@ -16,7 +17,6 @@ import { downloadFile, getLoggedInUser } from 'lib/helpers';
 import Router from 'lib/Router';
 import { since } from 'lib/relativeTime';
 import moment from 'moment';
-import Promotions from './promotions';
 import Verification from './verification';
 
 export default async function Admin({ queries = {} }) {
