@@ -4,6 +4,7 @@ const User = require('../entities/user');
 const calcEarnings = require('./calcEarnings');
 const downloadReport = require('./downloadGr');
 const earningsReview = require('./earningsReview');
+const PurchaseOrder = require('../entities/purchaseOrder');
 const updateEarnings = require('./updateEarnings');
 
 function refuse(message, statusCode = 409) {
@@ -33,25 +34,56 @@ module.exports = async function recalculateEarnings(userId, year, month) {
   // Refuse before calculating, because calculating also corrects the amounts of orders.
   assertCanSave(findRow(userId, year, month), hasManualHold);
 
-  // The same two reports as the monthly run. An order without a report entry falls back to an estimate,
-  // so a missing report would release the hold on guessed numbers. The month before may have had no sales.
-  const previous = moment({ year, month }).subtract(1, 'month');
-  const report = await downloadReport(year, month + 1);
-  const previousReport = await downloadReport(previous.year(), previous.month() + 1);
-  if (!report.length || previousReport.missing) throw refuse('The Google earnings reports of this month are not available yet. Try again later.');
+  // Razorpay orders and downloads do not depend on Google's reports.
+  const needsReports = hasGoogleOrders(userId, year, month);
+  const reports = needsReports ? await loadReports(year, month) : [];
 
   let earnings;
   try {
-    earnings = await calcEarnings.total(year, month, user, calcEarnings.indexReport([...report, ...previousReport]));
+    earnings = await calcEarnings.total(year, month, user, calcEarnings.indexReport(reports));
   } catch (error) {
     if (!isCalculation(error.code)) throw error;
     await earningsReview.hold(userId, year, month, error.code);
     throw refuse(error.message);
   }
 
-  save(userId, year, month, earnings, { hasManualHold, markers });
+  save(userId, year, month, earnings, { hasManualHold, markers, needsReports });
   return { earnings, remainingCodes: await heldCodes(userId, year, month) };
 };
+
+/**
+ * The same two reports as the monthly run. An order without a report entry falls back to an estimate,
+ * so a missing report would release the hold on guessed numbers. The month before may have had no sales.
+ */
+async function loadReports(year, month) {
+  const previous = moment({ year, month }).subtract(1, 'month');
+  const report = await downloadReport(year, month + 1);
+  const previousReport = await downloadReport(previous.year(), previous.month() + 1);
+  if (!report.length || previousReport.missing) {
+    throw refuse('This month has Google orders, but the Google earnings reports needed to check them are not available.');
+  }
+  return [...report, ...previousReport];
+}
+
+// The same orders that calcEarnings pays. Older databases store the state as text, such as '0.0'.
+function hasGoogleOrders(userId, year, month) {
+  const start = moment({ year, month });
+  const order = db
+    .prepare(
+      `SELECT 1 FROM purchase_order
+       WHERE plugin_id IN (SELECT id FROM plugin WHERE user_id = ?) AND created_at >= ? AND created_at < ?
+         AND provider IS NOT ? AND CAST(state AS REAL) = ?
+       LIMIT 1`,
+    )
+    .get(
+      userId,
+      start.format('YYYY-MM-DD'),
+      start.clone().add(1, 'month').format('YYYY-MM-DD'),
+      PurchaseOrder.PROVIDER_RAZORPAY,
+      PurchaseOrder.STATE_PURCHASED,
+    );
+  return Boolean(order);
+}
 
 function isCalculation(code) {
   return earningsReview.CALCULATION_CODES.includes(code);
@@ -75,11 +107,14 @@ function assertCanSave(row, hasManualHold) {
 }
 
 // One transaction, so that no run, admin or process can save, pay, hold or release the month in between.
-function save(userId, year, month, earnings, { hasManualHold, markers }) {
+function save(userId, year, month, earnings, { hasManualHold, markers, needsReports }) {
   db.transaction(() => {
     if (updateEarnings.isRunning()) throw refuse('The monthly earnings run is in progress. Try again when it has finished.');
     // A hold raised during the calculation may make its result unsafe to save.
     if (!sameMarkers(markers, currentMarkers(userId, year, month))) throw refuse('The holds of this month changed. Review them and try again.');
+
+    // A pending Google order may have completed since, and was then estimated.
+    if (!needsReports && hasGoogleOrders(userId, year, month)) throw refuse('A Google order of this month completed. Try again.');
 
     const row = findRow(userId, year, month);
     assertCanSave(row, hasManualHold);

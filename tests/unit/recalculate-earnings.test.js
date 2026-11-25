@@ -33,7 +33,12 @@ beforeEach(() => {
     CREATE TABLE user_earnings (
       id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, amount INTEGER NOT NULL, month INTEGER NOT NULL, year INTEGER NOT NULL, payment_id INTEGER
     );
-    INSERT INTO user VALUES (7, 'Example Developer');`);
+    CREATE TABLE plugin (id INTEGER PRIMARY KEY, user_id INTEGER);
+    CREATE TABLE purchase_order (id INTEGER PRIMARY KEY, plugin_id INTEGER, provider TEXT, state TEXT, created_at DATETIME);
+    INSERT INTO user VALUES (7, 'Example Developer');
+    INSERT INTO plugin VALUES (70, 7), (80, 8);`);
+  // Every finished month of this year has a Google order, so its reports are needed.
+  for (let month = 1; month <= 10; month += 1) order(70, 'google_play', '0.0', `2026-${String(month).padStart(2, '0')}-10 10:00:00`);
   const Entity = load('entities/entity.js', { '../lib/db': db });
   const settings = load('entities/appConfig.js', { './entity': Entity, '../../constants.mjs': { PAYMENT_THRESHOLD: 10000 } });
   reviews = load('lib/earningsReview.js', { '../entities/appConfig': settings, '../entities/entity': Entity, 'node:crypto': crypto });
@@ -49,6 +54,7 @@ beforeEach(() => {
     './calcEarnings': calculator,
     './downloadGr': downloadReport,
     './earningsReview': reviews,
+    '../entities/purchaseOrder': { PROVIDER_RAZORPAY: 'razorpay', STATE_PURCHASED: 0 },
     './updateEarnings': { isRunning: () => running },
   });
 });
@@ -60,6 +66,8 @@ afterEach(() => {
 
 const run = (period = HOLD) => recalculate(period.userId, period.year, period.month);
 const hold = (code, period = HOLD) => reviews.hold(period.userId, period.year, period.month, code);
+const order = (...values) => db.prepare('INSERT INTO purchase_order (plugin_id, provider, state, created_at) VALUES (?, ?, ?, ?)').run(...values);
+const noGoogleOrders = () => db.exec('DELETE FROM purchase_order');
 const rows = () => db.prepare('SELECT amount, year, month, payment_id FROM user_earnings').all();
 const codes = async () => (await reviews.list(7)).map(({ code }) => code);
 
@@ -106,7 +114,7 @@ it.each([
 ])('keeps the hold when the %s report is missing, because orders would be estimated %#', async (month, report) => {
   reports[month] = report;
   await hold('INVALID_GOOGLE_REPORT');
-  await expect(run()).rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining('not available yet') });
+  await expect(run()).rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining('not available') });
   expect(calculator.total).not.toHaveBeenCalled();
   expect(rows()).toEqual([]);
   expect(await codes()).toEqual(['INVALID_GOOGLE_REPORT']);
@@ -197,6 +205,48 @@ it('saves nothing when its hold cannot be released', async () => {
   await expect(run()).rejects.toThrow('disk failure');
   expect(rows()).toEqual([]);
   expect(await codes()).toEqual(['INVALID_GOOGLE_REPORT']);
+});
+
+it.each(['MISSING_RAZORPAY_INR', 'EARNINGS_RUN_FAILED', 'INVALID_GOOGLE_REPORT'])(
+  'recovers a %s month without Google orders even when no report was published',
+  async (code) => {
+    noGoogleOrders();
+    order(70, 'razorpay', '0', '2026-09-10 10:00:00');
+    for (const state of ['1', '1.0', '2']) order(70, 'google_play', state, '2026-09-10 10:00:00');
+    order(80, 'google_play', '0', '2026-09-10 10:00:00'); // Another developer.
+    order(70, 'google_play', '0', '2026-08-31 23:59:59');
+    order(70, 'google_play', '0', '2026-10-01 00:00:00');
+    reports = {};
+    await hold(code);
+    expect(await run()).toEqual({ earnings: 321.5, remainingCodes: [] });
+    expect(downloadReport).not.toHaveBeenCalled();
+    expect(calculator.total.mock.calls[0][3]).toHaveLength(0);
+  },
+);
+
+it.each([
+  ['google_play', '0', '2026-09-01 00:00:00'],
+  ['google_play', '0.0', '2026-09-30 23:59:59'],
+  [null, '0', '2026-09-10 10:00:00'],
+])('needs the reports for an order of %s in state %s at %s', async (provider, state, createdAt) => {
+  noGoogleOrders();
+  order(70, provider, state, createdAt);
+  reports = {};
+  await hold('EARNINGS_RUN_FAILED');
+  await expect(run()).rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining('not available') });
+  expect(await codes()).toEqual(['EARNINGS_RUN_FAILED']);
+});
+
+it('does not save when a Google order completes while the month is calculated without reports', async () => {
+  noGoogleOrders();
+  await hold('MISSING_RAZORPAY_INR');
+  calculator.total.mockImplementation(async () => {
+    order(70, 'google_play', '0', '2026-09-10 10:00:00');
+    return 321.5;
+  });
+  await expect(run()).rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining('completed') });
+  expect(rows()).toEqual([]);
+  expect(await codes()).toEqual(['MISSING_RAZORPAY_INR']);
 });
 
 it('saves one row when two admins recalculate at once', async () => {

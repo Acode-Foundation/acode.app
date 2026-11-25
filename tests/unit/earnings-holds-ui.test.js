@@ -23,10 +23,10 @@ const hold = {
   codes: ['GOOGLE_PURCHASE_REVIEW_REQUIRED'],
   snapshot,
   user: { name: 'Example Developer', email: 'dev@example.com' },
-  savedEarnings: 1234.5,
-  payout: { id: 55, status: 'paid' },
+  saved: [{ amount: 1234.5, payout: { id: 55, status: 'paid' } }],
   unpaidBalance: 4000,
 };
+const unpaidRow = (amount) => ({ amount, payout: null });
 let lifecycle;
 let alert;
 let confirm;
@@ -120,7 +120,7 @@ it('does nothing when the confirmation is cancelled', async () => {
 });
 
 it('warns that a month without saved earnings would be missing from the payout', async () => {
-  listing = { holds: [{ ...hold, codes: ['INVALID_GOOGLE_REPORT'], savedEarnings: null, payout: null }], invalidMarkers: [] };
+  listing = { holds: [{ ...hold, codes: ['INVALID_GOOGLE_REPORT'], saved: [] }], invalidMarkers: [] };
   const root = await mount();
   expect(root.querySelector('.hold').textContent).toContain('Not saved');
   expect(root.querySelector('.hold-warning').textContent).toContain('October 2026 were never saved');
@@ -130,8 +130,20 @@ it('warns that a month without saved earnings would be missing from the payout',
   expect(confirm.mock.calls[0][1]).toContain('would clear the calculation problem and save its earnings');
 });
 
+it('shows every row of a month that was saved more than once', async () => {
+  listing = { holds: [{ ...hold, codes: ['INVALID_GOOGLE_REPORT'], saved: [unpaidRow(10.5), ...hold.saved] }], invalidMarkers: [] };
+  const root = await mount();
+  const text = root.querySelector('.hold-facts').textContent;
+  for (const part of ['10.50', '1,234.50', 'Not paid / Paid (#55)']) expect(text).toContain(part);
+  expect(root.querySelector('.hold-warning').textContent).toContain('saved 2 times');
+  root.querySelector('.clear-hold').click();
+  await vi.waitFor(() => expect(confirm).toHaveBeenCalledOnce());
+  for (const part of ['saved 2 times', 'already part of a payout']) expect(confirm.mock.calls[0][1]).toContain(part);
+  expect(confirm.mock.calls[0][1]).not.toContain('Recalculating this month would');
+});
+
 it('recalculates after confirmation and shows the saved amount', async () => {
-  listing = { holds: [{ ...hold, codes: ['INVALID_GOOGLE_REPORT'], savedEarnings: null, payout: null }], invalidMarkers: [] };
+  listing = { holds: [{ ...hold, codes: ['INVALID_GOOGLE_REPORT'], saved: [] }], invalidMarkers: [] };
   const root = await mount();
   recalculated = { ok: true, status: 200, json: async () => ({ success: true, earnings: 321.5, remainingCodes: [] }) };
   listing = { holds: [], invalidMarkers: [] };
@@ -145,7 +157,7 @@ it('recalculates after confirmation and shows the saved amount', async () => {
 });
 
 it('shows why a recalculation failed and keeps the hold', async () => {
-  listing = { holds: [{ ...hold, codes: ['INVALID_GOOGLE_REPORT'], savedEarnings: null, payout: null }], invalidMarkers: [] };
+  listing = { holds: [{ ...hold, codes: ['INVALID_GOOGLE_REPORT'], saved: [] }], invalidMarkers: [] };
   const root = await mount();
   recalculated = { ok: false, status: 409, json: async () => ({ error: 'The Google earnings reports of this month are not available yet.' }) };
   root.querySelector('.recalculate-hold').click();
@@ -154,14 +166,11 @@ it('shows why a recalculation failed and keeps the hold', async () => {
 });
 
 it.each([
-  ['a calculation problem', { codes: ['INVALID_GOOGLE_REPORT'], payout: null }, true],
-  [
-    'a missing month with a manual review',
-    { codes: ['INVALID_GOOGLE_REPORT', 'GOOGLE_PURCHASE_REVIEW_REQUIRED'], savedEarnings: null, payout: null },
-    true,
-  ],
-  ['a saved month with a manual review', { codes: ['INVALID_GOOGLE_REPORT', 'GOOGLE_PURCHASE_REVIEW_REQUIRED'], payout: null }, false],
-  ['a manual review', { payout: null }, false],
+  ['a calculation problem', { codes: ['INVALID_GOOGLE_REPORT'], saved: [unpaidRow(10)] }, true],
+  ['a missing month with a manual review', { codes: ['INVALID_GOOGLE_REPORT', 'GOOGLE_PURCHASE_REVIEW_REQUIRED'], saved: [] }, true],
+  ['a saved month with a manual review', { codes: ['INVALID_GOOGLE_REPORT', 'GOOGLE_PURCHASE_REVIEW_REQUIRED'], saved: [unpaidRow(10)] }, false],
+  ['a manual review', { saved: [unpaidRow(10)] }, false],
+  ['a month saved twice', { codes: ['INVALID_GOOGLE_REPORT'], saved: [unpaidRow(10), unpaidRow(20)] }, false],
   ['a month in a payout', { codes: ['INVALID_GOOGLE_REPORT'] }, false],
 ])('offers to recalculate %s: %#', async (_name, extra, offered) => {
   listing = { holds: [{ ...hold, ...extra }], invalidMarkers: [] };
@@ -223,18 +232,25 @@ it('adds the developer, saved earnings and payout to each hold without touching 
   const base = (extra) => ({ userId: 7, year: 2026, month: 9, codes: ['A'], snapshot, ...extra });
   const [paid, unpaid, unsaved, missing] = await details([base(), base({ month: 10 }), base({ month: 11 }), base({ userId: 99 })]);
   const [orphan] = await details([base({ userId: 9 })]);
-  expect(orphan).toMatchObject({ savedEarnings: 5, payout: { id: 404, status: 'unknown' } });
+  expect(orphan).toMatchObject({ saved: [{ amount: 5, payout: { id: 404, status: 'unknown' } }] });
   expect(paid).toEqual({
     ...base(),
     user: { name: 'Example Developer', email: 'dev@example.com' },
-    savedEarnings: 100.5,
-    payout: { id: 55, status: 'paid' },
+    saved: [{ amount: 100.5, payout: { id: 55, status: 'paid' } }],
     unpaidBalance: 30.3,
   });
   expect(paid.snapshot).toBe(snapshot);
-  expect(unpaid).toMatchObject({ savedEarnings: 20.1, payout: null });
-  expect(unsaved).toMatchObject({ savedEarnings: null, payout: null, unpaidBalance: 30.3 });
-  expect(missing).toMatchObject({ user: null, savedEarnings: null, unpaidBalance: 0 });
+  expect(unpaid).toMatchObject({ saved: [unpaidRow(20.1)] });
+  expect(unsaved).toMatchObject({ saved: [], unpaidBalance: 30.3 });
+  expect(missing).toMatchObject({ user: null, saved: [], unpaidBalance: 0 });
+  // Migration 020 keeps months that were saved twice.
+  db.exec('INSERT INTO user_earnings VALUES (9, 7, 2026, 9, 60, NULL), (6, 7, 2026, 9, 50, 404)');
+  const [repeated] = await details([base()]);
+  expect(repeated.saved).toEqual([
+    { amount: 100.5, payout: { id: 55, status: 'paid' } },
+    { amount: 50, payout: { id: 404, status: 'unknown' } },
+    unpaidRow(60),
+  ]);
   expect(await details([])).toHaveLength(0);
   db.close();
 });

@@ -61,6 +61,7 @@ export default async function AddPaymentMethod({ mode } = {}) {
   const isOverseas = OVERSEAS_COUNTRIES.includes(country);
   const initialType = [MODES[mode], isOverseas && BANK_OVERSEAS, types[0]].find((type) => types.includes(type));
   const form = Ref();
+  const picker = Ref();
   const formError = Ref();
   const errorText = Reactive('');
   const buttonText = Reactive(SAVE_LABEL);
@@ -82,12 +83,12 @@ export default async function AddPaymentMethod({ mode } = {}) {
         action='/api/user/payment-method'
         method='POST'
         onbeforesubmit={onBeforeSubmit}
-        loading={(thisForm) => loadingStart(thisForm, errorText, null, buttonText)}
-        loadingEnd={(thisForm) => loadingEnd(thisForm, buttonText, SAVE_LABEL)}
+        loading={onLoading}
+        loadingEnd={onLoadingEnd}
         onloadend={onSaved}
         onerror={(error) => showFormError(error?.message || String(error))}
       >
-        <fieldset className='method-picker'>
+        <fieldset ref={picker} className='method-picker'>
           <legend>Payment method</legend>
           {types.map((type) => (
             <label className='method-option'>
@@ -175,6 +176,17 @@ export default async function AddPaymentMethod({ mode } = {}) {
 
     formData.delete(CONFIRM_FIELD);
     return true;
+  }
+
+  function onLoading(thisForm) {
+    // The result is about the submitted method, so it has to stay selected.
+    picker.el.disabled = true;
+    loadingStart(thisForm, errorText, null, buttonText);
+  }
+
+  function onLoadingEnd(thisForm) {
+    picker.el.disabled = false;
+    loadingEnd(thisForm, buttonText, SAVE_LABEL);
   }
 
   function onSaved() {

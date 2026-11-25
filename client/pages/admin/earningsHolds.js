@@ -95,7 +95,8 @@ export default function EarningsHolds({ signal }) {
   }
 
   function Hold(hold) {
-    const { userId, user, codes, savedEarnings, payout, unpaidBalance } = hold;
+    const { userId, user, codes, saved, unpaidBalance } = hold;
+    const warning = savedWarning(hold);
     const button = (
       <button type='button' className='clear-hold' onclick={() => clear(hold, button)}>
         Clear hold
@@ -128,12 +129,12 @@ export default function EarningsHolds({ signal }) {
         </ul>
 
         <dl className='hold-facts'>
-          <Fact label='Earnings this month' value={savedEarnings === null ? 'Not saved' : money(savedEarnings)} />
-          <Fact label='Payout of this month' value={payout ? `${PAYOUT_LABELS[payout.status]} (#${payout.id})` : 'Not paid'} />
+          <Fact label='Earnings this month' value={saved.length ? saved.map(({ amount }) => money(amount)).join(' / ') : 'Not saved'} />
+          <Fact label='Payout of this month' value={saved.length ? saved.map(payoutLabel).join(' / ') : 'Not paid'} />
           <Fact label='Unpaid balance' value={money(unpaidBalance)} />
         </dl>
 
-        {savedEarnings === null && <p className='hold-warning'>{notSavedWarning(hold)}</p>}
+        {warning && <p className='hold-warning'>{warning}</p>}
         <div className='hold-actions'>
           {button}
           {recalculateButton}
@@ -146,9 +147,9 @@ export default function EarningsHolds({ signal }) {
     const name = hold.user?.name || `User ${hold.userId}`;
     const message = [
       `${name} can be paid again once no other hold remains. Only clear ${period(hold)} after you have reviewed it.`,
-      hold.savedEarnings === null && notSavedWarning(hold),
-      hold.payout && 'This month is already part of a payout. Clearing the hold does not change that payout.',
-      hold.codes.some((code) => REASONS[code]?.recalculable) && 'Recalculating this month would clear the calculation problem and save its earnings.',
+      savedWarning(hold),
+      hold.saved.some(({ payout }) => payout) && 'This month is already part of a payout. Clearing the hold does not change that payout.',
+      canRecalculate(hold) && 'Recalculating this month would clear the calculation problem and save its earnings.',
     ]
       .filter(Boolean)
       .join(' ');
@@ -187,9 +188,10 @@ export default function EarningsHolds({ signal }) {
 }
 
 // The server applies the same rules; this only hides a button that could not work.
-function canRecalculate({ codes, savedEarnings, payout }) {
+function canRecalculate({ codes, saved }) {
+  if (saved.length > 1 || saved[0]?.payout) return false;
   const manual = codes.some((code) => !REASONS[code]?.recalculable);
-  return !payout && codes.some((code) => REASONS[code]?.recalculable) && (!manual || savedEarnings === null);
+  return codes.some((code) => REASONS[code]?.recalculable) && (!manual || !saved.length);
 }
 
 async function send(hold, action, method, body) {
@@ -212,7 +214,16 @@ function Fact({ label, value }) {
   );
 }
 
-function notSavedWarning(hold) {
+function payoutLabel({ payout }) {
+  return payout ? `${PAYOUT_LABELS[payout.status]} (#${payout.id})` : 'Not paid';
+}
+
+function savedWarning(hold) {
+  const { length } = hold.saved;
+  if (length === 1) return null;
+  if (length) {
+    return `${period(hold)} was saved ${length} times. It cannot be recalculated or added to a payout until the wrong rows are removed from the database.`;
+  }
   return `The earnings of ${period(hold)} were never saved. If you clear the hold now, they will be missing from the next payout.`;
 }
 

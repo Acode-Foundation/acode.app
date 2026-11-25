@@ -24,7 +24,8 @@ module.exports = async function earningsHoldDetails(holds) {
     `SELECT e.user_id, e.year, e.month, e.amount, e.payment_id, p.status
      FROM user_earnings e
      LEFT JOIN payment p ON p.id = e.payment_id
-     WHERE e.user_id IN (SELECT value FROM json_each(?))`,
+     WHERE e.user_id IN (SELECT value FROM json_each(?))
+     ORDER BY e.id`,
     [ids],
     UserEarnings,
   );
@@ -32,13 +33,16 @@ module.exports = async function earningsHoldDetails(holds) {
   return holds.map((hold) => {
     const user = users.find((row) => row.id === hold.userId);
     const rows = earnings.filter((row) => row.user_id === hold.userId);
-    const saved = rows.find((row) => Number(row.year) === hold.year && Number(row.month) === hold.month);
     return {
       ...hold,
       user: user ? { name: user.name, email: user.email } : null,
-      // null when the month was never saved, so its earnings are not part of any payout yet.
-      savedEarnings: saved ? saved.amount : null,
-      payout: saved?.payment_id == null ? null : { id: saved.payment_id, status: PAYOUT_STATUS[saved.status] ?? 'unknown' },
+      // Empty when the month was never saved. Databases from before migration 020 may have saved it more than once.
+      saved: rows
+        .filter((row) => Number(row.year) === hold.year && Number(row.month) === hold.month)
+        .map((row) => ({
+          amount: row.amount,
+          payout: row.payment_id == null ? null : { id: row.payment_id, status: PAYOUT_STATUS[row.status] ?? 'unknown' },
+        })),
       unpaidBalance: Math.round(rows.filter((row) => row.payment_id == null).reduce((sum, row) => sum + Number(row.amount), 0) * 100) / 100,
     };
   });

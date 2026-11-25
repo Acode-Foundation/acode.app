@@ -496,6 +496,28 @@ describe('form', () => {
     expect(Router.loadUrl).toHaveBeenCalledWith('/profile');
   });
 
+  it.each([
+    ['saved', {}],
+    ['refused', { error: 'Try again' }],
+  ])('keeps the submitted method selected until it is %s', async (_name, answer) => {
+    const document = await mount();
+    const respond = Promise.withResolvers();
+    dom.getInternalVMContext().fetch = async () => ({ json: () => respond.promise });
+    const details = { ...without(BANK_INDIA, 'bank_account_type'), bank_account_number_confirm: BANK_INDIA.bank_account_number };
+    fill(document, 'bank_india', details);
+    await submit(document);
+    const picker = document.querySelector('.method-picker');
+    expect(picker.disabled).toBe(true);
+    respond.resolve(answer);
+    await vi.waitFor(() => expect(picker.disabled).toBe(false));
+    if (answer.error) {
+      expect(alert).not.toHaveBeenCalled();
+      expect(document.querySelector('.form-message--error').textContent).toContain('Try again');
+    } else {
+      expect(alert.mock.calls[0][1]).toContain(paymentMethods.PAYMENT_METHOD_LABELS.bank_india);
+    }
+  });
+
   it('explains the limit instead of showing a form that cannot be saved', async () => {
     const document = await mount({ options: { count: 3 } });
     expect(document.querySelector('form')).toBeNull();
