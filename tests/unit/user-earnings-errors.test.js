@@ -4,6 +4,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import express from 'express';
 import moment from 'moment';
+import * as paymentMethods from '../../shared/paymentMethods';
 
 const root = path.resolve(import.meta.dirname, '../..');
 
@@ -90,6 +91,7 @@ function harness({ loggedIn = { id: 7 }, userExists = true, failure, holds = [] 
       ]),
     ),
     '../lib/emailCode': {},
+    '../../shared/paymentMethods': paymentMethods,
     '../lib/appleOAuth': {},
   };
   const source = fs.readFileSync(path.join(root, 'server/apis/user.js'), 'utf8');

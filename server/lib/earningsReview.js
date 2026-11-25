@@ -3,7 +3,10 @@ const AppConfig = require('../entities/appConfig');
 const Entity = require('../entities/entity');
 
 const HOLD_PREFIX = 'earnings-hold:';
-const CALCULATION_CODES = Object.freeze(['INVALID_GOOGLE_REPORT', 'MISSING_RAZORPAY_INR']);
+// The monthly run failed before it could save the month.
+const RUN_FAILED = 'EARNINGS_RUN_FAILED';
+// Reasons that a successful calculation of the month resolves.
+const CALCULATION_CODES = Object.freeze(['INVALID_GOOGLE_REPORT', 'MISSING_RAZORPAY_INR', RUN_FAILED]);
 // Set by the first monthly run that excludes pending Google orders. user_earnings
 // rows created at or after it cannot include a pending order's estimate.
 const PENDING_EXCLUDED_SINCE = 'earnings-pending-excluded-since';
@@ -15,11 +18,22 @@ function prefix(userId) {
   return `${HOLD_PREFIX}${Number(userId)}:`;
 }
 
+/** GLOB pattern of every marker that holds this developer, damaged ones included. */
+function holdPattern(userId) {
+  return `${prefix(userId)}*`;
+}
+
 function key(userId, year, month) {
   if (!Number.isSafeInteger(year) || year < 1970 || !Number.isInteger(month) || month < 0 || month > 11) {
     throw new Error('Invalid earnings review month.');
   }
   return `${prefix(userId)}${year}:${month}`;
+}
+
+/** Keys of the markers of one month: the legacy one and one per reason. */
+function monthMarkers(userId, year, month) {
+  const base = key(userId, year, month);
+  return { base, pattern: `${base}:*` };
 }
 
 function parse(row) {
@@ -58,11 +72,8 @@ async function hold(userId, year, month, code) {
 }
 
 async function snapshot(userId, year, month) {
-  const base = key(userId, year, month);
-  const rows = await AppConfig.for('internal').get(
-    [AppConfig.KEY, AppConfig.VALUE],
-    [[AppConfig.KEY, base], 'OR', [AppConfig.KEY, `${base}:*`, 'GLOB']],
-  );
+  const { base, pattern } = monthMarkers(userId, year, month);
+  const rows = await AppConfig.for('internal').get([AppConfig.KEY, AppConfig.VALUE], [[AppConfig.KEY, base], 'OR', [AppConfig.KEY, pattern, 'GLOB']]);
   rows.forEach(parse);
   return rows;
 }
@@ -102,16 +113,21 @@ async function clear(userId, year, month, expected) {
 }
 
 async function clearCalculated(userId, year, month) {
+  const { sql, values } = clearCalculatedStatement(userId, year, month);
+  await Entity.execSql(sql, values, AppConfig);
+}
+
+/** For callers that have to clear the holds in the transaction that saves the month. */
+function clearCalculatedStatement(userId, year, month) {
   const base = key(userId, year, month);
   const keys = [base, ...CALCULATION_CODES.map((code) => `${base}:${code}`)];
   // Match both legacy code values and revisioned values; never remove manual reasons.
-  await Entity.execSql(
-    `DELETE FROM app_config WHERE key IN (${keys.map(() => '?').join(', ')})
+  return {
+    sql: `DELETE FROM app_config WHERE key IN (${keys.map(() => '?').join(', ')})
      AND (CASE WHEN json_valid(value) THEN json_extract(value, '$.code') ELSE value END)
        IN (${CALCULATION_CODES.map(() => '?').join(', ')})`,
-    [...keys, ...CALCULATION_CODES],
-    AppConfig,
-  );
+    values: [...keys, ...CALCULATION_CODES],
+  };
 }
 
 async function assertRecalculable(userId, year, month) {
@@ -119,7 +135,7 @@ async function assertRecalculable(userId, year, month) {
 }
 
 async function list(userId) {
-  const rows = await AppConfig.for('internal').get([AppConfig.KEY, AppConfig.VALUE], [AppConfig.KEY, `${prefix(userId)}*`, 'GLOB']);
+  const rows = await AppConfig.for('internal').get([AppConfig.KEY, AppConfig.VALUE], [AppConfig.KEY, holdPattern(userId), 'GLOB']);
   return uniqueHolds(rows).map(({ year, month, code }) => ({ year, month, code }));
 }
 
@@ -174,10 +190,14 @@ async function pendingExcludedSince() {
 
 module.exports = {
   CALCULATION_CODES,
+  RUN_FAILED,
+  holdPattern,
   hold,
   snapshot,
   clear,
   clearCalculated,
+  clearCalculatedStatement,
+  monthMarkers,
   assertRecalculable,
   list,
   listAll,

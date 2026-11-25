@@ -6,6 +6,7 @@ import Reactive from 'html-tag-js/reactive';
 import Ref from 'html-tag-js/ref';
 import { hideLoading, showLoading } from 'lib/helpers';
 import moment from 'moment';
+import { PAYMENT_METHOD_ICONS, PAYMENT_METHOD_LABELS } from '../../../shared/paymentMethods';
 
 let loggedInUser;
 
@@ -150,7 +151,9 @@ export default async function Earnings({ user }) {
 }
 
 function Payment(props) {
-  const { bank_name: bankName, bank_account_number: bankAccountNumber } = props;
+  const { payment_method_type: type, bank_name: bankName, bank_account_number: bankAccountNumber } = props;
+  const details = { paypal: props.paypal_email, wallet: [props.wallet_type, props.wallet_address].filter(Boolean).join(' ') };
+  const detail = details[type] ?? bankAccountNumber;
 
   return (
     <tr>
@@ -158,9 +161,9 @@ function Payment(props) {
       <td className='amount'>&#8377; {props.amount.toLocaleString()}</td>
       <td className='payment-method'>
         <div>
-          <span className='icon bank' />
-          <span>{bankName}</span>
-          <span>{bankAccountNumber}</span>
+          <span className={`icon ${PAYMENT_METHOD_ICONS[type] || 'bank'}`} />
+          <span>{bankName || PAYMENT_METHOD_LABELS[type]}</span>
+          <span>{detail}</span>
         </div>
       </td>
       <td className='status'>{props.status}</td>

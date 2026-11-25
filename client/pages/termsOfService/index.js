@@ -1,24 +1,9 @@
 import PolicyPage from 'components/policyPage';
 
-export default async function TermsOfService() {
-  let thresholdDisplay = (
-    <span>
-      temporarily unavailable; please check your <a href='/earnings'>Earnings page</a>
-    </span>
-  );
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3000);
-  try {
-    const response = await fetch('/api/payment-threshold', { cache: 'no-store', signal: controller.signal });
-    if (!response.ok) throw new Error('Payment threshold unavailable');
-    const { threshold } = await response.json();
-    if (!Number.isSafeInteger(threshold) || threshold <= 0) throw new Error('Invalid payment threshold');
-    thresholdDisplay = <strong>₹{threshold.toLocaleString('en-IN')} INR</strong>;
-  } catch {
-    // Keep the Terms readable without displaying a guessed payout threshold.
-  } finally {
-    clearTimeout(timeout);
-  }
+export default function TermsOfService() {
+  // The page does not wait for the current threshold.
+  const thresholdDisplay = <span aria-live='polite'>loading…</span>;
+  loadThreshold().then((threshold) => thresholdDisplay.replaceChildren(threshold));
 
   return (
     <PolicyPage id='terms-of-service'>
@@ -70,8 +55,8 @@ export default async function TermsOfService() {
       </p>
       <h2>Developer Payments</h2>
       <p>
-        Developers earn from eligible plugin sales and download counts. Payments are made to the bank account provided as the developer's default
-        payment method.
+        Developers earn from eligible plugin sales and download counts. Payments are made to the developer's default payment method. Available methods
+        may include Indian and overseas bank accounts and PayPal, and are listed when you add a payment method.
       </p>
       <h3>Google Play Sales</h3>
       <p>
@@ -91,9 +76,9 @@ export default async function TermsOfService() {
       <h3>Payout Schedule</h3>
       <p>
         Eligible payouts are <strong>automatically initiated on the 16th of each month</strong> when unpaid earnings from previous months meet or
-        exceed the current payout threshold and a valid default bank account is available. Foxbiz{' '}
-        <strong>manually processes these payments within the next 10 business days</strong>. Initiation does not mean an immediate bank transfer; the
-        receiving bank may take additional time to credit the payment.
+        exceed the current payout threshold and a valid default payment method is available. Foxbiz{' '}
+        <strong>manually processes these payments within the next 10 business days</strong>. Initiation does not mean an immediate transfer; the
+        receiving bank or payment provider may take additional time to credit the payment.
       </p>
       <h2>Payment Threshold</h2>
       <p className='policy-note'>
@@ -101,7 +86,7 @@ export default async function TermsOfService() {
         be initiated. The threshold is managed through Acode's application settings, may be updated by the platform, and is also displayed on your{' '}
         <a href='/earnings'>Earnings page</a>. Earnings below the threshold carry forward to later months.
       </p>
-      <p>Developers are responsible for their income-related tax obligations and any fees charged by their receiving bank.</p>
+      <p>Developers are responsible for their income-related tax obligations and any fees charged by their receiving bank or payment provider.</p>
       <h2>Limitation of Liability</h2>
       <p>
         Our services are provided "as is" without any warranties of any kind. We will not be liable for any damages, whether direct, indirect,
@@ -121,4 +106,25 @@ export default async function TermsOfService() {
       <p>Any disputes arising from these Terms of Service will be resolved through arbitration.</p>
     </PolicyPage>
   );
+}
+
+async function loadThreshold() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  try {
+    const response = await fetch('/api/payment-threshold', { cache: 'no-store', signal: controller.signal });
+    if (!response.ok) throw new Error('Payment threshold unavailable');
+    const { threshold } = await response.json();
+    if (!Number.isSafeInteger(threshold) || threshold <= 0) throw new Error('Invalid payment threshold');
+    return <strong>₹{threshold.toLocaleString('en-IN')} INR</strong>;
+  } catch {
+    // Keep the Terms readable without displaying a guessed payout threshold.
+    return (
+      <span>
+        temporarily unavailable; please check your <a href='/earnings'>Earnings page</a>
+      </span>
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
 }

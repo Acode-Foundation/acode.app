@@ -1,10 +1,10 @@
 import './style.scss';
-import { isAccountRoute } from '../../../shared/adPolicy';
+import { isPromotionFreeRoute } from '../../../shared/adPolicy';
 
 export default function AnnouncementBanner() {
   const setHeight = (value) => document.documentElement.style.setProperty('--announcement-height', value);
   setHeight('0px');
-  if (isAccountRoute(location.pathname) || sessionStorage.getItem('announcement-banner-closed') === 'true') return null;
+  if (isPromotionFreeRoute(location.pathname) || sessionStorage.getItem('announcement-banner-closed') === 'true') return null;
   const root = document.createElement('div');
   root.className = 'announcement-banner hidden';
   const link = document.createElement('a');

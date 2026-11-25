@@ -75,7 +75,7 @@ async function requestThreshold() {
   return { res, body };
 }
 
-async function renderTerms(fetch) {
+async function renderTerms(fetch, onrender) {
   const dom = new JSDOM('', { runScripts: 'outside-only' });
   try {
     const context = dom.getInternalVMContext();
@@ -97,7 +97,10 @@ async function renderTerms(fetch) {
     policyPage = context.exports;
     context.exports = {};
     vm.runInContext(termsCode, context);
-    return (await context.exports.default()).outerHTML;
+    const page = await context.exports.default();
+    onrender?.(page.outerHTML);
+    await vi.waitFor(() => expect(page.textContent).not.toContain('loading…'));
+    return page.outerHTML;
   } finally {
     dom.window.close();
   }
@@ -116,6 +119,24 @@ it('renders JSX Terms with the shared threshold fetched on the client and picks 
   expect(updated).toContain('<strong>₹12,345 INR</strong>');
   expect(updated).not.toContain('₹10,000');
   expect(fetch).toHaveBeenLastCalledWith('/api/payment-threshold', { cache: 'no-store', signal: expect.any(AbortSignal) });
+});
+
+it('shows the Terms before the threshold has loaded', async () => {
+  let initial;
+  let respond;
+  const rendered = renderTerms(
+    () =>
+      new Promise((resolve) => {
+        respond = resolve;
+      }),
+    (html) => {
+      initial = html;
+      respond({ ok: true, json: async () => ({ threshold: 10000 }) });
+    },
+  );
+  expect(await rendered).toContain('<strong>₹10,000 INR</strong>');
+  expect(initial).toContain('Developers receive 85% of the reported net earnings');
+  expect(initial).not.toContain('₹');
 });
 
 it('shares the existing payout fallback when the setting is missing', async () => {

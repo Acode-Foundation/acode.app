@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { transformSync } from '@babel/core';
+import * as paymentMethods from '../../shared/paymentMethods';
 
 const sources = Object.fromEntries(
   ['client/pages/user/index.js', 'client/components/dialogs/dialogBox.js'].map((file) => [
@@ -80,12 +81,12 @@ it('renders the success logo, check and Done button while retaining ordinary dia
 function profile() {
   return load('client/pages/user/index.js', {
     './style.scss': {},
+    '../../../shared/paymentMethods': paymentMethods,
     'components/dialogs/alert': alert,
     'components/dialogs/confirm': vi.fn(),
-    'components/dialogs/select': vi.fn(),
     'components/plugins': vi.fn(),
     'components/tabs': vi.fn(),
-    'html-tag-js/ref': () => ({ el: { getAll: () => [] } }),
+    'html-tag-js/ref': () => ({ el: { querySelector: () => ({}), querySelectorAll: () => [] } }),
     'lib/appSource': { isIOSSource: () => false },
     'lib/helpers': { getLoggedInUser: async () => user, gravatar: () => '/avatar.svg', showLoading: vi.fn(), hideLoading: vi.fn() },
     'lib/pageMetadata': { beginProfileMetadataRequest: vi.fn(), applyProfileMetadata: vi.fn() },

@@ -17,6 +17,7 @@ CREATE TRIGGER IF NOT EXISTS app_config_updated_at
 const DEFAULTS = {
   acode_pro_price: '370',
   payment_threshold: '15000',
+  paypal_payouts_enabled: '1',
 };
 
 class AppConfig extends Entity {
@@ -42,6 +43,10 @@ class AppConfig extends Entity {
 
   async getPaymentThreshold() {
     return parseInt(await this.getValue('payment_threshold'), 10) || PAYMENT_THRESHOLD;
+  }
+
+  async isPayPalEnabled() {
+    return (await this.getValue('paypal_payouts_enabled')) !== '0';
   }
 
   async setValue(key, value) {

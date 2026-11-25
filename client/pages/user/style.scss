@@ -633,23 +633,16 @@
       background-color: rgba(255, 255, 255, 0.03);
       color: var(--dash-text);
       font-size: 0.82rem;
-      cursor: pointer;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
       transition: border-color 0.2s ease, background-color 0.2s ease;
 
-      &:hover {
-        border-color: rgba(255, 255, 255, 0.18);
-      }
-
-      // keep e.target on the row itself for the click handler
-      * {
-        pointer-events: none;
-      }
-
       .icon {
+        flex: none;
         font-size: 20px;
         color: var(--dash-muted);
+
+        &::before {
+          color: inherit;
+        }
       }
     }
 
@@ -665,18 +658,83 @@
         min-width: 0;
         flex: 1;
 
-        strong {
-          text-transform: capitalize;
+        .badges {
+          // Same height as the "Set as default" button, so that all rows match.
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          height: 24px;
+          margin-top: 4px;
         }
 
-        span {
-          color: var(--dash-muted);
+        .detail {
+          white-space: nowrap;
           font-variant-numeric: tabular-nums;
           overflow: hidden;
           text-overflow: ellipsis;
         }
       }
 
+      &[data-available='false'] .detail {
+        opacity: 0.6;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: none;
+      }
+
+      button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        height: 32px;
+        margin: 0;
+        padding: 0 10px;
+        border-radius: 8px;
+        background-color: transparent;
+        color: var(--dash-muted);
+        font: inherit;
+        font-size: 0.76rem;
+        font-weight: 500;
+
+        &:hover:not(:disabled) {
+          background-color: rgba(255, 255, 255, 0.08);
+          color: var(--dash-text);
+        }
+
+        &:focus-visible {
+          outline: 2px solid var(--dash-accent);
+        }
+
+        &:disabled {
+          opacity: 0.35;
+        }
+      }
+
+      .set-default {
+        align-self: flex-start;
+        height: 24px;
+        margin: 4px 0 0 -8px;
+        padding: 0 8px;
+        color: #7cc0ff;
+      }
+
+      .actions .delete {
+        width: 32px;
+        padding: 0;
+        font-size: 18px;
+
+        &:hover:not(:disabled) {
+          background-color: rgba(248, 113, 113, 0.14);
+          color: var(--dash-bad);
+        }
+      }
+
+      .unavailable-pill,
       .default-pill {
         padding: 1px 7px;
         border-radius: 6px;
@@ -685,10 +743,33 @@
         background-color: rgba(52, 153, 254, 0.16);
         color: #7cc0ff;
       }
+
+      .unavailable-pill {
+        background-color: rgba(251, 191, 36, 0.14);
+        color: #fbbf24;
+      }
+    }
+
+    .payment-methods-hint,
+    .payment-methods-error {
+      margin: 0;
+      color: var(--dash-muted);
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    .payment-methods-error {
+      color: var(--dash-bad);
+    }
+
+    .add-payment-method[hidden],
+    .payment-methods-hint[hidden] {
+      display: none;
     }
 
     .add-payment-method {
       justify-content: center;
+      text-decoration: none;
       border-style: dashed;
       background-color: transparent;
       color: var(--dash-muted);

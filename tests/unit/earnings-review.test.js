@@ -4,6 +4,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import Database from 'better-sqlite3';
 import moment from 'moment';
+import * as paymentMethods from '../../shared/paymentMethods';
 
 let db;
 let settings;
@@ -76,7 +77,13 @@ beforeEach(async () => {
   unpaid = () => calculator.unpaid(user);
   calculate = vi.fn().mockRejectedValue(Object.assign(new Error('Missing original INR'), { code: 'MISSING_RAZORPAY_INR' }));
   users = [user];
-  payment = { ID: 'id', AMOUNT: 'amount', insert: vi.fn() };
+  payment = load('entities/payment.js', {
+    './entity': Entity,
+    '../lib/db': db,
+    '../lib/maskedEmail': load('lib/maskedEmail.js', {}),
+    '../lib/earningsReview': reviews,
+  });
+  vi.spyOn(payment, 'initiate');
   downloadReport = vi.fn().mockResolvedValue([]);
   run = load('lib/updateEarnings.js', {
     moment,
@@ -88,6 +95,7 @@ beforeEach(async () => {
     '../entities/appConfig': settings,
     './earningsReview': reviews,
     './downloadGr': downloadReport,
+    '../../shared/paymentMethods': paymentMethods,
     './sendEmail': vi.fn(),
     './calcEarnings': { ...calculator, total: calculate },
   });
@@ -149,12 +157,12 @@ it('preserves other users/months and prevents payouts while any older month rema
   await reviews.hold(70, 2026, 9, 'INVALID_GOOGLE_REPORT');
   calculate.mockResolvedValue(70);
   await expect(run(2026, 10)).rejects.toThrow('2026-10');
-  expect(payment.insert).not.toHaveBeenCalled();
+  expect(payment.initiate).not.toHaveBeenCalled();
   await expect(reviews.list(7)).resolves.toEqual([{ year: 2026, month: 9, code: 'MISSING_RAZORPAY_INR' }]);
   await expect(reviews.assertClear(70)).rejects.toThrow('2026-10');
   await run(2026, 9);
-  expect(payment.insert).toHaveBeenCalledOnce();
-  expect(payment.insert.mock.calls[0]).toContainEqual(['amount', 140]);
+  expect(payment.initiate).toHaveBeenCalledOnce();
+  expect(payment.initiate.mock.calls[0][0]).toMatchObject({ amount: 140 });
   await expect(reviews.assertClear(70)).rejects.toThrow('2026-10');
 });
 
@@ -164,7 +172,8 @@ it('does not clear a marker when recalculation succeeds but the monthly write fa
   vi.spyOn(earnings, 'insert').mockRejectedValue(new Error('Fixture write failure'));
   await expect(run(2026, 9)).rejects.toThrow('Fixture write failure');
   await expect(reviews.assertClear(7, 2026, 9)).rejects.toMatchObject({ statusCode: 409 });
-  expect(payment.insert).not.toHaveBeenCalled();
+  expect((await reviews.list(7)).map(({ code }) => code).sort()).toEqual(['EARNINGS_RUN_FAILED', 'MISSING_RAZORPAY_INR']);
+  expect(payment.initiate).not.toHaveBeenCalled();
 });
 
 it('reads all held months without the API pagination limit and leaves settings alone', async () => {
@@ -187,17 +196,18 @@ it('preserves the monthly amount and hold when a Google amount write fails, then
   const failure = new Error('Fixture Google amount write failure');
   orders.update.mockRejectedValueOnce(failure);
 
-  await expect(run(2026, 9)).rejects.toBe(failure);
+  await expect(run(2026, 9)).rejects.toThrow('User 7: Fixture Google amount write failure');
+  expect((await reviews.list(7)).map(({ code }) => code)).toContain('EARNINGS_RUN_FAILED');
   expect(db.prepare('SELECT amount, payment_id FROM user_earnings').all()).toEqual([{ amount: 50, payment_id: null }]);
   await expect(reviews.assertClear(7, 2026, 9)).rejects.toMatchObject({ statusCode: 409 });
-  expect(payment.insert).not.toHaveBeenCalled();
+  expect(payment.initiate).not.toHaveBeenCalled();
 
   await run(2026, 9);
   expect(orders.update).toHaveBeenLastCalledWith(['amount', 200], ['id', 1]);
   await expect(reviews.list(7)).resolves.toEqual([]);
   expect(db.prepare('SELECT amount, payment_id FROM user_earnings').all()).toEqual([{ amount: 170, payment_id: 123 }]);
-  expect(payment.insert).toHaveBeenCalledOnce();
-  expect(payment.insert.mock.calls[0]).toContainEqual(['amount', 170]);
+  expect(payment.initiate).toHaveBeenCalledOnce();
+  expect(payment.initiate.mock.calls[0][0]).toMatchObject({ amount: 170 });
 });
 
 it('lists holds per developer and across developers for admins', async () => {
@@ -242,7 +252,7 @@ it.each([null, 42])('does not recalculate or release a manually held month (paym
   await expect(run(2026, 9)).rejects.toThrow('holds for users: 7');
   expect(calculate).not.toHaveBeenCalled();
   expect(db.prepare('SELECT amount, payment_id FROM user_earnings WHERE month = 9').get()).toEqual({ amount: 70, payment_id: paymentId });
-  expect(payment.insert).not.toHaveBeenCalled();
+  expect(payment.initiate).not.toHaveBeenCalled();
   expect(await reviews.list(7)).toHaveLength(2);
 });
 
@@ -308,7 +318,7 @@ it.each([
   await expect(run(2026, 9)).rejects.toThrow('holds for users: 7');
   expect(calculate.mock.calls.map((args) => args[2].id)).toEqual([8]);
   expect(db.prepare('SELECT user_id, amount FROM user_earnings').all()).toEqual([{ user_id: 8, amount: 70 }]);
-  expect(payment.insert).not.toHaveBeenCalled();
+  expect(payment.initiate).not.toHaveBeenCalled();
   await expect(settings.getValue(marker)).resolves.toBe(reason);
   await expect(reviews.list(7)).rejects.toMatchObject({ code: 'EARNINGS_UNDER_REVIEW' });
 });

@@ -7,6 +7,7 @@ import express from 'express';
 import * as rateLimit from 'express-rate-limit';
 import moment from 'moment';
 import { safeAccountRedirect } from '../../shared/accountRedirect';
+import * as paymentMethods from '../../shared/paymentMethods';
 
 const appleCrypto = createRequire(import.meta.url)('../../server/lib/appleOAuth');
 
@@ -641,6 +642,7 @@ async function start() {
     '../lib/emailCode': {},
     '../lib/calcEarnings': {},
     '../lib/earningsReview': {},
+    '../../shared/paymentMethods': paymentMethods,
     '../lib/developerDashboard': {},
     '../../constants.mjs': {},
   };

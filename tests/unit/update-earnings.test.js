@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import moment from 'moment';
+import * as paymentMethods from '../../shared/paymentMethods';
 
 const filename = path.resolve(import.meta.dirname, '../../server/lib/updateEarnings.js');
 const source = fs.readFileSync(filename, 'utf8');
@@ -13,9 +14,15 @@ let exit;
 let configuredThreshold;
 let users;
 let review;
+let method;
+let paypalEnabled;
+let sendEmail;
 
 beforeEach(() => {
   configuredThreshold = 1000;
+  method = { id: 1 };
+  paypalEnabled = false;
+  sendEmail = vi.fn().mockResolvedValue();
   users = [{ id: 1 }, { id: 2 }, { id: 3 }];
   calcEarnings = {
     indexReport: vi.fn(() => new Map()),
@@ -34,10 +41,11 @@ beforeEach(() => {
     insert: vi.fn(),
     update: vi.fn(),
   };
-  payment = { USER_ID: 'user_id', insert: vi.fn() };
+  payment = { initiate: vi.fn() };
   exit = vi.fn();
   review = {
-    CALCULATION_CODES: ['INVALID_GOOGLE_REPORT', 'MISSING_RAZORPAY_INR'],
+    CALCULATION_CODES: ['INVALID_GOOGLE_REPORT', 'MISSING_RAZORPAY_INR', 'EARNINGS_RUN_FAILED'],
+    RUN_FAILED: 'EARNINGS_RUN_FAILED',
     hold: vi.fn(),
     clearCalculated: vi.fn(),
     assertRecalculable: vi.fn(),
@@ -53,9 +61,10 @@ beforeEach(() => {
     './downloadGr': async () => [],
     './calcEarnings': calcEarnings,
     '../entities/userEarnings': earnings,
-    '../entities/paymentMethod': { ID: 'id', get: async () => [{ id: 1 }] },
-    './sendEmail': vi.fn(),
-    '../entities/appConfig': { getPaymentThreshold: async () => configuredThreshold },
+    '../entities/paymentMethod': { ID: 'id', get: async () => [method] },
+    './sendEmail': sendEmail,
+    '../entities/appConfig': { getPaymentThreshold: async () => configuredThreshold, isPayPalEnabled: async () => paypalEnabled },
+    '../../shared/paymentMethods': paymentMethods,
   };
   const module = { exports: {} };
   vm.runInNewContext(
@@ -82,15 +91,66 @@ it('holds only the affected developer and reports holds to the cron wrapper afte
   expect(calcEarnings.total.mock.calls.every((args) => args[3] === index)).toBe(true);
   expect(earnings.insert.mock.calls.map((columns) => columns.find(([key]) => key === 'user_id')[1])).toEqual([2, 3]);
   expect(earnings.update).not.toHaveBeenCalled();
-  expect(payment.insert).not.toHaveBeenCalled();
+  expect(payment.initiate).not.toHaveBeenCalled();
   expect(exit).not.toHaveBeenCalled();
 });
 
-it('propagates unexpected failures without killing the server', async () => {
+it('reports unexpected failures of every developer without killing the server', async () => {
   calcEarnings.total.mockRejectedValue(new Error('Database unavailable'));
-  await expect(updateEarnings(2026, 9)).rejects.toThrow('Database unavailable');
+  await expect(updateEarnings(2026, 9)).rejects.toThrow('failed unexpectedly for users: 1, 2, 3. User 1: Database unavailable');
+  expect(calcEarnings.total).toHaveBeenCalledTimes(3);
   expect(earnings.insert).not.toHaveBeenCalled();
   expect(exit).not.toHaveBeenCalled();
+});
+
+it('continues after an unexpected failure and holds the month that was not saved', async () => {
+  users = [
+    { id: 2, payment_method_id: 1 },
+    { id: 3, payment_method_id: 1 },
+  ];
+  configuredThreshold = 100;
+  calcEarnings.total.mockRejectedValueOnce(new Error('Corrupt row')).mockResolvedValue(100);
+  await expect(updateEarnings(2026, 9)).rejects.toThrow('failed unexpectedly for users: 2. User 2: Corrupt row');
+  expect(review.hold.mock.calls).toEqual([[2, 2026, 9, 'EARNINGS_RUN_FAILED']]);
+  expect(payment.initiate).toHaveBeenCalledOnce();
+  expect(payment.initiate.mock.calls[0][0]).toMatchObject({ userId: 3 });
+});
+
+it('does not hold a month that was saved before its payout failed', async () => {
+  users = [
+    { id: 2, payment_method_id: 1 },
+    { id: 3, payment_method_id: 1 },
+  ];
+  configuredThreshold = 100;
+  calcEarnings.total.mockResolvedValue(100);
+  payment.initiate.mockImplementationOnce(() => {
+    throw new Error('Disk failure');
+  });
+  await expect(updateEarnings(2026, 9)).rejects.toThrow('User 2: Disk failure');
+  expect(review.hold).not.toHaveBeenCalled();
+  expect(payment.initiate).toHaveBeenCalledTimes(2);
+});
+
+it('says which developers could not be held, reports holds too, and keeps the alert short', async () => {
+  users = Array.from({ length: 41 }, (_, index) => ({ id: index + 1 }));
+  calcEarnings.total.mockImplementation(async (_year, _month, user) => {
+    if (user.id === 1) throw Object.assign(new Error('Invalid report'), { code: 'INVALID_GOOGLE_REPORT' });
+    throw new Error('Database unavailable');
+  });
+  review.hold.mockImplementation(async (userId) => {
+    if (userId === 41) throw new Error('Read-only database');
+  });
+  const { message } = await updateEarnings(2026, 9).catch((error) => error);
+  expect(message).toContain('holds for users: 1.');
+  expect(message).toContain('User 41 could NOT be held; run 2026-10 again before the next payout.');
+  expect(message).toContain('And 21 more');
+});
+
+it('stops before any developer when the shared data cannot be loaded', async () => {
+  review.markPendingExcluded.mockRejectedValue(new Error('Database unavailable'));
+  await expect(updateEarnings(2026, 9)).rejects.toThrow('Database unavailable');
+  expect(calcEarnings.total).not.toHaveBeenCalled();
+  expect(review.hold).not.toHaveBeenCalled();
 });
 
 it('includes missing Razorpay order references in the cron alert while continuing other developers', async () => {
@@ -100,17 +160,17 @@ it('includes missing Razorpay order references in the cron alert while continuin
   });
   await expect(updateEarnings(2026, 9)).rejects.toThrow('order_missing');
   expect(earnings.insert.mock.calls.map((columns) => columns.find(([key]) => key === 'user_id')[1])).toEqual([2, 3]);
-  expect(payment.insert).not.toHaveBeenCalled();
+  expect(payment.initiate).not.toHaveBeenCalled();
 });
 
 it('uses the current application threshold for payout eligibility, including the exact boundary', async () => {
   users = [{ id: 2, payment_method_id: 1 }];
   configuredThreshold = 101;
   await updateEarnings(2026, 9);
-  expect(payment.insert).not.toHaveBeenCalled();
+  expect(payment.initiate).not.toHaveBeenCalled();
   configuredThreshold = 100;
   await updateEarnings(2026, 9);
-  expect(payment.insert).toHaveBeenCalledOnce();
+  expect(payment.initiate).toHaveBeenCalledOnce();
 });
 
 it('continues later developers when balance loading discovers a hold', async () => {
@@ -125,8 +185,15 @@ it('continues later developers when balance loading discovers a hold', async () 
   await expect(updateEarnings(2026, 9)).rejects.toThrow('holds for users: 1');
   expect(calcEarnings.total.mock.calls.map((args) => args[2].id)).toEqual([1, 2]);
   expect(calcEarnings.unpaid.mock.calls.map(([user]) => user.id)).toEqual([1, 2]);
-  expect(payment.insert).toHaveBeenCalledOnce();
-  expect(payment.insert.mock.calls[0]).toContainEqual(['user_id', 2]);
+  expect(payment.initiate).toHaveBeenCalledOnce();
+  expect(payment.initiate.mock.calls[0][0]).toMatchObject({
+    userId: 2,
+    paymentMethodId: 1,
+    amount: 100,
+    earningIds: [10],
+    dateFrom: '2026-10-01',
+    dateTo: '2026-10-31',
+  });
   expect(review.assertClear).not.toHaveBeenCalled(); // unpaid owns the hold check for payable accounts.
   expect(review.hold).not.toHaveBeenCalled(); // Do not mislabel this successfully calculated month as held.
 });
@@ -139,19 +206,22 @@ it('still reports existing holds for developers without a payment method', async
   expect(review.assertClear.mock.calls).toEqual([[2], [3]]);
   expect(calcEarnings.total).toHaveBeenCalledTimes(2);
   expect(calcEarnings.unpaid).not.toHaveBeenCalled();
-  expect(payment.insert).not.toHaveBeenCalled();
+  expect(payment.initiate).not.toHaveBeenCalled();
 });
 
-it('does not suppress unexpected failures while loading a balance', async () => {
+it('reports unexpected failures while loading a balance and still pays later developers', async () => {
   users = [
     { id: 2, payment_method_id: 1 },
     { id: 3, payment_method_id: 1 },
   ];
+  configuredThreshold = 100;
+  calcEarnings.total.mockResolvedValue(100);
   calcEarnings.unpaid.mockRejectedValueOnce(new Error('Database unavailable'));
 
-  await expect(updateEarnings(2026, 9)).rejects.toThrow('Database unavailable');
-  expect(calcEarnings.total).toHaveBeenCalledOnce();
-  expect(payment.insert).not.toHaveBeenCalled();
+  await expect(updateEarnings(2026, 9)).rejects.toThrow('failed unexpectedly for users: 2. User 2: Database unavailable');
+  expect(calcEarnings.total).toHaveBeenCalledTimes(2);
+  expect(payment.initiate).toHaveBeenCalledOnce();
+  expect(payment.initiate.mock.calls[0][0]).toMatchObject({ userId: 3 });
 });
 
 it('records the pending-exclusion cutoff before saving any earnings row', async () => {
@@ -169,4 +239,58 @@ it('continues other developers without recalculating a manually held month', asy
     [2, 2026, 9],
     [3, 2026, 9],
   ]);
+});
+
+it.each([
+  ['bank_india', false, true],
+  ['bank_overseas', false, true],
+  ['paypal', true, true],
+  ['paypal', false, false],
+  ['wallet', true, false],
+])('initiates a payout to %s with PayPal enabled=%s: %s', async (type, enabled, paid) => {
+  users = [{ id: 2, name: 'Developer', email: 'dev@example.com', payment_method_id: 1 }];
+  configuredThreshold = 100;
+  method = { id: 1, type };
+  paypalEnabled = enabled;
+  await updateEarnings(2026, 9);
+  expect(payment.initiate).toHaveBeenCalledTimes(paid ? 1 : 0);
+  expect(sendEmail).toHaveBeenCalledTimes(paid ? 0 : 1);
+  if (!paid) expect(earnings.update).not.toHaveBeenCalled();
+});
+
+it('reports a run as active until it has finished or failed', async () => {
+  expect(updateEarnings.isRunning()).toBe(false);
+  const failed = updateEarnings(2026, 9);
+  expect(updateEarnings.isRunning()).toBe(true);
+  await expect(failed).rejects.toThrow('holds for users: 1');
+  expect(updateEarnings.isRunning()).toBe(false);
+});
+
+it('reports a hold that appears while the payout is created as a hold, not as a failure', async () => {
+  users = [
+    { id: 2, payment_method_id: 1 },
+    { id: 3, payment_method_id: 1 },
+  ];
+  configuredThreshold = 100;
+  calcEarnings.total.mockResolvedValue(100);
+  payment.initiate.mockImplementationOnce(() => {
+    throw Object.assign(new Error('Held while paying'), { code: 'EARNINGS_UNDER_REVIEW' });
+  });
+  const { message } = await updateEarnings(2026, 9).catch((error) => error);
+  expect(message).toContain('holds for users: 2');
+  expect(message).not.toContain('failed unexpectedly');
+  expect(review.hold).not.toHaveBeenCalled();
+  expect(payment.initiate).toHaveBeenCalledTimes(2);
+});
+
+it.each([
+  ['paypal', 'PayPal'],
+  ['wallet', 'Crypto wallet'],
+  ['something_new', 'something_new'],
+])('names the unavailable %s method in the email', async (type, label) => {
+  users = [{ id: 2, payment_method_id: 1 }];
+  configuredThreshold = 100;
+  method = { id: 1, type };
+  await updateEarnings(2026, 9);
+  expect(sendEmail.mock.calls[0][3]).toContain(`default payment method (${label})`);
 });
