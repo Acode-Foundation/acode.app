@@ -294,3 +294,76 @@ it.each([
   await updateEarnings(2026, 9);
   expect(sendEmail.mock.calls[0][3]).toContain(`default payment method (${label})`);
 });
+
+describe('command line', () => {
+  async function runCommand(args, complete = true, isMain = true) {
+    const module = { exports: {} };
+    const process = { argv: ['node', 'updateEarnings', ...args] };
+    const error = vi.fn();
+    const auth = vi.fn().mockResolvedValue();
+    const downloadReport = vi.fn().mockRejectedValue(new Error('Reached the run'));
+    const isComplete = vi.fn(() => complete);
+    const dependencies = {
+      moment,
+      'node:path': path,
+      dotenv: { config() {} },
+      '../lib/gapis': auth,
+      './downloadGr': downloadReport,
+      './downloadHistory': { isComplete },
+      '../../shared/paymentMethods': paymentMethods,
+    };
+    for (const name of [
+      '../entities/plugin',
+      '../entities/payment',
+      './calcEarnings',
+      '../entities/userEarnings',
+      '../entities/paymentMethod',
+      './sendEmail',
+      '../entities/appConfig',
+      './earningsReview',
+      'node:crypto',
+    ])
+      dependencies[name] = {};
+    const load = (name) => {
+      if (!(name in dependencies)) throw new Error(`Unmocked dependency: ${name}`);
+      return dependencies[name];
+    };
+    load.main = isMain ? module : {};
+    vm.runInNewContext(source, { module, process, console: { error, log() {} }, require: load, __dirname: path.dirname(filename) });
+    await new Promise((resolve) => setTimeout(resolve));
+    return { process, auth, isComplete, downloadReport, error, message: error.mock.calls[0]?.[0].message };
+  }
+
+  it('runs a finished month whose downloads are stored', async () => {
+    const { auth, isComplete, downloadReport, error, message, process } = await runCommand(['2025', '9']);
+    expect(isComplete).toHaveBeenCalledWith(2025, 9);
+    expect(auth).toHaveBeenCalledOnce();
+    expect(downloadReport).toHaveBeenCalledWith(2025, 10);
+    expect(message).toBe('Reached the run');
+    expect(error).toHaveBeenCalledOnce();
+    expect(process.exitCode).toBe(1);
+  });
+
+  it.each([
+    [['2025', '12'], true, 'Usage'],
+    [['2025', '-1'], true, 'Usage'],
+    [['2025', '1.5'], true, 'Usage'],
+    [['x', '1'], true, 'Usage'],
+    [['2025'], true, 'Usage'],
+    [[], true, 'Usage'],
+    [['2999', '0'], true, 'finished month'],
+    [[String(new Date().getFullYear()), String(new Date().getMonth())], true, 'finished month'],
+    [['2025', '9'], false, 'already been deleted'],
+  ])('refuses %j with complete downloads: %s', async (args, complete, expected) => {
+    const { auth, message, process } = await runCommand(args, complete);
+    expect(message).toContain(expected);
+    expect(auth).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('does nothing when another program with arguments loads the file', async () => {
+    const { auth, message } = await runCommand(['2025', '9'], true, false);
+    expect(auth).not.toHaveBeenCalled();
+    expect(message).toBeUndefined();
+  });
+});

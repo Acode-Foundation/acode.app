@@ -13,23 +13,36 @@ const { PAYMENT_METHOD_LABELS, PAYPAL, getPaymentMethodType, isPaymentMethodType
 
 let activeRuns = 0;
 
-const args = process.argv.slice(2);
-const yearArg = args[0];
-const monthArg = args[1];
+if (require.main === module) runFromCommandLine(process.argv[2], process.argv[3]);
 
-if (yearArg && monthArg) {
-  (async () => {
+/**
+ * Runs a finished month again: node server/lib/updateEarnings <year> <month (0-11)>
+ */
+async function runFromCommandLine(yearArg, monthArg) {
+  try {
     const path = require('node:path');
     const { config } = require('dotenv');
-    const setAuth = require('../lib/gapis');
     config({ path: path.resolve(__dirname, '../.env') });
-    await setAuth();
-
-    await updateEarnings(+yearArg, +monthArg);
-  })().catch(() => {
-    // updateEarnings has already logged the error.
+    const year = Number(yearArg);
+    const month = Number(monthArg);
+    if (!yearArg || !monthArg || !Number.isInteger(year) || year < 1970 || !Number.isInteger(month) || month < 0 || month > 11) {
+      throw new Error('Usage: updateEarnings <year> <month (0-11)>');
+    }
+    if (!moment({ year, month }).isBefore(moment().startOf('month'))) throw new Error('Only a finished month can be run.');
+    // A rerun rewrites the month of every developer, without the downloads that were deleted. It does not use
+    // the kept earnings of held months, because other developers have none; recalculate those months instead.
+    if (!require('./downloadHistory').isComplete(year, month)) {
+      throw new Error('Some download records of this month have already been deleted. Nothing was changed.');
+    }
+    await require('../lib/gapis')();
+    // It logs its own errors.
+    await updateEarnings(year, month).catch(() => {
+      process.exitCode = 1;
+    });
+  } catch (error) {
+    console.error(error);
     process.exitCode = 1;
-  });
+  }
 }
 
 /**

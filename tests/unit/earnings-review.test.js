@@ -103,7 +103,7 @@ beforeEach(async () => {
     moment,
     './earningsReview': reviews,
     '../entities/entity': {},
-    '../entities/download': {},
+    '../entities/download': { OLDEST_QUERY: 'SELECT created_at FROM download ORDER BY id LIMIT 1' },
     '../entities/pluginScan': {},
     '../../shared/verification': { RECENT_DOWNLOAD_DAYS: 30 },
   });

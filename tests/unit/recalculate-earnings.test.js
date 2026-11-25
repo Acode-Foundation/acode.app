@@ -33,6 +33,8 @@ beforeEach(() => {
     CREATE TABLE user_earnings (
       id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, amount INTEGER NOT NULL, month INTEGER NOT NULL, year INTEGER NOT NULL, payment_id INTEGER
     );
+    CREATE TABLE download (id INTEGER PRIMARY KEY, created_at TEXT);
+    INSERT INTO download (created_at) VALUES ('2025-12-01 00:00:11');
     CREATE TABLE plugin (id INTEGER PRIMARY KEY, user_id INTEGER);
     CREATE TABLE purchase_order (id INTEGER PRIMARY KEY, plugin_id INTEGER, provider TEXT, state TEXT, created_at DATETIME);
     INSERT INTO user VALUES (7, 'Example Developer');
@@ -46,6 +48,14 @@ beforeEach(() => {
   reports = { '2026-9': [{ id: 'september' }], '2026-8': [{ id: 'august' }] };
   downloadReport = vi.fn(async (year, month) => reports[`${year}-${month}`] || []);
   running = false;
+  const downloadHistory = load('lib/downloadHistory.js', {
+    moment,
+    './db': db,
+    './earningsReview': reviews,
+    './calcEarnings': calculator,
+    '../entities/appConfig': settings,
+    '../entities/download': { OLDEST_QUERY: 'SELECT created_at FROM download ORDER BY id LIMIT 1' },
+  });
   recalculate = load('lib/recalculateEarnings.js', {
     moment,
     './db': db,
@@ -53,6 +63,7 @@ beforeEach(() => {
     '../entities/userEarnings': { USER_ID: 'user_id', YEAR: 'year', MONTH: 'month', AMOUNT: 'amount' },
     './calcEarnings': calculator,
     './downloadGr': downloadReport,
+    './downloadHistory': downloadHistory,
     './earningsReview': reviews,
     '../entities/purchaseOrder': { PROVIDER_RAZORPAY: 'razorpay', STATE_PURCHASED: 0 },
     './updateEarnings': { isRunning: () => running },
@@ -247,6 +258,55 @@ it('does not save when a Google order completes while the month is calculated wi
   await expect(run()).rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining('completed') });
   expect(rows()).toEqual([]);
   expect(await codes()).toEqual(['MISSING_RAZORPAY_INR']);
+});
+
+it.each([
+  ['the first day', '2026-09-01 23:59:59', true],
+  ['an earlier month', '2026-08-30 10:00:00', true],
+  ['the second day', '2026-09-02 00:00:00', false],
+  ['a later month', '2026-11-01 00:00:00', false],
+])('only recalculates a month whose downloads are all stored: oldest from %s', async (_name, oldest, complete) => {
+  db.prepare('UPDATE download SET created_at = ?').run(oldest);
+  await hold('INVALID_GOOGLE_REPORT');
+  if (complete) {
+    await expect(run()).resolves.toMatchObject({ earnings: 321.5 });
+    return;
+  }
+  await expect(run()).rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining('download records') });
+  expect(calculator.total).not.toHaveBeenCalled();
+  expect(rows()).toEqual([]);
+  expect(await codes()).toEqual(['INVALID_GOOGLE_REPORT']);
+});
+
+it('uses the kept download earnings once the downloads are deleted', async () => {
+  await hold('INVALID_GOOGLE_REPORT');
+  db.exec(
+    "DELETE FROM download; INSERT INTO app_config (key, value) VALUES ('earnings-downloads:7:2026:8', '45.67'), ('earnings-downloads:7:2026:9', '1')",
+  );
+  expect(await run()).toEqual({ earnings: 321.5, remainingCodes: [] });
+  expect(calculator.total.mock.calls[0][4]).toBe(45.67);
+});
+
+it('counts the downloads while they are stored, and never trusts a damaged amount', async () => {
+  await hold('INVALID_GOOGLE_REPORT');
+  db.exec("INSERT INTO app_config (key, value) VALUES ('earnings-downloads:7:2026:8', 'x')");
+  await run();
+  expect(calculator.total.mock.calls[0][4]).toBeNull();
+  db.exec('DELETE FROM download');
+  await hold('INVALID_GOOGLE_REPORT');
+  await expect(run()).rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining('damaged') });
+  expect(await codes()).toEqual(['INVALID_GOOGLE_REPORT']);
+});
+
+it('does not save when downloads are deleted during the calculation', async () => {
+  await hold('INVALID_GOOGLE_REPORT');
+  calculator.total.mockImplementation(async () => {
+    db.exec('DELETE FROM download');
+    return 0;
+  });
+  await expect(run()).rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining('Try again') });
+  expect(rows()).toEqual([]);
+  expect(await codes()).toEqual(['INVALID_GOOGLE_REPORT']);
 });
 
 it('saves one row when two admins recalculate at once', async () => {

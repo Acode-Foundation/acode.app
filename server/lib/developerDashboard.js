@@ -13,9 +13,6 @@ const MONTHLY_RANGE = 12;
 // are calculated on the 16th, and for the verification ranking's recent-download window.
 const DOWNLOAD_RETENTION_DAYS = Math.max(DAILY_RANGE * 2 + 2, RECENT_DOWNLOAD_DAYS + 1);
 
-// Downloads are inserted in time order, so the lowest id is the oldest row we still have.
-const OLDEST_DOWNLOAD_QUERY = 'SELECT created_at FROM download ORDER BY id LIMIT 1';
-
 const PLUGIN_STATS_QUERY = `SELECT
   p.id AS id,
   p.name AS name,
@@ -71,7 +68,7 @@ async function getDeveloperDashboard(
     executeQuery(PLUGIN_STATS_QUERY, [rangeStartSql, rangeStartSql, previousStartSql, user.id]),
     executeQuery(DAILY_DOWNLOADS_QUERY, [user.id, rangeStartSql]),
     getEarningRows(user, now, executeQuery),
-    executeQuery(OLDEST_DOWNLOAD_QUERY, []),
+    executeQuery(Download.OLDEST_QUERY, []),
     getEarningsHolds(user.id),
   ]);
 

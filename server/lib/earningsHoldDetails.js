@@ -2,6 +2,7 @@ const Entity = require('../entities/entity');
 const Payment = require('../entities/payment');
 const User = require('../entities/user');
 const UserEarnings = require('../entities/userEarnings');
+const downloadHistory = require('./downloadHistory');
 
 const PAYOUT_STATUS = {
   [Payment.STATUS_NONE]: 'none',
@@ -43,7 +44,19 @@ module.exports = async function earningsHoldDetails(holds) {
           amount: row.amount,
           payout: row.payment_id == null ? null : { id: row.payment_id, status: PAYOUT_STATUS[row.status] ?? 'unknown' },
         })),
+      // Without its downloads the month can no longer be recalculated.
+      ...downloadState(hold),
       unpaidBalance: Math.round(rows.filter((row) => row.payment_id == null).reduce((sum, row) => sum + Number(row.amount), 0) * 100) / 100,
     };
   });
 };
+
+function downloadState({ userId, year, month }) {
+  try {
+    return { hasDownloads: downloadHistory.isComplete(year, month) || downloadHistory.keptEarnings(userId, year, month) !== null };
+  } catch (error) {
+    // One damaged amount must not hide the holds of everyone.
+    if (error.code !== 'INVALID_KEPT_DOWNLOADS') throw error;
+    return { hasDownloads: false, damagedDownloads: error.key };
+  }
+}

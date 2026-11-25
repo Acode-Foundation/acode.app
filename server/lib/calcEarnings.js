@@ -166,10 +166,11 @@ async function fromDownloads(year, month, user) {
  * @param {number} month month (0-11)
  * @param {object} user
  * @param {Array<object>|Map<string, number>} [report]
+ * @param {number|null} [downloadEarnings] Use this amount instead of counting the stored downloads
  */
-async function total(year, month, user, report) {
+async function total(year, month, user, report, downloadEarnings) {
   let earnings = await fromPaidPlugins(year, month, user, report);
-  earnings += await fromDownloads(year, month, user);
+  earnings += downloadEarnings ?? (await fromDownloads(year, month, user));
   earnings = Number.parseFloat(Math.round(earnings * 100) / 100);
   return earnings;
 }

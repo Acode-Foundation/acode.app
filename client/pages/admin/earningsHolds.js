@@ -97,6 +97,7 @@ export default function EarningsHolds({ signal }) {
   function Hold(hold) {
     const { userId, user, codes, saved, unpaidBalance } = hold;
     const warning = savedWarning(hold);
+    const downloads = downloadsWarning(hold);
     const button = (
       <button type='button' className='clear-hold' onclick={() => clear(hold, button)}>
         Clear hold
@@ -135,6 +136,7 @@ export default function EarningsHolds({ signal }) {
         </dl>
 
         {warning && <p className='hold-warning'>{warning}</p>}
+        {downloads && <p className='hold-warning'>{downloads}</p>}
         <div className='hold-actions'>
           {button}
           {recalculateButton}
@@ -148,6 +150,7 @@ export default function EarningsHolds({ signal }) {
     const message = [
       `${name} can be paid again once no other hold remains. Only clear ${period(hold)} after you have reviewed it.`,
       savedWarning(hold),
+      downloadsWarning(hold),
       hold.saved.some(({ payout }) => payout) && 'This month is already part of a payout. Clearing the hold does not change that payout.',
       canRecalculate(hold) && 'Recalculating this month would clear the calculation problem and save its earnings.',
     ]
@@ -188,8 +191,8 @@ export default function EarningsHolds({ signal }) {
 }
 
 // The server applies the same rules; this only hides a button that could not work.
-function canRecalculate({ codes, saved }) {
-  if (saved.length > 1 || saved[0]?.payout) return false;
+function canRecalculate({ codes, saved, hasDownloads }) {
+  if (hasDownloads === false || saved.length > 1 || saved[0]?.payout) return false;
   const manual = codes.some((code) => !REASONS[code]?.recalculable);
   return codes.some((code) => REASONS[code]?.recalculable) && (!manual || !saved.length);
 }
@@ -225,6 +228,16 @@ function savedWarning(hold) {
     return `${period(hold)} was saved ${length} times. It cannot be recalculated or added to a payout until the wrong rows are removed from the database.`;
   }
   return `The earnings of ${period(hold)} were never saved. If you clear the hold now, they will be missing from the next payout.`;
+}
+
+function downloadsWarning(hold) {
+  // Recalculating is not possible anyway once the month is in a payout or saved twice.
+  if (hold.hasDownloads !== false || !canRecalculate({ ...hold, hasDownloads: true })) return null;
+  if (hold.damagedDownloads) {
+    return `The kept download earnings of ${period(hold)} are damaged, so it cannot be recalculated. Correct ${hold.damagedDownloads} in the app_config table first.`;
+  }
+  const action = hold.saved.length ? 'Check its saved earnings' : 'Save its earnings in the database';
+  return `The download records of ${period(hold)} are missing, so it can no longer be recalculated. ${action} before clearing the hold.`;
 }
 
 function period({ year, month }) {

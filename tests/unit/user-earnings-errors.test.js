@@ -64,7 +64,7 @@ function harness({ loggedIn = { id: 7 }, userExists = true, failure, holds = [] 
     './earningsReview': reviews,
     moment,
     '../entities/entity': { execSql: async (sql) => (sql.includes('FROM plugin p') ? [{ id: 'fixture-plugin', price: 100, downloads: 42 }] : []) },
-    '../entities/download': {},
+    '../entities/download': { OLDEST_QUERY: 'SELECT created_at FROM download ORDER BY id LIMIT 1' },
     '../entities/pluginScan': {},
     '../../shared/verification': { RECENT_DOWNLOAD_DAYS: 30 },
   });

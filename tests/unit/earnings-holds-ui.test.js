@@ -25,6 +25,7 @@ const hold = {
   user: { name: 'Example Developer', email: 'dev@example.com' },
   saved: [{ amount: 1234.5, payout: { id: 55, status: 'paid' } }],
   unpaidBalance: 4000,
+  hasDownloads: true,
 };
 const unpaidRow = (amount) => ({ amount, payout: null });
 let lifecycle;
@@ -142,6 +143,48 @@ it('shows every row of a month that was saved more than once', async () => {
   expect(confirm.mock.calls[0][1]).not.toContain('Recalculating this month would');
 });
 
+it('does not offer to recalculate a month whose downloads are deleted', async () => {
+  const held = { ...hold, codes: ['INVALID_GOOGLE_REPORT'], saved: [] };
+  listing = { holds: [held], invalidMarkers: [] };
+  expect((await mount()).textContent).not.toContain('can no longer be recalculated');
+  listing = { holds: [{ ...held, hasDownloads: false }], invalidMarkers: [] };
+  const root = await mount();
+  expect(root.querySelector('.recalculate-hold')).toBeNull();
+  expect(root.textContent).toContain('can no longer be recalculated');
+  root.querySelector('.clear-hold').click();
+  await vi.waitFor(() => expect(confirm).toHaveBeenCalledOnce());
+  expect(confirm.mock.calls[0][1]).toContain('can no longer be recalculated');
+  expect(confirm.mock.calls[0][1]).toContain('Save its earnings in the database');
+  expect(confirm.mock.calls[0][1]).not.toContain('Recalculating this month would');
+});
+
+it('names a damaged record instead of calling the downloads missing', async () => {
+  const damaged = { ...hold, codes: ['INVALID_GOOGLE_REPORT'], saved: [], hasDownloads: false, damagedDownloads: 'earnings-downloads:7:2026:9' };
+  listing = { holds: [damaged], invalidMarkers: [] };
+  const root = await mount();
+  expect(root.textContent).toContain('Correct earnings-downloads:7:2026:9');
+  expect(root.textContent).not.toContain('are missing');
+  expect(root.querySelector('.recalculate-hold')).toBeNull();
+});
+
+it('raises no alarm when the server does not report downloads', async () => {
+  listing = { holds: [{ ...hold, codes: ['INVALID_GOOGLE_REPORT'], saved: [], hasDownloads: undefined }], invalidMarkers: [] };
+  const root = await mount();
+  expect(root.textContent).not.toContain('are missing');
+  expect(root.querySelector('.recalculate-hold')).not.toBeNull();
+});
+
+it.each([
+  ['unpaid', [unpaidRow(10)], 'Check its saved earnings'],
+  ['paid', [{ amount: 10, payout: { id: 55, status: 'paid' } }], null],
+  ['saved twice', [unpaidRow(10), unpaidRow(20)], null],
+])('explains missing downloads of a month that is %s', async (_name, saved, message) => {
+  listing = { holds: [{ ...hold, codes: ['INVALID_GOOGLE_REPORT'], saved, hasDownloads: false }], invalidMarkers: [] };
+  const { textContent } = await mount();
+  expect(textContent.includes('download records')).toBe(Boolean(message));
+  if (message) expect(textContent).toContain(message);
+});
+
 it('recalculates after confirmation and shows the saved amount', async () => {
   listing = { holds: [{ ...hold, codes: ['INVALID_GOOGLE_REPORT'], saved: [] }], invalidMarkers: [] };
   const root = await mount();
@@ -219,10 +262,17 @@ it('adds the developer, saved earnings and payout to each hold without touching 
     INSERT INTO payment VALUES (55, 1);
     INSERT INTO user_earnings VALUES (5, 9, '2026', '9', 5, 404), (1, 7, 2026, 9, 100.5, 55), (2, 7, 2026, 10, 20.1, NULL), (3, 7, 2025, 9, 10.2, NULL), (4, 8, 2026, 9, 999, NULL);
   `);
+  const keptEarnings = (user, _year, month) => {
+    if (user === 9) throw Object.assign(new Error('Damaged'), { code: 'INVALID_KEPT_DOWNLOADS', key: 'earnings-downloads:9:2026:9' });
+    if (user === 10) throw new Error('Database unavailable');
+    return month === 11 ? 0 : null;
+  };
   const module = { exports: {} };
   vm.runInNewContext(fs.readFileSync('server/lib/earningsHoldDetails.js', 'utf8'), {
     module,
+    console: { error() {} },
     require: (name) => {
+      if (name === './downloadHistory') return { isComplete: (_year, month) => month === 10, keptEarnings };
       if (name === '../entities/entity') return { execSql: async (sql, values) => db.prepare(sql).all(...values) };
       if (name === '../entities/payment') return { STATUS_NONE: 0, STATUS_PAID: 1, STATUS_INITIATED: 2 };
       return {};
@@ -232,16 +282,22 @@ it('adds the developer, saved earnings and payout to each hold without touching 
   const base = (extra) => ({ userId: 7, year: 2026, month: 9, codes: ['A'], snapshot, ...extra });
   const [paid, unpaid, unsaved, missing] = await details([base(), base({ month: 10 }), base({ month: 11 }), base({ userId: 99 })]);
   const [orphan] = await details([base({ userId: 9 })]);
-  expect(orphan).toMatchObject({ saved: [{ amount: 5, payout: { id: 404, status: 'unknown' } }] });
+  expect(orphan).toMatchObject({
+    saved: [{ amount: 5, payout: { id: 404, status: 'unknown' } }],
+    hasDownloads: false,
+    damagedDownloads: 'earnings-downloads:9:2026:9',
+  });
+  await expect(details([base({ userId: 10 })])).rejects.toThrow('Database unavailable');
   expect(paid).toEqual({
     ...base(),
     user: { name: 'Example Developer', email: 'dev@example.com' },
     saved: [{ amount: 100.5, payout: { id: 55, status: 'paid' } }],
+    hasDownloads: false,
     unpaidBalance: 30.3,
   });
   expect(paid.snapshot).toBe(snapshot);
-  expect(unpaid).toMatchObject({ saved: [unpaidRow(20.1)] });
-  expect(unsaved).toMatchObject({ saved: [], unpaidBalance: 30.3 });
+  expect(unpaid).toMatchObject({ saved: [unpaidRow(20.1)], hasDownloads: true });
+  expect(unsaved).toMatchObject({ saved: [], unpaidBalance: 30.3, hasDownloads: true });
   expect(missing).toMatchObject({ user: null, saved: [], unpaidBalance: 0 });
   // Migration 020 keeps months that were saved twice.
   db.exec('INSERT INTO user_earnings VALUES (9, 7, 2026, 9, 60, NULL), (6, 7, 2026, 9, 50, 404)');

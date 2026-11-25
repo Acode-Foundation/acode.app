@@ -2,6 +2,7 @@ const moment = require('moment');
 const db = require('./db');
 const User = require('../entities/user');
 const calcEarnings = require('./calcEarnings');
+const downloadHistory = require('./downloadHistory');
 const downloadReport = require('./downloadGr');
 const earningsReview = require('./earningsReview');
 const PurchaseOrder = require('../entities/purchaseOrder');
@@ -33,6 +34,12 @@ module.exports = async function recalculateEarnings(userId, year, month) {
   const hasManualHold = codes.some((code) => !isCalculation(code));
   // Refuse before calculating, because calculating also corrects the amounts of orders.
   assertCanSave(findRow(userId, year, month), hasManualHold);
+  // Download earnings are counted from rows that are deleted after some time, so an old month would lose them.
+  const countsDownloads = downloadHistory.isComplete(year, month);
+  const keptDownloads = countsDownloads ? null : downloadHistory.keptEarnings(userId, year, month);
+  if (!countsDownloads && keptDownloads === null) {
+    throw refuse('Some download records of this month have already been deleted, so its earnings can no longer be calculated.');
+  }
 
   // Razorpay orders and downloads do not depend on Google's reports.
   const needsReports = hasGoogleOrders(userId, year, month);
@@ -40,14 +47,14 @@ module.exports = async function recalculateEarnings(userId, year, month) {
 
   let earnings;
   try {
-    earnings = await calcEarnings.total(year, month, user, calcEarnings.indexReport(reports));
+    earnings = await calcEarnings.total(year, month, user, calcEarnings.indexReport(reports), keptDownloads);
   } catch (error) {
     if (!isCalculation(error.code)) throw error;
     await earningsReview.hold(userId, year, month, error.code);
     throw refuse(error.message);
   }
 
-  save(userId, year, month, earnings, { hasManualHold, markers, needsReports });
+  save(userId, year, month, earnings, { hasManualHold, markers, needsReports, countsDownloads });
   return { earnings, remainingCodes: await heldCodes(userId, year, month) };
 };
 
@@ -107,7 +114,7 @@ function assertCanSave(row, hasManualHold) {
 }
 
 // One transaction, so that no run, admin or process can save, pay, hold or release the month in between.
-function save(userId, year, month, earnings, { hasManualHold, markers, needsReports }) {
+function save(userId, year, month, earnings, { hasManualHold, markers, needsReports, countsDownloads }) {
   db.transaction(() => {
     if (updateEarnings.isRunning()) throw refuse('The monthly earnings run is in progress. Try again when it has finished.');
     // A hold raised during the calculation may make its result unsafe to save.
@@ -115,6 +122,11 @@ function save(userId, year, month, earnings, { hasManualHold, markers, needsRepo
 
     // A pending Google order may have completed since, and was then estimated.
     if (!needsReports && hasGoogleOrders(userId, year, month)) throw refuse('A Google order of this month completed. Try again.');
+
+    // The daily cleanup may have run since.
+    if (countsDownloads && !downloadHistory.isComplete(year, month)) {
+      throw refuse('Download records of this month were deleted during the calculation. Try again.');
+    }
 
     const row = findRow(userId, year, month);
     assertCanSave(row, hasManualHold);

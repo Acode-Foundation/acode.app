@@ -18,6 +18,9 @@ class Download extends Entity {
   CLIENT_IP = 'client_ip';
   PACKAGE_NAME = 'package_name';
 
+  // Downloads are inserted in time order, so the lowest id is the oldest row we still have.
+  OLDEST_QUERY = 'SELECT created_at FROM download ORDER BY id LIMIT 1';
+
   constructor() {
     super(table);
   }
