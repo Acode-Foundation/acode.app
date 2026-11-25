@@ -65,7 +65,12 @@ interface Payment {
 interface PaymentMethod {
   id: number;
   user_id: number;
+  type: 'bank_india' | 'bank_overseas' | 'paypal' | 'wallet';
   paypal_email: string;
+  bank_country: string;
+  bank_routing_code: string;
+  bank_address: string;
+  bank_account_holder_address: string;
   bank_name: string;
   bank_ifsc_code: string;
   bank_swift_code: string;

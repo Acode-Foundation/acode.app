@@ -21,7 +21,7 @@ const bucket = storage.bucket(bucketName);
  * @param {number} year Year to download
  * @param {number} month Month of the year to download, 1-12
  * @param {'earnings'|'sales'} type
- * @returns {Promise<Order[]>}
+ * @returns {Promise<Order[] & {missing?: boolean}>} empty and `missing` when Google has not published the report
  */
 async function downloadReport(year, month, type = 'earnings') {
   if (month < 10) {
@@ -43,7 +43,7 @@ async function downloadReport(year, month, type = 'earnings') {
   const [files] = await bucket.getFiles({ prefix });
 
   if (files.length === 0) {
-    return [];
+    return Object.assign([], { missing: true });
   }
 
   const [file] = files;

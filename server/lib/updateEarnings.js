@@ -9,6 +9,9 @@ const PaymentMethod = require('../entities/paymentMethod');
 const sendEmail = require('./sendEmail');
 const AppConfig = require('../entities/appConfig');
 const earningsReview = require('./earningsReview');
+const { PAYMENT_METHOD_LABELS, PAYPAL, getPaymentMethodType, isPaymentMethodTypeAvailable } = require('../../shared/paymentMethods');
+
+let activeRuns = 0;
 
 const args = process.argv.slice(2);
 const yearArg = args[0];
@@ -47,6 +50,7 @@ function previous(year, month) {
  * @param {number} month month (0-11)
  */
 async function updateEarnings(year, month) {
+  activeRuns += 1;
   if (year === undefined || month === undefined) {
     const now = moment();
     [year, month] = previous(now.year(), now.month());
@@ -69,11 +73,42 @@ async function updateEarnings(year, month) {
     const indexedReport = calcEarnings.indexReport(report);
     const heldUsers = [];
     const holdReasons = [];
+    const failedUsers = [];
+    const failures = [];
     const threshold = await AppConfig.getPaymentThreshold();
-    // filter user with not paypal email or not bank account and send email to them
-    // send email to user with no paypal email or no bank account
 
     for (const user of users) {
+      const progress = { saved: false };
+      try {
+        await processUser(user, progress);
+      } catch (error) {
+        // Do not let one developer block the others. A payout is created completely or not at all.
+        if (progress.saved && error.code === 'EARNINGS_UNDER_REVIEW') {
+          // Held after the balance was calculated. The month is saved, so the next run pays it.
+          heldUsers.push(user.id);
+          holdReasons.push(error.message);
+          continue;
+        }
+
+        console.error('Earnings run failed for user %s:', user.id, error);
+        failedUsers.push(user.id);
+        failures.push(`User ${user.id}: ${error.message}`);
+        if (!progress.saved) await holdUnsavedMonth(user.id);
+      }
+    }
+
+    const problems = [];
+    if (heldUsers.length) {
+      problems.push(
+        `Earnings completed with holds for users: ${heldUsers.join(', ')}. Other users completed; review held users and payment links before a targeted retry. ${holdReasons.join(' ')}`,
+      );
+    }
+    if (failedUsers.length) {
+      problems.push(`Earnings failed unexpectedly for users: ${failedUsers.join(', ')}. ${summarize(failures)}`);
+    }
+    if (problems.length) throw new Error(problems.join(' '));
+
+    async function processUser(user, progress) {
       const { payment_method_id, email, name } = user;
       let earnings;
       try {
@@ -88,7 +123,7 @@ async function updateEarnings(year, month) {
         console.error(error.message);
         heldUsers.push(user.id);
         holdReasons.push(error.message);
-        continue;
+        return;
       }
 
       const [row] = await UserEarnings.get([
@@ -108,6 +143,7 @@ async function updateEarnings(year, month) {
         );
       }
 
+      progress.saved = true;
       // Clear only after this month's result has been saved. Other held months
       // still make the aggregate incomplete and must prevent payout initiation.
       await earningsReview.clearCalculated(user.id, year, month);
@@ -124,15 +160,15 @@ async function updateEarnings(year, month) {
         if (error.code !== 'EARNINGS_UNDER_REVIEW') throw error;
         heldUsers.push(user.id);
         holdReasons.push(error.message);
-        continue;
+        return;
       }
 
-      if (!payment_method_id) continue;
+      if (!payment_method_id) return;
 
-      const { ids: unpaidEarningsId, earnings: unpaid, from, to } = unpaidEarnings;
+      const { ids: earningIds, earnings: unpaid, from, to } = unpaidEarnings;
       console.log(`Earnings for ${user.name} is ${unpaid}`);
 
-      if (unpaid < threshold) continue;
+      if (unpaid < threshold) return;
 
       const [paymentMethod] = await PaymentMethod.get([PaymentMethod.ID, payment_method_id]);
       if (!paymentMethod) {
@@ -140,44 +176,65 @@ async function updateEarnings(year, month) {
           email,
           name,
           'Payment method not found',
-          'Your earnings have reached the payment threshold. Please add a bank account to receive your payments.',
+          'Your earnings have reached the payment threshold. Please add a payment method to receive your payments.',
         ).catch((err) => console.error(`Failed to send email to ${email}:`, err));
-        continue;
+        return;
       }
-      if (paymentMethod.paypal_email || paymentMethod.wallet_address) {
+
+      const methodType = getPaymentMethodType(paymentMethod);
+      const paypalEnabled = methodType === PAYPAL && (await AppConfig.isPayPalEnabled());
+      if (!isPaymentMethodTypeAvailable(methodType, { paypalEnabled })) {
         sendEmail(
           email,
           name,
-          'Payment method not supported',
-          'Your earnings have reached the payment threshold, but PayPal and cryptocurrency payment methods are no longer supported. Please add a bank account to receive your payments.',
+          'Payment method not available',
+          `Your earnings have reached the payment threshold, but payouts to your default payment method (${PAYMENT_METHOD_LABELS[methodType] || methodType}) are currently unavailable. Please set another payment method as your default to receive your payments.`,
         ).catch((err) => console.error(`Failed to send email to ${email}:`, err));
-        continue;
+        return;
       }
 
       const paymentId = crypto.randomInt(1, 2147483647);
 
-      await Payment.insert(
-        [Payment.ID, paymentId],
-        [Payment.USER_ID, user.id],
-        [Payment.AMOUNT, unpaid],
-        [Payment.STATUS, Payment.STATUS_INITIATED],
-        [Payment.PAYMENT_METHOD_ID, user.payment_method_id],
-        [Payment.DATE_FROM, from.format('YYYY-MM-DD')],
-        [Payment.DATE_TO, to.format('YYYY-MM-DD')],
-      );
-
-      await UserEarnings.update([UserEarnings.PAYMENT_ID, paymentId], [UserEarnings.ID, unpaidEarningsId]);
+      Payment.initiate({
+        id: paymentId,
+        userId: user.id,
+        amount: unpaid,
+        paymentMethodId: payment_method_id,
+        dateFrom: from.format('YYYY-MM-DD'),
+        dateTo: to.format('YYYY-MM-DD'),
+        earningIds,
+      });
     }
-    if (heldUsers.length) {
-      throw new Error(
-        `Earnings completed with holds for users: ${heldUsers.join(', ')}. Other users completed; review held users and payment links before a targeted retry. ${holdReasons.join(' ')}`,
-      );
+
+    // Later runs only calculate their own month. Without a hold they would pay this developer
+    // without the month that could not be saved.
+    async function holdUnsavedMonth(userId) {
+      try {
+        await earningsReview.hold(userId, year, month, earningsReview.RUN_FAILED);
+      } catch (error) {
+        console.error('Failed to hold earnings of user %s:', userId, error);
+        failures.push(`User ${userId} could NOT be held; run ${year}-${month + 1} again before the next payout.`);
+      }
     }
   } catch (error) {
     // Let the cron wrapper send its existing failure alert without terminating the server.
     console.error(error);
     throw error;
+  } finally {
+    activeRuns -= 1;
   }
 }
+
+/** Keeps the alert readable when everything fails for the same reason. */
+function summarize(messages, limit = 20) {
+  const rest = messages.length - limit;
+  // The most important messages are about developers that could not be held.
+  const urgent = messages.filter((message) => message.includes('could NOT be held'));
+  const others = messages.filter((message) => !urgent.includes(message));
+  return [...urgent, ...others].slice(0, limit).join(' ') + (rest > 0 ? ` And ${rest} more, see the server log.` : '');
+}
+
+/** Whether a run of this process is calculating and paying earnings right now. */
+updateEarnings.isRunning = () => activeRuns > 0;
 
 module.exports = updateEarnings;

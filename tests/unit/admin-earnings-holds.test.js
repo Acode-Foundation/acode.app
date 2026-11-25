@@ -6,10 +6,16 @@ import Database from 'better-sqlite3';
 import { Router } from 'express';
 
 let reviews;
+let recalculate;
 let admin;
 let audit;
 let request;
 let db;
+const ROUTES = {
+  get: '/earnings-holds',
+  delete: '/earnings-holds/:userId/:year/:month',
+  post: '/earnings-holds/:userId/:year/:month/recalculate',
+};
 const reviewed = [{ key: 'earnings-hold:7:2026:9:GOOGLE_PURCHASE_REVIEW_REQUIRED', value: 'GOOGLE_PURCHASE_REVIEW_REQUIRED' }];
 
 beforeEach(() => {
@@ -21,6 +27,7 @@ beforeEach(() => {
     clear: vi.fn().mockResolvedValue([{ userId: 7, year: 2026, month: 9, code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED' }]),
   };
   admin = { id: 1, isAdmin: true };
+  recalculate = vi.fn().mockResolvedValue({ earnings: 321.5, remainingCodes: [] });
   audit = vi.fn();
   const source = fs.readFileSync(new URL('../../server/apis/admin.js', import.meta.url), 'utf8');
   const dependencies = Object.fromEntries([...source.matchAll(/require\('([^']+)'\)/g)].map(([, name]) => [name, {}]));
@@ -29,6 +36,8 @@ beforeEach(() => {
     express: { Router },
     '../lib/helpers': { getWebLoggedInUser: async () => admin },
     '../lib/earningsReview': reviews,
+    '../lib/earningsHoldDetails': async (holds) => holds,
+    '../lib/recalculateEarnings': (...args) => recalculate(...args),
   });
   const module = { exports: {} };
   vm.runInNewContext(source, {
@@ -58,9 +67,7 @@ beforeEach(() => {
       authorized = true;
     });
     if (authorized) {
-      const route = router.stack.find(
-        (layer) => layer.route?.path === (method === 'get' ? '/earnings-holds' : '/earnings-holds/:userId/:year/:month'),
-      );
+      const route = router.stack.find((layer) => layer.route?.path === ROUTES[method]);
       await route.route.stack[0].handle(req, res);
     }
     return res;
@@ -71,6 +78,8 @@ it.each([null, { id: 7, isAdmin: false }])('rejects a non-admin before accessing
   admin = account;
   expect((await request()).statusCode).toBe(401);
   expect((await request('get')).statusCode).toBe(401);
+  expect((await request('post')).statusCode).toBe(401);
+  expect(recalculate).not.toHaveBeenCalled();
   expect(reviews.clear).not.toHaveBeenCalled();
   expect(reviews.listAll).not.toHaveBeenCalled();
 });
@@ -92,6 +101,18 @@ it.each([{ userId: 'x' }, { year: 'NaN' }, { year: '1969' }, { month: '12' }, { 
     expect(reviews.clear).not.toHaveBeenCalled();
   },
 );
+
+it('recalculates the requested month and logs it, and reports refusals without logging', async () => {
+  expect((await request('post')).body).toEqual({ success: true, earnings: 321.5, remainingCodes: [] });
+  expect(recalculate).toHaveBeenCalledWith(7, 2026, 9);
+  expect(audit).toHaveBeenCalledExactlyOnceWith(expect.any(String), 1, 7, 2026, 10, 321.5);
+  expect((await request('post', { userId: '7', year: '2026', month: '12' })).statusCode).toBe(400);
+  recalculate.mockRejectedValueOnce(Object.assign(new Error('Not available yet'), { statusCode: 409 }));
+  expect(await request('post')).toMatchObject({ statusCode: 409, body: { error: 'Not available yet' } });
+  recalculate.mockRejectedValueOnce(new Error('Secret storage detail'));
+  expect(await request('post')).toMatchObject({ statusCode: 500, body: { error: 'Failed to recalculate earnings' } });
+  expect(audit).toHaveBeenCalledOnce();
+});
 
 it('does not log a failed clear as successful', async () => {
   reviews.clear.mockRejectedValueOnce(new Error('Fixture database failure'));
@@ -176,4 +197,23 @@ it('shows malformed markers alongside valid months without allowing them to be c
   expect(malformed.statusCode).toBe(400);
   await expect(settings.getValue(invalid.key)).resolves.toBe(invalid.value);
   expect(audit).not.toHaveBeenCalled();
+});
+
+it('answers 404 for a payment method that does not exist', async () => {
+  const source = fs.readFileSync(new URL('../../server/apis/admin.js', import.meta.url), 'utf8');
+  const dependencies = Object.fromEntries([...source.matchAll(/require\('([^']+)'\)/g)].map(([, name]) => [name, {}]));
+  Object.assign(dependencies, {
+    'node:path': path,
+    express: { Router },
+    '../entities/paymentMethod': { ID: 'id', get: async ([, id]) => (id === '1' ? [{ id: 1 }] : []) },
+  });
+  const module = { exports: {} };
+  vm.runInNewContext(source, { __dirname: '/', module, require: (name) => dependencies[name], console });
+  const { handle } = module.exports.stack.find((layer) => layer.route?.path === '/payment-method/:id').route.stack[0];
+  const res = { status: vi.fn(() => res), send: vi.fn() };
+  await handle({ params: { id: '2' } }, res);
+  expect(res.status).toHaveBeenCalledWith(404);
+  expect(res.send).toHaveBeenCalledWith({ error: 'Payment method not found' });
+  await handle({ params: { id: '1' } }, res);
+  expect(res.send).toHaveBeenLastCalledWith({ id: 1 });
 });

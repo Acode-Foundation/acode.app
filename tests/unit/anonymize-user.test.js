@@ -44,7 +44,9 @@ function createDatabase() {
     CREATE TABLE payment_method (
       id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES user(id), paypal_email TEXT, bank_name TEXT,
       bank_ifsc_code TEXT, bank_swift_code TEXT, bank_account_number TEXT, bank_account_holder TEXT,
-      bank_account_type TEXT, wallet_address TEXT, wallet_type TEXT, is_default INTEGER, is_deleted INTEGER
+      bank_account_type TEXT, wallet_address TEXT, wallet_type TEXT, is_default INTEGER, is_deleted INTEGER,
+      bank_country TEXT, bank_routing_code TEXT, bank_address TEXT,
+      bank_account_holder_address TEXT
     );
     CREATE TABLE plugin (id TEXT PRIMARY KEY, user_id INTEGER REFERENCES user(id), name TEXT, price REAL, status INTEGER);
     CREATE TABLE comment (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id), plugin_id TEXT REFERENCES plugin(id), comment TEXT);
@@ -76,7 +78,8 @@ function createDatabase() {
     INSERT INTO api_key (id, user_id, name, token_hash, token_prefix, scopes, plugin_ids, created_at, expires_at)
       VALUES (1, 2, 'CI', 'hashed-key', 'acode_abcd', '[]', '[]', '2026-01-01', '2027-01-01');
     INSERT INTO payment_method VALUES
-      (1, 2, 'paypal@example.com', 'Bank', 'IFSC', 'SWIFT', '1234', 'Normal User', 'Savings', 'wallet', 'btc', 1, 0);
+      (1, 2, 'paypal@example.com', 'Bank', 'IFSC', 'SWIFT', '1234', 'Normal User', 'Savings', 'wallet', 'btc', 1, 0,
+       'US', '021000021', 'Bank street', 'Home street');
     INSERT INTO plugin VALUES ('plugin.one', 2, 'Plugin One', 10, 0);
     INSERT INTO comment VALUES (1, 2, 'plugin.one', 'Keep me');
     INSERT INTO sponsor VALUES (1, 2, 'Sponsor', 'sponsor@example.com', 'https://sponsor.example.com', 'identity.png', 'Tagline', 1, 'token');
@@ -148,6 +151,9 @@ describe('User.delete anonymization', () => {
       paypal_email: null,
       bank_account_number: null,
       wallet_address: null,
+      bank_routing_code: null,
+      bank_address: null,
+      bank_account_holder_address: null,
       is_default: 0,
       is_deleted: 1,
     });

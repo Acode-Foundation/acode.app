@@ -12,8 +12,8 @@ export default function PrivacyPolicy() {
       <h2>Information Collection</h2>
       <p>
         We collect your name, email address, optional Github user ID, optional website, and password when you create a developer account. We also
-        collect your bank account or PayPal email address if you add it to receive payments for your plugin sales and download count. Our app does not
-        collect personal data, however, third-party services like Google In-App Purchases and Ad Mob may collect personal data.
+        collect your bank account details or PayPal email address if you add them to receive payments for your plugin sales and download count. Our
+        app does not collect personal data, however, third-party services like Google In-App Purchases and Ad Mob may collect personal data.
       </p>
       <h2>Use of Information</h2>
       <p>

@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   else main.content = pagePlaceholder(window.location.pathname);
 
   Router.add('/admin', (_params, queries) => loadModule('admin', { queries }));
-  Router.add('/add-payment-method/:mode', (params) => loadModule('addPaymentMethod', params));
+  Router.add('/add-payment-method/:mode?', (params) => loadModule('addPaymentMethod', params));
   Router.add('/faqs/:qHash?', (params) => loadModule('FAQs', params));
   Router.add('/docs/run-python', () => window.location.replace('https://docs.acode.app/tutorials/python-language-server'));
   Router.add('/policy', () => loadModule('privacyPolicy'));

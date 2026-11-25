@@ -36,9 +36,7 @@ export default function DeveloperDashboard({ user, isSelf, stats, paymentMethods
               </div>
             </Panel>
             <Panel title='Earnings' meta='Last 12 months'>
-              {stats.monthly.some((row) => row.reviewRequired) && (
-                <p className='panel-empty'>Some earnings are under review. Affected months are omitted from the chart.</p>
-              )}
+              <ReviewNotice stats={stats} />
               <div className='chart-box'>
                 <canvas ref={earningsCanvas} aria-label='Monthly earnings for the last 12 months' role='img' />
               </div>
@@ -109,6 +107,17 @@ export default function DeveloperDashboard({ user, isSelf, stats, paymentMethods
     }
     payoutBalance.el.replaceChildren(<Payout unpaid={unpaid} reviewRequired={reviewRequired} />);
   }
+}
+
+function ReviewNotice({ stats }) {
+  if (stats.monthly.some((row) => row.reviewRequired)) {
+    return <p className='panel-empty'>Some earnings are under review. Affected months are omitted from the chart.</p>;
+  }
+  // The held month is older than the chart.
+  if (stats.totals.lifetimeEarnings === null) {
+    return <p className='panel-empty'>Earnings of an earlier month are under review, so your lifetime total is not available yet.</p>;
+  }
+  return null;
 }
 
 function StatTiles({ stats, user }) {

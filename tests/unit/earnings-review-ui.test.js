@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import { transformAsync } from '@babel/core';
 import { JSDOM } from 'jsdom';
 import moment from 'moment';
+import * as paymentMethods from '../../shared/paymentMethods';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const compiled = new Map();
@@ -38,6 +39,7 @@ function mount(fetch) {
     }
   }
   const dependencies = {
+    '../../../shared/paymentMethods': paymentMethods,
     moment,
     './style.scss': {},
     'components/dialogs/alert': vi.fn(),
@@ -103,6 +105,23 @@ it('shows a held monthly amount as text without a currency prefix or zero', asyn
   dom.window.document.body.append(await render('pages/earnings/index.js', { user: 7 }));
   await vi.waitFor(() => expect(dom.window.document.querySelector('[title="Your earnings"]').textContent).toBe('Earnings under review'));
   expect(dom.window.document.querySelector('.info').textContent).toContain('12,345');
+});
+
+it.each([
+  [null, true],
+  [500, false],
+])('explains a missing lifetime total when the held month is older than the chart (%s)', async (lifetimeEarnings, explained) => {
+  const { render } = mount(async () => reply({ error: 'Held' }, 409));
+  const stats = {
+    range: 30,
+    totals: { plugins: 1, paidPlugins: 1, downloads: 42, recentDownloads: 5, previousDownloads: 3, lifetimeEarnings },
+    monthly: [{ year: 2026, month: 11, amount: 10, paid: true }],
+    plugins: [],
+    daily: [],
+  };
+  const paymentMethods = dom.window.document.createElement('div');
+  const page = await render('pages/user/dashboard.js', { user: { id: 7 }, stats, isSelf: true, paymentMethods });
+  expect(page.textContent.includes('Earnings of an earlier month are under review')).toBe(explained);
 });
 
 it('keeps dashboard statistics, settled chart values, and payment methods visible during a hold', async () => {
