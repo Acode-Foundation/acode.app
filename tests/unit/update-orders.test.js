@@ -222,6 +222,16 @@ it.each([null, 42])(
   },
 );
 
+it('records the provider order ID that completion saves on the hold', async () => {
+  db.prepare('UPDATE purchase_order SET order_id = NULL').run();
+  db.prepare('INSERT INTO user_earnings (user_id, amount, month, year, payment_id) VALUES (7, 500, 9, 2026, NULL)').run();
+  await expect(sync()).rejects.toThrow('Google purchase accounting held for review');
+  expect(savedOrder()).toMatchObject({ order_id: 'GPA.test', state: 0 });
+  expect((await reviews.listAll()).holds[0].orders).toEqual([
+    expect.objectContaining({ id: 1, orderId: 'GPA.test', createdAt: '2026-10-31 12:00:00' }),
+  ]);
+});
+
 it('does not hold a month first calculated after pending orders were excluded', async () => {
   await reviews.markPendingExcluded('2026-11-16 00:00:00');
   db.prepare(`INSERT INTO user_earnings (user_id, amount, month, year, created_at, updated_at)

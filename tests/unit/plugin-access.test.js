@@ -531,6 +531,10 @@ describe('Google purchase completion', () => {
         : await downloadPlugin({ token: 'pending', package: 'com.foxdebug.acode' });
     expect(res.statusCode).toBe(200);
     expect(pending.state).toBe(0);
+    // The hold gets Google's order ID, which the pending row did not have yet.
+    expect(checkGooglePurchaseAccounting).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 10, order_id: 'GPA.original', created_at: '2026-10-01 00:00:00' }),
+    );
   });
 
   it('preserves an existing pending estimate when the current price is unavailable', async () => {
