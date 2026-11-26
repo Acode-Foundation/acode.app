@@ -514,11 +514,13 @@ async function main() {
         };
 
     res.header('Content-Type', 'text/html;charset=utf-8');
+    const isHomeRoute = ['/', '/index.html'].includes(req.path);
     res.send(
       renderIndexTemplate({
         ...context,
         adsDisabled: isAdFreeRoute(req.path),
-        homePoster: ['/', '/index.html'].includes(req.path) && (builtHomePoster ?? homePosterSrcset(PUBLIC_DIR)),
+        appStoreBanner: isHomeRoute,
+        homePoster: isHomeRoute && (builtHomePoster ?? homePosterSrcset(PUBLIC_DIR)),
       }),
     );
   });

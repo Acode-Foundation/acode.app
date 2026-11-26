@@ -10,6 +10,9 @@
   <link rel="icon" href="/favicon-16x16.png" type="image/png" />
   <link rel="manifest" href="/manifest.json" />
    <link rel="apple-touch-icon" href="/apple-touch-icon.png" type="image/png" />
+  {{#if app_store_app_id}}
+  <meta name="apple-itunes-app" content="app-id={{app_store_app_id}}" />
+  {{/if}}
   <meta name="theme-color" content="#101421" />
 
   <title>{{title}}</title>
@@ -239,9 +242,9 @@
   <div class="lan-hero">
     <h1>{{heroHeadline}}</h1>
     <p>{{heroSubheadline}}</p>
-    {{#if isIOS}}<p><strong>Coming soon for iPhone and iPad.</strong></p>{{/if}}
+    {{#if isIOS}}<p><strong>Now available on the App Store for iPhone and iPad.</strong></p>{{/if}}
     <div class="lan-cta">
-      <a href="{{#if isIOS}}/?src=ios{{else}}https://play.google.com/store/apps/details?id=com.foxdebug.acodefree{{/if}}" class="lan-cta-primary"{{#unless isIOS}} target="_blank" rel="noopener"{{/unless}}>{{ctaPrimary}}</a>
+      <a href="{{#if isIOS}}{{{app_store_url}}}{{else}}{{{play_store_url}}}{{/if}}" class="lan-cta-primary" target="_blank" rel="noopener">{{ctaPrimary}}</a>
       <a href="/{{#if isIOS}}?src=ios{{/if}}" class="lan-cta-secondary" data-google-vignette="false">{{ctaSecondary}}</a>
     </div>
   </div>
@@ -328,9 +331,9 @@
 
   <div class="lan-section" style="text-align:center;">
     <h2>{{#if isIOS}}Explore Acode for iPhone and iPad{{else}}Ready to Start Coding on Android?{{/if}}</h2>
-    <p style="font-size:18px;margin-bottom:24px;">{{#if isIOS}}The iOS release is coming soon. Check the home page for availability.{{else}}Acode is free, open source, and trusted by 3.6M+ developers. Get it now.{{/if}}</p>
+    <p style="font-size:18px;margin-bottom:24px;">{{#if isIOS}}Acode is free and open source. Download it from the App Store for iPhone and iPad.{{else}}Acode is free, open source, and trusted by millions of developers. Get it now.{{/if}}</p>
     <div class="lan-cta">
-      <a href="{{#if isIOS}}/?src=ios{{else}}https://play.google.com/store/apps/details?id=com.foxdebug.acodefree{{/if}}" class="lan-cta-primary"{{#unless isIOS}} target="_blank" rel="noopener"{{/unless}}>{{#if isIOS}}iOS availability{{else}}Download Acode for Free{{/if}}</a>
+      <a href="{{#if isIOS}}{{{app_store_url}}}{{else}}{{{play_store_url}}}{{/if}}" class="lan-cta-primary" target="_blank" rel="noopener">{{#if isIOS}}Download on the App Store{{else}}Download Acode for Free{{/if}}</a>
     </div>
   </div>
 

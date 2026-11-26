@@ -1,4 +1,4 @@
-const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.foxdebug.acodefree';
+const { APP_STORE_URL, PLAY_STORE_URL } = require('../../shared/appLinks');
 
 module.exports = function storeRedirect(req, res, next) {
   if (req.query.redirect !== 'store') return next();
@@ -8,8 +8,11 @@ module.exports = function storeRedirect(req, res, next) {
   res.vary('User-Agent');
   res.vary('Sec-CH-UA-Platform');
   const platform = req.get('Sec-CH-UA-Platform');
-  const android = platform ? /^"?Android"?$/i.test(platform) : /\bAndroid\b/i.test(req.get('User-Agent') || '');
-  // iOS remains unavailable while the site's App Store button is "Coming soon".
-  if (android) return res.redirect(302, PLAY_URL);
+  const userAgent = req.get('User-Agent') || '';
+  const android = platform ? /^"?Android"?$/i.test(platform) : /\bAndroid\b/i.test(userAgent);
+  if (android) return res.redirect(302, PLAY_STORE_URL);
+  // iPadOS reports a desktop Mac user agent by default, so only identifiable iOS devices redirect.
+  const ios = platform ? /^"?iOS"?$/i.test(platform) : /\b(iPhone|iPad|iPod)\b/.test(userAgent);
+  if (ios) return res.redirect(302, APP_STORE_URL);
   return next();
 };

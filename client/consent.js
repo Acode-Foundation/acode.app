@@ -1,7 +1,11 @@
 import './consent.scss';
 import { isAdFreeRoute } from '../shared/adPolicy';
+import { APP_STORE_URL } from '../shared/appLinks';
 import { observeAdUnits } from './lib/adUnits';
 import { CONSENT_KEY, createConsentController, suppressAdIntents, suppressVignettes } from './lib/cookieConsent';
+
+const APP_STORE = new URL(APP_STORE_URL);
+const APP_STORE_PATH_ID = APP_STORE.pathname.split('/').pop();
 
 const adsAllowed = document.currentScript?.dataset.adsDisabled === 'false' && !isAdFreeRoute(location.pathname);
 // Do this before injecting either Google script, including on remembered consent.
@@ -120,6 +124,8 @@ document.addEventListener('click', (event) => {
     new URL(link.href).searchParams.get('id') === 'com.foxdebug.acodefree'
   ) {
     window.gtag?.('event', 'store_click', { store: 'google_play' });
+  } else if (link?.origin === APP_STORE.origin && link.pathname.replace(/\/$/, '').split('/').pop() === APP_STORE_PATH_ID) {
+    window.gtag?.('event', 'store_click', { store: 'app_store' });
   }
 });
 window.addEventListener('storage', (event) => {

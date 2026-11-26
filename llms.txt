@@ -1,10 +1,10 @@
 # Acode — Code Editor with Linux Terminal & AI Coding
 
-> Open-source Code Editor with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Node.js, React, Next.js, Python, Git, SSH, and 250+ plugins. 3.6M+ downloads. Built by Foxbiz Software Pvt. Ltd.
+> Open-source Code Editor with a full Alpine Linux terminal. Run Claude Code, Codex, and OpenCode on your phone. Node.js, React, Next.js, Python, Git, SSH, and 250+ plugins. 5M+ downloads. Built by Foxbiz Software Pvt. Ltd.
 
-Acode is the only Android app that combines a professional code editor with a native Alpine Linux terminal (proot-based, no root required). It supports 100+ languages with syntax highlighting, uses the apk package manager for Linux packages, and enables desktop-grade development workflows entirely on a phone.
+Acode is an open-source code editor for Android and iOS that combines a professional editing experience with an Alpine Linux terminal (proot-based, no root required). It supports 100+ languages with syntax highlighting, uses the apk package manager for Linux packages, and enables desktop-grade development workflows entirely on a phone.
 
-Acode for iPhone and iPad is coming soon. The iOS guides below describe its file access, previews, and emulated Linux terminal; Android setup instructions do not necessarily apply to iOS. Check the homepage for availability.
+Acode for iPhone and iPad is available on the App Store and requires iOS 18.6 or iPadOS 18.6 or later. The iOS guides below describe its file access, previews, and emulated Linux terminal; Android setup instructions do not necessarily apply to iOS.
 
 Android capabilities:
 - Native Alpine Linux terminal with bash, zsh, apk package manager
@@ -44,7 +44,7 @@ Android capabilities:
 - [VS Code Alternative for Android](https://acode.app/vscode-alternative-android): VS Code-like experience on mobile
 - [Spck Editor Alternative](https://acode.app/spck-alternative): How Acode compares to Spck Editor
 
-## iPhone and iPad (Coming Soon)
+## iPhone and iPad
 
 - [Code Editor for iPhone and iPad](https://acode.app/code-editor-ios): Files, editing, previews, and plugins on iOS
 - [Linux Terminal on iPhone and iPad](https://acode.app/linux-terminal-ios): The emulated Linux environment and its limitations
@@ -60,6 +60,7 @@ Android capabilities:
 - [FAQs](https://acode.app/faqs): Frequently asked questions about Acode
 - [Sponsors](https://acode.app/sponsors): Support Acode development
 - [Documentation](https://docs.acode.app): Developer docs — plugin API, user guide, tutorials
-- [GitHub](https://github.com/Acode-Foundation/Acode): Source code (5,458 stars, 1,096 forks, MIT license)
+- [GitHub](https://github.com/Acode-Foundation/Acode): Source code (MIT license)
 - [Google Play](https://play.google.com/store/apps/details?id=com.foxdebug.acodefree): Download from Play Store
+- [App Store](https://apps.apple.com/app/id6815644799): Download for iPhone and iPad
 - [F-Droid](https://www.f-droid.org/packages/com.foxdebug.acode/): Download from F-Droid

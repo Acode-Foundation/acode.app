@@ -5,6 +5,7 @@ const path = require('node:path');
 const Handlebars = require('handlebars');
 const defaultOg = require('../../server/defaultOg.json');
 const { getMetadata } = require('../../server/routeMetadata');
+const { APP_STORE_APP_ID, APP_STORE_URL, PLAY_STORE_URL } = require('../../shared/appLinks');
 const { createProfileMetadata } = require('../../shared/metadataText');
 const {
   MAX_PLUGIN_DESCRIPTION_LENGTH,
@@ -218,10 +219,11 @@ describe('iOS landing pages', () => {
       expect(html).toContain(`href="${route}?src=ios"`);
       expect(html).not.toContain(`href="${route}"`);
     }
-    expect(html).not.toMatch(/class="lan-cta-primary"[^>]*target="_blank"/);
-    expect(html).toMatch(/class="lan-hero">[\s\S]*?Coming soon for iPhone and iPad\.[\s\S]*?class="lan-cta"/);
+    expect(html).toContain(`href="${APP_STORE_URL}" class="lan-cta-primary" target="_blank" rel="noopener"`);
+    expect(html).toContain(`name="apple-itunes-app" content="app-id=${APP_STORE_APP_ID}"`);
+    expect(html).toMatch(/class="lan-hero">[\s\S]*?Now available on the App Store for iPhone and iPad\.[\s\S]*?class="lan-cta"/);
     expect(html).not.toMatch(/play\.google|F-Droid|Coding on Android|Download Acode for Free/);
-    expect(html).toContain('coming soon');
+    expect(html).not.toMatch(/coming soon/i);
     expect(JSON.parse(page.pageSchema).mainEntityOfPage['@id']).toBe(`https://acode.app/${slug}`);
     expect(getMetadata(page.path)).toBeNull();
     for (const related of page.relatedPages) expect(iosPaths).toContain(related.url.slice(1));
@@ -230,9 +232,8 @@ describe('iOS landing pages', () => {
 
   it('keeps Android downloads and registers every landing page exactly once', () => {
     const page = require('../../server/landing-pages/git-android.json');
-    expect(template(page)).toContain(
-      'href="https://play.google.com/store/apps/details?id=com.foxdebug.acodefree" class="lan-cta-primary" target="_blank"',
-    );
+    const context = createMetadataContext(defaultOg, { canonicalPath: page.path, origin: 'https://acode.app' });
+    expect(template({ ...context, ...page })).toContain(`href="${PLAY_STORE_URL}" class="lan-cta-primary" target="_blank"`);
     const files = fs
       .readdirSync(path.resolve(__dirname, '../../server/landing-pages'))
       .filter((name) => name.endsWith('.json'))

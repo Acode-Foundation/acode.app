@@ -4,13 +4,12 @@ import vm from 'node:vm';
 import { transformFromAstSync, transformSync, types } from '@babel/core';
 import tag from 'html-tag-js';
 
+import { APP_STORE_URL, PLAY_STORE_CAMPAIGN_URL, TESTFLIGHT_URL } from '../../shared/appLinks';
+
 // Render the real download components without starting the homepage's network requests.
 const names = new Set([
-  'PLAY_URL',
   'FDROID_URL',
   'GITHUB_URL',
-  'APP_STORE_URL',
-  'TESTFLIGHT_URL',
   'STORES',
   'detectPlatform',
   'HeroDownload',
@@ -38,6 +37,9 @@ function renderDownloads(userAgent, maxTouchPoints = 0, iosSource = false) {
     tag,
     navigator: { userAgent, maxTouchPoints },
     isIOSSource: () => iosSource,
+    APP_STORE_URL,
+    PLAY_STORE_CAMPAIGN_URL,
+    TESTFLIGHT_URL,
   });
   return { ...components, hero: components.HeroDownload({ platform: components.detectPlatform() }) };
 }
@@ -47,13 +49,15 @@ it.each([
   ['iPad', 0, false],
   ['Macintosh', 5, false],
   ['Macintosh', 0, true],
-])('offers the TestFlight beta for iOS visitors (%s, touch=%s, source=%s)', (...device) => {
+])('leads with the App Store for iOS visitors (%s, touch=%s, source=%s)', (...device) => {
   const { hero } = renderDownloads(...device);
-  const button = hero.querySelector('.home-btn');
-  expect(button.getAttribute('aria-disabled')).toBe('true');
-  expect(button.textContent).toContain('App Store');
-  expect(button.textContent).toContain('Coming soon');
-  const betaLink = button.nextElementSibling;
+  const button = hero.querySelector('a.home-btn');
+  expect(button.href).toBe(APP_STORE_URL);
+  expect(button.textContent).toContain('Download on the App Store');
+  expect(hero.textContent).not.toMatch(/coming soon/i);
+  expect(hero.querySelector('[data-scroll-download]')).toBeNull();
+  expect(hero.textContent).not.toContain('Also on');
+  const betaLink = hero.querySelector('a.home-beta-link');
   expect(betaLink.href).toBe('https://testflight.apple.com/join/qttCCWSb');
   expect(betaLink.textContent).toContain('Try the beta via TestFlight');
 });
@@ -65,18 +69,12 @@ it.each(['Android', 'Macintosh', 'Windows'])('keeps Google Play as the primary d
   expect(hero.querySelector('.home-beta-link')).toBeNull();
 });
 
-it('places Try Beta inside the App Store card while keeping other store cards linked', () => {
+it('links every store card, including the App Store', () => {
   const { DownloadOption, STORES } = renderDownloads('iPhone');
-  const card = DownloadOption({ store: STORES.appStore, recommended: true });
-  expect(card.tagName).toBe('DIV');
-  expect(card.querySelector('.home-soon').textContent).toBe('Soon');
-  const betaLink = card.querySelector('a.home-beta-link');
-  expect(betaLink.textContent.trim()).toBe('Try Beta');
-  expect(betaLink.href).toBe('https://testflight.apple.com/join/qttCCWSb');
-  for (const store of [STORES.play, STORES.fdroid, STORES.github]) {
-    const otherCard = DownloadOption({ store });
-    expect(otherCard.tagName).toBe('A');
-    expect(otherCard.getAttribute('href')).toBe(store.href);
-    expect(otherCard.querySelector('.home-beta-link')).toBeNull();
+  for (const store of [STORES.appStore, STORES.play, STORES.fdroid, STORES.github]) {
+    const card = DownloadOption({ store, recommended: store === STORES.appStore });
+    expect(card.tagName).toBe('A');
+    expect(card.getAttribute('href')).toBe(store.href);
+    expect(card.textContent).not.toMatch(/soon|your device/i);
   }
 });
