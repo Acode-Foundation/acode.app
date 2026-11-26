@@ -55,7 +55,12 @@ module.exports = async function checkGooglePurchaseAccounting(order) {
   // Legacy totals cannot prove whether this pending order was counted. Hold the
   // original month (even if already paid) so its developer is reviewed before
   // any further payout could count the sale twice.
-  await earningsReview.hold(plugin.user_id, year, month, REVIEW_CODE);
+  await earningsReview.hold(plugin.user_id, year, month, REVIEW_CODE, {
+    id: order.id,
+    orderId: order.order_id || null,
+    pluginId: order.plugin_id,
+    createdAt: date.format('YYYY-MM-DD HH:mm:ss'),
+  });
   console.error('Google purchase %s requires earnings review for user %s, %s-%s.', order.id, plugin.user_id, year, month + 1);
   return { userId: plugin.user_id, year, month };
 };

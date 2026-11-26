@@ -225,6 +225,42 @@ it('lists holds per developer and across developers for admins', async () => {
   );
 });
 
+it('keeps every order that raised a review of the month, once per order', async () => {
+  const order = (id, createdAt) => ({ id, orderId: `GPA.${id}`, pluginId: 'example.plugin', createdAt });
+  // A marker written before orders were recorded.
+  db.prepare('INSERT INTO app_config (key, value) VALUES (?, ?)').run(
+    'earnings-hold:7:2025:7:GOOGLE_PURCHASE_REVIEW_REQUIRED',
+    '{"code":"GOOGLE_PURCHASE_REVIEW_REQUIRED","revision":"old"}',
+  );
+  // better-sqlite3 runs these one after another. Each merge is one statement, which SQLite serializes.
+  await reviews.hold(7, 2025, 7, 'GOOGLE_PURCHASE_REVIEW_REQUIRED', order(12, '2025-08-20 10:00:00'));
+  await reviews.hold(7, 2025, 7, 'GOOGLE_PURCHASE_REVIEW_REQUIRED', { ...order(11, '2025-08-02 09:30:00'), orderId: null });
+  await reviews.hold(7, 2025, 7, 'GOOGLE_PURCHASE_REVIEW_REQUIRED', order(11, '2025-08-02 09:30:00'));
+  await reviews.hold(7, 2025, 7, 'GOOGLE_PURCHASE_REVIEW_REQUIRED');
+  await reviews.hold(7, 2025, 6, 'GOOGLE_PURCHASE_REVIEW_REQUIRED', { id: 9, orderId: 42, pluginId: 1234, createdAt: '2025-07-01 00:00:00' });
+  const numeric = (await reviews.listAll()).holds.find((hold) => hold.month === 6);
+  expect(numeric.orders).toEqual([
+    { id: 9, orderId: '42', pluginId: '1234', createdAt: '2025-07-01 00:00:00', code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED' },
+  ]);
+  await reviews.clear(7, 2025, 6, numeric.snapshot);
+  const [held] = (await reviews.listAll()).holds;
+  expect(held.orders).toEqual([
+    { ...order(11, '2025-08-02 09:30:00'), code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED' },
+    { ...order(12, '2025-08-20 10:00:00'), code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED' },
+  ]);
+  // A hand-edited marker cannot break the listing.
+  const [{ key, value }] = held.snapshot;
+  const edited = JSON.parse(value);
+  edited.orders.push({ id: 13, orderId: 5, pluginId: 3, createdAt: { at: 'now' } }, { id: 'x' });
+  db.prepare('UPDATE app_config SET value = ? WHERE key = ?').run(JSON.stringify(edited), key);
+  const [damaged] = (await reviews.listAll()).holds;
+  expect(damaged.orders.at(-1)).toEqual({ id: 13, orderId: null, pluginId: null, createdAt: null, code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED' });
+  expect(damaged.orders).toHaveLength(3);
+  // Orders do not change what the marker means.
+  await expect(reviews.list(7)).resolves.toEqual([{ year: 2025, month: 7, code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED' }]);
+  await expect(reviews.clear(7, 2025, 7, damaged.snapshot)).resolves.toHaveLength(1);
+});
+
 it('records the pending-exclusion cutoff only once', async () => {
   await reviews.markPendingExcluded('2026-11-16 00:00:00');
   await reviews.markPendingExcluded('2026-12-16 00:00:00');

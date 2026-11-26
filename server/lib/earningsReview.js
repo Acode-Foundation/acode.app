@@ -59,16 +59,55 @@ function uniqueHolds(rows) {
   return [...new Map(holds.map((hold) => [`${hold.userId}:${hold.year}:${hold.month}:${hold.code}`, hold])).values()];
 }
 
-async function hold(userId, year, month, code) {
+/**
+ * @param {object} [order] The order that raised the review, kept so an admin can find it.
+ * @param {number} order.id purchase_order.id
+ * @param {string} [order.orderId] The provider's order ID.
+ * @param {string} [order.pluginId] plugin.id, the plugin's package ID.
+ * @param {string} [order.createdAt] The accounting date before the review, UTC.
+ */
+async function hold(userId, year, month, code, order) {
   if (typeof code !== 'string' || !/^[A-Z_]+$/.test(code)) throw new Error('Invalid earnings review reason.');
+  const value = { code, revision: randomUUID() };
+  if (order) {
+    // purchase_order.plugin_id has INTEGER affinity, so a numeric-looking package ID arrives as a number.
+    const text = (field) => (field == null || field === '' ? null : String(field));
+    value.orders = [{ id: order.id, orderId: text(order.orderId), pluginId: text(order.pluginId), createdAt: order.createdAt ?? null }];
+  }
   // Keep independent reasons, but refresh the revision for every new review event.
   // A second purchase raising the same code must invalidate an earlier admin GET.
+  // Orders accumulate in one statement, so concurrent holds of one month keep every order.
   await Entity.execSql(
     `INSERT INTO app_config (key, value) VALUES (?, ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-    [`${key(userId, year, month)}:${code}`, JSON.stringify({ code, revision: randomUUID() })],
+     ON CONFLICT(key) DO UPDATE SET value = json_set(excluded.value, '$.orders', json((
+       SELECT json_group_array(json(item)) FROM (
+         SELECT value AS item FROM json_each(CASE WHEN json_valid(app_config.value) THEN app_config.value ELSE '{}' END, '$.orders')
+         UNION
+         SELECT value AS item FROM json_each(excluded.value, '$.orders')
+       )
+     )))`,
+    [`${key(userId, year, month)}:${code}`, JSON.stringify(value)],
     AppConfig,
   );
+}
+
+/** The orders recorded on a marker. Markers from before orders were recorded have none. */
+function orders(row) {
+  try {
+    const list = JSON.parse(row.value).orders;
+    if (!Array.isArray(list)) return [];
+    // Markers may be edited by hand; keep only what the admin page can show safely.
+    return list
+      .filter((order) => order && typeof order === 'object' && Number.isSafeInteger(order.id))
+      .map((order) => ({
+        id: order.id,
+        orderId: typeof order.orderId === 'string' && order.orderId ? order.orderId : null,
+        pluginId: typeof order.pluginId === 'string' && order.pluginId ? order.pluginId : null,
+        createdAt: typeof order.createdAt === 'string' && order.createdAt ? order.createdAt : null,
+      }));
+  } catch {
+    return [];
+  }
 }
 
 async function snapshot(userId, year, month) {
@@ -154,11 +193,18 @@ async function listAll() {
     }
     const { userId, year, month, code } = hold;
     const period = key(userId, year, month);
-    if (!months.has(period)) months.set(period, { userId, year, month, codes: [], snapshot: [] });
+    if (!months.has(period)) months.set(period, { userId, year, month, codes: [], orders: [], snapshot: [] });
     const entry = months.get(period);
     if (!entry.codes.includes(code)) entry.codes.push(code);
+    for (const order of orders(row)) {
+      // The stored list dedupes by JSON text, so one order may be stored twice with fields filled in later.
+      const known = entry.orders.find((item) => item.id === order.id);
+      if (!known) entry.orders.push({ ...order, code });
+      else for (const field of ['orderId', 'pluginId', 'createdAt']) known[field] ??= order[field];
+    }
     entry.snapshot.push(row);
   }
+  for (const entry of months.values()) entry.orders.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)) || a.id - b.id);
   return { holds: [...months.values()], invalidMarkers };
 }
 

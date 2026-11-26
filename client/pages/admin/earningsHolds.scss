@@ -79,6 +79,30 @@
       }
     }
 
+    .hold-orders {
+      margin: 4px 0 0;
+      padding: 0;
+      list-style: none;
+
+      li {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 2px 10px;
+        padding-left: 0;
+        border-left: 0;
+        overflow-wrap: anywhere;
+
+        & + li {
+          margin-top: 2px;
+        }
+      }
+    }
+
+    .hold-orders-missing {
+      color: var(--page-muted);
+      font-style: italic;
+    }
+
     strong {
       font-weight: 600;
     }

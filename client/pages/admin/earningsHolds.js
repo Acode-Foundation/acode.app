@@ -125,6 +125,9 @@ export default function EarningsHolds({ signal }) {
             <li>
               <strong>{REASONS[code]?.title || code}</strong>
               <span>{REASONS[code]?.action || 'Review the earnings of this month before clearing the hold.'}</span>
+              {code === 'GOOGLE_PURCHASE_REVIEW_REQUIRED' && (
+                <HeldOrders userId={userId} orders={(hold.orders || []).filter((order) => order.code === code)} />
+              )}
             </li>
           ))}
         </ul>
@@ -206,6 +209,28 @@ async function send(hold, action, method, body) {
   const json = await res.json();
   if (!res.ok || json.error) throw new Error(json.error || `Server error (${res.status})`);
   return json;
+}
+
+function HeldOrders({ userId, orders }) {
+  if (!orders.length) {
+    return (
+      <span className='hold-orders-missing'>
+        The order was not recorded with this hold. Search the server log for "requires earnings review for user {String(userId)}".
+      </span>
+    );
+  }
+  return (
+    <ul className='hold-orders'>
+      {orders.map((order) => (
+        <li>
+          <strong>Order #{String(order.id)}</strong>
+          {order.orderId && <code>{order.orderId}</code>}
+          {(order.pluginName || order.pluginId) && <span>{order.pluginName || order.pluginId}</span>}
+          <span>{order.createdAt ? `Placed ${String(order.createdAt).slice(0, 16)} UTC` : 'Original date unknown'}</span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function Fact({ label, value }) {

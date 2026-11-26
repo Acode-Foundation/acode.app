@@ -206,6 +206,17 @@ it.each([null, 42])(
     expect(db.prepare('SELECT state FROM purchase_order WHERE id = 2').get().state).toBe(0);
     expect(db.prepare('SELECT amount, payment_id FROM user_earnings').get()).toEqual({ amount: 500, payment_id: paymentId });
     await expect(reviews.list(7)).resolves.toEqual([{ year: 2026, month: 9, code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED' }]);
+    // The admin can find the order and its original date, which completion overwrote.
+    const original = db.prepare('SELECT order_id, plugin_id FROM purchase_order WHERE id = 1').get();
+    expect((await reviews.listAll()).holds[0].orders).toEqual([
+      {
+        id: 1,
+        orderId: original.order_id ?? null,
+        pluginId: original.plugin_id,
+        createdAt: expect.stringMatching(/^2026-10-/),
+        code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED',
+      },
+    ]);
     // The completed order is not reported again.
     await expect(sync()).resolves.toBeUndefined();
   },
