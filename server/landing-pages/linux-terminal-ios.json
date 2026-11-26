@@ -5,14 +5,14 @@
   "description": "Use Acode’s emulated Alpine Linux terminal on iPhone and iPad. Learn about package installation, project files, and iOS runtime limitations.",
   "heroHeadline": "A Linux terminal alongside your iOS editor",
   "heroSubheadline": "Run shell commands in an emulated Alpine Linux environment while keeping your source files and editor close at hand.",
-  "ctaPrimary": "iOS availability",
+  "ctaPrimary": "Download on the App Store",
   "ctaSecondary": "Explore Acode",
   "problemHeadline": "Designed for a mobile workflow",
   "problemPoints": [
     "Use Acode’s emulated Alpine Linux terminal on iPhone and iPad. Learn about package installation, project files, and iOS runtime limitations."
   ],
   "solutionHeadline": "What to expect on iOS",
-  "solutionPoints": ["Acode for iPhone and iPad is currently marked Coming soon on the website. Check the home page for release availability."],
+  "solutionPoints": ["Acode for iPhone and iPad is available on the App Store. It requires iOS 18.6 or iPadOS 18.6 or later."],
   "featuresHeadline": "Linux Terminal on iPhone and iPad",
   "features": [
     {

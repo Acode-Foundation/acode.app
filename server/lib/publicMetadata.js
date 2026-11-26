@@ -1,3 +1,4 @@
+const { APP_STORE_APP_ID, APP_STORE_URL, PLAY_STORE_URL } = require('../../shared/appLinks');
 const { PLUGIN_DESCRIPTION_MAX_LENGTH, createPluginMetadataDescription } = require('../../shared/metadataText');
 
 const DEFAULT_PUBLIC_ORIGIN = 'https://acode.app';
@@ -23,6 +24,9 @@ function createMetadataContext(metadata, { canonicalPath, imagePath, origin = ge
     ...metadata,
     canonical_url: publicUrl(canonicalPath, publicOrigin),
     image_url: publicUrl(imagePath || metadata.image_path || DEFAULT_IMAGE_PATH, publicOrigin),
+    app_store_app_id: APP_STORE_APP_ID,
+    app_store_url: APP_STORE_URL,
+    play_store_url: PLAY_STORE_URL,
   };
 }
 

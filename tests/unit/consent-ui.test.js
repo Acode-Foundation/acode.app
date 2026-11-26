@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import { transformAsync } from '@babel/core';
 import * as consent from '../../client/lib/cookieConsent';
 import { isAdFreeRoute } from '../../shared/adPolicy';
+import { APP_STORE_URL } from '../../shared/appLinks';
 
 const { code } = await transformAsync(fs.readFileSync(new URL('../../client/consent.js', import.meta.url), 'utf8'), {
   babelrc: false,
@@ -62,6 +63,7 @@ function mount(pathname = '/plugins') {
   const dependencies = {
     './consent.scss': {},
     '../shared/adPolicy': { isAdFreeRoute },
+    '../shared/appLinks': { APP_STORE_URL },
     './lib/adUnits': { observeAdUnits: vi.fn() },
     './lib/cookieConsent': {
       ...consent,
@@ -115,6 +117,15 @@ it('records the Acode store click only with analytics consent', () => {
   link.search = '?id=another.app';
   click();
   expect(events()).toHaveLength(1);
+  link.href = APP_STORE_URL;
+  click();
+  expect(Array.from(events()[1])).toEqual(['event', 'store_click', { store: 'app_store' }]);
+  link.href = `${APP_STORE_URL}/`;
+  click();
+  expect(Array.from(events()[2])).toEqual(['event', 'store_click', { store: 'app_store' }]);
+  link.href = 'https://apps.apple.com/us/app/acode-editor/id6815644799';
+  click();
+  expect(Array.from(events()[3])).toEqual(['event', 'store_click', { store: 'app_store' }]);
 });
 
 it.each(['/admin', '/policy', '/terms', '/refund', '/about', '/contact', '/faqs', '/faqs/question-id'])(

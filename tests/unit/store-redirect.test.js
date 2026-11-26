@@ -1,4 +1,5 @@
 const storeRedirect = require('../../server/lib/storeRedirect');
+const { APP_STORE_URL, PLAY_STORE_URL } = require('../../shared/appLinks');
 
 function request({ redirect = 'store', userAgent = '', platform } = {}) {
   const req = {
@@ -14,9 +15,9 @@ function request({ redirect = 'store', userAgent = '', platform } = {}) {
 it.each([
   { userAgent: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/131.0.0.0 Mobile Safari/537.36' },
   { platform: '"Android"', userAgent: 'Mozilla/5.0' },
-])('temporarily redirects Android clients to the fixed Google Play listing: %j', (headers) => {
+])('redirects Android clients to the fixed Google Play listing: %j', (headers) => {
   const { res, next } = request(headers);
-  expect(res.redirect).toHaveBeenCalledWith(302, 'https://play.google.com/store/apps/details?id=com.foxdebug.acodefree');
+  expect(res.redirect).toHaveBeenCalledWith(302, PLAY_STORE_URL);
   expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'private, no-store');
   expect(res.vary).toHaveBeenCalledWith('User-Agent');
   expect(res.vary).toHaveBeenCalledWith('Sec-CH-UA-Platform');
@@ -26,6 +27,15 @@ it.each([
 it.each([
   { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)' },
   { userAgent: 'Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X)' },
+  { platform: '"iOS"', userAgent: 'Mozilla/5.0' },
+])('redirects iOS clients to the App Store listing: %j', (headers) => {
+  const { res, next } = request(headers);
+  expect(res.redirect).toHaveBeenCalledWith(302, APP_STORE_URL);
+  expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'private, no-store');
+  expect(next).not.toHaveBeenCalled();
+});
+
+it.each([
   { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' },
   { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
   {},

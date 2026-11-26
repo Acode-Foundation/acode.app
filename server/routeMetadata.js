@@ -9,6 +9,7 @@
  */
 
 const sharedMetadata = require('../shared/routeMetadata.json');
+const { APP_STORE_URL, PLAY_STORE_URL } = require('../shared/appLinks');
 const { formatMilestoneCount } = require('../shared/metadataText');
 const { getPublicOrigin, publicUrl } = require('./lib/publicMetadata');
 
@@ -97,11 +98,7 @@ function getHomeSchemas(origin) {
       name: 'Foxbiz Software Pvt. Ltd.',
       url: publicOrigin,
       logo: publicUrl('/logo-512.png', publicOrigin),
-      sameAs: [
-        'https://github.com/Acode-Foundation/Acode',
-        'https://play.google.com/store/apps/details?id=com.foxdebug.acodefree',
-        'https://t.me/foxdebug_acode',
-      ],
+      sameAs: ['https://github.com/Acode-Foundation/Acode', PLAY_STORE_URL, APP_STORE_URL, 'https://t.me/foxdebug_acode'],
     },
   };
 }

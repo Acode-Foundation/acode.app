@@ -5,14 +5,14 @@
   "description": "Write HTML, CSS, and JavaScript on iPhone and iPad with Acode. Preview local websites and choose local or remote tools for your project.",
   "heroHeadline": "Build and preview websites on iOS",
   "heroSubheadline": "Edit HTML, CSS, and JavaScript in a project folder, preview your changes, and use additional tools when your project needs them.",
-  "ctaPrimary": "iOS availability",
+  "ctaPrimary": "Download on the App Store",
   "ctaSecondary": "Explore Acode",
   "problemHeadline": "Designed for a mobile workflow",
   "problemPoints": [
     "Write HTML, CSS, and JavaScript on iPhone and iPad with Acode. Preview local websites and choose local or remote tools for your project."
   ],
   "solutionHeadline": "What to expect on iOS",
-  "solutionPoints": ["Acode for iPhone and iPad is currently marked Coming soon on the website. Check the home page for release availability."],
+  "solutionPoints": ["Acode for iPhone and iPad is available on the App Store. It requires iOS 18.6 or iPadOS 18.6 or later."],
   "featuresHeadline": "Web Development on iPhone and iPad",
   "features": [
     {

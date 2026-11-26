@@ -11,24 +11,20 @@ import demoVideo from 'res/optimized/acode-demo-720.mp4';
 import posterSmall from 'res/optimized/acode-poster-480.webp';
 import posterMedium from 'res/optimized/acode-poster-800.webp';
 import demoPoster from 'res/optimized/acode-poster-1024.webp';
+import { APP_STORE_URL, PLAY_STORE_CAMPAIGN_URL, TESTFLIGHT_URL } from '../../../shared/appLinks';
 import { setupContributorRow } from './contributorRow';
 import FeatureSections from './featureSections';
 import { setupHeroVideo } from './heroVideo';
 import { setupHomeInteractions } from './homeInteractions';
 import { HOME_MIN_SPONSORS, setupSponsorGrid } from './sponsorGrid';
 
-const PLAY_URL =
-  'https://play.google.com/store/apps/details?id=com.foxdebug.acodefree&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1';
 const FDROID_URL = 'https://f-droid.org/en/packages/com.foxdebug.acode/';
 const GITHUB_URL = 'https://github.com/acode-foundation/acode';
-// Leave empty until the iOS app is live; App Store entries then show as "Coming soon".
-const APP_STORE_URL = '';
-const TESTFLIGHT_URL = 'https://testflight.apple.com/join/qttCCWSb';
 const CONTRIBUTORS_URL = 'https://api.github.com/repos/acode-foundation/acode/contributors?per_page=30';
 
 const STORES = {
-  play: { name: 'Google Play', icon: 'googleplay', href: PLAY_URL, detail: 'Android phones and tablets' },
-  appStore: { name: 'App Store', icon: 'app-store', href: APP_STORE_URL, detail: 'iPhone and iPad' },
+  play: { name: 'Google Play', icon: 'googleplay', href: PLAY_STORE_CAMPAIGN_URL, detail: 'Android phones and tablets' },
+  appStore: { name: 'App Store', icon: 'app-store', href: APP_STORE_URL, detail: 'iPhone and iPad', action: 'Download on the' },
   fdroid: { name: 'F-Droid', icon: 'f-droid', href: FDROID_URL, detail: 'Free and open-source build' },
   github: { name: 'GitHub', icon: 'github', href: `${GITHUB_URL}/releases`, detail: 'Releases and source code' },
 };
@@ -174,7 +170,7 @@ export default function home() {
             {'code'}
           </span>
         </h2>
-        <p>For Android, iPhone, and iPad. Free on Android. iOS release coming soon.</p>
+        <p>Free for Android, iPhone, and iPad.</p>
         <ul className='home-downloads'>
           {[STORES.play, STORES.appStore, STORES.fdroid, STORES.github].map((store) => (
             <li>
@@ -192,7 +188,8 @@ export default function home() {
   setupHeroVideo(page.querySelector('.home-demo'), lifecycle.signal, { low: demoLow, high: demoVideo });
   whenNear(page.querySelector('.home-contributors-mount'), () => loadContributors(contributorsMount, lifecycle.signal), lifecycle.signal);
   const disposeInteractions = setupHomeInteractions(page);
-  page.querySelector('[data-scroll-download]').addEventListener(
+  const downloadLink = page.querySelector('[data-scroll-download]');
+  downloadLink?.addEventListener(
     'click',
     (event) => {
       // Keep the Router from treating the in-page anchor as a navigation.
@@ -220,18 +217,20 @@ function detectPlatform() {
   return 'other';
 }
 
-// One store for this device, plus a quiet pointer to every other option at the bottom.
+// One store for this device. Other options stay in the download section below.
 function HeroDownload({ platform }) {
   const ios = platform === 'ios';
   return (
     <div className='home-actions'>
       <StoreButton store={ios ? STORES.appStore : STORES.play} />
+      {ios ? null : (
+        <a className='home-more' href='#download' data-scroll-download>
+          {/* Non-breaking hyphen keeps "F-Droid" whole when the line wraps on narrow phones. */}
+          {'Also on F\u2011Droid, GitHub, and more'}
+          <ChevronIcon path='m6 9 6 6 6-6' />
+        </a>
+      )}
       {ios ? <BetaLink /> : null}
-      <a className='home-more' href='#download' data-scroll-download>
-        {/* Non-breaking hyphen keeps "F-Droid" whole when the line wraps on narrow phones. */}
-        Also on {ios ? 'Google Play, F\u2011Droid' : 'F\u2011Droid, GitHub'}, and more
-        <ChevronIcon path='m6 9 6 6 6-6' />
-      </a>
     </div>
   );
 }
@@ -245,49 +244,26 @@ function BetaLink({ label = 'Try the beta via TestFlight' }) {
 }
 
 function StoreButton({ store }) {
-  if (!store.href) {
-    return (
-      <span className='home-btn home-btn-soon' aria-disabled='true'>
-        <span className={`icon ${store.icon}`} aria-hidden='true' />
-        {store.name}
-        <span className='home-soon'>Coming soon</span>
-      </span>
-    );
-  }
   return (
     <a className='home-btn home-btn-primary' href={store.href} target='_blank' rel='noopener'>
       <span className={`icon ${store.icon}`} aria-hidden='true' />
-      Get it on {store.name}
+      {store.action || 'Get it on'} {store.name}
     </a>
   );
 }
 
 function DownloadOption({ store, recommended }) {
-  const className = `home-download${recommended ? ' is-recommended' : ''}${store.href ? '' : ' is-soon'}`;
-  const body = [
-    <span className='home-download__icon' aria-hidden='true'>
-      <span className={`icon ${store.icon}`} />
-    </span>,
-    <span className='home-download__text'>
-      <strong>
-        {store.name}
-        {recommended ? <span className='home-download__tag'>Your device</span> : null}
-      </strong>
-      <span>{store.detail}</span>
-    </span>,
-    store.href ? (
-      <ChevronIcon path='M7 17 17 7M8 7h9v9' />
-    ) : (
-      <span className='home-download__availability'>
-        <span className='home-soon'>Soon</span>
-        {store === STORES.appStore ? <BetaLink label='Try Beta' /> : null}
-      </span>
-    ),
-  ];
-  if (!store.href) return <div className={className}>{body}</div>;
+  const className = `home-download${recommended ? ' is-recommended' : ''}`;
   return (
     <a className={className} href={store.href} target='_blank' rel='noopener'>
-      {body}
+      <span className='home-download__icon' aria-hidden='true'>
+        <span className={`icon ${store.icon}`} />
+      </span>
+      <span className='home-download__text'>
+        <strong>{store.name}</strong>
+        <span>{store.detail}</span>
+      </span>
+      <ChevronIcon path='M7 17 17 7M8 7h9v9' />
     </a>
   );
 }
