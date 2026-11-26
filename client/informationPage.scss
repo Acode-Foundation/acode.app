@@ -1,0 +1,67 @@
+// Shared visual rules for About, Contact, and the policy pages.
+@mixin page($max-width: 1080px) {
+  width: calc(100% - 48px);
+  max-width: $max-width;
+  margin: 0 auto;
+  padding: clamp(28px, 5vw, 56px) 0 72px;
+  color: var(--page-text);
+
+  @media (max-width: 800px) {
+    width: calc(100% - 32px);
+    max-width: min(680px, $max-width);
+    padding-bottom: 48px;
+  }
+}
+
+@mixin title {
+  margin: 0 0 18px;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.04em;
+  text-align: left;
+  color: var(--page-text);
+}
+
+@mixin section-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  text-align: left;
+  color: var(--page-text);
+}
+
+@mixin copy {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: #c5cad4;
+  overflow-wrap: anywhere;
+}
+
+@mixin label {
+  display: block;
+  margin: 0 0 10px;
+  color: #72b8ff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@mixin links {
+  a {
+    font-size: inherit;
+    margin: 0;
+    color: #72b8ff;
+    text-underline-offset: 3px;
+
+    &:hover { color: #b3d9ff; }
+
+    &:focus-visible {
+      outline: 2px solid var(--page-accent);
+      outline-offset: 4px;
+      border-radius: 2px;
+    }
+  }
+}

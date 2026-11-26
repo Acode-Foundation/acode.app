@@ -23,6 +23,9 @@ const { getSponsorWhereClause } = require('../lib/sponsorScope');
 const { setPluginFeatured } = require('../lib/featuredPlugins');
 const { isPluginStatusFilter } = require('../lib/pluginSearch');
 const { getVerificationCandidates } = require('../lib/verificationCandidates');
+const earningsReview = require('../lib/earningsReview');
+const earningsHoldDetails = require('../lib/earningsHoldDetails');
+const recalculateEarnings = require('../lib/recalculateEarnings');
 
 const router = Router();
 
@@ -33,6 +36,7 @@ router.use('/', async (req, res, next) => {
     return;
   }
 
+  req.adminUser = loggedInUser;
   next();
 });
 
@@ -250,6 +254,10 @@ router.get('/payments', async (req, res) => {
 router.get('/payment-method/:id', async (req, res) => {
   const { id } = req.params;
   const [row] = await PaymentMethod.get([PaymentMethod.ID, id]);
+  if (!row) {
+    res.status(404).send({ error: 'Payment method not found' });
+    return;
+  }
   res.send(row);
 });
 
@@ -309,7 +317,7 @@ router.post('/send-email', async (req, res) => {
   res.send({ sent: users.length });
 });
 
-const ALLOWED_CONFIG_KEYS = ['acode_pro_price', 'payment_threshold'];
+const ALLOWED_CONFIG_KEYS = ['acode_pro_price', 'payment_threshold', 'paypal_payouts_enabled'];
 
 router.get('/config', async (_req, res) => {
   try {
@@ -353,10 +361,106 @@ router.put('/config', async (req, res) => {
       }
     }
 
+    if (key === 'paypal_payouts_enabled') {
+      if (typeof value !== 'boolean') {
+        res.status(400).send({ error: 'PayPal payouts must be turned on or off' });
+        return;
+      }
+
+      await AppConfig.setValue(key, value ? '1' : '0');
+      res.send({ success: true, key, value });
+      return;
+    }
+
     await AppConfig.setValue(key, value);
     res.send({ success: true, key, value });
   } catch {
     res.status(500).send({ error: 'Failed to update config' });
+  }
+});
+
+router.get('/earnings-holds', async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    const { holds, invalidMarkers } = await earningsReview.listAll();
+    res.send({ holds: await earningsHoldDetails(holds), invalidMarkers });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+/** Months are zero-based. Sends the error itself and returns null when the period is invalid. */
+function getHeldPeriod(req, res) {
+  const userId = Number(req.params.userId);
+  const year = Number(req.params.year);
+  const month = Number(req.params.month);
+  if (
+    !Number.isSafeInteger(userId) ||
+    userId <= 0 ||
+    !Number.isSafeInteger(year) ||
+    year < 1970 ||
+    !Number.isInteger(month) ||
+    month < 0 ||
+    month > 11
+  ) {
+    res.status(400).send({ error: 'Invalid user, year or month (0-11)' });
+    return null;
+  }
+  return { userId, year, month };
+}
+
+// Months are zero-based, matching GET /earnings-holds and the earnings APIs.
+// Clear only after manual reconciliation; recalculating a paid month is not a refund.
+router.delete('/earnings-holds/:userId/:year/:month', async (req, res) => {
+  const period = getHeldPeriod(req, res);
+  if (!period) return;
+  const { userId, year, month } = period;
+  const held = req.body?.snapshot;
+  if (held === undefined) {
+    res.status(428).send({ error: 'Supply the snapshot from the reviewed earnings-holds listing.' });
+    return;
+  }
+  if (!Array.isArray(held) || !held.length || held.some((row) => !row || typeof row.key !== 'string' || typeof row.value !== 'string')) {
+    res.status(400).send({ error: 'Invalid earnings review snapshot.' });
+    return;
+  }
+  try {
+    const removed = await earningsReview.clear(userId, year, month, held);
+    console.info(
+      'Earnings holds cleared by admin %s for user %s, %s-%s: %s',
+      req.adminUser.id,
+      userId,
+      year,
+      month + 1,
+      [...new Set(removed.map((hold) => hold.code))].join(', '),
+    );
+    res.send({ success: true, clearedCodes: [...new Set(removed.map((hold) => hold.code))] });
+  } catch (error) {
+    if ([400, 409].includes(error.statusCode)) {
+      res.status(error.statusCode).send({ error: error.message });
+      return;
+    }
+    console.error('Failed to clear earnings hold:', error);
+    res.status(500).send({ error: 'Failed to clear earnings hold' });
+  }
+});
+
+// Saves the month again without starting a payout.
+router.post('/earnings-holds/:userId/:year/:month/recalculate', async (req, res) => {
+  const period = getHeldPeriod(req, res);
+  if (!period) return;
+  const { userId, year, month } = period;
+  try {
+    const result = await recalculateEarnings(userId, year, month);
+    console.info('Earnings recalculated by admin %s for user %s, %s-%s: %s', req.adminUser.id, userId, year, month + 1, result.earnings);
+    res.send({ success: true, ...result });
+  } catch (error) {
+    if ([400, 404, 409].includes(error.statusCode)) {
+      res.status(error.statusCode).send({ error: error.message });
+      return;
+    }
+    console.error('Failed to recalculate earnings:', error);
+    res.status(500).send({ error: 'Failed to recalculate earnings' });
   }
 });
 

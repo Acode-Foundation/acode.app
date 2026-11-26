@@ -1,9 +1,9 @@
 import './style.scss';
-import AdSense from 'components/adsense';
-import CurrencySelector from 'components/currencySelector';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import prompt from 'components/dialogs/prompt';
+import AdSense from 'components/adsense';
+import CurrencySelector from 'components/currencySelector';
 import EditorType from 'components/editorType';
 import MonthSelect from 'components/MonthSelect';
 import Markdown from 'components/markdown';
@@ -443,7 +443,7 @@ async function renderOrders(ref, pluginId, year, month) {
 
   for (const order of orders) {
     const date = moment(order.created_at).format('DD MMMM YYYY');
-    const statusLabel = Number(order.state) === 0 ? 'Completed' : 'Cancelled';
+    const statusLabel = ['Completed', 'Cancelled', 'Pending'][Number(order.state)] || 'Unknown';
     const statusClass = statusLabel.toLowerCase();
     const packageName = /free$/.test(order.package) ? 'Free' : 'Paid';
     const provider = order.provider === 'razorpay' ? 'Razorpay' : 'Google Play';

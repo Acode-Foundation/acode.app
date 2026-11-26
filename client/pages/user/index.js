@@ -1,7 +1,6 @@
 import './style.scss';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
-import select from 'components/dialogs/select';
 import Plugins from 'components/plugins';
 import Tabs from 'components/tabs';
 import Ref from 'html-tag-js/ref';
@@ -9,6 +8,7 @@ import { isIOSSource } from 'lib/appSource';
 import { getLoggedInUser, gravatar, hideLoading, showLoading } from 'lib/helpers';
 import { applyProfileMetadata, beginProfileMetadataRequest } from 'lib/pageMetadata';
 import Router from 'lib/Router';
+import { PAYMENT_METHOD_ICONS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_LIMIT } from '../../../shared/paymentMethods';
 import DeveloperDashboard from './dashboard';
 import PluginManager from './pluginManager';
 
@@ -46,10 +46,15 @@ export default async function User({ userId }) {
   const paymentMethodsList = (
     <div ref={paymentMethods} className='payment-methods'>
       {isSelf && (
-        <div onclick={addPaymentMethod} className='add-payment-method' title='Add payment method to get paid.'>
-          <span className='icon add' />
+        <a href='/add-payment-method' className='add-payment-method' hidden>
+          <span className='icon add' aria-hidden='true' />
           <span>Add payment method</span>
-        </div>
+        </a>
+      )}
+      {isSelf && (
+        <p className='payment-methods-hint' hidden>
+          You have added the maximum of {PAYMENT_METHOD_LIMIT} payment methods. Delete one to add another.
+        </p>
       )}
     </div>
   );
@@ -59,7 +64,7 @@ export default async function User({ userId }) {
   }
 
   const stats = shouldShowSensitiveInfo ? await fetchDashboard() : null;
-  const isDeveloper = Boolean(stats && (stats.totals.plugins > 0 || stats.totals.lifetimeEarnings > 0));
+  const isDeveloper = Boolean(stats && (stats.totals.plugins > 0 || stats.totals.lifetimeEarnings > 0 || stats.totals.lifetimeEarnings === null));
   const params = new URLSearchParams(window.location.search);
   const linked = params.get('linked');
   const linkedLabel = { github: 'GitHub', google: 'Google', apple: 'Apple' }[linked];
@@ -220,7 +225,7 @@ export default async function User({ userId }) {
             <a href={`/earnings?user=${user.id}`}>Earnings</a>
           </span>
         </div>
-        {isSelf && <p className='panel-hint'>Add a bank account to get paid for your plugins.</p>}
+        {isSelf && <p className='panel-hint'>Add a payment method to get paid for your plugins.</p>}
         {paymentMethodsList}
       </div>
     );
@@ -254,94 +259,120 @@ export default async function User({ userId }) {
     }
   }
 
-  function PaymentMethod({ id, bank_account_number: bankAccountNumber, bank_account_type: bankAccountType, is_default: isDefault }) {
-    isDefault = isDefault ? 'default' : '';
-    let title = `${bankAccountType} ${bankAccountNumber}`;
-
-    if (isDefault) {
-      title += ' (default)';
-    }
+  function PaymentMethod(method) {
+    const { id, type, available, is_default: isDefault } = method;
+    const label = PAYMENT_METHOD_LABELS[type];
+    const detail = paymentMethodDetail(method);
+    const name = [label, detail].filter(Boolean).join(', ');
 
     return (
-      <div on:click={onPaymentMethodClick} data-id={id} title={title} className='payment-method' data-default={isDefault}>
-        <span className='icon account_balance' />
+      <div className='payment-method' title={name} data-default={isDefault ? 'default' : ''} data-available={String(available)}>
+        <span className={`icon ${PAYMENT_METHOD_ICONS[type]}`} role='img' aria-label={label} />
         <div className='info'>
-          <strong>{bankAccountType}</strong>
-          <span>{bankAccountNumber}</span>
+          <span className='detail'>{detail || label}</span>
+          {(isDefault || !available) && (
+            <div className='badges'>
+              {isDefault ? <span className='default-pill'>Default</span> : null}
+              {!available && <span className='unavailable-pill'>Unavailable</span>}
+            </div>
+          )}
+          {isSelf && available && !isDefault && (
+            <button type='button' className='set-default' aria-label={`Set ${name} as default`} onclick={(e) => setDefault(e.currentTarget, id)}>
+              Set as default
+            </button>
+          )}
         </div>
-        {isDefault && <span className='default-pill'>Default</span>}
+        <div className='actions'>
+          {isSelf && (
+            <button
+              type='button'
+              className='icon delete'
+              aria-label={`Delete ${name}`}
+              title={isDefault ? 'Set another payment method as default to delete this one' : 'Delete'}
+              disabled={Boolean(isDefault)}
+              onclick={(e) => deletePaymentMethod(e.currentTarget, id, name)}
+            />
+          )}
+        </div>
       </div>
     );
   }
 
   /**
-   * Give options to delete, set as default option.
-   * @param {MouseEvent} e
+   * Short description that tells payment methods of the same type apart
    */
-  async function onPaymentMethodClick(e) {
-    if (!isSelf) return;
+  function paymentMethodDetail(method) {
+    switch (method.type) {
+      case 'paypal':
+        return method.paypal_email;
+      case 'wallet':
+        return [method.wallet_type, method.wallet_address].filter(Boolean).join(' · ');
+      default:
+        return [method.bank_name, method.bank_account_number].filter(Boolean).join(' · ');
+    }
+  }
+
+  async function deletePaymentMethod(button, id, name) {
+    const confirmation = await confirm('Delete payment method?', `${name} will be removed from your account. This cannot be undone.`, {
+      okLabel: 'Delete',
+    });
+    if (confirmation) await changePaymentMethod(button, `/api/user/payment-method/${id}`, 'DELETE');
+  }
+
+  async function setDefault(button, id) {
+    await changePaymentMethod(button, `/api/user/payment-method/update-default/${id}`, 'PATCH');
+  }
+
+  /**
+   * Send a change and show the updated list.
+   * @param {HTMLButtonElement} button Button clicked
+   * @param {string} url
+   * @param {'DELETE' | 'PATCH'} method
+   */
+  async function changePaymentMethod(button, url, method) {
+    button.disabled = true;
+    showLoading();
     try {
-      const { title } = e.target;
-      const option = await select(title, ['Delete', 'Set as default']);
-      if (option === 'Delete') {
-        const confirmation = await confirm('WARNING', `Are you sure you want to delete this payment method? This action cannot be undone. ${title}`);
-        if (!confirmation) return;
-        showLoading();
-        const res = await fetch(`/api/user/payment-method/${e.target.dataset.id}`, {
-          method: 'DELETE',
-        }).then((paymentRes) => paymentRes.json());
-        if (res.error) {
-          throw new Error(res.error);
-        }
-
-        renderPaymentMethods();
-        alert('Success', 'Payment method deleted.');
-        return;
-      }
-
-      if (option === 'Set as default') {
-        showLoading();
-        const res = await fetch(`/api/user/payment-method/update-default/${e.target.dataset.id}`, {
-          method: 'PATCH',
-        }).then((paymentRes) => paymentRes.json());
-        if (res.error) {
-          throw new Error(res.error);
-        }
-
-        renderPaymentMethods();
-        alert('Success', 'Payment method set as default.');
-      }
+      const res = await fetch(url, { method });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      await renderPaymentMethods();
     } catch (error) {
+      button.disabled = false;
       alert('Error', error.message);
     } finally {
       hideLoading();
     }
   }
 
-  /**
-   * Add payment method
-   */
-  async function addPaymentMethod() {
-    Router.loadUrl('/add-payment-method/bank-account');
-  }
-
   async function renderPaymentMethods() {
+    const { el } = paymentMethods;
+    const addButton = el.querySelector('.add-payment-method');
+    const limitHint = el.querySelector('.payment-methods-hint');
+    const clear = () => {
+      for (const $el of el.querySelectorAll('.payment-method, .payment-methods-error')) $el.remove();
+    };
+
     showLoading();
     try {
       const url = `/api/user/payment-methods?user=${user.id}`;
       const rows = await fetch(url).then((res) => res.json());
-      const { el } = paymentMethods;
-      const lastChild = el.lastElementChild;
-
-      for (const $el of el.getAll('.payment-method')) {
-        $el.remove();
-      }
+      if (rows.error) throw new Error(rows.error);
+      clear();
 
       for (const row of rows) {
-        el.insertBefore(<PaymentMethod {...row} />, lastChild);
+        el.insertBefore(<PaymentMethod {...row} />, addButton);
+      }
+
+      if (isSelf) {
+        const limitReached = rows.length >= PAYMENT_METHOD_LIMIT;
+        addButton.hidden = limitReached;
+        limitHint.hidden = !limitReached;
       }
     } catch (error) {
-      paymentMethods.innerHTML = <div className='error'>{error.message}</div>;
+      console.error('Failed to load payment methods:', error);
+      clear();
+      el.insertBefore(<p className='payment-methods-error'>Could not load payment methods. Reload the page to try again.</p>, addButton);
     } finally {
       hideLoading();
     }

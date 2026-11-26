@@ -2,7 +2,7 @@ const { Router } = require('express');
 const moment = require('moment');
 const crypto = require('node:crypto');
 const { encryptPassword, isValidPassword } = require('../password');
-const { getLoggedInUser, getWebLoggedInUser, areSameUser } = require('../lib/helpers');
+const { getLoggedInUser, getWebLoggedInUser, areSameUser, getCountryFromIp } = require('../lib/helpers');
 const { rejectSignedIn } = require('../lib/guestOnly');
 const Comment = require('../entities/comment');
 const User = require('../entities/user');
@@ -10,14 +10,22 @@ const Payment = require('../entities/payment');
 const PaymentMethod = require('../entities/paymentMethod');
 const UserEarnings = require('../entities/userEarnings');
 const calcEarnings = require('../lib/calcEarnings');
+const earningsReview = require('../lib/earningsReview');
 const { getDeveloperDashboard } = require('../lib/developerDashboard');
-const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
 const AppConfig = require('../entities/appConfig');
 const login = require('../entities/login');
 const AppAuthCode = require('../entities/appAuthCode');
 const { appAuthCodeLimiter, appTokenExchangeLimiter, appleUnlinkLimiter, emailCodeCheckLimiter } = require('../lib/rateLimits');
 const { consumeEmailCode } = require('../lib/emailCode');
 const { logAppleError } = require('../lib/appleOAuth');
+const {
+  BANK_INDIA,
+  PAYMENT_METHOD_LIMIT,
+  PAYMENT_METHOD_TYPES,
+  getPaymentMethodType,
+  isPaymentMethodTypeAvailable,
+  validatePaymentMethod,
+} = require('../../shared/paymentMethods');
 
 const route = Router();
 
@@ -187,7 +195,42 @@ route.get('/payment-methods', async (req, res) => {
       [PaymentMethod.IS_DELETED, 0],
     ]);
 
-    res.send(rows.filter((row) => !row.paypal_email && !row.wallet_address));
+    const paypalEnabled = await AppConfig.isPayPalEnabled();
+    res.send(
+      rows.map((row) => {
+        const type = getPaymentMethodType(row);
+        return { ...row, type, available: isPaymentMethodTypeAvailable(type, { paypalEnabled }) };
+      }),
+    );
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+// What the logged in user can add right now.
+route.get('/payment-method-options', async (req, res) => {
+  try {
+    const loggedInUser = await getWebLoggedInUser(req);
+    if (!loggedInUser) {
+      res.status(401).send({ error: 'Not logged in' });
+      return;
+    }
+
+    const paypalEnabled = await AppConfig.isPayPalEnabled();
+    const rows = await PaymentMethod.get([
+      [PaymentMethod.USER_ID, loggedInUser.id],
+      [PaymentMethod.IS_DELETED, 0],
+    ]);
+
+    res.set('Cache-Control', 'no-store');
+    res.send({
+      types: PAYMENT_METHOD_TYPES.filter((type) => isPaymentMethodTypeAvailable(type, { paypalEnabled })),
+      count: rows.length,
+      limit: PAYMENT_METHOD_LIMIT,
+      hasDefault: rows.some((row) => row.is_default && isPaymentMethodTypeAvailable(getPaymentMethodType(row), { paypalEnabled })),
+      threshold: await AppConfig.getPaymentThreshold(),
+      country: getCountryFromIp(req.ip),
+    });
   } catch (error) {
     handleError(res, error);
   }
@@ -208,6 +251,7 @@ route.get('/earnings/:year/:month', async (req, res) => {
 
     let earnings;
     let estimated = false;
+    await earningsReview.assertClear(user.id, year, month);
 
     const now = moment();
     const thisMonth = moment({ year: now.year(), month: now.month() });
@@ -240,7 +284,7 @@ route.get('/earnings/:year/:month', async (req, res) => {
 route.get('/unpaid-earnings', async (req, res) => {
   try {
     const user = await getAuthorizedUser(req);
-    const threshold = parseInt(await AppConfig.getValue('payment_threshold'), 10) || PAYMENT_THRESHOLD;
+    const threshold = await AppConfig.getPaymentThreshold();
     const { earnings, from, to } = await calcEarnings.unpaid(user);
 
     if (!earnings) {
@@ -524,53 +568,38 @@ route.post('/payment-method', async (req, res) => {
       return;
     }
 
-    const paymentMethodsCount = await PaymentMethod.count([
-      [PaymentMethod.USER_ID, loggedInUser.id],
-      [PaymentMethod.IS_DELETED, 0],
-    ]);
-
-    if (paymentMethodsCount >= 3) {
-      res.status(400).send({ error: 'You can add only 3 payment methods' });
+    const { is_default: makeDefault } = req.body;
+    // Pages loaded before the types existed only know Indian bank accounts.
+    const type = req.body.type ?? (req.body.bank_ifsc_code ? BANK_INDIA : undefined);
+    const paypalEnabled = await AppConfig.isPayPalEnabled();
+    if (PAYMENT_METHOD_TYPES.includes(type) && !isPaymentMethodTypeAvailable(type, { paypalEnabled })) {
+      res.status(400).send({ error: 'This payment method is currently unavailable' });
       return;
     }
 
-    const {
-      bank_name: bankName,
-      bank_account_number: bankAccount,
-      bank_ifsc_code: bankIFSC,
-      bank_swift_code: bankSwift,
-      bank_account_holder: bankAccountHolder,
-      bank_account_type: bankAccountType = PaymentMethod.BANK_ACCOUNT_TYPE_SAVINGS,
-    } = req.body;
-
-    if (!bankName || !bankAccount || !bankIFSC || !bankAccountHolder) {
-      res.status(400).send({ error: 'Missing required fields' });
+    const { values, errors } = validatePaymentMethod(type, req.body);
+    const [error] = Object.values(errors);
+    if (error) {
+      res.status(400).send({ error, errors });
       return;
     }
 
-    const [row] = await PaymentMethod.get([
-      [PaymentMethod.BANK_ACCOUNT_NUMBER, bankAccount],
-      [PaymentMethod.USER_ID, loggedInUser.id],
-      [PaymentMethod.IS_DELETED, 0],
-    ]);
+    const result = PaymentMethod.add(loggedInUser.id, type, values, {
+      makeDefault: ['1', 'true', 'on', true].includes(makeDefault),
+      paypalEnabled,
+      limit: PAYMENT_METHOD_LIMIT,
+    });
 
-    if (row) {
-      res.status(400).send({ error: 'Bank account already exists' });
+    if (result === 'duplicate') {
+      res.status(400).send({ error: 'You have already added this payment method' });
       return;
     }
 
-    const insert = [
-      [PaymentMethod.BANK_NAME, bankName],
-      [PaymentMethod.BANK_IFSC_CODE, bankIFSC],
-      [PaymentMethod.BANK_SWIFT_CODE, bankSwift],
-      [PaymentMethod.BANK_ACCOUNT_NUMBER, bankAccount],
-      [PaymentMethod.BANK_ACCOUNT_TYPE, bankAccountType],
-      [PaymentMethod.BANK_ACCOUNT_HOLDER, bankAccountHolder],
-    ];
+    if (result === 'limit') {
+      res.status(400).send({ error: `You can add only ${PAYMENT_METHOD_LIMIT} payment methods` });
+      return;
+    }
 
-    const count = await PaymentMethod.count([PaymentMethod.USER_ID, loggedInUser.id]);
-    insert.push([PaymentMethod.USER_ID, loggedInUser.id]);
-    await PaymentMethod.insert(...insert, [PaymentMethod.IS_DEFAULT, count === 0 ? 1 : 0]);
     res.send({ message: 'Payment method added' });
   } catch (error) {
     handleError(res, error);
@@ -628,8 +657,7 @@ route.post('/', emailCodeCheckLimiter, rejectSignedIn, async (req, res) => {
 
 route.put('/threshold', async (_req, res) => {
   try {
-    const raw = await AppConfig.getValue('payment_threshold');
-    const threshold = parseInt(raw, 10) || PAYMENT_THRESHOLD;
+    const threshold = await AppConfig.getPaymentThreshold();
     res.status(410).send({
       error: `Payment threshold is now fixed at ₹${threshold.toLocaleString()} for all users. It can be changed by an admin in Settings.`,
     });
@@ -728,15 +756,16 @@ route.patch('/payment-method/update-default/:id', async (req, res) => {
       return;
     }
 
-    await PaymentMethod.update(
-      [PaymentMethod.IS_DEFAULT, 0],
-      [
-        [PaymentMethod.USER_ID, loggedInUser.id],
-        [PaymentMethod.IS_DEFAULT, 1],
-      ],
-    );
+    if (!isPaymentMethodTypeAvailable(getPaymentMethodType(row), { paypalEnabled: await AppConfig.isPayPalEnabled() })) {
+      res.status(400).send({ error: 'This payment method is currently unavailable' });
+      return;
+    }
 
-    await PaymentMethod.update([PaymentMethod.IS_DEFAULT, 1], [PaymentMethod.ID, id]);
+    // It may have been deleted since it was read.
+    if (!PaymentMethod.setDefault(loggedInUser.id, id)) {
+      res.status(400).send({ error: 'Payment method not found' });
+      return;
+    }
 
     res.send({ message: 'Payment method updated' });
   } catch (error) {
@@ -764,10 +793,21 @@ route.delete('/payment-method/:id', async (req, res) => {
       return;
     }
 
+    if (row.is_default && !row.is_deleted) {
+      res.status(400).send({ error: 'Set another payment method as default before deleting this one' });
+      return;
+    }
+
     const payments = await Payment.get([Payment.PAYMENT_METHOD_ID, id]);
 
     if (payments.length) {
-      await PaymentMethod.update([PaymentMethod.IS_DELETED, 1], [PaymentMethod.ID, id]);
+      await PaymentMethod.update(
+        [
+          [PaymentMethod.IS_DELETED, 1],
+          [PaymentMethod.IS_DEFAULT, 0],
+        ],
+        [PaymentMethod.ID, id],
+      );
     } else {
       await PaymentMethod.delete([PaymentMethod.ID, id]);
     }
@@ -779,10 +819,12 @@ route.delete('/payment-method/:id', async (req, res) => {
     ]);
 
     if (!defaultRow.length) {
-      const [firstRow] = await PaymentMethod.get([
+      const paypalEnabled = await AppConfig.isPayPalEnabled();
+      const rows = await PaymentMethod.get([
         [PaymentMethod.USER_ID, loggedInUser.id],
         [PaymentMethod.IS_DELETED, 0],
       ]);
+      const firstRow = rows.find((method) => isPaymentMethodTypeAvailable(getPaymentMethodType(method), { paypalEnabled })) ?? rows[0];
 
       if (firstRow) {
         await PaymentMethod.update([PaymentMethod.IS_DEFAULT, 1], [PaymentMethod.ID, firstRow.id]);
@@ -869,7 +911,8 @@ async function getAuthorizedUser(req) {
  */
 function handleError(res, error) {
   console.log(error);
-  res.status(error.code || 500).send({ error: error.message });
+  const status = [error.statusCode, error.code].find((value) => Number.isInteger(value) && value >= 400 && value <= 599) ?? 500;
+  res.status(status).send({ error: error.message });
 }
 
 module.exports = route;

@@ -1,4 +1,5 @@
 const Entity = require('./entity');
+const { PAYMENT_THRESHOLD } = require('../../constants.mjs');
 
 const table = `CREATE TABLE IF NOT EXISTS app_config (
   key TEXT PRIMARY KEY,
@@ -16,6 +17,7 @@ CREATE TRIGGER IF NOT EXISTS app_config_updated_at
 const DEFAULTS = {
   acode_pro_price: '370',
   payment_threshold: '15000',
+  paypal_payouts_enabled: '1',
 };
 
 class AppConfig extends Entity {
@@ -37,6 +39,14 @@ class AppConfig extends Entity {
   async getValue(key) {
     const [row] = await this.get([this.KEY, key], { orderBy: 'updated_at DESC' });
     return row?.value ?? null;
+  }
+
+  async getPaymentThreshold() {
+    return parseInt(await this.getValue('payment_threshold'), 10) || PAYMENT_THRESHOLD;
+  }
+
+  async isPayPalEnabled() {
+    return (await this.getValue('paypal_payouts_enabled')) !== '0';
   }
 
   async setValue(key, value) {

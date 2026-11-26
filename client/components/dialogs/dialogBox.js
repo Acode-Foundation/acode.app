@@ -22,18 +22,22 @@ let nextDialogId = 0;
  * @param {string} [props.body]
  * @param {boolean} [props.keep]
  * @param {string} [props.icon]
+ * @param {string} [props.okLabel]
  * @param {'success'} [props.variant]
  * @param {HTMLElement[]} [children]
  * @returns {DialogBox}
  */
-export default function DialogBox({ title = '', onhide, onok, oncancel, onselect, options, message, body, keep = false, icon, variant }, children) {
+export default function DialogBox(
+  { title = '', onhide, onok, oncancel, onselect, options, message, body, keep = false, icon, okLabel, variant },
+  children,
+) {
   const titleId = `dialog-title-${++nextDialogId}`;
   const buttons = [];
 
   if (onok && typeof onok === 'function') {
     buttons.push(
       <button type='button' onclick={() => onok(hide, $box)}>
-        {variant === 'success' ? 'Done' : 'OK'}
+        {okLabel || (variant === 'success' ? 'Done' : 'OK')}
       </button>,
     );
   }

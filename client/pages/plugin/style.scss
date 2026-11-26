@@ -452,6 +452,10 @@
   }
 
   .order-status {
+    &.pending {
+      color: #f5bd60;
+    }
+
     &.completed {
       color: green;
     }

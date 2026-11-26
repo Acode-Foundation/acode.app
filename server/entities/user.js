@@ -132,6 +132,10 @@ class User extends Entity {
              bank_account_type = NULL,
              wallet_address = NULL,
              wallet_type = NULL,
+             bank_country = NULL,
+             bank_routing_code = NULL,
+             bank_address = NULL,
+             bank_account_holder_address = NULL,
              is_default = 0,
              is_deleted = 1
          WHERE user_id = ?`,

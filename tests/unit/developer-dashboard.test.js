@@ -172,4 +172,33 @@ describe('getDeveloperDashboard', () => {
     expect(result.monthly.at(-2)).toMatchObject({ month: 8, amount: 999, estimated: true });
     expect(result.totals.lifetimeEarnings).toBe(75 + 999);
   });
+
+  it.each(['MISSING_RAZORPAY_INR', 'INVALID_GOOGLE_REPORT'])('preserves dashboard data when an estimate is held (%s)', async (code) => {
+    insertPlugin({ id: 'paid', price: 100, downloads: 42 });
+    db.prepare('INSERT INTO user_earnings (user_id, amount, month, year, payment_id) VALUES (?, ?, ?, ?, ?)').run(1, 75, 7, 2026, 7);
+    const estimateEarnings = vi.fn(async (_year, month) => {
+      if (month === 8) throw Object.assign(new Error('Needs review'), { code });
+      return 20;
+    });
+    const result = await getDeveloperDashboard(user, { executeQuery, now, estimateEarnings });
+    expect(result.totals).toMatchObject({ downloads: 42, plugins: 1, lifetimeEarnings: null });
+    expect(result.plugins[0].id).toBe('paid');
+    expect(result.daily).toHaveLength(DAILY_RANGE);
+    expect(result.monthly.at(-3)).toMatchObject({ amount: 75, paid: true, reviewRequired: false });
+    expect(result.monthly.at(-2)).toMatchObject({ amount: null, estimated: false, reviewRequired: true });
+    expect(result.monthly.at(-1)).toMatchObject({ amount: 20, estimated: true, reviewRequired: false });
+  });
+
+  it('does not suppress unexpected estimation failures', async () => {
+    const error = new Error('Database unavailable');
+    await expect(
+      getDeveloperDashboard(user, {
+        executeQuery,
+        now,
+        estimateEarnings: async () => {
+          throw error;
+        },
+      }),
+    ).rejects.toBe(error);
+  });
 });

@@ -5,7 +5,7 @@ import { transformAsync } from '@babel/core';
 import Handlebars from 'handlebars';
 import { JSDOM } from 'jsdom';
 import { safeAccountRedirect } from '../../client/lib/appSource';
-import { isAccountRoute, isAdFreeRoute } from '../../shared/adPolicy';
+import { isAccountRoute, isAdFreeRoute, isPromotionFreeRoute } from '../../shared/adPolicy';
 import landingPages from '../../shared/landingPages.json';
 
 const root = path.resolve(import.meta.dirname, '../..');
@@ -181,7 +181,7 @@ describe('page startup', () => {
     const { default: router } = await loadClient(
       'client/lib/Router.js',
       {
-        '../../shared/adPolicy': { isAdFreeRoute, isAccountRoute },
+        '../../shared/adPolicy': { isAdFreeRoute, isAccountRoute, isPromotionFreeRoute },
         '../../shared/landingPages.json': landingPages,
         './appSource': {},
       },
@@ -438,7 +438,19 @@ it('still renders registration when the session lookup fails', async () => {
 });
 
 describe('ad-free routes and account flows', () => {
-  const accountPaths = ['/login', '/register', '/change-password', '/api-keys', '/logout', '/profile/edit', '/user/edit', '/oauth/google'];
+  const accountPaths = [
+    '/login',
+    '/register',
+    '/change-password',
+    '/api-keys',
+    '/logout',
+    '/profile/edit',
+    '/user/edit',
+    '/oauth/google',
+    '/add-payment-method',
+    '/add-payment-method/paypal',
+  ];
+  const sponsorPaths = ['/sponsors', '/sponsors/', '/SPONSORS'];
   const adminPaths = ['/admin', '/admin/', '/ADMIN', '/admin/promotions'];
   const companyPaths = ['/policy', '/terms', '/refund', '/about', '/contact'];
   const faqPaths = ['/faqs', '/faqs/', '/FAQS', '/faqs/question-id'];
@@ -451,6 +463,7 @@ describe('ad-free routes and account flows', () => {
       ...adminPaths,
       ...companyVariants,
       ...faqPaths,
+      ...sponsorPaths,
       '/LOGIN',
       '/register/',
       '/',
@@ -471,6 +484,9 @@ describe('ad-free routes and account flows', () => {
       '/about-guide',
       '/policy/example',
       '/faqs-guide',
+      '/become-sponsor',
+      '/sponsors-guide',
+      '/add-payment-method-guide',
     ]) {
       expect(isAdFreeRoute(pathname)).toBe(false);
       expect(render({ adsDisabled: isAdFreeRoute(pathname) })).toContain('data-ads-disabled="false"');
@@ -486,14 +502,14 @@ describe('ad-free routes and account flows', () => {
     for (const link of homeLinks) expect(link).toContain('data-google-vignette="false"');
   });
 
-  it('does not create promotional banners or their rotation timers on account pages', async () => {
+  it('does not create promotional banners or their rotation timers on account and sponsor pages', async () => {
     const setProperty = vi.fn();
     const tag = vi.fn();
     const setInterval = vi.fn();
-    for (const pathname of accountPaths) {
+    for (const pathname of [...accountPaths, ...sponsorPaths]) {
       const banner = await loadClient(
         'client/components/announcementBanner/index.js',
-        { './style.scss': {}, 'res/shellular-logo.png': '', '../../../shared/adPolicy': { isAccountRoute } },
+        { './style.scss': {}, 'res/shellular-logo.png': '', '../../../shared/adPolicy': { isPromotionFreeRoute } },
         { location: { pathname }, document: { documentElement: { style: { setProperty } } }, tag, setInterval },
       );
       expect(banner.default()).toBeNull();
@@ -502,6 +518,8 @@ describe('ad-free routes and account flows', () => {
     expect(tag).not.toHaveBeenCalled();
     expect(setInterval).not.toHaveBeenCalled();
     expect(isAccountRoute('/')).toBe(false);
+    expect(isAccountRoute('/sponsors')).toBe(false); // Sponsors stay indexable and keep the upgrade button.
+    expect(isPromotionFreeRoute('/plugins')).toBe(false);
   });
 
   it.each([
@@ -513,6 +531,9 @@ describe('ad-free routes and account flows', () => {
     ['/admin', '/index.html', '/plugins'],
     ['/', '/index.html', '/login?redirect=app&state=StateValue'],
     ['/login', '/register?redirect=app&state=StateValue', '/'],
+    ['/plugins', '/plugin/example', '/sponsors'],
+    ['/', '/index.html', '/sponsors'],
+    ['/plugins', '/plugin/example', '/add-payment-method/paypal'],
     ...[...companyPaths, ...faqPaths].flatMap((pathname) => [
       ['/plugins', '/plugin/example', pathname],
       [pathname, '/index.html', '/plugins'],
@@ -530,7 +551,7 @@ describe('ad-free routes and account flows', () => {
         'client/lib/Router.js',
         {
           './appSource': { withAppSource: (href) => href },
-          '../../shared/adPolicy': { isAccountRoute, isAdFreeRoute },
+          '../../shared/adPolicy': { isAccountRoute, isAdFreeRoute, isPromotionFreeRoute },
           '../../shared/landingPages.json': landingPages,
         },
         { location, window: { location, history }, document: { title: 'Acode' }, CustomEvent, URL },
@@ -582,7 +603,7 @@ describe('ad-free routes and account flows', () => {
         'client/lib/Router.js',
         {
           './appSource': { withAppSource: (href) => href },
-          '../../shared/adPolicy': { isAccountRoute, isAdFreeRoute },
+          '../../shared/adPolicy': { isAccountRoute, isAdFreeRoute, isPromotionFreeRoute },
           '../../shared/landingPages.json': landingPages,
         },
         { location, window: { location, history }, document: { title: 'Acode' }, CustomEvent, URL },

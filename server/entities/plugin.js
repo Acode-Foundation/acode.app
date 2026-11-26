@@ -183,7 +183,7 @@ class Plugin extends Entity {
     from (
       select * from user where id in (select user_id from ${this.table} group by user_id)
     ) u
-    left join payment_method p on u.id = p.user_id and p.is_default = true`;
+    left join payment_method p on u.id = p.user_id and p.is_default = true and p.is_deleted = 0`;
 
     return Entity.execSql(sql, [], this);
   }

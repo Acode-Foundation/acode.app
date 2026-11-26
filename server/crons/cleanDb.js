@@ -6,9 +6,12 @@ const ApiKey = require('../entities/apiKey');
 const Download = require('../entities/download');
 const RazorpayOrder = require('../entities/razorpayOrder');
 const Order = require('../entities/purchaseOrder');
+const { createNotifier } = require('../lib/cronNotifier');
 const { DOWNLOAD_RETENTION_DAYS } = require('../lib/developerDashboard');
+const downloadHistory = require('../lib/downloadHistory');
 
 const FORMAT = 'YYYY-MM-DD HH:mm:ss.sss';
+const downloadNotifier = createNotifier('Download cleanup');
 
 // Dates are computed per run: this module is loaded once by the long-running cron process.
 async function cleanOtp() {
@@ -29,9 +32,17 @@ async function cleanApiKeys() {
 }
 
 async function cleanDownload() {
-  const cutoff = moment().startOf('day').subtract(DOWNLOAD_RETENTION_DAYS, 'days').format(FORMAT);
-  await Download.delete([Download.CREATED_AT, cutoff, '<']);
-  console.log('Deleted old downloads');
+  // Without a time: a download of exactly midnight sorts before '00:00:00.00' and would be deleted a day early.
+  const cutoff = moment().startOf('day').subtract(DOWNLOAD_RETENTION_DAYS, 'days').format('YYYY-MM-DD');
+  try {
+    // Nothing is deleted if this fails, because held earnings would be lost. The next run tries again.
+    await downloadHistory.keepHeldMonths(cutoff);
+    await Download.delete([Download.CREATED_AT, cutoff, '<']);
+    downloadNotifier.success();
+    console.log('Deleted old downloads');
+  } catch (error) {
+    downloadNotifier.failure(error);
+  }
 }
 
 async function cleanRazorpayOrders() {

@@ -70,7 +70,7 @@ All routes defined in client/main.js using custom Router from client/lib/Router.
 - `/payments` → payment history
 - `/admin` → admin dashboard
 - `/admin/sponsors` → sponsor management
-- `/add-payment-method/:mode` → add payment method
+- `/add-payment-method/:mode?` → add payment method
 - `/faqs/:qHash?` → FAQs
 - `/policy` → privacy policy
 - `/terms` → terms of service

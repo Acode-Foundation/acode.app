@@ -1,10 +1,11 @@
-import { isAccountRoute, isAdFreeRoute } from '../../shared/adPolicy';
+import { isAccountRoute, isAdFreeRoute, isPromotionFreeRoute } from '../../shared/adPolicy';
 import landingPages from '../../shared/landingPages.json';
 import { withAppSource } from './appSource';
 
 class Router {
   #adFreeDocument = isAdFreeRoute(location.pathname);
   #accountDocument = isAccountRoute(location.pathname);
+  #promotionFreeDocument = isPromotionFreeRoute(location.pathname);
   #thisSite = new RegExp(`(^https?://(www.)?${location.hostname}(/.*)?)|(^/)`);
   #customEvent = new CustomEvent('locationchange');
   #routes = {};
@@ -50,8 +51,7 @@ class Router {
   navigate(url) {
     const { location } = window;
     url = (typeof url === 'string' ? url : location.pathname).split(/[?#]/, 1)[0];
-    // Reload when the ad SDK or account-page header policy changes.
-    if (isAdFreeRoute(url) !== this.#adFreeDocument || isAccountRoute(url) !== this.#accountDocument) {
+    if (this.#policyChanged(url)) {
       location.reload();
       return;
     }
@@ -289,7 +289,20 @@ class Router {
     path = withAppSource(path);
     const { history } = window;
     history.pushState(history.state, document.title, path);
-    if (isAdFreeRoute(location.pathname) !== this.#adFreeDocument || isAccountRoute(location.pathname) !== this.#accountDocument) location.reload();
+    if (this.#policyChanged(location.pathname)) location.reload();
+  }
+
+  /**
+   * The ad SDK, promotional banner and account-page header are decided once per document,
+   * so moving to a page with a different policy needs a reload.
+   * @param {string} pathname
+   */
+  #policyChanged(pathname) {
+    return (
+      isAdFreeRoute(pathname) !== this.#adFreeDocument ||
+      isAccountRoute(pathname) !== this.#accountDocument ||
+      isPromotionFreeRoute(pathname) !== this.#promotionFreeDocument
+    );
   }
 }
 

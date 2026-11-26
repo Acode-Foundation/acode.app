@@ -143,6 +143,20 @@ it('reopens settings from the footer and restores focus on Escape without changi
   expect(ui.controller.getChoice().advertising).toBe(false);
 });
 
+it('shows only Cancel and Save while editing, then restores the initial actions without saving', () => {
+  const ui = mount();
+  ui.click('settings');
+  for (const action of ['reject', 'settings', 'accept']) expect(ui.nodes.get(`[data-choice="${action}"]`).hidden).toBe(true);
+  for (const action of ['cancel', 'save']) expect(ui.nodes.get(`[data-choice="${action}"]`).hidden).toBe(false);
+  ui.nodes.get('[name="analytics"]').checked = true;
+  ui.click('cancel');
+  for (const action of ['reject', 'settings', 'accept']) expect(ui.nodes.get(`[data-choice="${action}"]`).hidden).toBe(false);
+  for (const action of ['cancel', 'save']) expect(ui.nodes.get(`[data-choice="${action}"]`).hidden).toBe(true);
+  expect(ui.panel.hidden).toBe(false);
+  expect(ui.controller.getChoice()).toBeNull();
+  expect(ui.document.head.append).not.toHaveBeenCalled();
+});
+
 it('exposes Google privacy settings only when its API is ready', () => {
   const ui = mount();
   ui.win.googlefc.showRevocationMessage = vi.fn();
@@ -166,7 +180,9 @@ it.each(['cancel', 'Escape'])('allows %s after a persistence failure while keepi
   ui.storage.removeItem = () => {
     throw Error('blocked');
   };
-  ui.click('reject');
+  ui.nodes.get('[name="analytics"]').checked = false;
+  ui.nodes.get('[name="advertising"]').checked = false;
+  ui.click('save');
   const status = ui.nodes.get('[data-consent-status]');
   expect(status.hidden).toBe(false);
   expect(status.textContent).toContain('could not save');

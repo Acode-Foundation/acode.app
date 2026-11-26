@@ -1,9 +1,10 @@
 import './style.scss';
-import Chart from 'chart.js/auto';
+import Promotions from './promotions';
 import alert from 'components/dialogs/alert';
 import confirm from 'components/dialogs/confirm';
 import DialogBox from 'components/dialogs/dialogBox';
 import select from 'components/dialogs/select';
+import Chart from 'chart.js/auto';
 import Input from 'components/input';
 import { RecommendationBadge, ReviewActions, ScanDetails } from 'components/pluginSecurity';
 import createRefreshButton from 'components/refreshButton';
@@ -16,7 +17,8 @@ import { downloadFile, getLoggedInUser } from 'lib/helpers';
 import Router from 'lib/Router';
 import { since } from 'lib/relativeTime';
 import moment from 'moment';
-import Promotions from './promotions';
+import { getPaymentMethodType, PAYMENT_METHOD_LABELS } from '../../../shared/paymentMethods';
+import EarningsHolds from './earningsHolds';
 import Verification from './verification';
 
 export default async function Admin({ queries = {} }) {
@@ -84,6 +86,13 @@ export default async function Admin({ queries = {} }) {
             description: 'Review developer payouts and update payment statuses.',
             label: 'Payments',
             content: <Payments />,
+          },
+          {
+            id: 'holds',
+            icon: 'warning',
+            description: 'Developers whose payouts are on hold until their earnings are reviewed.',
+            label: 'Earnings holds',
+            content: <EarningsHolds signal={lifecycle.signal} />,
           },
           {
             id: 'promotions',
@@ -1033,6 +1042,8 @@ function AppSettings() {
   const thresholdRef = Ref();
   const priceStatusRef = Ref();
   const thresholdStatusRef = Ref();
+  const paypalRef = Ref();
+  const paypalStatusRef = Ref();
 
   (async () => {
     try {
@@ -1044,10 +1055,15 @@ function AppSettings() {
       if (thresholdRef.el) {
         thresholdRef.el.value = config.payment_threshold;
       }
+      if (paypalRef.el && config.paypal_payouts_enabled !== undefined) {
+        paypalRef.el.checked = config.paypal_payouts_enabled === '1';
+        paypalRef.el.disabled = false;
+      }
     } catch {
       const msg = 'Failed to load config';
       if (priceStatusRef.el) priceStatusRef.el.textContent = msg;
       if (thresholdStatusRef.el) thresholdStatusRef.el.textContent = msg;
+      if (paypalStatusRef.el) paypalStatusRef.el.textContent = msg;
     }
   })();
 
@@ -1096,6 +1112,33 @@ function AppSettings() {
     }
   };
 
+  const onPayPalToggle = async () => {
+    const { el } = paypalRef;
+    const value = el.checked;
+    el.disabled = true;
+    paypalStatusRef.el.textContent = 'Saving...';
+
+    try {
+      const res = await fetch('/api/admin/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'paypal_payouts_enabled', value }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      paypalStatusRef.el.textContent = value ? 'PayPal is on' : 'PayPal is off';
+      setTimeout(() => {
+        paypalStatusRef.el.textContent = '';
+      }, 2000);
+    } catch (error) {
+      el.checked = !value;
+      paypalStatusRef.el.textContent = '';
+      alert('ERROR', error.message || 'Failed to save config');
+    } finally {
+      el.disabled = false;
+    }
+  };
+
   return (
     <div className='app-settings'>
       <div className='setting-row'>
@@ -1117,6 +1160,16 @@ function AppSettings() {
           </button>
           <span ref={thresholdStatusRef} className='status' role='status' />
         </div>
+      </div>
+      <div className='setting-row'>
+        <label className='setting-toggle'>
+          <span>
+            PayPal payouts
+            <small>When off, developers cannot add PayPal, and payouts to PayPal defaults are held until they choose another method.</small>
+          </span>
+          <input ref={paypalRef} type='checkbox' disabled={true} onchange={onPayPalToggle} />
+        </label>
+        <span ref={paypalStatusRef} className='status' role='status' />
       </div>
     </div>
   );
@@ -1552,6 +1605,10 @@ function Payments() {
 
       paymentMethod.el.content = (
         <>
+          <tr>
+            <th>Method</th>
+            <td>{PAYMENT_METHOD_LABELS[getPaymentMethodType(data)]}</td>
+          </tr>
           {data.bank_account_number && (
             <tr>
               <th>Account</th>
@@ -1563,10 +1620,20 @@ function Payments() {
                 <span>
                   {data.bank_account_type} ({data.bank_account_holder})
                 </span>
-                <br />
-                <span>IFSC: {data.bank_ifsc_code}</span>
-                <br />
-                <span>SWIFT: {data.bank_swift_code}</span>
+                {[
+                  ['IFSC', data.bank_ifsc_code],
+                  ['SWIFT', data.bank_swift_code],
+                  ['Routing', data.bank_routing_code],
+                  ['Bank country', data.bank_country],
+                  ['Bank address', data.bank_address],
+                  ['Holder address', data.bank_account_holder_address],
+                ]
+                  .filter(([, value]) => value)
+                  .map(([label, value]) => (
+                    <div>
+                      {label}: {value}
+                    </div>
+                  ))}
               </td>
             </tr>
           )}

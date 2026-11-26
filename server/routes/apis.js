@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const { exec } = require('node:child_process');
 const db = require('../lib/db');
+const AppConfig = require('../entities/appConfig');
 
 const apis = Router();
 
@@ -22,6 +23,15 @@ apis.use('/team', require('../apis/team'));
 
 apis.get('/status', (_req, res) => {
   res.json({ status: 'ok' });
+});
+
+apis.get('/payment-threshold', async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    res.json({ threshold: await AppConfig.getPaymentThreshold() });
+  } catch {
+    res.status(503).json({ error: 'Payment threshold temporarily unavailable.' });
+  }
 });
 
 apis.get('/server-time', (_req, res) => {
