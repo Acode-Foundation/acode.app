@@ -66,6 +66,7 @@ beforeAll(async () => {
     require(name) {
       if (name === 'express') return express;
       if (name === 'node:child_process' || name === '../lib/db') return {};
+      if (name === '../entities/appConfig') return {};
       if (name === '../apis/pluginStats') return module.exports;
       if (name === '../apis/plugin') return pluginApi;
       if (name.startsWith('../apis/')) return express.Router();
