@@ -76,7 +76,8 @@ async function updateOrder(startDate, endDate, google) {
       if (Number(state) === PurchaseOrder.STATE_PENDING && Number(purchaseState) === PurchaseOrder.STATE_PURCHASED) {
         // Resolve the amount first so a hold is only placed for an order that can complete.
         const completion = googlePurchaseCompletion(order, plugin.price);
-        const held = await checkGooglePurchaseAccounting(order);
+        // Google's order ID is saved with this update; give the hold the ID the completed purchase will have.
+        const held = await checkGooglePurchaseAccounting({ ...order, order_id: orderId || purchaseOrderId || null });
         if (held) heldEarnings.push(`order ${rowId} (user ${held.userId}, ${held.year}-${String(held.month + 1).padStart(2, '0')})`);
         updates.push(...Object.entries(completion));
       }

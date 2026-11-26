@@ -1,5 +1,6 @@
 const Entity = require('../entities/entity');
 const Payment = require('../entities/payment');
+const Plugin = require('../entities/plugin');
 const User = require('../entities/user');
 const UserEarnings = require('../entities/userEarnings');
 const downloadHistory = require('./downloadHistory');
@@ -30,12 +31,21 @@ module.exports = async function earningsHoldDetails(holds) {
     [ids],
     UserEarnings,
   );
+  const pluginIds = [...new Set(holds.flatMap((hold) => (hold.orders || []).map((order) => order.pluginId)).filter((id) => id != null))];
+  const plugins = pluginIds.length
+    ? await Entity.execSql('SELECT id, name FROM plugin WHERE id IN (SELECT value FROM json_each(?))', [JSON.stringify(pluginIds)], Plugin)
+    : [];
+  const pluginNames = new Map(plugins.map((row) => [String(row.id), row.name]));
 
   return holds.map((hold) => {
     const user = users.find((row) => row.id === hold.userId);
     const rows = earnings.filter((row) => row.user_id === hold.userId);
     return {
       ...hold,
+      orders: (hold.orders || []).map((order) => ({
+        ...order,
+        pluginName: pluginNames.get(String(order.pluginId)) ?? null,
+      })),
       user: user ? { name: user.name, email: user.email } : null,
       // Empty when the month was never saved. Databases from before migration 020 may have saved it more than once.
       saved: rows

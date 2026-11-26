@@ -206,10 +206,31 @@ it.each([null, 42])(
     expect(db.prepare('SELECT state FROM purchase_order WHERE id = 2').get().state).toBe(0);
     expect(db.prepare('SELECT amount, payment_id FROM user_earnings').get()).toEqual({ amount: 500, payment_id: paymentId });
     await expect(reviews.list(7)).resolves.toEqual([{ year: 2026, month: 9, code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED' }]);
+    // The admin can find the order and its original date, which completion overwrote.
+    const original = db.prepare('SELECT order_id, plugin_id FROM purchase_order WHERE id = 1').get();
+    expect((await reviews.listAll()).holds[0].orders).toEqual([
+      {
+        id: 1,
+        orderId: original.order_id ?? null,
+        pluginId: original.plugin_id,
+        createdAt: expect.stringMatching(/^2026-10-/),
+        code: 'GOOGLE_PURCHASE_REVIEW_REQUIRED',
+      },
+    ]);
     // The completed order is not reported again.
     await expect(sync()).resolves.toBeUndefined();
   },
 );
+
+it('records the provider order ID that completion saves on the hold', async () => {
+  db.prepare('UPDATE purchase_order SET order_id = NULL').run();
+  db.prepare('INSERT INTO user_earnings (user_id, amount, month, year, payment_id) VALUES (7, 500, 9, 2026, NULL)').run();
+  await expect(sync()).rejects.toThrow('Google purchase accounting held for review');
+  expect(savedOrder()).toMatchObject({ order_id: 'GPA.test', state: 0 });
+  expect((await reviews.listAll()).holds[0].orders).toEqual([
+    expect.objectContaining({ id: 1, orderId: 'GPA.test', createdAt: '2026-10-31 12:00:00' }),
+  ]);
+});
 
 it('does not hold a month first calculated after pending orders were excluded', async () => {
   await reviews.markPendingExcluded('2026-11-16 00:00:00');

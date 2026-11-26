@@ -98,6 +98,37 @@ it('shows who is held, why, and what clearing would release', async () => {
   expect(root.querySelector('.hold-warning')).toBeNull();
 });
 
+it('shows the orders that raised a Google purchase review, or where to find them', async () => {
+  listing = {
+    holds: [
+      {
+        ...hold,
+        orders: [
+          {
+            id: 41,
+            orderId: 'GPA.1234-5678',
+            pluginId: 'example.plugin',
+            pluginName: 'Example Plugin',
+            createdAt: '2025-08-14 10:32:05',
+            code: hold.codes[0],
+          },
+        ],
+      },
+      { ...hold, userId: 8 },
+      { ...hold, userId: 9, orders: [{ id: 42, orderId: null, pluginId: 'deleted.plugin', pluginName: null, createdAt: null, code: hold.codes[0] }] },
+    ],
+    invalidMarkers: [],
+  };
+  const root = await mount();
+  const [recorded, legacy, deleted] = root.querySelectorAll('.hold');
+  const parts = [...recorded.querySelectorAll('.hold-orders li > *')].map((node) => node.textContent.trim());
+  expect(parts).toEqual(['Order #41', 'GPA.1234-5678', 'Example Plugin', 'Placed 2025-08-14 10:32 UTC']);
+  expect(legacy.querySelector('.hold-orders')).toBeNull();
+  const deletedParts = [...deleted.querySelectorAll('.hold-orders li > *')].map((node) => node.textContent.trim());
+  expect(deletedParts).toEqual(['Order #42', 'deleted.plugin', 'Original date unknown']);
+  expect(legacy.querySelector('.hold-orders-missing').textContent).toContain('requires earnings review for user 8');
+});
+
 it('clears exactly the reviewed snapshot and zero-based month after confirmation, then reloads', async () => {
   const root = await mount();
   listing = { holds: [], invalidMarkers: [] };
@@ -257,6 +288,8 @@ it('adds the developer, saved earnings and payout to each hold without touching 
   db.exec(`
     CREATE TABLE user (id INTEGER PRIMARY KEY, name TEXT, email TEXT);
     CREATE TABLE payment (id INTEGER PRIMARY KEY, status INTEGER);
+    CREATE TABLE plugin (id TEXT, name TEXT);
+    INSERT INTO plugin VALUES ('example.plugin', 'Example Plugin'), ('other.plugin', 'Other Plugin');
     CREATE TABLE user_earnings (id INTEGER PRIMARY KEY, user_id INTEGER, year INTEGER, month INTEGER, amount REAL, payment_id INTEGER);
     INSERT INTO user VALUES (7, 'Example Developer', 'dev@example.com');
     INSERT INTO payment VALUES (55, 1);
@@ -290,6 +323,7 @@ it('adds the developer, saved earnings and payout to each hold without touching 
   await expect(details([base({ userId: 10 })])).rejects.toThrow('Database unavailable');
   expect(paid).toEqual({
     ...base(),
+    orders: [],
     user: { name: 'Example Developer', email: 'dev@example.com' },
     saved: [{ amount: 100.5, payout: { id: 55, status: 'paid' } }],
     hasDownloads: false,
@@ -307,6 +341,9 @@ it('adds the developer, saved earnings and payout to each hold without touching 
     { amount: 50, payout: { id: 404, status: 'unknown' } },
     unpaidRow(60),
   ]);
+  const order = (id, pluginId) => ({ id, orderId: `GPA.${id}`, pluginId, createdAt: '2025-08-14 10:32:05', code: 'A' });
+  const [withOrders] = await details([base({ orders: [order(1, 'example.plugin'), order(2, 'missing.plugin'), order(3, null)] })]);
+  expect(withOrders.orders.map(({ pluginName }) => pluginName)).toEqual(['Example Plugin', null, null]);
   expect(await details([])).toHaveLength(0);
   db.close();
 });

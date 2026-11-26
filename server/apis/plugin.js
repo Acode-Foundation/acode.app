@@ -91,7 +91,8 @@ async function saveGooglePurchase(columns, purchase, pluginId, existing) {
     // Resolve the amount first so a hold is only placed for an order that can complete.
     const completion = googlePurchaseCompletion(existing, amountColumn?.[1]);
     // An ambiguous legacy month holds the developer's earnings, not the buyer's purchase.
-    await checkGooglePurchaseAccounting(existing);
+    // Google's order ID is saved below; give the hold the ID the completed purchase will have.
+    await checkGooglePurchaseAccounting({ ...existing, order_id: existing.order_id || orderId || null });
     updates.push([Order.STATE, Order.STATE_PURCHASED], ...Object.entries(completion));
     if (orderId && !existing.order_id) updates.push([Order.ORDER_ID, orderId]);
   }
