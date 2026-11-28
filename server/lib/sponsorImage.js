@@ -1,6 +1,6 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
-const { mkdir, writeFile } = require('node:fs/promises');
+const { mkdir, writeFile, rm } = require('node:fs/promises');
 const path = require('node:path');
 const sharp = require('sharp');
 const { fileInDir } = require('./pluginScanner');
@@ -102,6 +102,10 @@ async function saveSponsorImage(dataUrl, dir = SPONSOR_IMAGES_DIR) {
   return filename;
 }
 
+async function removeSponsorImage(filename, dir = SPONSOR_IMAGES_DIR) {
+  await rm(fileInDir(dir, filename), { force: true });
+}
+
 /**
  * @param {string} dataUrl
  * @returns {Promise<{ buffer: Buffer, extension: string } | null>}
@@ -128,4 +132,4 @@ async function decodeSponsorImage(dataUrl) {
   }
 }
 
-module.exports = { SPONSOR_IMAGES_DIR, decodeSponsorImage, saveSponsorImage, sendSponsorImage, sponsorImageType };
+module.exports = { SPONSOR_IMAGES_DIR, decodeSponsorImage, saveSponsorImage, removeSponsorImage, sendSponsorImage, sponsorImageType };

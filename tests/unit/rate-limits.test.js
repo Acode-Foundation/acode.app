@@ -23,6 +23,7 @@ it.each([
   ['OAuth callback', module.exports.createOAuthCallbackLimiter((_req, res) => res.status(429).send({ error: 'Rate limited' })), 120],
   ['plugin stats', module.exports.pluginStatsLimiter, 600],
   ['OG images', module.exports.ogImageLimiter, 600],
+  ['sponsor registration', module.exports.sponsorRegisterLimiter, 20],
 ])('limits %s requests without session lookups or header-based bypasses', async (_label, limiter, limit) => {
   const downstream = vi.fn();
   const send = async (ip, headers = {}, method = 'GET', extension = 'svg') => {

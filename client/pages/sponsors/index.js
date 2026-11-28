@@ -1,6 +1,7 @@
 import './style.scss';
 import { fetchSponsorMix } from 'lib/sponsors';
 import getSponsorTiers, { TIER_ORDER } from 'lib/sponsorTiers';
+import { safeSponsorWebsite } from '../../../shared/sponsorWebsite';
 
 export default async function Sponsors() {
   const sponsors = await fetchSponsors();
@@ -64,6 +65,7 @@ function renderSponsorCard(sponsor) {
 
   const hasImage = ['gold', 'platinum', 'titanium'].includes(tier);
   const hasWebsite = ['silver', 'gold', 'platinum', 'titanium'].includes(tier);
+  const websiteUrl = safeSponsorWebsite(website);
 
   return (
     <div key={id} className={`sponsor-card sponsor-card-${tier}${expired ? ' sponsor-card-expired' : ''}`}>
@@ -74,16 +76,16 @@ function renderSponsorCard(sponsor) {
         </div>
       )}
       <div className='sponsor-info'>
-        {hasWebsite && website ? (
-          <a href={website} target='_blank' rel='noopener' className='sponsor-name sponsor-name-link'>
+        {hasWebsite && websiteUrl ? (
+          <a href={websiteUrl} target='_blank' rel='noopener' className='sponsor-name sponsor-name-link'>
             {name}
           </a>
         ) : (
           <span className='sponsor-name'>{name}</span>
         )}
         {tagline && ['platinum', 'titanium'].includes(tier) && <p className='sponsor-tagline'>{tagline}</p>}
-        {hasWebsite && website && (
-          <a href={ensureAbsoluteUrl(website)} target='_blank' rel='noopener' className='sponsor-website'>
+        {hasWebsite && websiteUrl && (
+          <a href={websiteUrl} target='_blank' rel='noopener' className='sponsor-website'>
             <span className='icon link' /> {website.replace(/^https?:\/\//, '')}
           </a>
         )}
@@ -94,10 +96,4 @@ function renderSponsorCard(sponsor) {
 
 async function fetchSponsors() {
   return fetchSponsorMix({ expiredLimit: 12 });
-}
-
-function ensureAbsoluteUrl(url) {
-  if (!url) return '';
-  if (/^https?:\/\//.test(url)) return url;
-  return `http://${url}`;
 }

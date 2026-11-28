@@ -1,4 +1,5 @@
 const Entity = require('./entity');
+const { purchaseExpiry } = require('../lib/sponsorPurchase');
 
 const table = `create table if not exists sponsor (
   id integer primary key,
@@ -15,6 +16,7 @@ const table = `create table if not exists sponsor (
   tier text,
   public integer default 0,
   status integer default 2,
+  reason text,
   created_at timestamp default current_timestamp,
   expires_at timestamp,
   foreign key (user_id) references user(id) on delete set null
@@ -29,6 +31,7 @@ class Sponsor extends Entity {
   IMAGE = 'image';
   AMOUNT = 'amount';
   STATUS = 'status';
+  REASON = 'reason';
   PUBLIC = 'public';
   USER_ID = 'user_id';
   WEBSITE = 'website';
@@ -65,6 +68,38 @@ class Sponsor extends Entity {
     super(table);
   }
 
+  insertPurchase(...columns) {
+    const values = Object.fromEntries(columns);
+    const fields = columns.map(([field]) => field).join(', ');
+    const placeholders = columns.map(() => '?').join(', ');
+    // A single statement prevents concurrent retries from granting the same order twice.
+    return Entity.execSql(
+      `INSERT INTO sponsor (${fields}) SELECT ${placeholders} WHERE NOT EXISTS
+       (SELECT 1 FROM sponsor WHERE package_name = ? AND order_id = ?) RETURNING id`,
+      [...columns.map(([, value]) => value), values.package_name, values.order_id],
+      this,
+    );
+  }
+
+  refreshPurchase(id, { purchaseState, orderId, purchaseTimeMillis, reason = null }) {
+    // The verified payment activates legacy pending rows. COALESCE preserves an
+    // existing term even when a retry/cron read raced with another activation.
+    return Entity.execSql(
+      `UPDATE sponsor SET status = ?, reason = ?, order_id = COALESCE(?, order_id),
+       expires_at = CASE WHEN ? = ? THEN COALESCE(expires_at, ?) ELSE expires_at END WHERE id = ?`,
+      [
+        purchaseState,
+        reason,
+        orderId ?? null,
+        purchaseState,
+        this.STATE_PURCHASED,
+        purchaseState === this.STATE_PURCHASED ? purchaseExpiry(Number(purchaseTimeMillis)) : null,
+        id,
+      ],
+      this,
+    );
+  }
+
   get columns() {
     return [
       this.ID,
@@ -75,6 +110,7 @@ class Sponsor extends Entity {
       this.IMAGE,
       this.AMOUNT,
       this.STATUS,
+      this.REASON,
       this.PUBLIC,
       this.TAGLINE,
       this.WEBSITE,

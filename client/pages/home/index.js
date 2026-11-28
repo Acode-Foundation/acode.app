@@ -12,6 +12,7 @@ import posterSmall from 'res/optimized/acode-poster-480.webp';
 import posterMedium from 'res/optimized/acode-poster-800.webp';
 import demoPoster from 'res/optimized/acode-poster-1024.webp';
 import { APP_STORE_URL, PLAY_STORE_CAMPAIGN_URL, TESTFLIGHT_URL } from '../../../shared/appLinks';
+import { safeSponsorWebsite } from '../../../shared/sponsorWebsite';
 import { setupContributorRow } from './contributorRow';
 import FeatureSections from './featureSections';
 import { setupHeroVideo } from './heroVideo';
@@ -423,12 +424,6 @@ function avatarUrl(url) {
   return `${url}${url.includes('?') ? '&' : '?'}s=80`;
 }
 
-function ensureAbsoluteUrl(url) {
-  if (!url) return '';
-  if (/^https?:\/\//.test(url)) return url;
-  return `https://${url}`;
-}
-
 function renderSponsorCard(sponsor) {
   const { id, name, tier, tagline, website, image, expired } = sponsor;
   const initials = name
@@ -440,12 +435,13 @@ function renderSponsorCard(sponsor) {
 
   const hasImage = ['gold', 'platinum', 'titanium'].includes(tier);
   const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
-  const Tag = website ? 'a' : 'div';
+  const websiteUrl = safeSponsorWebsite(website);
+  const Tag = websiteUrl ? 'a' : 'div';
 
   return (
     <Tag
       key={id}
-      {...(website ? { href: ensureAbsoluteUrl(website), target: '_blank', rel: 'noopener' } : {})}
+      {...(websiteUrl ? { href: websiteUrl, target: '_blank', rel: 'noopener' } : {})}
       className={`sponsor-card sponsor-card-${tier}${expired ? ' sponsor-card-expired' : ''}`}
       title={`${tierLabel}${expired ? ' · Previous sponsor' : ''}`}
     >

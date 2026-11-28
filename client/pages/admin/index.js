@@ -167,6 +167,7 @@ function Sponsors({ signal }) {
               <th>Tier</th>
               <th>Email</th>
               <th>Status</th>
+              <th>Reason</th>
               <th>Created</th>
               <th>Delete</th>
             </tr>
@@ -217,11 +218,11 @@ function Sponsors({ signal }) {
       ref.innerHTML = '';
       ref.append(
         ...sponsors.map((s) => {
-          const expired = s.expires_at && new Date(s.expires_at) < new Date();
+          const expired = s.status === 0 && s.expires_at && new Date(s.expires_at) < new Date();
           let statusLabel = 'Pending';
           if (expired) {
             statusLabel = 'Expired';
-          } else if (s.status === 0) {
+          } else if (s.status === 0 && s.expires_at) {
             statusLabel = 'Active';
           } else if (s.status === 1) {
             statusLabel = 'Canceled';
@@ -234,6 +235,7 @@ function Sponsors({ signal }) {
               <td>{s.tier}</td>
               <td>{s.email}</td>
               <td className={statusClass}>{statusLabel}</td>
+              <td>{s.reason === 'APPLE_REFUND_OR_REVOCATION' ? 'Refunded or revoked by Apple' : s.reason || '—'}</td>
               <td>{moment(s.created_at).format('DD-MM-YY')}</td>
               <td style={{ textAlign: 'center' }}>
                 <span data-action='delete' data-sponsor-id={s.id} className='icon delete' />
@@ -248,7 +250,7 @@ function Sponsors({ signal }) {
       ref.el.querySelector('[data-load-error]')?.remove();
       ref.append(
         <tr data-load-error>
-          <td colSpan='7' role='alert'>
+          <td colSpan='8' role='alert'>
             Failed to load sponsors. Use the refresh button to retry.
           </td>
         </tr>,

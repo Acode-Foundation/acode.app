@@ -3,8 +3,15 @@ const Sponsor = require('../entities/sponsor');
 const { google } = require('googleapis');
 const { getWebLoggedInUser } = require('../lib/helpers');
 const sendEmail = require('../lib/sendEmail');
-const { saveSponsorImage } = require('../lib/sponsorImage');
+const { saveSponsorImage, removeSponsorImage } = require('../lib/sponsorImage');
+const { sponsorRegisterLimiter } = require('../lib/rateLimits');
+const { VerificationException, VerificationStatus } = require('@apple/app-store-server-library');
 const { getSponsorQueryOptions, getSponsorScope, getSponsorWhereClause } = require('../lib/sponsorScope');
+const { verifyAppleSponsorPurchase } = require('../lib/appleSponsorPurchase');
+const { bundleId, googlePackages, purchaseExpiry } = require('../lib/sponsorPurchase');
+const { logSponsorError } = require('../lib/sponsorError');
+const { TIER_ORDER } = require('../../shared/sponsorTiers');
+const { safeSponsorWebsite } = require('../../shared/sponsorWebsite');
 
 const router = Router();
 const androidpublisher = google.androidpublisher('v3');
@@ -52,78 +59,123 @@ router.get('/{:top}', async (req, res) => {
   res.send(rows);
 });
 
-router.post('/', async (req, res) => {
+router.post('/', sponsorRegisterLimiter, async (req, res) => {
+  const invalidField = validateSponsorRequest(req.body);
+  if (invalidField) return res.status(400).json({ error: `Invalid sponsor ${invalidField}`, field: invalidField });
   const { name, tier, email, image, public: show = 0, website, packageName, purchaseToken, tagline } = req.body;
 
-  if (!name) {
-    return res.status(400).json({
-      error: 'Missing required field: name',
-    });
-  }
-
-  if (!purchaseToken) {
-    return res.status(400).json({
-      error: 'Missing required field: purchaseToken',
-    });
-  }
-
-  if (!packageName) {
-    return res.status(400).json({
-      error: 'Missing required field: packageName',
-    });
-  }
-
+  let phase = 'verification';
+  let filename;
+  let inserted = false;
   try {
-    const [existingRow] = await Sponsor.get([Sponsor.ID], [[Sponsor.TOKEN, purchaseToken]]);
+    const purchase =
+      packageName === bundleId
+        ? await verifyAppleSponsorPurchase(purchaseToken, tier)
+        : (await androidpublisher.purchases.products.get({ packageName, productId: tier, token: purchaseToken })).data;
+
+    if (purchase.purchaseState !== Sponsor.STATE_PURCHASED || !purchase.orderId || (purchase.quantity ?? 1) !== 1) {
+      return res.status(403).json({ error: 'Purchase not valid' });
+    }
+
+    const expiresAt = purchaseExpiry(packageName === bundleId ? purchase.purchaseDate : Number(purchase.purchaseTimeMillis));
+    phase = 'registration';
+    const [existingRow] = await Sponsor.get(
+      [Sponsor.ID, Sponsor.EXPIRES_AT, Sponsor.STATUS],
+      [
+        [Sponsor.PACKAGE_NAME, packageName],
+        [Sponsor.ORDER_ID, purchase.orderId],
+      ],
+    );
 
     if (existingRow) {
-      return res.status(400).json({
-        error: 'Invalid request, token already consumed',
-      });
+      if (packageName === bundleId && existingRow.status === Sponsor.STATE_CANCELED) {
+        return res.status(403).json({ error: 'Purchase not valid' });
+      }
+      if (packageName !== bundleId && existingRow.expires_at == null) {
+        await Sponsor.refreshPurchase(existingRow.id, purchase);
+      }
+      return res.status(200).json({ message: 'Sponsorship already registered' });
     }
-
-    const { data: purchase } = await androidpublisher.purchases.products.get({
-      packageName,
-      productId: tier,
-      token: purchaseToken,
-    });
 
     // The purchase is already paid, so an unusable image only drops the logo.
-    const filename = image ? await saveSponsorImage(image) : null;
+    filename = image ? await saveSponsorImage(image) : null;
     if (image && !filename) {
-      console.warn(`Sponsor "${name}" uploaded an image that is not a supported image; saving without it.`);
+      console.warn('Unsupported sponsor image; saving without a logo.');
     }
 
+    const hideSandbox = purchase.sandbox && process.env.NODE_ENV !== 'development';
     const insertValues = [
-      [Sponsor.NAME, name],
+      [Sponsor.NAME, name.trim()],
       [Sponsor.TIER, tier],
-      [Sponsor.EMAIL, email],
-      [Sponsor.PUBLIC, show ? 1 : 0],
+      [Sponsor.EMAIL, email || ''],
+      [Sponsor.PUBLIC, (show === true || show === 1) && !hideSandbox ? 1 : 0],
       [Sponsor.IMAGE, filename],
-      [Sponsor.WEBSITE, website],
+      [Sponsor.WEBSITE, safeSponsorWebsite(website)],
       [Sponsor.TAGLINE, tagline],
-      [Sponsor.TOKEN, purchaseToken],
+      [Sponsor.TOKEN, packageName === bundleId ? '' : purchaseToken],
       [Sponsor.PACKAGE_NAME, packageName],
       [Sponsor.ORDER_ID, purchase.orderId],
       [Sponsor.STATUS, purchase.purchaseState],
     ];
 
-    if (purchase.purchaseState === Sponsor.STATE_PURCHASED) {
-      insertValues.push([Sponsor.EXPIRES_AT, new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()]);
+    insertValues.push([Sponsor.EXPIRES_AT, expiresAt]);
+
+    const rows = await Sponsor.insertPurchase(...insertValues);
+    inserted = rows.length > 0;
+
+    if (email && inserted && !purchase.sandbox) {
+      void sendEmail(
+        email,
+        name,
+        'Thank you for sponsoring Acode',
+        'Acode team appreciate your support. Thank you for being a valued sponsor!',
+      ).catch((error) => logSponsorError('email', error));
     }
 
-    await Sponsor.insert(...insertValues);
-
-    if (email) {
-      sendEmail(email, name, 'Thank you for sponsoring Acode', 'Acode team appreciate your support. Thank you for being a valued sponsor!');
-    }
-
-    res.status(201).json({ message: 'Thank you for becoming a sponsor!' });
+    res.status(inserted ? 201 : 200).json({ message: 'Thank you for becoming a sponsor!' });
   } catch (error) {
-    console.error('Error processing sponsorship:', error);
-    res.status(403).json({ error: 'Purchase not valid' });
+    logSponsorError(phase, error);
+    if (error?.code === 'SQLITE_BUSY' || error?.code === 'SQLITE_LOCKED') {
+      return res.status(503).json({ error: 'Sponsor storage is temporarily busy. Please retry.' });
+    }
+    if (phase === 'registration') {
+      return res.status(500).json({ error: 'Could not register sponsorship. Please retry.' });
+    }
+    const invalidApple =
+      error?.code === 'INVALID_SPONSOR_PURCHASE' ||
+      (error instanceof VerificationException && error.status !== VerificationStatus.RETRYABLE_VERIFICATION_FAILURE);
+    const googleStatus = error?.response?.status || error?.code;
+    const invalidGoogle = packageName !== bundleId && [400, 404, 410].includes(Number(googleStatus));
+    if (invalidApple || invalidGoogle) return res.status(403).json({ error: 'Purchase not valid' });
+    return res.status(503).json({ error: 'Purchase verification is temporarily unavailable. Please retry.' });
+  } finally {
+    if (filename && !inserted) {
+      await removeSponsorImage(filename).catch((error) => logSponsorError('image cleanup', error));
+    }
   }
 });
+
+function validateSponsorRequest(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return 'request';
+  for (const [field, max, required] of [
+    ['name', 200, true],
+    ['packageName', 255, true],
+    ['purchaseToken', 32768, true],
+    ['email', 320],
+    ['website', 2048],
+    ['tagline', 500],
+    ['image', 2 * 1024 * 1024],
+  ]) {
+    const value = body[field];
+    if (!required && value == null) continue;
+    if (typeof value !== 'string' || value.length > max || (required && !value.trim())) return field;
+  }
+  if (body.packageName !== bundleId && !googlePackages.includes(body.packageName)) return 'packageName';
+  if (!TIER_ORDER.includes(body.tier)) return 'tier';
+  if (body.website?.trim() && !safeSponsorWebsite(body.website)) return 'website';
+  if (![undefined, true, false, 0, 1].includes(body.public)) return 'public';
+  return null;
+}
 
 router.delete('/:id', async (req, res) => {
   const loggedInUser = await getWebLoggedInUser(req);

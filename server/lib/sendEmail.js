@@ -1,5 +1,6 @@
 const nodeMailer = require('nodemailer');
 const dotenv = require('dotenv');
+const { escapeExpression } = require('handlebars');
 
 dotenv.config();
 
@@ -32,7 +33,7 @@ async function sendEmail(email, name, subject, message) {
       </div>
       <div style="height:1px;background:#f1f5f9;margin:24px 0"></div>
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;color:#1e293b;line-height:1.7">
-        Hi ${name},
+        Hi ${escapeExpression(name)},
       </div>
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;color:#475569;line-height:1.7;padding-top:12px">
         ${message}
