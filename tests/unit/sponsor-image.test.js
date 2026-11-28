@@ -7,7 +7,7 @@ import { rateLimit } from 'express-rate-limit';
 import sharp from 'sharp';
 
 const require = createRequire(import.meta.url);
-const { decodeSponsorImage, saveSponsorImage, sendSponsorImage, sponsorImageType } = require('../../server/lib/sponsorImage');
+const { decodeSponsorImage, saveSponsorImage, removeSponsorImage, sendSponsorImage, sponsorImageType } = require('../../server/lib/sponsorImage');
 
 const pixel = { width: 2, height: 2, channels: 3, background: '#3499fe' };
 
@@ -80,6 +80,10 @@ it('writes stored logos under a random name with their real extension', async ()
     expect(fs.readdirSync(dir)).toEqual([filename]);
     expect(await saveSponsorImage(await dataUrl('text/html', Buffer.from('<p>hi</p>')), dir)).toBeNull();
     expect(fs.readdirSync(dir)).toEqual([filename]);
+    await expect(removeSponsorImage('../outside.png', dir)).rejects.toThrow();
+    await removeSponsorImage(filename, dir);
+    await removeSponsorImage(filename, dir);
+    expect(fs.readdirSync(dir)).toEqual([]);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

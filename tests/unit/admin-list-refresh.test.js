@@ -94,6 +94,31 @@ it('refreshes the current sponsor page without clearing the table during the req
   await vi.waitFor(() => expect(root.textContent).toContain('Updated sponsor'));
 });
 
+it('shows cancellation and its reason even after a sponsor term expires', async () => {
+  fetch.mockResolvedValueOnce(
+    response({
+      sponsors: [
+        { ...sponsor, status: 1, expires_at: '2000-01-01', reason: 'APPLE_REFUND_OR_REVOCATION' },
+        { ...sponsor, id: 2, status: 0, expires_at: '2000-01-01', reason: null },
+        { ...sponsor, id: 3, status: 2, expires_at: '2000-01-01', reason: null },
+        { ...sponsor, id: 4, status: 0, expires_at: null, reason: null },
+        { ...sponsor, id: 5, status: 0, expires_at: '2999-01-01', reason: null },
+      ],
+      pages: 1,
+    }),
+  );
+  const root = await mount('Sponsors');
+  const rows = root.querySelectorAll('tbody tr');
+  expect(rows[0].children[4].textContent).toBe('Canceled');
+  expect(rows[0].children[5].textContent).toBe('Refunded or revoked by Apple');
+  expect(rows[0].querySelector('.status-expired')).toBeNull();
+  expect(rows[1].children[4].textContent).toBe('Expired');
+  expect(rows[1].children[5].textContent).toBe('—');
+  expect(rows[2].children[4].textContent).toBe('Pending');
+  expect(rows[3].children[4].textContent).toBe('Pending');
+  expect(rows[4].children[4].textContent).toBe('Active');
+});
+
 it('refreshes plugins with the current search, status, and page and keeps existing rows visible', async () => {
   const root = await mount('Plugins');
   const search = root.querySelector('input');

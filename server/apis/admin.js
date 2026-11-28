@@ -555,7 +555,16 @@ router.get('/sponsors', async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
   const total = await Sponsor.count();
-  const SPONSOR_ADMIN_COLUMNS = [Sponsor.ID, Sponsor.NAME, Sponsor.TIER, Sponsor.EMAIL, Sponsor.STATUS, Sponsor.CREATED_AT, Sponsor.EXPIRES_AT];
+  const SPONSOR_ADMIN_COLUMNS = [
+    Sponsor.ID,
+    Sponsor.NAME,
+    Sponsor.TIER,
+    Sponsor.EMAIL,
+    Sponsor.STATUS,
+    Sponsor.REASON,
+    Sponsor.CREATED_AT,
+    Sponsor.EXPIRES_AT,
+  ];
 
   const sponsors = await Sponsor.get(SPONSOR_ADMIN_COLUMNS, [], {
     page,

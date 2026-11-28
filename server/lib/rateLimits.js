@@ -67,6 +67,10 @@ module.exports = {
   sponsorImageLimiter: limiter(600, 1, {
     keyGenerator: (req) => ipKeyGenerator(req.ip),
   }),
+  // Bound receipt verification work without loading a login session for native buyers.
+  sponsorRegisterLimiter: limiter(20, 15, {
+    keyGenerator: (req) => ipKeyGenerator(req.ip),
+  }),
   appAuthCodeLimiter: limiter(process.env.NODE_ENV === 'development' ? 200 : 20, 15),
   appTokenExchangeLimiter: limiter(process.env.NODE_ENV === 'development' ? 400 : 120, 15, {
     keyGenerator: (req) => ipKeyGenerator(req.ip),
