@@ -6,7 +6,8 @@ function safeSponsorWebsite(value) {
   if (!website || website.includes('\\') || [...website].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)) return '';
   const hasScheme = /^[a-z][a-z\d+.-]*:/i.test(website);
   // A dotted hostname or localhost followed by a numeric port is not a URL scheme.
-  const hasHostPort = /^(?:[^:/?#@\s]+\.[^:/?#@\s]+|localhost):\d+(?=[/?#]|$)/i.test(website);
+  const host = /^([^:/?#@\s]+):\d+(?=[/?#]|$)/.exec(website)?.[1];
+  const hasHostPort = host && (host.toLowerCase() === 'localhost' || host.slice(1, -1).includes('.'));
   let candidate = hasScheme && !hasHostPort ? website : `https://${website}`;
   if (website.startsWith('//')) candidate = `https:${website}`;
   const normalized = safeRepositoryUrl(candidate);
